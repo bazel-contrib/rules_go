@@ -32,6 +32,10 @@ load(
     "@rules_proto//proto:defs.bzl",
     "ProtoInfo",
 )
+load(
+    "//go/private:providers.bzl",
+    "GoProtoInfo",
+)
 
 GoProtoImports = provider()
 
@@ -79,10 +83,14 @@ def _go_proto_aspect_impl(target, ctx):
     archive = go.archive(go, source)
 
     return [
-        GoProtoImports(imports = imports),
-        library,
-        source,
-        archive,
+        GoProtoImports(
+            imports = imports,
+        ),
+        GoProtoInfo(
+            library = library,
+            source = source,
+            archive = archive,
+        ),
     ]
 
 _go_proto_aspect = aspect(
@@ -99,11 +107,7 @@ _go_proto_aspect = aspect(
         "deps",
     ],
     required_providers = [ProtoInfo],
-    provides = [
-        GoLibrary,
-        GoSource,
-        GoArchive,
-    ],
+    provides = [GoProtoImports, GoProtoInfo],
     toolchains = [GO_TOOLCHAIN],
 )
 
@@ -113,9 +117,9 @@ def _go_proto_library_impl(ctx):
     proto = ctx.attr.protos[0]
 
     return [
-        proto[GoLibrary],
-        proto[GoSource],
-        proto[GoArchive],
+        proto[GoProtoInfo].library,
+        proto[GoProtoInfo].source,
+        proto[GoProtoInfo].archive,
     ]
 
 go_proto_library = rule(
