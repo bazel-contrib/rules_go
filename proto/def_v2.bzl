@@ -56,12 +56,11 @@ def _library_to_source(_go, attr, source, merge):
     if GoSource in compiler:
         merge(source, compiler[GoSource])
 
-def _go_proto_aspect_impl(target, ctx):
+def _compile_proto(ctx, target, attr):
     go = go_context(ctx)
     go_srcs = []
-
     proto_info = target[ProtoInfo]
-    imports = get_imports(target, ctx.rule.attr, go.importpath)
+    imports = get_imports(target, attr, go.importpath)
     compiler = ctx.attr._compiler[GoProtoCompiler]
     if proto_info.direct_sources:
         go_srcs.extend(compiler.compile(
@@ -72,7 +71,7 @@ def _go_proto_aspect_impl(target, ctx):
             importpath = go.importpath,
         ))
 
-    go_deps = getattr(ctx.rule.attr, "deps", [])
+    go_deps = getattr(attr, "deps", [])
     library = go.new_library(
         go,
         resolver = _library_to_source,
@@ -81,16 +80,23 @@ def _go_proto_aspect_impl(target, ctx):
     )
     source = go.library_to_source(go, ctx.attr, library, False)
     archive = go.archive(go, source)
-
-    return [
-        GoProtoImports(
+    return {
+        "imports": GoProtoImports(
             imports = imports,
         ),
-        GoProtoInfo(
+        "info": GoProtoInfo(
             library = library,
             source = source,
             archive = archive,
         ),
+    }
+
+def _go_proto_aspect_impl(target, ctx):
+    providers = _compile_proto(ctx, target, ctx.rule.attr)
+
+    return [
+        providers["imports"],
+        providers["info"],
     ]
 
 _go_proto_aspect = aspect(
@@ -117,6 +123,7 @@ def _go_proto_library_impl(ctx):
     proto = ctx.attr.protos[0]
 
     return [
+        proto[GoProtoImports],
         proto[GoProtoInfo].library,
         proto[GoProtoInfo].source,
         proto[GoProtoInfo].archive,
@@ -132,8 +139,47 @@ go_proto_library = rule(
         ),
     },
     provides = [
+        GoProtoImports,  # This is used by go_grpc_library to determine importpaths for proto deps
         GoLibrary,
         GoSource,
         GoArchive,
     ],
+)
+
+def _go_grpc_library_impl(ctx):
+    if len(ctx.attr.protos) != 1:
+        fail("protos attribute must be exactly one target")
+
+    providers = _compile_proto(ctx, ctx.attr.protos[0], ctx.attr)
+
+    return [
+        providers["info"].library,
+        providers["info"].source,
+        providers["info"].archive,
+    ]
+
+go_grpc_library = rule(
+    implementation = _go_grpc_library_impl,
+    attrs = {
+        "protos": attr.label_list(
+            providers = [ProtoInfo],
+            mandatory = True,
+        ),
+        "deps": attr.label_list(
+            providers = [GoLibrary],
+        ),
+        "importpath": attr.string(),
+        "_compiler": attr.label(
+            default = "//proto:go_grpc",
+        ),
+        "_go_context_data": attr.label(
+            default = "//:go_context_data",
+        ),
+    },
+    provides = [
+        GoLibrary,
+        GoSource,
+        GoArchive,
+    ],
+    toolchains = [GO_TOOLCHAIN],
 )
