@@ -27,12 +27,19 @@ go_library(
 )
 
 go_test(
-	name = "hello_test",
-	srcs = [
-		"hello_test.go",
-		"hello_external_test.go",
-	],
-	embed = [":hello"],
+    name = "hello_test",
+    srcs = [
+        "hello_test.go",
+        "hello_external_test.go",
+    ],
+    embed = [":hello"],
+)
+
+go_library(
+    name = "incompatible",
+    srcs = ["incompatible.go"],
+    importpath = "example.com/incompatible",
+    target_compatible_with = ["@platforms//:incompatible"],
 )
 
 -- hello.go --
@@ -76,7 +83,11 @@ import "os"
 func main() {
 	fmt.Fprintln(os.Stderr, "Subdirectory Hello World!")
 }
-		`,
+
+-- incompatible.go --
+//go:build ignore
+package hello
+`,
 	})
 }
 
@@ -278,8 +289,8 @@ func TestOverlay(t *testing.T) {
 	subhelloPath := path.Join(wd, "subhello/subhello.go")
 
 	expectedImportsPerFile := map[string][]string{
-		helloPath:    []string{"fmt"},
-		subhelloPath: []string{"os", "encoding/json"},
+		helloPath:    {"fmt"},
+		subhelloPath: {"os", "encoding/json"},
 	}
 
 	overlayDriverRequest := DriverRequest{
@@ -322,6 +333,27 @@ func TestOverlay(t *testing.T) {
 
 	expectSetEquality(t, expectedImportsPerFile[helloPath], helloPkgImportPaths, "hello imports")
 	expectSetEquality(t, expectedImportsPerFile[subhelloPath], subhelloPkgImportPaths, "subhello imports")
+}
+
+// TestIncompatible checks that a target that can be queried but not analyzed
+// does not appear in .Roots.
+func TestIncompatible(t *testing.T) {
+	resp := runForTest(t, DriverRequest{}, "./...")
+
+	helloLabel := "@@//:hello"
+	incompatibleLabel := "@@//:incompatible"
+	var foundHello bool
+	for _, root := range resp.Roots {
+		if root == helloLabel {
+			foundHello = true
+		}
+		if root == incompatibleLabel {
+			t.Errorf("response contains root %s", incompatibleLabel)
+		}
+	}
+	if !foundHello {
+		t.Errorf("response does not contain root %s; roots were %s", helloLabel, strings.Join(resp.Roots, ", "))
+	}
 }
 
 func runForTest(t *testing.T, driverRequest DriverRequest, relativeWorkingDir string, args ...string) driverResponse {
