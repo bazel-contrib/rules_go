@@ -340,19 +340,25 @@ func TestOverlay(t *testing.T) {
 func TestIncompatible(t *testing.T) {
 	resp := runForTest(t, DriverRequest{}, "./...")
 
-	helloLabel := "@@//:hello"
-	incompatibleLabel := "@@//:incompatible"
-	var foundHello bool
+	rootLabels := make(map[string]bool)
 	for _, root := range resp.Roots {
-		if root == helloLabel {
-			foundHello = true
-		}
-		if root == incompatibleLabel {
-			t.Errorf("response contains root %s", incompatibleLabel)
-		}
+		rootLabels[root] = true
 	}
-	if !foundHello {
-		t.Errorf("response does not contain root %s; roots were %s", helloLabel, strings.Join(resp.Roots, ", "))
+
+	// Verify //:hello is in .Roots and check whether its label starts with
+	// "@@" (bzlmod) or "@" (not bzlmod).
+	var incompatibleLabel string
+	if rootLabels["@@//:hello"] {
+		incompatibleLabel = "@@//:incompatible"
+	} else if rootLabels["@//:hello"] {
+		incompatibleLabel = "@//:incompatible"
+	} else {
+		t.Fatalf("response does not contain //:hello; roots were %s", strings.Join(resp.Roots, ", "))
+	}
+
+	// Verify //:incompatible is NOT in .Roots.
+	if rootLabels[incompatibleLabel] {
+		t.Fatalf("response contains root %s", incompatibleLabel)
 	}
 }
 
