@@ -1,15 +1,15 @@
-gomock
+
 =====================
 
 Tests that ensure the gomock rules can be called correctly under different input permutations.
 
 reflective
 ------------------------
-Checks that gomock can be run in "reflective" mode when passed a `GoLibrary` and `interfaces`.
+Checks that gomock can be run in "reflective" mode when passed a `GoInfo` and `interfaces`.
 
 source
 ------------------------
-Checks that gomock can be run in "source" mode when passed a `GoLibrary` and `source`.
+Checks that gomock can be run in "source" mode when passed a `GoInfo` and `source`.
 
 source_with_importpath
 ------------------------

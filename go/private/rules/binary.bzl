@@ -23,6 +23,7 @@ load(
 load(
     "//go/private:context.bzl",
     "go_context",
+    "new_go_info",
 )
 load(
     "//go/private:mode.bzl",
@@ -35,9 +36,8 @@ load(
 )
 load(
     "//go/private:providers.bzl",
-    "GoLibrary",
+    "GoInfo",
     "GoSDK",
-    "GoSource",
 )
 load(
     "//go/private/rules:transition.bzl",
@@ -96,7 +96,7 @@ def new_cc_import(
     )
 
 def _go_cc_aspect_impl(target, ctx):
-    if GoSource not in target:
+    if GoInfo not in target:
         return []
 
     deps = (
@@ -127,8 +127,12 @@ def _go_binary_impl(ctx):
     )
 
     is_main = go.mode.linkmode not in (LINKMODE_SHARED, LINKMODE_PLUGIN)
-    library = go.new_library(go, importable = False, is_main = is_main)
-    source = go.library_to_source(go, ctx.attr, library, ctx.coverage_instrumented())
+    go_info = new_go_info(
+        go,
+        ctx.attr,
+        importable = False,
+        is_main = is_main,
+    )
     name = ctx.attr.basename
     if not name:
         name = ctx.label.name
@@ -141,7 +145,7 @@ def _go_binary_impl(ctx):
     archive, executable, runfiles = go.binary(
         go,
         name = name,
-        source = source,
+        source = go_info,
         gc_linkopts = gc_linkopts(ctx),
         version_file = ctx.version_file,
         info_file = ctx.info_file,
@@ -238,20 +242,20 @@ def _go_binary_kwargs(go_cc_aspects = []):
                 """,
             ),
             "deps": attr.label_list(
-                providers = [GoLibrary],
+                providers = [GoInfo],
                 aspects = go_cc_aspects,
                 doc = """List of Go libraries this package imports directly.
-                These may be `go_library` rules or compatible rules with the [GoLibrary] provider.
+                These may be `go_library` rules or compatible rules with the [GoInfo] provider.
                 """,
                 cfg = go_transition,
             ),
             "embed": attr.label_list(
-                providers = [GoLibrary],
+                providers = [GoInfo],
                 aspects = go_cc_aspects,
                 doc = """List of Go libraries whose sources should be compiled together with this
                 binary's sources. Labels listed here must name `go_library`,
-                `go_proto_library`, or other compatible targets with the [GoLibrary] and
-                [GoSource] providers. Embedded libraries must all have the same `importpath`,
+                `go_proto_library`, or other compatible targets with the [GoInfo] provider.
+                Embedded libraries must all have the same `importpath`,
                 which must match the `importpath` for this `go_binary` if one is
                 specified. At most one embedded library may have `cgo = True`, and the
                 embedding binary may not also have `cgo = True`. See [Embedding] for
@@ -451,8 +455,6 @@ def _go_binary_kwargs(go_cc_aspects = []):
         ***Note:*** `name` should be the same as the desired name of the generated binary.<br><br>
         **Providers:**
         <ul>
-          <li>[GoLibrary]</li>
-          <li>[GoSource]</li>
           <li>[GoArchive]</li>
         </ul>
         """,

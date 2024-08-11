@@ -126,8 +126,6 @@ _go_cross_kwargs = {
     of the golang SDK.<br><br>
     **Providers:**
     <ul>
-      <li>[GoLibrary]</li>
-      <li>[GoSource]</li>
       <li>[GoArchive]</li>
     </ul>
     """,

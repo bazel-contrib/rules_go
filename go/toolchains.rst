@@ -5,9 +5,8 @@ Go toolchains
 .. _Bazel toolchains: https://docs.bazel.build/versions/master/toolchains.html
 .. _Go website: https://golang.org/
 .. _GoArchive: providers.rst#goarchive
-.. _GoLibrary: providers.rst#golibrary
 .. _GoSDK: providers.rst#gosdk
-.. _GoSource: providers.rst#gosource
+.. _GoInfo: providers.rst#gosource
 .. _binary distribution: https://golang.org/dl/
 .. _compilation modes: modes.rst#compilation-modes
 .. _control the version: `Forcing the Go version`_
@@ -649,9 +648,9 @@ It returns a GoArchive_.
 +--------------------------------+-----------------------------+-----------------------------------+
 | This must be the same GoContext object you got this function from.                               |
 +--------------------------------+-----------------------------+-----------------------------------+
-| :param:`source`                | :type:`GoSource`            | |mandatory|                       |
+| :param:`source`                | :type:`GoInfo`            | |mandatory|                         |
 +--------------------------------+-----------------------------+-----------------------------------+
-| The GoSource_ that should be compiled into an archive.                                           |
+| The GoInfo_ that should be compiled into an archive.                                             |
 +--------------------------------+-----------------------------+-----------------------------------+
 
 
@@ -675,9 +674,9 @@ a ``runfiles`` object.
 +--------------------------------+-----------------------------+-----------------------------------+
 | The base name of the generated binaries. Required if :param:`executable` is not given.           |
 +--------------------------------+-----------------------------+-----------------------------------+
-| :param:`source`                | :type:`GoSource`            | |mandatory|                       |
+| :param:`source`                | :type:`GoInfo`            | |mandatory|                         |
 +--------------------------------+-----------------------------+-----------------------------------+
-| The GoSource_ that should be compiled and linked.                                                |
+| The GoInfo_ that should be compiled and linked.                                                  |
 +--------------------------------+-----------------------------+-----------------------------------+
 | :param:`test_archives`         | :type:`list GoArchiveData`  | :value:`[]`                       |
 +--------------------------------+-----------------------------+-----------------------------------+
@@ -787,18 +786,17 @@ current build mode to make the filename unique between configurations.
 | If this is not set, the current rule name is used in it's place.                                 |
 +--------------------------------+-----------------------------+-----------------------------------+
 
-library_to_source
+new_go_info
 +++++++++++++++++
 
-This is used to build a GoSource object for a given GoLibrary in the current
-build mode.
+This is used to build a GoInfo object in the current build mode.
 
 +--------------------------------+-----------------------------+-----------------------------------+
 | **Name**                       | **Type**                    | **Default value**                 |
 +--------------------------------+-----------------------------+-----------------------------------+
 | :param:`go`                    | :type:`GoContext`           | |mandatory|                       |
 +--------------------------------+-----------------------------+-----------------------------------+
-| This must be the same GoContext object you got this function from.                               |
+| The GoContext object for this target.                                                            |
 +--------------------------------+-----------------------------+-----------------------------------+
 | :param:`attr`                  | :type:`ctx.attr`            | |mandatory|                       |
 +--------------------------------+-----------------------------+-----------------------------------+
@@ -815,33 +813,18 @@ build mode.
 | As an exception, ``deps``, if present, must be a list containing either                          |
 | ``Targets`` or ``GoArchives``.                                                                   |
 +--------------------------------+-----------------------------+-----------------------------------+
-| :param:`library`               | :type:`GoLibrary`           | |mandatory|                       |
-+--------------------------------+-----------------------------+-----------------------------------+
-| The GoLibrary_ that you want to build a GoSource_ object for in the current build mode.          |
-+--------------------------------+-----------------------------+-----------------------------------+
-| :param:`coverage_instrumented` | :type:`bool`                | |mandatory|                       |
-+--------------------------------+-----------------------------+-----------------------------------+
-| This controls whether cover is enabled for this specific library in this mode.                   |
-| This should generally be the value of ctx.coverage_instrumented()                                |
-+--------------------------------+-----------------------------+-----------------------------------+
-
-new_library
-+++++++++++
-
-This creates a new GoLibrary.  You can add extra fields to the go library by
-providing extra named parameters to this function, they will be visible to the
-resolver when it is invoked.
-
-+--------------------------------+-----------------------------+-----------------------------------+
-| **Name**                       | **Type**                    | **Default value**                 |
-+--------------------------------+-----------------------------+-----------------------------------+
-| :param:`go`                    | :type:`GoContext`           | |mandatory|                       |
-+--------------------------------+-----------------------------+-----------------------------------+
-| This must be the same GoContext object you got this function from.                               |
+| :param:`name`                  | :type:`string`                                                  |
++--------------------------------+-----------------------------------------------------------------+
+| The name of the library. Usually, this is the ``name`` attribute.                                |
++--------------------------------+-----------------------------------------------------------------+
+| :param:`importpath`            | :type:`string`                                                  |
++--------------------------------+-----------------------------------------------------------------+
+| The string used in ``import`` declarations in Go source code to import                           |
+| this library. Usually, this is the ``importpath`` attribute.                                     |
 +--------------------------------+-----------------------------+-----------------------------------+
 | :param:`resolver`              | :type:`function`            | :value:`None`                     |
 +--------------------------------+-----------------------------+-----------------------------------+
-| This is the function that gets invoked when converting from a GoLibrary to a GoSource.           |
+| This is the function that gets invoked when building the GoInfo.                                 |
 | The function's signature must be                                                                 |
 |                                                                                                  |
 | .. code:: bzl                                                                                    |
@@ -849,11 +832,43 @@ resolver when it is invoked.
 |     def _stdlib_library_to_source(go, attr, source, merge)                                       |
 |                                                                                                  |
 | attr is the attributes of the rule being processed                                               |
-| source is the dictionary of GoSource fields being generated                                      |
+| source is the dictionary of GoInfo fields being generated                                        |
 | merge is a helper you can call to merge                                                          |
 +--------------------------------+-----------------------------+-----------------------------------+
-| :param:`importable`            | :type:`bool`                | |mandatory|                       |
+| :param:`importable`            | :type:`bool`                | |False|                           |
 +--------------------------------+-----------------------------+-----------------------------------+
-| This controls whether the GoLibrary_ is supposed to be importable. This is generally only false  |
+| This controls whether the GoInfo_ is supposed to be importable. This is generally only false     |
 | for the "main" libraries that are built just before linking.                                     |
++--------------------------------+-----------------------------+-----------------------------------+
+| :param:`testfilter`            | :type:`string`              | |None|                            |
++--------------------------------+-----------------------------+-----------------------------------+
+| :param:`is_main`               | :type:`bool`                                                    |
++--------------------------------+-----------------------------------------------------------------+
+| Indicates whether the library should be compiled as a `main` package.                            |
+| `main` packages may have arbitrary `importpath` and `importmap` values,                          |
+| but the compiler and linker must see them as `main`.                                             |
++--------------------------------+-----------------------------+-----------------------------------+
+| :param:`coverage_instrumented` | :type:`bool`                | |None|                            |
++--------------------------------+-----------------------------+-----------------------------------+
+| This controls whether cover is enabled for this specific library in this mode.                   |
+| If ommitted, it falls back to ctx.coverage_instrumented()                                        |
++--------------------------------+-----------------------------+-----------------------------------+
+| :param:`generated_srcs`        | :type:`List[file]`          | |None|                            |
++--------------------------------+-----------------------------+-----------------------------------+
+| :param:`pathtype`              | :type:`string`                                                  |
++--------------------------------+-----------------------------------------------------------------+
+| Information about the source of the importpath. Possible values are:                             |
+|                                                                                                  |
+| :value:`explicit`                                                                                |
+|     The importpath was explicitly supplied by the user and the library is importable.            |
+|     This is the normal case.                                                                     |
+| :value:`inferred`                                                                                |
+|     The importpath was inferred from the directory structure and rule name. The library may be   |
+|     importable.                                                                                  |
+|     This is normally true for rules that do not expect to be compiled directly to a library,     |
+|     embeded into another rule instead (source generators)                                        |
+| :value:`export`                                                                                  |
+|     The importpath was explicitly supplied by the user, but the library is                       |
+|     not importable. This is the case for binaries and tests. The importpath                      |
+|     may still be useful for `go_path`_ and other rules.                                          |
 +--------------------------------+-----------------------------+-----------------------------------+

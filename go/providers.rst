@@ -13,8 +13,7 @@ Go providers
 .. _race detector: modes.rst#using-the-race-detector
 .. _runfiles: https://docs.bazel.build/versions/master/skylark/lib/runfiles.html
 .. _File: https://docs.bazel.build/versions/master/skylark/lib/File.html
-.. _new_library: toolchains.rst#new_library
-.. _library_to_source: toolchains.rst#library_to_source
+.. _new_go_info: toolchains.rst#new_go_info
 .. _archive: toolchains.rst#archive
 
 .. role:: param(kbd)
@@ -41,19 +40,19 @@ All the providers are designed to hold only immutable data. This is partly
 because its a cleaner design choice to be able to assume a provider will never
 change, but also because only immutable objects are allowed to be stored in a
 depset, and it's really useful to have depsets of providers.  Specifically the
-:param:`direct` and :param:`transitive` fields on GoLibrary_ only work because
-it is immutable.
+:param:`direct` and :param:`transitive` fields on GoArchive_ only work because
+GoArchiveData_ is immutable.
 
 API
 ---
 
-GoLibrary
-~~~~~~~~~
+GoInfo
+~~~~~~~~
 
-``GoLibrary`` contains metadata about an individual library. It is provided
-by the `go_library`_ rule and other compatible rules. In general, you should
-build ``GoLibrary`` with the `new_library`_ helper method. ``GoLibrary`` is
-an input to the `library_to_source`_ helper method, which produces GoSource_.
+GoInfo contains metadata about an individual library.
+It takes into account mode-specific processing, ready to build
+a GoArchive_. This is produced by calling the `new_go_info`_ helper
+method. In general, only rules_go should need to build or handle these.
 
 +--------------------------------+-----------------------------------------------------------------+
 | **Name**                       | **Type**                                                        |
@@ -95,33 +94,13 @@ an input to the `library_to_source`_ helper method, which produces GoSource_.
 |     not importable. This is the case for binaries and tests. The importpath                      |
 |     may still be useful for `go_path`_ and other rules.                                          |
 +--------------------------------+-----------------------------------------------------------------+
-| :param:`resolve`               | :type:`function (optional)`                                     |
-+--------------------------------+-----------------------------------------------------------------+
-| A function called by `library_to_source`_ that can be used to resolve this                       |
-| library to a mode-specific GoSource_.                                                            |
-+--------------------------------+-----------------------------------------------------------------+
 | :param:`is_main`               | :type:`bool`                                                    |
 +--------------------------------+-----------------------------------------------------------------+
 | Indicates whether the library should be compiled as a `main` package.                            |
 | `main` packages may have arbitrary `importpath` and `importmap` values,                          |
 | but the compiler and linker must see them as `main`.                                             |
 +--------------------------------+-----------------------------------------------------------------+
-
-GoSource
-~~~~~~~~
-
-GoSource represents a GoLibrary_ after mode-specific processing, ready to build
-a GoArchive_. This is produced by calling the `library_to_source`_ helper
-method. In general, only rules_go should need to build or handle these.
-
-+--------------------------------+-----------------------------------------------------------------+
-| **Name**                       | **Type**                                                        |
-+--------------------------------+-----------------------------------------------------------------+
-| :param:`library`               | :type:`GoLibrary`                                               |
-+--------------------------------+-----------------------------------------------------------------+
-| The go library that this GoSource was generated from.                                            |
-+--------------------------------+-----------------------------------------------------------------+
-| :param:`mode`                  | :type:`GoConfigInfo`                                            |
+| :param:`mode`                  | :type:`Mode`                                                    |
 +--------------------------------+-----------------------------------------------------------------+
 | The mode this library is being built for.                                                        |
 +--------------------------------+-----------------------------------------------------------------+
@@ -276,7 +255,7 @@ which is available through the :param:`data` field.
 +--------------------------------+-----------------------------------------------------------------+
 | **Name**                       | **Type**                                                        |
 +--------------------------------+-----------------------------------------------------------------+
-| :param:`source`                | :type:`GoSource`                                                |
+| :param:`source`                | :type:`GoInfo`                                                |
 +--------------------------------+-----------------------------------------------------------------+
 | The source provider this GoArchive was compiled from.                                            |
 +--------------------------------+-----------------------------------------------------------------+
@@ -306,7 +285,7 @@ which is available through the :param:`data` field.
 | The direct cgo dependencies of this library.                                                     |
 | This has the same constraints as things that can appear in the deps of a cc_library_.            |
 +--------------------------------+-----------------------------------------------------------------+
-| :param:`cgo_exports`           | :type:`depset of GoSource`                                      |
+| :param:`cgo_exports`           | :type:`depset of GoInfo`                                        |
 +--------------------------------+-----------------------------------------------------------------+
 | The transitive set of c headers needed to reference exports of this archive.                     |
 +--------------------------------+-----------------------------------------------------------------+

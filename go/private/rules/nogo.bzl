@@ -19,12 +19,12 @@ load(
 load(
     "//go/private:context.bzl",
     "go_context",
+    "new_go_info",
 )
 load(
     "//go/private:providers.bzl",
     "EXPORT_PATH",
     "GoArchive",
-    "GoLibrary",
 )
 load(
     "//go/private/rules:transition.bzl",
@@ -61,26 +61,23 @@ def _nogo_impl(ctx):
     )
 
     # Compile the nogo binary itself.
-    nogo_library = GoLibrary(
+    nogo_info = new_go_info(
+        go,
+        struct(
+            embed = [ctx.attr._nogo_srcs],
+            deps = analyzer_archives,
+        ),
+        generated_srcs = [nogo_main],
         name = go.label.name + "~nogo",
-        label = go.label,
         importpath = "nogomain",
-        importmap = "nogomain",
-        importpath_aliases = (),
         pathtype = EXPORT_PATH,
         is_main = True,
-        resolve = None,
+        coverage_instrumented = False,
     )
-
-    nogo_source = go.library_to_source(go, struct(
-        srcs = [struct(files = [nogo_main])],
-        embed = [ctx.attr._nogo_srcs],
-        deps = analyzer_archives,
-    ), nogo_library, False)
     _, executable, runfiles = go.binary(
         go,
         name = ctx.label.name,
-        source = nogo_source,
+        source = nogo_info,
     )
     return [DefaultInfo(
         files = depset([executable]),

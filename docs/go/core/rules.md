@@ -5,9 +5,8 @@
   [Bourne shell tokenization]: https://docs.bazel.build/versions/master/be/common-definitions.html#sh-tokenization
   [Gazelle]: https://github.com/bazelbuild/bazel-gazelle
   [GoArchive]: /go/providers.rst#GoArchive
-  [GoLibrary]: /go/providers.rst#GoLibrary
   [GoPath]: /go/providers.rst#GoPath
-  [GoSource]: /go/providers.rst#GoSource
+  [GoInfo]: /go/providers.rst#GoInfo
   [build constraints]: https://golang.org/pkg/go/build/#hdr-Build_Constraints
   [cc_library deps]: https://docs.bazel.build/versions/master/be/c-cpp.html#cc_library.deps
   [cgo]: http://golang.org/cmd/cgo/
@@ -53,9 +52,8 @@ sufficient to match the capabilities of the normal go tools.
 - [Bourne shell tokenization]
 - [Gazelle]
 - [GoArchive]
-- [GoLibrary]
 - [GoPath]
-- [GoSource]
+- [GoInfo]
 - [build constraints]:
 - [cc_library deps]
 - [cgo]
@@ -136,8 +134,6 @@ This builds an executable from a set of source files,
         ***Note:*** `name` should be the same as the desired name of the generated binary.<br><br>
         **Providers:**
         <ul>
-          <li>[GoLibrary]</li>
-          <li>[GoSource]</li>
           <li>[GoArchive]</li>
         </ul>
         
@@ -156,8 +152,8 @@ This builds an executable from a set of source files,
 | <a id="go_binary-cppopts"></a>cppopts |  List of flags to add to the C/C++ preprocessor command.                 Subject to ["Make variable"] substitution and [Bourne shell tokenization].                 Only valid if <code>cgo</code> = <code>True</code>.   | List of strings | optional | [] |
 | <a id="go_binary-cxxopts"></a>cxxopts |  List of flags to add to the C++ compilation command.                 Subject to ["Make variable"] substitution and [Bourne shell tokenization].                 Only valid if <code>cgo</code> = <code>True</code>.   | List of strings | optional | [] |
 | <a id="go_binary-data"></a>data |  List of files needed by this rule at run-time. This may include data files                 needed or other programs that may be executed. The [bazel] package may be                 used to locate run files; they may appear in different places depending on the                 operating system and environment. See [data dependencies] for more                 information on data files.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional | [] |
-| <a id="go_binary-deps"></a>deps |  List of Go libraries this package imports directly.                 These may be <code>go_library</code> rules or compatible rules with the [GoLibrary] provider.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional | [] |
-| <a id="go_binary-embed"></a>embed |  List of Go libraries whose sources should be compiled together with this                 binary's sources. Labels listed here must name <code>go_library</code>,                 <code>go_proto_library</code>, or other compatible targets with the [GoLibrary] and                 [GoSource] providers. Embedded libraries must all have the same <code>importpath</code>,                 which must match the <code>importpath</code> for this <code>go_binary</code> if one is                 specified. At most one embedded library may have <code>cgo = True</code>, and the                 embedding binary may not also have <code>cgo = True</code>. See [Embedding] for                 more information.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional | [] |
+| <a id="go_binary-deps"></a>deps |  List of Go libraries this package imports directly.                 These may be <code>go_library</code> rules or compatible rules with the [GoInfo] provider.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional | [] |
+| <a id="go_binary-embed"></a>embed |  List of Go libraries whose sources should be compiled together with this                 binary's sources. Labels listed here must name <code>go_library</code>,                 <code>go_proto_library</code>, or other compatible targets with the [GoInfo] provider.                 Embedded libraries must all have the same <code>importpath</code>,                 which must match the <code>importpath</code> for this <code>go_binary</code> if one is                 specified. At most one embedded library may have <code>cgo = True</code>, and the                 embedding binary may not also have <code>cgo = True</code>. See [Embedding] for                 more information.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional | [] |
 | <a id="go_binary-embedsrcs"></a>embedsrcs |  The list of files that may be embedded into the compiled package using                 <code>//go:embed</code> directives. All files must be in the same logical directory                 or a subdirectory as source files. All source files containing <code>//go:embed</code>                 directives must be in the same logical directory. It's okay to mix static and                 generated source files and static and generated embeddable files.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional | [] |
 | <a id="go_binary-env"></a>env |  Environment variables to set when the binary is executed with bazel run.                 The values (but not keys) are subject to                 [location expansion](https://docs.bazel.build/versions/main/skylark/macros.html) but not full                 [make variable expansion](https://docs.bazel.build/versions/main/be/make-variables.html).   | <a href="https://bazel.build/rules/lib/dict">Dictionary: String -> String</a> | optional | {} |
 | <a id="go_binary-gc_goopts"></a>gc_goopts |  List of flags to add to the Go compilation command when using the gc compiler.                 Subject to ["Make variable"] substitution and [Bourne shell tokenization].   | List of strings | optional | [] |
@@ -193,8 +189,6 @@ This wraps an executable built by `go_binary` to cross compile it
     of the golang SDK.<br><br>
     **Providers:**
     <ul>
-      <li>[GoLibrary]</li>
-      <li>[GoSource]</li>
       <li>[GoArchive]</li>
     </ul>
     
@@ -228,8 +222,7 @@ This builds a Go library from a set of source files that are all part of
     or `go_default_library`, with the old naming convention.<br><br>
     **Providers:**
     <ul>
-      <li>[GoLibrary]</li>
-      <li>[GoSource]</li>
+      <li>[GoInfo]</li>
       <li>[GoArchive]</li>
     </ul>
     
@@ -247,8 +240,8 @@ This builds a Go library from a set of source files that are all part of
 | <a id="go_library-cppopts"></a>cppopts |  List of flags to add to the C/C++ preprocessor command.             Subject to ["Make variable"] substitution and [Bourne shell tokenization].             Only valid if <code>cgo = True</code>.   | List of strings | optional | [] |
 | <a id="go_library-cxxopts"></a>cxxopts |  List of flags to add to the C++ compilation command.             Subject to ["Make variable"] substitution and [Bourne shell tokenization]. Only valid if <code>cgo = True</code>.   | List of strings | optional | [] |
 | <a id="go_library-data"></a>data |  List of files needed by this rule at run-time.             This may include data files needed or other programs that may be executed.             The [bazel] package may be used to locate run files; they may appear in different places             depending on the operating system and environment. See [data dependencies] for more information on data files.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional | [] |
-| <a id="go_library-deps"></a>deps |  List of Go libraries this package imports directly.             These may be <code>go_library</code> rules or compatible rules with the [GoLibrary] provider.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional | [] |
-| <a id="go_library-embed"></a>embed |  List of Go libraries whose sources should be compiled together with this package's sources.             Labels listed here must name <code>go_library</code>, <code>go_proto_library</code>, or other compatible targets with             the [GoLibrary] and [GoSource] providers. Embedded libraries must have the same <code>importpath</code> as the embedding library.             At most one embedded library may have <code>cgo = True</code>, and the embedding library may not also have <code>cgo = True</code>.             See [Embedding] for more information.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional | [] |
+| <a id="go_library-deps"></a>deps |  List of Go libraries this package imports directly.             These may be <code>go_library</code> rules or compatible rules with the [GoInfo] provider.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional | [] |
+| <a id="go_library-embed"></a>embed |  List of Go libraries whose sources should be compiled together with this package's sources.             Labels listed here must name <code>go_library</code>, <code>go_proto_library</code>, or other compatible targets with             the [GoInfo] provider. Embedded libraries must have the same <code>importpath</code> as the embedding library.             At most one embedded library may have <code>cgo = True</code>, and the embedding library may not also have <code>cgo = True</code>.             See [Embedding] for more information.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional | [] |
 | <a id="go_library-embedsrcs"></a>embedsrcs |  The list of files that may be embedded into the compiled package using <code>//go:embed</code>             directives. All files must be in the same logical directory or a subdirectory as source files.             All source files containing <code>//go:embed</code> directives must be in the same logical directory.             It's okay to mix static and generated source files and static and generated embeddable files.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional | [] |
 | <a id="go_library-gc_goopts"></a>gc_goopts |  List of flags to add to the Go compilation command when using the gc compiler.             Subject to ["Make variable"] substitution and [Bourne shell tokenization].   | List of strings | optional | [] |
 | <a id="go_library-importmap"></a>importmap |  The actual import path of this library. By default, this is <code>importpath</code>. This is mostly only visible to the compiler and linker,             but it may also be seen in stack traces. This must be unique among packages passed to the linker.             It may be set to something different than <code>importpath</code> to prevent conflicts between multiple packages             with the same path (for example, from different vendor directories).   | String | optional | "" |
@@ -343,8 +336,7 @@ This declares a set of source files and related dependencies that can be embedde
     This is used as a way of easily declaring a common set of sources re-used in multiple rules.<br><br>
     **Providers:**
     <ul>
-      <li>[GoLibrary]</li>
-      <li>[GoSource]</li>
+      <li>[GoInfo]</li>
     </ul>
     
 
@@ -355,8 +347,8 @@ This declares a set of source files and related dependencies that can be embedde
 | :------------- | :------------- | :------------- | :------------- | :------------- |
 | <a id="go_source-name"></a>name |  A unique name for this target.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
 | <a id="go_source-data"></a>data |  List of files needed by this rule at run-time. This may include data files             needed or other programs that may be executed. The [bazel] package may be             used to locate run files; they may appear in different places depending on the             operating system and environment. See [data dependencies] for more             information on data files.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional | [] |
-| <a id="go_source-deps"></a>deps |  List of Go libraries this source list imports directly.             These may be go_library rules or compatible rules with the [GoLibrary] provider.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional | [] |
-| <a id="go_source-embed"></a>embed |  List of Go libraries whose sources should be compiled together with this             package's sources. Labels listed here must name <code>go_library</code>,             <code>go_proto_library</code>, or other compatible targets with the [GoLibrary] and             [GoSource] providers. Embedded libraries must have the same <code>importpath</code> as             the embedding library. At most one embedded library may have <code>cgo = True</code>,             and the embedding library may not also have <code>cgo = True</code>. See [Embedding]             for more information.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional | [] |
+| <a id="go_source-deps"></a>deps |  List of Go libraries this source list imports directly.             These may be go_library rules or compatible rules with the [GoInfo] provider.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional | [] |
+| <a id="go_source-embed"></a>embed |  List of Go libraries whose sources should be compiled together with this             package's sources. Labels listed here must name <code>go_library</code>,             <code>go_proto_library</code>, or other compatible targets with the [GoInfo]             provider. Embedded libraries must have the same <code>importpath</code> as             the embedding library. At most one embedded library may have <code>cgo = True</code>,             and the embedding library may not also have <code>cgo = True</code>. See [Embedding]             for more information.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional | [] |
 | <a id="go_source-gc_goopts"></a>gc_goopts |  List of flags to add to the Go compilation command when using the gc compiler.             Subject to ["Make variable"] substitution and [Bourne shell tokenization].   | List of strings | optional | [] |
 | <a id="go_source-srcs"></a>srcs |  The list of Go source files that are compiled to create the package.             The following file types are permitted: <code>.go, .c, .s, .syso, .S, .h</code>.             The files may contain Go-style [build constraints].   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional | [] |
 
@@ -418,8 +410,8 @@ This builds a set of tests that can be run with `bazel test`.<br><br>
 | <a id="go_test-cppopts"></a>cppopts |  List of flags to add to the C/C++ preprocessor command.             Subject to ["Make variable"] substitution and [Bourne shell tokenization].             Only valid if <code>cgo</code> = <code>True</code>.   | List of strings | optional | [] |
 | <a id="go_test-cxxopts"></a>cxxopts |  List of flags to add to the C++ compilation command.             Subject to ["Make variable"] substitution and [Bourne shell tokenization].             Only valid if <code>cgo</code> = <code>True</code>.   | List of strings | optional | [] |
 | <a id="go_test-data"></a>data |  List of files needed by this rule at run-time. This may include data files             needed or other programs that may be executed. The [bazel] package may be             used to locate run files; they may appear in different places depending on the             operating system and environment. See [data dependencies] for more             information on data files.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional | [] |
-| <a id="go_test-deps"></a>deps |  List of Go libraries this test imports directly.             These may be go_library rules or compatible rules with the [GoLibrary] provider.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional | [] |
-| <a id="go_test-embed"></a>embed |  List of Go libraries whose sources should be compiled together with this             package's sources. Labels listed here must name <code>go_library</code>,             <code>go_proto_library</code>, or other compatible targets with the [GoLibrary] and             [GoSource] providers. Embedded libraries must have the same <code>importpath</code> as             the embedding library. At most one embedded library may have <code>cgo = True</code>,             and the embedding library may not also have <code>cgo = True</code>. See [Embedding]             for more information.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional | [] |
+| <a id="go_test-deps"></a>deps |  List of Go libraries this test imports directly.             These may be go_library rules or compatible rules with the [GoInfo] provider.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional | [] |
+| <a id="go_test-embed"></a>embed |  List of Go libraries whose sources should be compiled together with this             package's sources. Labels listed here must name <code>go_library</code>,             <code>go_proto_library</code>, or other compatible targets with the             [GoInfo] provider. Embedded libraries must have the same <code>importpath</code> as             the embedding library. At most one embedded library may have <code>cgo = True</code>,             and the embedding library may not also have <code>cgo = True</code>. See [Embedding]             for more information.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional | [] |
 | <a id="go_test-embedsrcs"></a>embedsrcs |  The list of files that may be embedded into the compiled package using             <code>//go:embed</code> directives. All files must be in the same logical directory             or a subdirectory as source files. All source files containing <code>//go:embed</code>             directives must be in the same logical directory. It's okay to mix static and             generated source files and static and generated embeddable files.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional | [] |
 | <a id="go_test-env"></a>env |  Environment variables to set for the test execution.             The values (but not keys) are subject to             [location expansion](https://docs.bazel.build/versions/main/skylark/macros.html) but not full             [make variable expansion](https://docs.bazel.build/versions/main/be/make-variables.html).   | <a href="https://bazel.build/rules/lib/dict">Dictionary: String -> String</a> | optional | {} |
 | <a id="go_test-env_inherit"></a>env_inherit |  Environment variables to inherit from the external environment.   | List of strings | optional | [] |
