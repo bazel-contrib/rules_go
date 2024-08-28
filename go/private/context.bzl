@@ -170,7 +170,6 @@ def _dirname(file):
 def _builder_args(go, command = None, use_path_mapping = False):
     args = go.actions.args()
     args.use_param_file("-param=%s")
-    args.set_param_file_format("shell")
     if command:
         args.add(command)
     sdk_root_file = go.sdk.root_file
@@ -187,14 +186,15 @@ def _builder_args(go, command = None, use_path_mapping = False):
         # Use a file rather than goroot as the latter is just a string and thus
         # not subject to path mapping.
         args.add_all("-goroot", [goroot_file], map_each = _dirname, expand_directories = False)
-    args.add("-installsuffix", installsuffix(go.mode))
-    args.add_joined("-tags", go.mode.tags, join_with = ",")
+    mode = go.mode
+    args.add("-installsuffix", installsuffix(mode))
+    if mode.tags:
+        args.add_joined("-tags", mode.tags, join_with = ",")
     return args
 
 def _tool_args(go):
     args = go.actions.args()
     args.use_param_file("-param=%s")
-    args.set_param_file_format("shell")
     return args
 
 def _new_library(go, name = None, importpath = None, resolver = None, importable = True, testfilter = None, is_main = False, **kwargs):

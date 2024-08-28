@@ -81,11 +81,13 @@ def emit_compilepkg(
         fail("sources is a required parameter")
     if out_lib == None:
         fail("out_lib is a required parameter")
-    if bool(nogo) != bool(out_facts):
+
+    have_nogo = nogo != None
+    if have_nogo != (out_facts != None):
         fail("nogo must be specified if and only if out_facts is specified")
-    if bool(nogo) != bool(out_nogo_log):
+    if have_nogo != (out_nogo_log != None):
         fail("nogo must be specified if and only if out_nogo_log is specified")
-    if bool(nogo) != bool(out_nogo_validation):
+    if have_nogo != (out_nogo_validation != None):
         fail("nogo must be specified if and only if out_nogo_validation is specified")
 
     if cover and go.coverdata:
@@ -97,17 +99,19 @@ def emit_compilepkg(
     inputs_transitive = [sdk.headers, sdk.tools, go.stdlib.libs]
     outputs = [out_lib, out_export]
 
-    args = go.builder_args(go, "compilepkg", use_path_mapping = True)
-    args.add_all(sources, before_each = "-src")
-    args.add_all(embedsrcs, before_each = "-embedsrc", expand_directories = False)
-    args.add_all(
+    shared_args = go.builder_args(go, use_path_mapping = True)
+    shared_args.add_all(sources, before_each = "-src")
+
+    compile_args = go.tool_args(go)
+    compile_args.add_all(embedsrcs, before_each = "-embedsrc", expand_directories = False)
+    compile_args.add_all(
         sources + [out_lib] + embedsrcs,
         map_each = _embedroot_arg,
         before_each = "-embedroot",
         uniquify = True,
         expand_directories = False,
     )
-    args.add_all(
+    compile_args.add_all(
         sources + [out_lib],
         map_each = _embedlookupdir_arg,
         before_each = "-embedlookupdir",
@@ -115,34 +119,33 @@ def emit_compilepkg(
         expand_directories = False,
     )
 
-    cover_mode = None
     if cover and go.coverdata:
         if go.mode.race:
             cover_mode = "atomic"
         else:
             cover_mode = "set"
-        args.add("-cover_mode", cover_mode)
-        args.add("-cover_format", go.mode.cover_format)
-        args.add_all(cover, before_each = "-cover")
+        shared_args.add("-cover_mode", cover_mode)
+        compile_args.add("-cover_format", go.mode.cover_format)
+        compile_args.add_all(cover, before_each = "-cover")
 
-    args.add_all(archives, before_each = "-arc", map_each = _archive)
+    shared_args.add_all(archives, before_each = "-arc", map_each = _archive)
     if recompile_internal_deps:
-        args.add_all(recompile_internal_deps, before_each = "-recompile_internal_deps")
+        shared_args.add_all(recompile_internal_deps, before_each = "-recompile_internal_deps")
     if importpath:
-        args.add("-importpath", importpath)
+        shared_args.add("-importpath", importpath)
     else:
-        args.add("-importpath", go.label.name)
+        shared_args.add("-importpath", go.label.name)
     if importmap:
-        args.add("-p", importmap)
-    args.add("-package_list", sdk.package_list)
+        shared_args.add("-p", importmap)
+    shared_args.add("-package_list", sdk.package_list)
 
-    args.add("-lo", out_lib)
-    args.add("-o", out_export)
+    compile_args.add("-lo", out_lib)
+    compile_args.add("-o", out_export)
     if out_cgo_export_h:
-        args.add("-cgoexport", out_cgo_export_h)
+        compile_args.add("-cgoexport", out_cgo_export_h)
         outputs.append(out_cgo_export_h)
     if testfilter:
-        args.add("-testfilter", testfilter)
+        shared_args.add("-testfilter", testfilter)
 
     link_mode_flag = link_mode_arg(go.mode)
 
@@ -156,10 +159,10 @@ def emit_compilepkg(
     gc_flags.extend(go.toolchain.flags.compile)
     if link_mode_flag:
         gc_flags.append(link_mode_flag)
-    args.add("-gcflags", quote_opts(gc_flags))
+    compile_args.add("-gcflags", quote_opts(gc_flags))
 
     if link_mode_flag:
-        args.add("-asmflags", link_mode_flag)
+        compile_args.add("-asmflags", link_mode_flag)
 
     # cgo and the linker action don't support path mapping yet
     # TODO: Remove the second condition after https://github.com/bazelbuild/bazel/pull/21921.
@@ -175,25 +178,25 @@ def emit_compilepkg(
         if nogo:
             cgo_go_srcs_for_nogo = go.declare_directory(go, path = out_lib.basename + ".cgo")
             outputs.append(cgo_go_srcs_for_nogo)
-            args.add("-cgo_go_srcs", cgo_go_srcs_for_nogo.path)
+            compile_args.add("-cgo_go_srcs", cgo_go_srcs_for_nogo.path)
         inputs_transitive.append(cgo_inputs)
         inputs_transitive.append(go.cc_toolchain_files)
         env["CC"] = go.cgo_tools.c_compiler_path
         if cppopts:
-            args.add("-cppflags", quote_opts(cppopts))
+            compile_args.add("-cppflags", quote_opts(cppopts))
         if copts:
-            args.add("-cflags", quote_opts(copts))
+            compile_args.add("-cflags", quote_opts(copts))
         if cxxopts:
-            args.add("-cxxflags", quote_opts(cxxopts))
+            compile_args.add("-cxxflags", quote_opts(cxxopts))
         if objcopts:
-            args.add("-objcflags", quote_opts(objcopts))
+            compile_args.add("-objcflags", quote_opts(objcopts))
         if objcxxopts:
-            args.add("-objcxxflags", quote_opts(objcxxopts))
+            compile_args.add("-objcxxflags", quote_opts(objcxxopts))
         if clinkopts:
-            args.add("-ldflags", quote_opts(clinkopts))
+            compile_args.add("-ldflags", quote_opts(clinkopts))
 
     if go.mode.pgoprofile:
-        args.add("-pgoprofile", go.mode.pgoprofile)
+        compile_args.add("-pgoprofile", go.mode.pgoprofile)
         inputs_direct.append(go.mode.pgoprofile)
 
     go.actions.run(
@@ -201,7 +204,7 @@ def emit_compilepkg(
         outputs = outputs,
         mnemonic = "GoCompilePkgExternal" if is_external_pkg else "GoCompilePkg",
         executable = go.toolchain._builder,
-        arguments = [args],
+        arguments = ["compilepkg", shared_args, compile_args],
         env = env,
         toolchain = GO_TOOLCHAIN_LABEL,
         execution_requirements = execution_requirements,
@@ -210,14 +213,10 @@ def emit_compilepkg(
     if nogo:
         _run_nogo(
             go,
+            shared_args = shared_args,
             sources = sources,
             cgo_go_srcs = cgo_go_srcs_for_nogo,
-            importpath = importpath,
-            importmap = importmap,
             archives = archives,
-            recompile_internal_deps = recompile_internal_deps,
-            cover_mode = cover_mode,
-            testfilter = testfilter,
             out_facts = out_facts,
             out_log = out_nogo_log,
             out_validation = out_nogo_validation,
@@ -226,15 +225,11 @@ def emit_compilepkg(
 
 def _run_nogo(
         go,
+        shared_args,
         *,
         sources,
         cgo_go_srcs,
-        importpath,
-        importmap,
         archives,
-        recompile_internal_deps,
-        cover_mode,
-        testfilter,
         out_facts,
         out_log,
         out_validation,
@@ -248,30 +243,15 @@ def _run_nogo(
     inputs_transitive = [sdk.tools, sdk.headers, go.stdlib.libs]
     outputs = [out_facts, out_log]
 
-    args = go.builder_args(go, "nogo", use_path_mapping = True)
-    args.add_all(sources, before_each = "-src")
+    nogo_args = go.tool_args(go)
     if cgo_go_srcs:
         inputs_direct.append(cgo_go_srcs)
-        args.add_all([cgo_go_srcs], before_each = "-ignore_src")
-    if cover_mode:
-        args.add("-cover_mode", cover_mode)
-    if recompile_internal_deps:
-        args.add_all(recompile_internal_deps, before_each = "-recompile_internal_deps")
-    args.add_all(archives, before_each = "-arc", map_each = _archive)
-    if importpath:
-        args.add("-importpath", importpath)
-    else:
-        args.add("-importpath", go.label.name)
-    if importmap:
-        args.add("-p", importmap)
-    args.add("-package_list", sdk.package_list)
-    if testfilter:
-        args.add("-testfilter", testfilter)
+        nogo_args.add_all([cgo_go_srcs], before_each = "-ignore_src")
 
-    args.add_all(archives, before_each = "-facts", map_each = _facts)
-    args.add("-out_facts", out_facts)
-    args.add("-out_log", out_log)
-    args.add("-nogo", nogo)
+    nogo_args.add_all(archives, before_each = "-facts", map_each = _facts)
+    nogo_args.add("-out_facts", out_facts)
+    nogo_args.add("-out_log", out_log)
+    nogo_args.add("-nogo", nogo)
 
     # This action runs nogo and produces the facts files for downstream nogo actions.
     # It is important that this action doesn't fail if nogo produces findings, which allows users
@@ -285,7 +265,7 @@ def _run_nogo(
         outputs = outputs,
         mnemonic = "RunNogo",
         executable = go.toolchain._builder,
-        arguments = [args],
+        arguments = ["nogo", shared_args, nogo_args],
         env = go.env_for_path_mapping,
         toolchain = GO_TOOLCHAIN_LABEL,
         execution_requirements = SUPPORTS_PATH_MAPPING_REQUIREMENT,
