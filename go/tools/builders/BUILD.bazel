@@ -32,6 +32,21 @@ go_test(
 )
 
 go_test(
+    name = "nogo_change_test",
+    size = "small",
+    srcs = [
+        "difflib.go",
+        "nogo_change.go",
+        "nogo_change_serialization.go",
+        "nogo_change_serialization_test.go",
+        "nogo_change_test.go",
+    ],
+    deps = [
+        "@org_golang_x_tools//go/analysis",
+    ],
+)
+
+go_test(
     name = "stdliblist_test",
     size = "small",
     srcs = [
@@ -105,11 +120,11 @@ go_source(
     name = "nogo_srcs",
     srcs = [
         "constants.go",
+        "difflib.go",
         "env.go",
         "flags.go",
         "nogo_change.go",
         "nogo_change_serialization.go",
-        "nogo_edit.go",
         "nogo_main.go",
         "nogo_typeparams_go117.go",
         "nogo_typeparams_go118.go",

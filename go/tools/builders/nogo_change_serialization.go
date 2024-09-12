@@ -3,20 +3,35 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	// "log"
+	"os"
 )
 
-// SaveToFile saves the Change struct to a JSON file.
-func SaveToFile(filename string, change Change) error {
-	// Serialize Change to JSON
-	jsonData, err := json.MarshalIndent(change, "", "  ")
-	if err != nil {
-		return fmt.Errorf("error serializing to JSON: %v", err)
+// SavePatchesToFile saves the map[string]string (file paths to patch content) to a JSON file.
+func SavePatchesToFile(filename string, patches map[string]string) error {
+	if len(patches) == 0 {
+		// Special case optimization for the empty patches, where we dump an empty string, rather than an empty json like {}.
+		// This helps skip the json serialization below.
+		err := os.WriteFile(filename, []byte(""), 0644)
+		if err != nil {
+			return fmt.Errorf("error writing empty string to file: %v", err)
+		}
+		return nil
 	}
-	// log.Fatalf("!!!!: %v", change)
+
+	// Serialize patches (map[string]string) to JSON
+	jsonData, err := json.MarshalIndent(patches, "", "  ")
+	if err != nil {
+		// If serialization fails, create the output file anyway as per your requirements
+		errWrite := os.WriteFile(filename, []byte(""), 0644)
+		if errWrite != nil {
+			return fmt.Errorf("error serializing to JSON: %v and error writing to the file: %v", err, errWrite)
+		} else {
+			return fmt.Errorf("error serializing to JSON: %v", err)
+		}
+	}
+
 	// Write the JSON data to the file
-	err = ioutil.WriteFile(filename, jsonData, 0644)
+	err = os.WriteFile(filename, jsonData, 0644)
 	if err != nil {
 		return fmt.Errorf("error writing to file: %v", err)
 	}
@@ -24,21 +39,27 @@ func SaveToFile(filename string, change Change) error {
 	return nil
 }
 
-// LoadFromFile loads the Change struct from a JSON file.
-func LoadFromFile(filename string) (Change, error) {
-	var change Change
+// LoadPatchesFromFile loads the map[string]string (file paths to patch content) from a JSON file.
+// Note LoadPatchesFromFile is used for testing only.
+func LoadPatchesFromFile(filename string) (map[string]string, error) {
+	var patches map[string]string
 
 	// Read the JSON file
-	jsonData, err := ioutil.ReadFile(filename)
+	jsonData, err := os.ReadFile(filename)
 	if err != nil {
-		return change, fmt.Errorf("error reading file: %v", err)
+		return nil, fmt.Errorf("error reading file: %v", err)
 	}
 
-	// Deserialize JSON data into the Change struct
-	err = json.Unmarshal(jsonData, &change)
-	if err != nil {
-		return change, fmt.Errorf("error deserializing JSON: %v", err)
+	if len(jsonData) == 0 {
+		// this corresponds to the special case optimization in SavePatchesToFile
+		return make(map[string]string), nil
 	}
 
-	return change, nil
+	// Deserialize JSON data into the patches map (map[string]string)
+	err = json.Unmarshal(jsonData, &patches)
+	if err != nil {
+		return nil, fmt.Errorf("error deserializing JSON: %v", err)
+	}
+
+	return patches, nil
 }
