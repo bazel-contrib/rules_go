@@ -73,6 +73,6 @@ func main() {
 	log.SetPrefix(verb + ": ")
 
 	if err := action(rest); err != nil {
-		log.Fatal(err)
+		log.Fatalf("\n$$$$$$$$$$$$$$$$$$$$$$$$ fatal: %+v", err)
 	}
 }
