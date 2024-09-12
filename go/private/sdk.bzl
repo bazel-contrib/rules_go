@@ -91,6 +91,7 @@ def _go_download_sdk_impl(ctx):
         )
 
         data = ctx.read("versions.json")
+        ctx.delete("versions.json")
         sdks_by_version = _parse_versions_json(data)
 
         if not version:

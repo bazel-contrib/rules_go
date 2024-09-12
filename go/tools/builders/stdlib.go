@@ -131,7 +131,7 @@ You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 		installArgs = append(installArgs, "-race")
 	}
 	if *pgoprofile != "" {
-		installArgs = append(installArgs, "-pgo", abs(*pgoprofile))
+		gcflags = append(gcflags, "-pgoprofile=" + abs(*pgoprofile))
 	}
 	if *shared {
 		gcflags = append(gcflags, "-shared")

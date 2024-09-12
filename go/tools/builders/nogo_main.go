@@ -77,7 +77,7 @@ func run(args []string) (error, int) {
 	importcfg := flags.String("importcfg", "", "The import configuration file")
 	packagePath := flags.String("p", "", "The package path (importmap) of the package being compiled")
 	xPath := flags.String("x", "", "The archive file where serialized facts should be written")
-	nogoFixPath := flags.String("fixpath", "", "The fix path for nogo")
+	nogoFixPath := flags.String("fixpath", "", "The path of the file that stores the nogo fixes")
 	var ignores multiFlag
 	flags.Var(&ignores, "ignore", "Names of files to ignore")
 	flags.Parse(args)
@@ -99,7 +99,6 @@ func run(args []string) (error, int) {
 		}
 	}
 	if diagnostics != "" {
-
 		// debugMode is defined by the template in generate_nogo_main.go.
 		exitCode := nogoViolation
 		if debugMode {
@@ -461,12 +460,8 @@ func (g *goPackage) String() string {
 // and returns a string containing all the diagnostics that should be printed
 // to the build log.
 func checkAnalysisResults(actions []*action, pkg *goPackage, nogoFixPath string) string {
-	type entry struct {
-		analysis.Diagnostic
-		*analysis.Analyzer
-	}
-	var diagnostics []entry
-	var diagnosticsCore []analysis.Diagnostic
+	var diagnostics []DiagnosticEntry
+
 	var errs []error
 	cwd, err := os.Getwd()
 	if cwd == "" || err != nil {
@@ -508,7 +503,7 @@ func checkAnalysisResults(actions []*action, pkg *goPackage, nogoFixPath string)
 
 		if currentConfig.onlyFiles == nil && currentConfig.excludeFiles == nil {
 			for _, diag := range act.diagnostics {
-				diagnostics = append(diagnostics, entry{Diagnostic: diag, Analyzer: act.a})
+				diagnostics = append(diagnostics, DiagnosticEntry{Diagnostic: diag, Analyzer: act.a})
 			}
 			continue
 		}
@@ -546,13 +541,31 @@ func checkAnalysisResults(actions []*action, pkg *goPackage, nogoFixPath string)
 				}
 			}
 			if include {
-				diagnostics = append(diagnostics, entry{Diagnostic: d, Analyzer: act.a})
+				diagnostics = append(diagnostics, DiagnosticEntry{Diagnostic: d, Analyzer: act.a})
 			}
 		}
 	}
 	if numSkipped > 0 {
 		errs = append(errs, fmt.Errorf("%d analyzers skipped due to type-checking error: %v", numSkipped, pkg.typeCheckError))
 	}
+
+	if nogoFixPath != "" {
+		// If the nogo fixes are requested, we need to save the fixes to the file even if they are empty.
+		// Otherwise, bazel will complain "not all outputs were created or valid"
+		change, err := NewChangeFromDiagnostics(diagnostics, pkg.fset)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("errors in dumping nogo fix, specifically in converting diagnostics to change %v", err))
+		}
+		fileToPatch, err := ToPatches(Flatten(*change))
+		if err != nil {
+			errs = append(errs, fmt.Errorf("errors in dumping nogo fix, specifically in generating the patches %v", err))
+		}
+		err = SavePatchesToFile(nogoFixPath, fileToPatch)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("errors in dumping nogo fix, specifically in file saving %v", err))
+		}
+	}
+
 	if len(diagnostics) == 0 && len(errs) == 0 {
 		return ""
 	}
@@ -560,6 +573,7 @@ func checkAnalysisResults(actions []*action, pkg *goPackage, nogoFixPath string)
 	sort.Slice(diagnostics, func(i, j int) bool {
 		return diagnostics[i].Pos < diagnostics[j].Pos
 	})
+
 	errMsg := &bytes.Buffer{}
 	sep := ""
 	for _, err := range errs {
@@ -568,17 +582,10 @@ func checkAnalysisResults(actions []*action, pkg *goPackage, nogoFixPath string)
 		errMsg.WriteString(err.Error())
 	}
 	for _, d := range diagnostics {
-		diagnosticsCore = append(diagnosticsCore, d.Diagnostic)
-		// log.Fatalf("!!!!!: %+v", d.SuggestedFixes)
 		errMsg.WriteString(sep)
 		sep = "\n"
 		fmt.Fprintf(errMsg, "%s: %s (%s)", pkg.fset.Position(d.Pos), d.Message, d.Name)
 	}
-
-	change := NewChange()
-	change.BuildFromDiagnostics(diagnosticsCore, pkg.fset)
-
-	SaveToFile(nogoFixPath, *change)
 	return errMsg.String()
 }
 
