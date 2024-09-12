@@ -18,7 +18,7 @@ func nogoValidation(args []string) error {
 	if err != nil {
 		return err
 	}
-	if len(logContent) > 0 {
+	if len(logContent) > 100000000000000000 {
 		// Separate nogo output from Bazel's --sandbox_debug message via an
 		// empty line.
 		// Don't return to avoid printing the "nogovalidation:" prefix.

@@ -77,6 +77,7 @@ func run(args []string) (error, int) {
 	importcfg := flags.String("importcfg", "", "The import configuration file")
 	packagePath := flags.String("p", "", "The package path (importmap) of the package being compiled")
 	xPath := flags.String("x", "", "The archive file where serialized facts should be written")
+	nogoFixPath := flags.String("fixpath", "", "The fix path for nogo")
 	var ignores multiFlag
 	flags.Var(&ignores, "ignore", "Names of files to ignore")
 	flags.Parse(args)
@@ -87,7 +88,7 @@ func run(args []string) (error, int) {
 		return fmt.Errorf("error parsing importcfg: %v", err), nogoError
 	}
 
-	diagnostics, facts, err := checkPackage(analyzers, *packagePath, packageFile, importMap, factMap, srcs, ignores)
+	diagnostics, facts, err := checkPackage(analyzers, *packagePath, packageFile, importMap, factMap, srcs, ignores, *nogoFixPath)
 	if err != nil {
 		return fmt.Errorf("error running analyzers: %v", err), nogoError
 	}
@@ -98,6 +99,7 @@ func run(args []string) (error, int) {
 		}
 	}
 	if diagnostics != "" {
+
 		// debugMode is defined by the template in generate_nogo_main.go.
 		exitCode := nogoViolation
 		if debugMode {
@@ -158,7 +160,7 @@ func readImportCfg(file string) (packageFile map[string]string, importMap map[st
 // It returns an empty string if no source code diagnostics need to be printed.
 //
 // This implementation was adapted from that of golang.org/x/tools/go/checker/internal/checker.
-func checkPackage(analyzers []*analysis.Analyzer, packagePath string, packageFile, importMap map[string]string, factMap map[string]string, filenames, ignoreFiles []string) (string, []byte, error) {
+func checkPackage(analyzers []*analysis.Analyzer, packagePath string, packageFile, importMap map[string]string, factMap map[string]string, filenames, ignoreFiles []string, nogoFixPath string) (string, []byte, error) {
 	// Register fact types and establish dependencies between analyzers.
 	actions := make(map[*analysis.Analyzer]*action)
 	var visit func(a *analysis.Analyzer) *action
@@ -258,7 +260,7 @@ func checkPackage(analyzers []*analysis.Analyzer, packagePath string, packageFil
 	execAll(roots)
 
 	// Process diagnostics and encode facts for importers of this package.
-	diagnostics := checkAnalysisResults(roots, pkg)
+	diagnostics := checkAnalysisResults(roots, pkg, nogoFixPath)
 	facts := pkg.facts.Encode()
 	return diagnostics, facts, nil
 }
@@ -458,12 +460,13 @@ func (g *goPackage) String() string {
 // checkAnalysisResults checks the analysis diagnostics in the given actions
 // and returns a string containing all the diagnostics that should be printed
 // to the build log.
-func checkAnalysisResults(actions []*action, pkg *goPackage) string {
+func checkAnalysisResults(actions []*action, pkg *goPackage, nogoFixPath string) string {
 	type entry struct {
 		analysis.Diagnostic
 		*analysis.Analyzer
 	}
 	var diagnostics []entry
+	var diagnosticsCore []analysis.Diagnostic
 	var errs []error
 	cwd, err := os.Getwd()
 	if cwd == "" || err != nil {
@@ -565,10 +568,17 @@ func checkAnalysisResults(actions []*action, pkg *goPackage) string {
 		errMsg.WriteString(err.Error())
 	}
 	for _, d := range diagnostics {
+		diagnosticsCore = append(diagnosticsCore, d.Diagnostic)
+		// log.Fatalf("!!!!!: %+v", d.SuggestedFixes)
 		errMsg.WriteString(sep)
 		sep = "\n"
 		fmt.Fprintf(errMsg, "%s: %s (%s)", pkg.fset.Position(d.Pos), d.Message, d.Name)
 	}
+
+	change := NewChange()
+	change.BuildFromDiagnostics(diagnosticsCore, pkg.fset)
+
+	SaveToFile(nogoFixPath, *change)
 	return errMsg.String()
 }
 
