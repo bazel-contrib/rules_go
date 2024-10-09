@@ -67,14 +67,25 @@ protoc_toolchains(
     version = "v25.3",
 )
 
+# An up-to-date version is required by com_google_protobuf 27.0 below.
+http_archive(
+    name = "rules_python",
+    sha256 = "ca77768989a7f311186a29747e3e95c936a41dffac779aff6b443db22290d913",
+    strip_prefix = "rules_python-0.36.0",
+    url = "https://github.com/bazelbuild/rules_python/releases/download/0.36.0/rules_python-0.36.0.tar.gz",
+)
+
+load("@rules_python//python:repositories.bzl", "py_repositories")
+
+py_repositories()
+
 http_archive(
     name = "com_google_protobuf",
-    sha256 = "75be42bd736f4df6d702a0e4e4d30de9ee40eac024c4b845d17ae4cc831fe4ae",
-    strip_prefix = "protobuf-21.7",
-    # latest available in BCR, as of 2022-09-30
+    integrity = "sha256-2iiL8dqmwE0DqQUXgcqlKs65FjWGv/mqbPsS9puTlao=",
+    strip_prefix = "protobuf-27.0",
     urls = [
-        "https://github.com/protocolbuffers/protobuf/archive/v21.7.tar.gz",
-        "https://mirror.bazel.build/github.com/protocolbuffers/protobuf/archive/v21.7.tar.gz",
+        "https://github.com/protocolbuffers/protobuf/archive/v27.0.tar.gz",
+        "https://mirror.bazel.build/github.com/protocolbuffers/protobuf/archive/v27.0.tar.gz",
     ],
 )
 
