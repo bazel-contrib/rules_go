@@ -400,6 +400,11 @@ go_test(
     cgo = True,
 )
 
+go_bazel_test(
+    name = "cgo_abs_paths_test",
+    srcs = ["cgo_abs_paths_test.go"],
+)
+
 cc_library(
     name = "cgo_link_dep",
     srcs = ["cgo_link_dep.c"],

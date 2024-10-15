@@ -57,6 +57,16 @@ go_test(
     ],
 )
 
+go_test(
+    name = "env_test",
+    size = "small",
+    srcs = [
+        "env.go",
+        "env_test.go",
+        "flags.go",
+    ],
+)
+
 filegroup(
     name = "builder_srcs",
     srcs = [
