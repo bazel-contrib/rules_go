@@ -53,8 +53,8 @@ func TestUpdate(t *testing.T) {
 	}
 	got := strings.TrimSpace(string(data))
 	want := strings.TrimSpace(`
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
 load("@bazel_gazelle//:def.bzl", "gazelle")
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 # gazelle:prefix example.com/hello
 gazelle(

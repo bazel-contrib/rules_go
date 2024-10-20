@@ -122,10 +122,10 @@ bazel_skylib_workspace()
 
 http_archive(
     name = "bazel_gazelle",
-    sha256 = "b7387f72efb59f876e4daae42f1d3912d0d45563eac7cb23d1de0b094ab588cf",
+    sha256 = "b760f7fe75173886007f7c2e616a21241208f3d90e8657dc65d36a771e916b6a",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/bazel-gazelle/releases/download/v0.34.0/bazel-gazelle-v0.34.0.tar.gz",
-        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.34.0/bazel-gazelle-v0.34.0.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-gazelle/releases/download/v0.39.1/bazel-gazelle-v0.39.1.tar.gz",
+        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.39.1/bazel-gazelle-v0.39.1.tar.gz",
     ],
 )
 
@@ -192,18 +192,6 @@ go_repository(
     sum = "h1:S9GbmC1iCgvbLyAokVCwiO6tVIrU9Y7c5oMx1V/ki/Y=",
     version = "v0.0.0-20221024183307-1bc688fe9f3e",
 )
-
-# TODO(sluongng): Gazelle v0.25.0 switched to static dependency resolution which cause
-# build files generation in external dependencies to wrongly resolve these repositories.
-# We should investigate in Gazelle why this happen and fix it.
-# For now, use manual mapping as a workaround.
-#
-# gazelle:repository go_repository name=org_golang_x_tools   importpath=golang.org/x/tools
-# gazelle:repository go_repository name=org_golang_x_text    importpath=golang.org/x/text
-# gazelle:repository go_repository name=org_golang_x_xerrors importpath=golang.org/x/xerrors
-# gazelle:repository go_repository name=org_golang_x_net     importpath=golang.org/x/net
-# gazelle:repository go_repository name=org_golang_x_sys     importpath=golang.org/x/sys
-# gazelle:repository go_repository name=org_golang_x_crypto  importpath=golang.org/x/crypto
 
 load("@io_bazel_rules_go//tests/legacy/test_chdir:remote.bzl", "test_chdir_remote")
 
