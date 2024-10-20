@@ -33,8 +33,6 @@ tasks:
       - "-//tests/runfiles:runfiles_test"
   ubuntu2004:
     # enable some unflipped incompatible flags on this platform to ensure we don't regress.
-    shell_commands:
-      - tests/core/cgo/generate_imported_dylib.sh
     build_flags:
       - "--config=incompatible"
     test_flags:
@@ -49,8 +47,6 @@ tasks:
       - "//..."
   debian11_zig_cc:
     platform: debian11
-    shell_commands:
-      - tests/core/cgo/generate_imported_dylib.sh
     build_flags:
       - "--config=incompatible"
       - "--extra_toolchains=@zig_sdk//toolchain:linux_amd64_gnu.2.31"
@@ -92,8 +88,6 @@ tasks:
     test_targets:
       - "//..."
   macos_arm64:
-    shell_commands:
-      - tests/core/cgo/generate_imported_dylib.sh
     build_flags:
       - "--apple_crosstool_top=@local_config_apple_cc//:toolchain"
       - "--crosstool_top=@local_config_apple_cc//:toolchain"
@@ -111,8 +105,6 @@ tasks:
     test_targets:
       - "//..."
   rbe_ubuntu1604:
-    shell_commands:
-      - tests/core/cgo/generate_imported_dylib.sh
     build_targets:
       - "//..."
       - "--"

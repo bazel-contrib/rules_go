@@ -99,16 +99,45 @@ go_library(
     tags = ["manual"],
 )
 
+
+genrule(
+    name = "generate_imported_dylib_linux",
+    srcs = ["imported.c"],
+    tools = ["generate_imported_dylib.sh"],
+    outs = [
+        "libimported.so",
+        "libversioned.so.2",
+    ],
+    cmd = "$(location generate_imported_dylib.sh) $(location imported.c) $(@D)",
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+genrule(
+    name = "generate_imported_dylib_darwin",
+    srcs = ["imported.c"],
+    tools = ["generate_imported_dylib.sh"],
+    outs = [
+        "libimported.dylib",
+        "libversioned.2.dylib",
+        "libversioned.dylib.2",
+        "libversioned.dylib",
+    ],
+    cmd = "$(location generate_imported_dylib.sh) $(location imported.c) $(@D)",
+    target_compatible_with = ["@platforms//os:macos"],
+)
+
 cc_import(
     name = "darwin_imported_dylib",
     shared_library = "libimported.dylib",
     tags = ["manual"],
+    target_compatible_with = ["@platforms//os:macos"],
 )
 
 cc_import(
     name = "linux_imported_dylib",
-    shared_library = ":libimported.so",
+    shared_library = "libimported.so",
     tags = ["manual"],
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 go_test(
@@ -187,12 +216,14 @@ cc_import(
     name = "linux_imported_versioned_dylib",
     shared_library = "libversioned.so.2",
     tags = ["manual"],
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 cc_import(
     name = "darwin_imported_versioned_dylib",
     shared_library = "libversioned.2.dylib",
     tags = ["manual"],
+    target_compatible_with = ["@platforms//os:macos"],
 )
 
 go_test(
@@ -212,7 +243,6 @@ go_library(
     target_compatible_with = ["@platforms//os:macos"],
 )
 
-# //tests/core/cgo:generate_imported_dylib.sh must be run first
 cc_library(
     name = "oracle_convention_darwin_dylib",
     srcs = [
