@@ -150,7 +150,8 @@ def _go_test_impl(ctx):
     # before user code. See comment above the init function
     # in bzltestutil/init.go.
     test_gc_linkopts.extend(["-X", "+initfirst/github.com/bazelbuild/rules_go/go/tools/bzltestutil/chdir.RunDir=" + run_dir])
-
+    #post golang 1.23 testing.Testing is expected to be set for go tests
+    test_gc_linkopts.extend(["-X", "testing.Testing=1"])
     # Now compile the test binary itself
     test_library = GoLibrary(
         name = go.label.name + "~testmain",
