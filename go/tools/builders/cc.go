@@ -1,7 +1,7 @@
 package main
 
 import (
-	"errors"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,12 +13,13 @@ import (
 func cc(args []string) error {
 	cc := os.Getenv("GO_CC")
 	if cc == "" {
-		errors.New("GO_CC environment variable not set")
+		log.Fatal("GO_CC environment variable not set")
 	}
 	ccroot := os.Getenv("GO_CC_ROOT")
 	if ccroot == "" {
-		errors.New("GO_CC_ROOT environment variable not set")
+		log.Fatal("GO_CC_ROOT environment variable not set")
 	}
+
 	normalized := []string{cc}
 	normalized = append(normalized, args...)
 	transformArgs(normalized, cgoAbsEnvFlags, func(s string) string {
@@ -26,10 +27,10 @@ func cc(args []string) error {
 			trimmed := strings.TrimPrefix(s, cgoAbsPlaceholder)
 			abspath := filepath.Join(ccroot, trimmed)
 			if _, err := os.Stat(abspath); err == nil {
-                                // Only return the abspath if it exists, otherwise it
-                                // means that either it won't have any effect or the original
-                                // value was not a relpath (e.g. a path with a XCODE placehold from
-                                // macos cc_wrapper)
+				// Only return the abspath if it exists, otherwise it
+				// means that either it won't have any effect or the original
+				// value was not a relpath (e.g. a path with a XCODE placehold from
+				// macos cc_wrapper)
 				return abspath
 			}
 			return trimmed

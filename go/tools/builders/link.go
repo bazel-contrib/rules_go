@@ -141,6 +141,16 @@ func link(args []string) error {
 	}
 	goargs = append(goargs, "-o", *outFile)
 
+	// substitute `builder cc` for the linker with a script. unfortunately
+	// we can't just set an environment variable to `builder cc` because
+	// in `go tool link` the `linkerFlagSupported` call sites used to determine
+	// if a linker supports various flags all appear to use the first arg
+	// after splitting so the `cc` would be left off of `builder cc`
+	linkerCleanup, err := absCCLinker(toolArgs)
+	if err != nil {
+		return err
+	}
+	defer linkerCleanup()
 	// add in the unprocess pass through options
 	goargs = append(goargs, toolArgs...)
 	goargs = append(goargs, *main)

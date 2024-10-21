@@ -25,6 +25,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -160,6 +161,86 @@ func (e *env) runCommandToFile(out, err io.Writer, args []string) error {
 	cmd.Stdout = out
 	cmd.Stderr = err
 	return runAndLogCommand(cmd, e.verbose)
+}
+
+func symlinkBuilderCC() (func(), string, error) {
+	absPath, err := filepath.Abs(os.Args[0])
+	if err != nil {
+		return nil, "", err
+	}
+
+	dirname, err := os.MkdirTemp("", "")
+	if err != nil {
+		return func() {}, "", err
+	}
+
+	// re-use the file extension if there is one (mostly for .exe)
+	builderPath := filepath.Join(dirname, "builder-cc"+filepath.Ext(os.Args[0]))
+
+	if err := os.Symlink(absPath, builderPath); err != nil {
+		_ = os.RemoveAll(dirname)
+		return func() {}, "", err
+	}
+
+	return func() { _ = os.RemoveAll(dirname) }, builderPath, nil
+}
+
+var symlinkBuilderName = regexp.MustCompile(`.*builder-(\w+)(\.exe)?$`)
+
+// verbFromName parses the builder verb from the builder name so
+// that the builder+verb can be invoked in a way that allows the verb
+// to be part of the program name, rather than requring it to be in the
+// arg list. this makes it easier to set a program like `builder cc` as
+// an environment variable in a way that is more compatible
+func verbFromName(arg0 string) string {
+	matches := symlinkBuilderName.FindAllStringSubmatch(arg0, 1)
+	if len(matches) != 1 {
+		return ""
+	}
+
+	if len(matches[0]) < 2 {
+		return ""
+	}
+
+	return matches[0][1]
+}
+
+// absCCLinker sets the target of the `-extld` to a name which `verbFromName`
+// can extract correctly, allowing go tool link to be able to use the `builder cc` wrapper
+func absCCLinker(argList []string) (func(), error) {
+	extldIndex := -1
+	for i, arg := range argList {
+		if arg == "-extld" && i+1 < len(argList) {
+			extldIndex = i + 1
+			break
+		}
+	}
+	if extldIndex < 0 {
+		// if we don't find extld just return
+		// a noop cleanup function
+		return func() {}, nil
+	}
+
+	cleanup, buildercc, err := symlinkBuilderCC()
+	if err != nil {
+		return nil, err
+	}
+
+	err = os.Setenv("GO_CC", argList[extldIndex])
+	if err != nil {
+		cleanup()
+		return nil, err
+	}
+
+	err = os.Setenv("GO_CC_ROOT", abs("."))
+	if err != nil {
+		cleanup()
+		return nil, err
+	}
+
+	argList[extldIndex] = buildercc
+
+	return cleanup, nil
 }
 
 // absCCCompiler modifies CGO flags to workaround relative paths.
