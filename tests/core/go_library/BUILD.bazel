@@ -1,4 +1,4 @@
-load("//go:def.bzl", "go_binary", "go_library", "go_test")
+load("//go:def.bzl", "go_binary", "go_library", "go_source", "go_test")
 load("//go/tools/bazel_testing:def.bzl", "go_bazel_test")
 load(":def.bzl", "embedsrcs_files")
 
@@ -165,4 +165,46 @@ go_bazel_test(
 go_library(
     name = "no_srcs_lib",
     importpath = "github.com/bazelbuild/rules_go/tests/core/no_srcs_lib",
+)
+
+# Tests for go_library and go_source support for .syso srcs
+cc_library(
+    name = "imported",
+    srcs = ["imported.c"],
+    linkstatic = True,
+)
+
+# TODO(eljobe): This feels like a little bit of a hack.
+#               Maybe it would be better to have a go_syso rule?
+genrule(
+    name = "sysolib",
+    srcs = [":imported"],
+    outs = ["imported.syso"],
+    cmd = "cp $< $@",
+)
+
+go_source(
+    name = "use_syso_srcs",
+    srcs = [
+        ":sysolib",
+        "wrap_imported_amd64.s",
+        "wrap_imported_arm64.s",
+    ],
+    visibility = [
+        "//tests/core/go_binary:__pkg__",
+        "//tests/core/go_test:__pkg__",
+    ],
+)
+
+go_library(
+    name = "use_syso_lib",
+    srcs = [
+        "use_syso.go",
+        ":use_syso_srcs",
+    ],
+    importpath = "github.com/bazelbuild/rules_go/tests/core/usesyso",
+    visibility = [
+        "//tests/core/go_binary:__pkg__",
+        "//tests/core/go_test:__pkg__",
+    ],
 )
