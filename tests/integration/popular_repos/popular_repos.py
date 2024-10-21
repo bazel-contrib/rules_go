@@ -182,10 +182,12 @@ POPULAR_REPOS = [
             "godoc:godoc_test", # requires GOROOT and GOPATH
             "internal/apidiff:apidiff_test", # Needs testdata directory
             "internal/diff/difftest:difftest_test", # Needs diff tool
+            "internal/diffp:diffp_test", # Needs testdata directory
             "internal/facts:facts_test", # loads test package with go/packages, which probably needs go list
             "internal/gcimporter:gcimporter_test", # Needs testdata directory
             "internal/gocommand:gocommand_test", # Needs go tool
             "internal/imports:imports_test", # Needs testdata directory
+            "internal/pprof:pprof_test", # Needs testdata directory
             "internal/refactor/inline:inline_test", # Needs GOROOT
             "internal/refactor/inline/analyzer:analyzer_test", # Needs GOROOT
             "internal/typeparams:typeparams_test", # Needs go tool
