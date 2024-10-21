@@ -21,6 +21,7 @@ load(
 )
 load(
     "//go/private:context.bzl",
+    "MAYBE_OPTIONAL_CPP_TOOLCHAIN",
     "go_context",
 )
 load(
@@ -236,7 +237,7 @@ go_tool_library = rule(
         "_cgo_context_data": attr.label(default = "//:cgo_context_data_proxy"),
         "_stdlib": attr.label(default = "//:stdlib"),
     },
-    toolchains = [GO_TOOLCHAIN],
+    toolchains = [GO_TOOLCHAIN] + MAYBE_OPTIONAL_CPP_TOOLCHAIN,
 )
 # This is used instead of `go_library` for dependencies of the `nogo` rule and
 # packages that are depended on implicitly by code generated within the Go rules.
