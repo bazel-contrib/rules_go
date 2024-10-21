@@ -278,3 +278,18 @@ go_bazel_test(
     name = "timeout_test",
     srcs = ["timeout_test.go"],
 )
+
+# Tests using .syso files in go_binary both transitively and directly.
+go_test(
+    name = "syso_transitive_test",
+    srcs = ["syso_transitive_test.go"],
+    deps = ["//tests/core/go_library:use_syso_lib"],
+)
+
+go_test(
+    name = "syso_direct_test",
+    srcs = [
+        "//tests/core/go_library:use_syso_srcs",
+        "syso_direct_test.go",
+    ],
+)

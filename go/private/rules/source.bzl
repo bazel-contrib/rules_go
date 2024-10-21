@@ -53,7 +53,7 @@ go_source = rule(
         "srcs": attr.label_list(
             allow_files = True,
             doc = """The list of Go source files that are compiled to create the package.
-            The following file types are permitted: `.go, .c, .s, .S .h`.
+            The following file types are permitted: `.go, .c, .s, .syso, .S, .h`.
             The files may contain Go-style [build constraints].
             """,
         ),

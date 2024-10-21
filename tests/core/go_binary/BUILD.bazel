@@ -230,3 +230,18 @@ go_bazel_test(
     srcs = ["pgo_test.go"],
     embedsrcs = ["pgo.pprof"],
 )
+
+# Tests using .syso files in go_binary both transitively and directly.
+go_binary(
+    name = "meaning",
+    srcs = ["meaning.go"],
+    deps = ["//tests/core/go_library:use_syso_lib"],
+)
+
+go_binary(
+    name = "meaning2",
+    srcs = [
+        "//tests/core/go_library:use_syso_srcs",
+        "meaning2.go",
+    ],
+)
