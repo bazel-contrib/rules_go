@@ -4,7 +4,6 @@ import(
 	"fmt"
 )
 
-//go:noescape
 func foo() int
 
 func main() {

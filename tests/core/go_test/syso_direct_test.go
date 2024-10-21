@@ -4,7 +4,6 @@ import(
 	"testing"
 )
 
-//go:noescape
 func foo() int32
 
 func TestSysoDirect(t *testing.T) {
