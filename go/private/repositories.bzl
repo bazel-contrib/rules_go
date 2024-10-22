@@ -174,6 +174,17 @@ def go_rules_dependencies(force = False):
         patch_args = ["-p1"],
     )
 
+    # releaser:upgrade-dep bazelbuild rules_proto
+    wrapper(
+        http_archive,
+        name = "rules_proto",
+        sha256 = "303e86e722a520f6f326a50b41cfc16b98fe6d1955ce46642a5b7a67c11c0f5d",
+        strip_prefix = "rules_proto-6.0.0",
+        urls = [
+            "https://github.com/bazelbuild/rules_proto/releases/download/6.0.0/rules_proto-6.0.0.tar.gz",
+        ],
+    )
+
     # gRPC protoc plugin
     # releaser:upgrade-dep grpc grpc-go cmd/protoc-gen-go-grpc
     wrapper(
