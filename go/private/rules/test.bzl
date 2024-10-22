@@ -76,6 +76,11 @@ def _go_test_impl(ctx):
     internal_archive = go.archive(go, internal_source)
     if internal_archive.data._validation_output:
         validation_outputs.append(internal_archive.data._validation_output)
+    if internal_archive.data._nogo_fix_output:
+        # We do not include those from external_archive that corresponds to a separate package
+        # since that package would be built separately, during which the nogo fixes are produced already.
+        validation_outputs.append(internal_archive.data._nogo_fix_output)
+
     go_srcs = [src for src in internal_source.srcs if src.extension == "go"]
 
     # Compile the library with the external black box tests
