@@ -132,6 +132,15 @@ _UNSUPPORTED_FEATURES = [
     "rules_go_unsupported_feature",
 ]
 
+# In pure mode, a C++ toolchain isn't needed when transitioning.
+# But if we declare a mandatory toolchain dependency here, a cross-compiling C++ toolchain is required at toolchain resolution time.
+# So we make this toolchain dependency optional, so that it's only attempted to be looked up if it's actually needed.
+# Optional toolchain support was added in bazel 6.0.0.
+OPTIONAL_CPP_TOOLCHAIN = config_common.toolchain_type("@bazel_tools//tools/cpp:toolchain_type", mandatory = False) if hasattr(config_common, "toolchain_type") else "@bazel_tools//tools/cpp:toolchain_type"
+
+# Toolchain that is *always* optional, empty if Bazel doesn't support optional toolchains
+MAYBE_OPTIONAL_CPP_TOOLCHAIN = [OPTIONAL_CPP_TOOLCHAIN] if hasattr(config_common, "toolchain_type") else []
+
 def _match_option(option, pattern):
     if pattern.endswith("="):
         return option.startswith(pattern)
@@ -654,7 +663,7 @@ go_context_data = rule(
     },
     doc = """go_context_data gathers information about the build configuration.
     It is a common dependency of all Go targets.""",
-    toolchains = [GO_TOOLCHAIN],
+    toolchains = [GO_TOOLCHAIN] + MAYBE_OPTIONAL_CPP_TOOLCHAIN,
     cfg = request_nogo_transition,
 )
 
@@ -886,11 +895,7 @@ cgo_context_data = rule(
         ),
     },
     toolchains = [
-        # In pure mode, a C++ toolchain isn't needed when transitioning.
-        # But if we declare a mandatory toolchain dependency here, a cross-compiling C++ toolchain is required at toolchain resolution time.
-        # So we make this toolchain dependency optional, so that it's only attempted to be looked up if it's actually needed.
-        # Optional toolchain support was added in bazel 6.0.0.
-        config_common.toolchain_type("@bazel_tools//tools/cpp:toolchain_type", mandatory = False) if hasattr(config_common, "toolchain_type") else "@bazel_tools//tools/cpp:toolchain_type",
+        OPTIONAL_CPP_TOOLCHAIN,
     ],
     fragments = ["apple", "cpp"],
     doc = """Collects information about the C/C++ toolchain. The C/C++ toolchain
