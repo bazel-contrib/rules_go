@@ -141,6 +141,19 @@ func link(args []string) error {
 	}
 	goargs = append(goargs, "-o", *outFile)
 
+	// substitute `builder cc` for the linker with a symlink to builder called `builder-cc`.
+	// unfortunately we can't just set an environment variable to `builder cc` because
+	// in `go tool link` the `linkerFlagSupported` [1][2] call sites used to determine
+	// if a linker supports various flags all appear to use the first arg after splitting
+	// so the `cc` would be left off of `builder cc`
+	//
+	//    [1]: https://cs.opensource.google/go/go/+/ad7f736d8f51ea03166b698256385c869968ae3e:src/cmd/link/internal/ld/lib.go;l=1739
+	//    [2]: https://cs.opensource.google/go/go/+/master:src/cmd/link/internal/ld/lib.go;drc=c6531fae589cf3f9475f3567a5beffb4336fe1d6;l=1429?q=linkerFlagSupported&ss=go%2Fgo
+	linkerCleanup, err := absCCLinker(toolArgs)
+	if err != nil {
+		return err
+	}
+	defer linkerCleanup()
 	// add in the unprocess pass through options
 	goargs = append(goargs, toolArgs...)
 	goargs = append(goargs, *main)
