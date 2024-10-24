@@ -3,9 +3,8 @@
   [Bourne shell tokenization]: https://docs.bazel.build/versions/master/be/common-definitions.html#sh-tokenization
   [Gazelle]: https://github.com/bazelbuild/bazel-gazelle
   [GoArchive]: /go/providers.rst#GoArchive
-  [GoLibrary]: /go/providers.rst#GoLibrary
   [GoPath]: /go/providers.rst#GoPath
-  [GoSource]: /go/providers.rst#GoSource
+  [GoInfo]: /go/providers.rst#GoInfo
   [build constraints]: https://golang.org/pkg/go/build/#hdr-Build_Constraints
   [cc_library deps]: https://docs.bazel.build/versions/master/be/c-cpp.html#cc_library.deps
   [cgo]: http://golang.org/cmd/cgo/
@@ -51,9 +50,8 @@ sufficient to match the capabilities of the normal go tools.
 - [Bourne shell tokenization]
 - [Gazelle]
 - [GoArchive]
-- [GoLibrary]
 - [GoPath]
-- [GoSource]
+- [GoInfo]
 - [build constraints]:
 - [cc_library deps]
 - [cgo]

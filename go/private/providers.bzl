@@ -12,24 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# A representation of the inputs to a go package.
-# This is a configuration independent provider.
-# You must call resolve with a mode to produce a GoSource.
-# See go/providers.rst#GoLibrary for full documentation.
-GoLibrary = provider()
-
 # The filtered inputs and dependencies needed to build a GoArchive
 # This is a configuration specific provider.
 # It has no transitive information.
-# See go/providers.rst#GoSource for full documentation.
-GoSource = provider()
+# See go/providers.rst#GoInfo for full documentation.
+GoInfo = provider()
 
 # This compiled form of a package used in transitive dependencies.
 # This is a configuration specific provider.
 # See go/providers.rst#GoArchiveData for full documentation.
 GoArchiveData = provider()
 
-# The compiled form of a GoLibrary, with everything needed to link it into a binary.
+# The compiled form of GoInfo, with everything needed to link it into a binary.
 # This is a configuration specific provider.
 # See go/providers.rst#GoArchive for full documentation.
 GoArchive = provider()
@@ -76,7 +70,7 @@ EXPORT_PATH = "export"
 def get_source(dep):
     if type(dep) == "struct":
         return dep
-    return dep[GoSource]
+    return dep[GoInfo]
 
 def get_archive(dep):
     if type(dep) == "struct":
@@ -91,7 +85,7 @@ def effective_importpath_pkgpath(lib):
     removed, and vendor directories from importmap may be modified.
 
     Args:
-      lib: GoLibrary or GoArchiveData
+      lib: GoInfo or GoArchiveData
 
     Returns:
       A tuple of effective import path and effective package path. Both are ""

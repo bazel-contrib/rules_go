@@ -29,6 +29,7 @@ load(
 load(
     "//go/private:context.bzl",
     _go_context = "go_context",
+    _new_go_info = "new_go_info",
 )
 load(
     "//go/private:go_toolchain.bzl",
@@ -38,10 +39,9 @@ load(
     "//go/private:providers.bzl",
     _GoArchive = "GoArchive",
     _GoArchiveData = "GoArchiveData",
-    _GoLibrary = "GoLibrary",
+    _GoInfo = "GoInfo",
     _GoPath = "GoPath",
     _GoSDK = "GoSDK",
-    _GoSource = "GoSource",
 )
 load(
     "//go/private/rules:cross.bzl",
@@ -134,11 +134,19 @@ go_tool_library = _go_tool_library
 go_toolchain = _go_toolchain
 nogo = _nogo
 
-# See go/providers.rst#GoLibrary for full documentation.
-GoLibrary = _GoLibrary
+# This provider is deprecated and will be removed in a future release.
+# Use GoInfo instead.
+GoLibrary = _GoInfo
 
-# See go/providers.rst#GoSource for full documentation.
-GoSource = _GoSource
+# This provider is deprecated and will be removed in a future release.
+# Use GoInfo instead.
+GoSource = _GoInfo
+
+# See go/providers.rst#GoInfo for full documentation.
+GoInfo = _GoInfo
+
+# See go/toolchains.rst#new_go_info for full documentation.
+new_go_info = _new_go_info
 
 # See go/providers.rst#GoPath for full documentation.
 GoPath = _GoPath

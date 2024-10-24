@@ -1,4 +1,4 @@
-load("//go:def.bzl", "GoLibrary")
+load("//go:def.bzl", "GoInfo")
 
 def _test_impl(ctx):
     pass
@@ -8,7 +8,7 @@ test_source = rule(
     attrs = {
         "srcs": attr.label(
             mandatory = True,
-            providers = [GoLibrary],
+            providers = [GoInfo],
         ),
     },
 )

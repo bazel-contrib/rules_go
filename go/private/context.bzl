@@ -69,8 +69,7 @@ load(
     "GoArchive",
     "GoConfigInfo",
     "GoContextInfo",
-    "GoLibrary",
-    "GoSource",
+    "GoInfo",
     "GoStdLib",
     "INFERRED_PATH",
     "get_archive",
@@ -197,29 +196,6 @@ def _tool_args(go):
     args.set_param_file_format("shell")
     return args
 
-def _new_library(go, name = None, importpath = None, resolver = None, importable = True, testfilter = None, is_main = False, **kwargs):
-    if not importpath:
-        importpath = go.importpath
-        importmap = go.importmap
-    else:
-        importmap = importpath
-    pathtype = go.pathtype
-    if not importable and pathtype == EXPLICIT_PATH:
-        pathtype = EXPORT_PATH
-
-    return GoLibrary(
-        name = go.label.name if not name else name,
-        label = go.label,
-        importpath = importpath,
-        importmap = importmap,
-        importpath_aliases = go.importpath_aliases,
-        pathtype = pathtype,
-        resolve = resolver,
-        testfilter = testfilter,
-        is_main = is_main,
-        **kwargs
-    )
-
 def _merge_embed(source, embed):
     s = get_source(embed)
     source["srcs"] = s.srcs + source["srcs"]
@@ -260,16 +236,85 @@ def _dedup_archives(archives):
         deduped_archives.append(arc)
     return deduped_archives
 
-def _library_to_source(go, attr, library, coverage_instrumented, verify_resolver_deps = True):
+def _deprecated_new_library(go, name = None, importpath = None, resolver = None, importable = True, testfilter = None, is_main = False, **kwargs):
+    if not importpath:
+        importpath = go.importpath
+        importmap = go.importmap
+    else:
+        importmap = importpath
+    pathtype = go.pathtype
+    if not importable and pathtype == EXPLICIT_PATH:
+        pathtype = EXPORT_PATH
+
+    return struct(
+        name = go.label.name if not name else name,
+        label = go.label,
+        importpath = importpath,
+        importmap = importmap,
+        importpath_aliases = go.importpath_aliases,
+        pathtype = pathtype,
+        resolve = resolver,
+        testfilter = testfilter,
+        is_main = is_main,
+        **kwargs
+    )
+
+def _deprecated_library_to_source(go, attr, library, coverage_instrumented, verify_resolver_deps = True):
+    return new_go_info(
+        go,
+        attr,
+        name = library.name,
+        importpath = library.importpath,
+        resolver = library.resolve,
+        testfilter = library.testfilter,
+        is_main = library.is_main,
+        coverage_instrumented = coverage_instrumented,
+        generated_srcs = getattr(library, "srcs", []),
+        pathtype = library.pathtype,
+        verify_resolver_deps = verify_resolver_deps,
+    )
+
+def new_go_info(
+        go,
+        attr,
+        name = None,
+        importpath = None,
+        resolver = None,
+        importable = True,
+        testfilter = None,
+        is_main = False,
+        coverage_instrumented = None,
+        generated_srcs = [],
+        pathtype = None,
+        verify_resolver_deps = False):
+    if not importpath:
+        importpath = go.importpath
+        importmap = go.importmap
+    else:
+        importmap = importpath
+    if not pathtype:
+        pathtype = go.pathtype
+    if not importable and pathtype == EXPLICIT_PATH:
+        pathtype = EXPORT_PATH
+
+    if coverage_instrumented == None:
+        coverage_instrumented = go.coverage_instrumented
+
     #TODO: stop collapsing a depset in this line...
     attr_srcs = [f for t in getattr(attr, "srcs", []) for f in as_iterable(t.files)]
-    generated_srcs = getattr(library, "srcs", [])
     srcs = attr_srcs + generated_srcs
     embedsrcs = [f for t in getattr(attr, "embedsrcs", []) for f in as_iterable(t.files)]
-    attr_deps = getattr(attr, "deps", [])
-    deps = [get_archive(dep) for dep in attr_deps]
-    source = {
-        "library": library,
+    deps = [get_archive(dep) for dep in getattr(attr, "deps", [])]
+
+    go_info = {
+        "name": go.label.name if not name else name,
+        "label": go.label,
+        "importpath": importpath,
+        "importmap": importmap,
+        "importpath_aliases": tuple(getattr(attr, "importpath_aliases", ())),
+        "pathtype": pathtype,
+        "testfilter": testfilter,
+        "is_main": is_main,
         "mode": go.mode,
         "srcs": srcs,
         "embedsrcs": embedsrcs,
@@ -277,7 +322,7 @@ def _library_to_source(go, attr, library, coverage_instrumented, verify_resolver
         "x_defs": {},
         "deps": deps,
         "gc_goopts": _expand_opts(go, "gc_goopts", getattr(attr, "gc_goopts", [])),
-        "runfiles": _collect_runfiles(go, getattr(attr, "data", []), attr_deps),
+        "runfiles": _collect_runfiles(go, getattr(attr, "data", []), deps),
         "cgo": getattr(attr, "cgo", False),
         "cdeps": getattr(attr, "cdeps", []),
         "cppopts": _expand_opts(go, "cppopts", getattr(attr, "cppopts", [])),
@@ -288,42 +333,43 @@ def _library_to_source(go, attr, library, coverage_instrumented, verify_resolver
     }
 
     for e in getattr(attr, "embed", []):
-        _merge_embed(source, e)
+        _merge_embed(go_info, e)
 
-    source["deps"] = _dedup_archives(source["deps"])
+    go_info["deps"] = _dedup_archives(go_info["deps"])
 
-    x_defs = source["x_defs"]
+    x_defs = go_info["x_defs"]
+
     for k, v in getattr(attr, "x_defs", {}).items():
         v = _expand_location(go, attr, v)
         if "." not in k:
-            k = "{}.{}".format(library.importmap, k)
+            k = "{}.{}".format(importmap, k)
         x_defs[k] = v
-    source["x_defs"] = x_defs
-    if not source["cgo"]:
+    go_info["x_defs"] = x_defs
+    if not go_info["cgo"]:
         for k in ("cdeps", "cppopts", "copts", "cxxopts", "clinkopts"):
             if getattr(attr, k, None):
                 fail(k + " set without cgo = True")
-        for f in source["srcs"]:
+        for f in go_info["srcs"]:
             # This check won't report directory sources that contain C/C++
             # sources. compilepkg will catch these instead.
             if f.extension in ("c", "cc", "cxx", "cpp", "hh", "hpp", "hxx"):
                 fail("source {} has C/C++ extension, but cgo was not enabled (set 'cgo = True')".format(f.path))
 
-    if library.resolve:
-        library.resolve(go, attr, source, _merge_embed)
+    if resolver:
+        resolver(go, attr, go_info, _merge_embed)
 
         # TODO(zbarsky): Remove this once downstream has a chance to migrate.
         if verify_resolver_deps:
-            for dep in source["deps"]:
+            for dep in go_info["deps"]:
                 if type(dep) == "Target":
                     print('Detected Targets in `source["deps"]` as a result of _resolver: ' +
-                          "{}, from target {}. ".format(library.resolve, str(library.label)) +
+                          "{}, from target {}. ".format(resolver, str(go.label)) +
                           "Please pass a list of `GoArchive`s instead, for examples `deps = [deps[GoArchive] for dep in deps]`. " +
                           "This will be an error in the future.")
-                    source["deps"] = [get_archive(dep) for dep in source["deps"]]
+                    go_info["deps"] = [get_archive(dep) for dep in go_info["deps"]]
                     break
 
-    return GoSource(**source)
+    return GoInfo(**go_info)
 
 def _collect_runfiles(go, data, deps):
     """Builds a set of runfiles from the deps and data attributes.
@@ -343,7 +389,7 @@ def _infer_importpath(ctx, embeds, importpath, importmap):
     embed_importpath = ""
     embed_importmap = ""
     for embed in embeds:
-        lib = embed[GoLibrary]
+        lib = embed[GoInfo]
         if lib.pathtype == EXPLICIT_PATH:
             embed_importpath = lib.importpath
             embed_importmap = lib.importmap
@@ -596,8 +642,8 @@ def go_context(
         # Helpers
         builder_args = _builder_args,
         tool_args = _tool_args,
-        new_library = _new_library,
-        library_to_source = _library_to_source,
+        new_library = _deprecated_new_library,
+        library_to_source = _deprecated_library_to_source,
         declare_file = _declare_file,
         declare_directory = _declare_directory,
 

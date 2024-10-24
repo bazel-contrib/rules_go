@@ -8,8 +8,7 @@
 .. _go_library: /docs/go/core/rules.md#go_library
 .. _analysis: https://godoc.org/golang.org/x/tools/go/analysis
 .. _Analyzer: https://godoc.org/golang.org/x/tools/go/analysis#Analyzer
-.. _GoLibrary: providers.rst#GoLibrary
-.. _GoSource: providers.rst#GoSource
+.. _GoInfo: providers.rst#GoInfo
 .. _GoArchive: providers.rst#GoArchive
 .. _vet: https://golang.org/cmd/vet/
 .. _golangci-lint: https://github.com/golangci/golangci-lint

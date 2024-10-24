@@ -29,8 +29,7 @@ load(
 load(
     "//go/private:providers.bzl",
     "GoArchive",
-    "GoLibrary",
-    "GoSource",
+    "GoInfo",
 )
 
 # A list of rules_go settings that are possibly set by go_transition.
@@ -280,7 +279,7 @@ go_stdlib_transition = transition(
 
 def _go_reset_target_impl(ctx):
     t = ctx.attr.dep[0]  # [0] seems to be necessary with the transition
-    providers = [t[p] for p in [GoLibrary, GoSource, GoArchive] if p in t]
+    providers = [t[p] for p in [GoInfo, GoArchive] if p in t]
 
     # We can't pass DefaultInfo through as-is, since Bazel forbids executable
     # if it's a file declared in a different target. To emulate that, symlink

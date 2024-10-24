@@ -22,13 +22,17 @@ load(
 )
 load(
     "//go:def.bzl",
-    "GoLibrary",
+    "GoInfo",
     "go_context",
 )
 load(
     "//go/private:common.bzl",
     "GO_TOOLCHAIN",
     "GO_TOOLCHAIN_LABEL",
+)
+load(
+    "//go/private:context.bzl",
+    "new_go_info",
 )
 load(
     "//go/private/rules:transition.bzl",
@@ -59,7 +63,7 @@ the import path of the Go library being generated.
 The function should declare output .go files and actions to generate them.
 It should return a list of .go Files to be compiled by the Go compiler.
 """,
-        "deps": """List of targets providing GoLibrary, GoSource, and GoArchive.
+        "deps": """List of targets providing GoInfo and GoArchive.
 These are added as implicit dependencies for any go_proto_library using this
 compiler. Typically, these are Well Known Types and proto runtime libraries.""",
         "valid_archive": """A Boolean indicating whether the .go files produced
@@ -183,8 +187,7 @@ def proto_path(src, proto):
 
 def _go_proto_compiler_impl(ctx):
     go = go_context(ctx, include_deprecated_properties = False)
-    library = go.new_library(go)
-    source = go.library_to_source(go, ctx.attr, library, ctx.coverage_instrumented())
+    go_info = new_go_info(go, ctx.attr)
     proto_toolchain = proto_toolchains.find_toolchain(
         ctx,
         legacy_attr = "_legacy_proto_toolchain",
@@ -205,14 +208,13 @@ def _go_proto_compiler_impl(ctx):
                 import_path_option = ctx.attr.import_path_option,
             ),
         ),
-        library,
-        source,
+        go_info,
     ]
 
 _go_proto_compiler = rule(
     implementation = _go_proto_compiler_impl,
     attrs = dict({
-        "deps": attr.label_list(providers = [GoLibrary]),
+        "deps": attr.label_list(providers = [GoInfo]),
         "options": attr.string_list(),
         "suffix": attr.string(default = ".pb.go"),
         "suffixes": attr.string_list(),

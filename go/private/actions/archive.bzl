@@ -43,7 +43,7 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
     if source == None:
         fail("source is a required parameter")
 
-    testfilter = getattr(source.library, "testfilter", None)
+    testfilter = getattr(source, "testfilter", None)
     pre_ext = ""
     if go.mode.linkmode == LINKMODE_C_ARCHIVE:
         pre_ext = "_"  # avoid collision with go_binary output file with .a extension
@@ -53,17 +53,17 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
         pre_ext = ".external"
     if _recompile_suffix:
         pre_ext += _recompile_suffix
-    out_lib = go.declare_file(go, name = source.library.name, ext = pre_ext + ".a")
+    out_lib = go.declare_file(go, name = source.name, ext = pre_ext + ".a")
 
     # store export information for compiling dependent packages separately
-    out_export = go.declare_file(go, name = source.library.name, ext = pre_ext + ".x")
+    out_export = go.declare_file(go, name = source.name, ext = pre_ext + ".x")
     out_cgo_export_h = None  # set if cgo used in c-shared or c-archive mode
 
     nogo = get_nogo(go)
     if nogo:
-        out_facts = go.declare_file(go, name = source.library.name, ext = pre_ext + ".facts")
-        out_nogo_log = go.declare_file(go, name = source.library.name, ext = pre_ext + ".nogo.log")
-        out_nogo_validation = go.declare_file(go, name = source.library.name, ext = pre_ext + ".nogo")
+        out_facts = go.declare_file(go, name = source.name, ext = pre_ext + ".facts")
+        out_nogo_log = go.declare_file(go, name = source.name, ext = pre_ext + ".nogo.log")
+        out_nogo_validation = go.declare_file(go, name = source.name, ext = pre_ext + ".nogo")
     else:
         out_facts = None
         out_nogo_log = None
@@ -78,8 +78,8 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
             fail("Archive mode does not match {} is {} expected {}".format(a.data.label, mode_string(a.source.mode), mode_string(go.mode)))
     runfiles = source.runfiles.merge_all(files)
 
-    importmap = "main" if source.library.is_main else source.library.importmap
-    importpath, _ = effective_importpath_pkgpath(source.library)
+    importmap = "main" if source.is_main else source.importmap
+    importpath, _ = effective_importpath_pkgpath(source)
 
     if source.cgo and not go.mode.pure:
         # TODO(jayconrod): do we need to do full Bourne tokenization here?
@@ -157,15 +157,13 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
         # may be mutable. For now, new copied fields are private (named with
         # a leading underscore) since they may change in the future.
 
-        # GoLibrary fields
-        name = source.library.name,
-        label = source.library.label,
-        importpath = source.library.importpath,
-        importmap = source.library.importmap,
-        importpath_aliases = source.library.importpath_aliases,
-        pathtype = source.library.pathtype,
-
-        # GoSource fields
+        # GoInfo fields
+        name = source.name,
+        label = source.label,
+        importpath = source.importpath,
+        importmap = source.importmap,
+        importpath_aliases = source.importpath_aliases,
+        pathtype = source.pathtype,
         srcs = tuple(source.srcs),
         _cover = source.cover,
         _embedsrcs = tuple(source.embedsrcs),
