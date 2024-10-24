@@ -6,15 +6,15 @@
 //
 // The goals for the format are:
 //
-//	- be trivial enough to create and edit by hand.
-//	- be able to store trees of text files describing go command test cases.
-//	- diff nicely in git history and code reviews.
+//   - be trivial enough to create and edit by hand.
+//   - be able to store trees of text files describing go command test cases.
+//   - diff nicely in git history and code reviews.
 //
 // Non-goals include being a completely general archive format,
 // storing binary data, storing file modes, storing special files like
 // symbolic links, and so on.
 //
-// Txtar format
+// # Txtar format
 //
 // A txtar archive is zero or more comment lines and then a sequence of file entries.
 // Each file entry begins with a file marker line of the form "-- FILENAME --"
@@ -44,10 +44,15 @@ type Archive struct {
 	Files   []File
 }
 
+type NewType struct {
+	Test string
+}
+
 // A File is a single file in an archive.
 type File struct {
-	Name string // name of file ("foo/bar.txt")
-	Data []byte // text content of file
+	Name      string // name of file ("foo/bar.txt")
+	Data      []byte // text content of file
+	Something byte
 }
 
 // Format returns the serialized form of an Archive.
