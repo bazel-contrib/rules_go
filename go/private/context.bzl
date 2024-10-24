@@ -100,6 +100,8 @@ _COMPILER_OPTIONS_DENYLIST = dict({
     # fmax-errors limits that and causes build failures.
     "-fmax-errors=": None,
     "-Wall": None,
+    "-Wunused-parameter": None,
+    "-Wextra": None,
 
     # Symbols are needed by Go, so keep them
     "-g0": None,
