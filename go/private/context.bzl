@@ -188,8 +188,7 @@ def _builder_args(go, command = None, use_path_mapping = False):
         args.add_all("-goroot", [goroot_file], map_each = _dirname, expand_directories = False)
     mode = go.mode
     args.add("-installsuffix", installsuffix(mode))
-    if mode.tags:
-        args.add_joined("-tags", mode.tags, join_with = ",")
+    args.add_joined("-tags", mode.tags, join_with = ",")
     return args
 
 def _tool_args(go):
