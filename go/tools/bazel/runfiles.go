@@ -237,6 +237,8 @@ func ListRunfiles() ([]RunfileEntry, error) {
 // TestWorkspace returns the name of the Bazel workspace for this test.
 // TestWorkspace returns an error if the TEST_WORKSPACE environment variable
 // was not set or SetDefaultTestWorkspace was not called.
+// Deprecated: With Bzlmod enabled, the workspace name is always "_main". Use
+// github.com/bazelbuild/rules_go/go/runfiles instead to access runfiles.
 func TestWorkspace() (string, error) {
 	if err := ensureRunfiles(); err != nil {
 		return "", err
@@ -250,6 +252,8 @@ func TestWorkspace() (string, error) {
 // SetDefaultTestWorkspace allows you to set a fake value for the
 // environment variable TEST_WORKSPACE if it is not defined. This is useful
 // when running tests on the command line and not through Bazel.
+// Deprecated: With Bzlmod enabled, the workspace name is always "_main". Use
+// github.com/bazelbuild/rules_go/go/runfiles instead to access runfiles.
 func SetDefaultTestWorkspace(w string) {
 	ensureRunfiles()
 	runfiles.workspace = w
@@ -259,6 +263,8 @@ func SetDefaultTestWorkspace(w string) {
 // It will return an error if there is no runfiles tree, for example because
 // the executable is run on Windows or was not invoked with 'bazel test'
 // or 'bazel run'.
+// Deprecated: Use github.com/bazelbuild/rules_go/go/runfiles instead to access
+// runfiles, which provides a platform-agnostic fs.FS implementation.
 func RunfilesPath() (string, error) {
 	if err := ensureRunfiles(); err != nil {
 		return "", err

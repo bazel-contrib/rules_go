@@ -13,6 +13,9 @@
 // limitations under the License.
 
 // Package bazel provides utilities for interacting with the surrounding Bazel environment.
+//
+// All functions other than NewTmpDir and TestTmpDir are deprecated. Use
+// github.com/bazelbuild/rules_go/go/runfiles instead to access runfiles.
 package bazel
 
 import (
@@ -21,8 +24,13 @@ import (
 	"os"
 )
 
+// Deprecated: Use github.com/bazelbuild/rules_go/go/runfiles instead to access
+// runfiles.
 const TEST_SRCDIR = "TEST_SRCDIR"
 const TEST_TMPDIR = "TEST_TMPDIR"
+// Deprecated: Use github.com/bazelbuild/rules_go/go/runfiles instead to access
+// runfiles. With Bzlmod enabled, the corresponding environment variable has the
+// constant value "_main".
 const TEST_WORKSPACE = "TEST_WORKSPACE"
 
 // NewTmpDir creates a new temporary directory in TestTmpDir().
@@ -44,6 +52,7 @@ func TestTmpDir() string {
 // "-begin_files" and "-end_files" are used). Entries between these delimiters
 // are spliced out of from os.Args and returned to the caller.  If the ordering
 // of -begin_files or -end_files is malformed, error is returned.
+// Deprecated: This method is meant for internal use by bazel_testing only.
 func SpliceDelimitedOSArgs(begin, end string) ([]string, error) {
 	var files []string
 	beginFiles, endFiles := -1, -1
