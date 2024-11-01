@@ -142,7 +142,7 @@ def _go_test_impl(ctx):
     )
 
     test_gc_linkopts = gc_linkopts(ctx)
-    if not go.mode.debug:
+    if not go.mode.debug and go.mode.strip:
         # Disable symbol table and DWARF generation for test binaries.
         test_gc_linkopts.extend(["-s", "-w"])
 
