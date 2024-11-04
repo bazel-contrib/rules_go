@@ -1,7 +1,54 @@
 workspace(name = "io_bazel_rules_go")
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
+
+http_archive(
+    name = "rules_proto",
+    sha256 = "303e86e722a520f6f326a50b41cfc16b98fe6d1955ce46642a5b7a67c11c0f5d",
+    strip_prefix = "rules_proto-6.0.0",
+    url = "https://github.com/bazelbuild/rules_proto/releases/download/6.0.0/rules_proto-6.0.0.tar.gz",
+)
+
+load("@rules_proto//proto:repositories.bzl", "rules_proto_dependencies")
+
+rules_proto_dependencies()
+
+load("@rules_proto//proto:toolchains.bzl", "rules_proto_toolchains")
+
+rules_proto_toolchains()
+
+# For API doc generation
+# This is a dev dependency, users should not need to install it
+# so we declare it in the WORKSPACE
+http_archive(
+    name = "io_bazel_stardoc",
+    sha256 = "62bd2e60216b7a6fec3ac79341aa201e0956477e7c8f6ccc286f279ad1d96432",
+    urls = [
+        "https://mirror.bazel.build/github.com/bazelbuild/stardoc/releases/download/0.6.2/stardoc-0.6.2.tar.gz",
+        "https://github.com/bazelbuild/stardoc/releases/download/0.6.2/stardoc-0.6.2.tar.gz",
+    ],
+)
+
+load("@io_bazel_stardoc//:setup.bzl", "stardoc_repositories")
+
+stardoc_repositories()
+
+load("@rules_jvm_external//:repositories.bzl", "rules_jvm_external_deps")
+
+rules_jvm_external_deps()
+
+load("@rules_jvm_external//:setup.bzl", "rules_jvm_external_setup")
+
+rules_jvm_external_setup()
+
+load("@io_bazel_stardoc//:deps.bzl", "stardoc_external_deps")
+
+stardoc_external_deps()
+
+load("@stardoc_maven//:defs.bzl", stardoc_pinned_maven_install = "pinned_maven_install")
+
+stardoc_pinned_maven_install()
+
 
 # Required by toolchains_protoc.
 http_archive(
@@ -25,24 +72,11 @@ load("@bazel_features//:deps.bzl", "bazel_features_deps")
 
 bazel_features_deps()
 
+load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
+
 go_rules_dependencies()
 
 go_register_toolchains(version = "1.23.1")
-
-http_archive(
-    name = "rules_proto",
-    sha256 = "303e86e722a520f6f326a50b41cfc16b98fe6d1955ce46642a5b7a67c11c0f5d",
-    strip_prefix = "rules_proto-6.0.0",
-    url = "https://github.com/bazelbuild/rules_proto/releases/download/6.0.0/rules_proto-6.0.0.tar.gz",
-)
-
-load("@rules_proto//proto:repositories.bzl", "rules_proto_dependencies")
-
-rules_proto_dependencies()
-
-load("@rules_proto//proto:toolchains.bzl", "rules_proto_toolchains")
-
-rules_proto_toolchains()
 
 http_archive(
     name = "toolchains_protoc",
@@ -205,22 +239,6 @@ local_repository(
     name = "runfiles_remote_test",
     path = "tests/core/runfiles/runfiles_remote_test",
 )
-
-# For API doc generation
-# This is a dev dependency, users should not need to install it
-# so we declare it in the WORKSPACE
-http_archive(
-    name = "io_bazel_stardoc",
-    sha256 = "3fd8fec4ddec3c670bd810904e2e33170bedfe12f90adf943508184be458c8bb",
-    urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/stardoc/releases/download/0.5.3/stardoc-0.5.3.tar.gz",
-        "https://github.com/bazelbuild/stardoc/releases/download/0.5.3/stardoc-0.5.3.tar.gz",
-    ],
-)
-
-load("@io_bazel_stardoc//:setup.bzl", "stardoc_repositories")
-
-stardoc_repositories()
 
 # For testing objc_library interop, users should not need to install it
 http_archive(
