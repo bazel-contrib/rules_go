@@ -1,7 +1,7 @@
 workspace(name = "io_bazel_rules_go")
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
+load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk", "go_register_nogo", "go_register_toolchains", "go_rules_dependencies")
 
 # Required by toolchains_protoc.
 http_archive(
@@ -28,6 +28,15 @@ bazel_features_deps()
 go_rules_dependencies()
 
 go_register_toolchains(version = "1.23.1")
+
+go_download_sdk(
+    name = "rules_go_internal_compatibility_sdk",
+    version = "1.19.13",
+)
+
+go_register_nogo(
+    nogo = "@//:tools_nogo",
+)
 
 http_archive(
     name = "rules_proto",
@@ -137,7 +146,7 @@ grpc_dependencies()
 
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
 
-gazelle_dependencies()
+gazelle_dependencies(go_sdk = "go_sdk")
 
 go_repository(
     name = "com_github_google_go_github_v36",

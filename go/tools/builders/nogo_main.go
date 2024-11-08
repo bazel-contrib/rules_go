@@ -223,7 +223,7 @@ func checkPackage(analyzers []*analysis.Analyzer, packagePath string, packageFil
 		if _, ok := ignoreFilesSet[pkg.fset.Position(f.Pos()).Filename]; ok {
 			for _, act := range actions {
 				act.nolint = append(act.nolint, &Range{
-					from: pkg.fset.Position(f.FileStart),
+					from: pkg.fset.Position(f.Pos()),
 					to:   pkg.fset.Position(f.End()).Line,
 				})
 			}
