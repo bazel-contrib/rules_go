@@ -184,6 +184,8 @@ func Test(t *testing.T) {
 	// Build the targets in each directory.
 	var wg sync.WaitGroup
 	wg.Add(len(dirs))
+	var errs []error
+	var mu sync.Mutex
 	for _, dir := range dirs {
 		go func(dir string) {
 			defer wg.Done()
@@ -196,11 +198,19 @@ func Test(t *testing.T) {
 			)
 			cmd.Dir = dir
 			if err := cmd.Run(); err != nil {
-				t.Fatalf("in %s, error running %s: %v", dir, strings.Join(cmd.Args, " "), err)
+				mu.Lock()
+				errs = append(errs, fmt.Errorf("in %s, error running %s: %v", dir, strings.Join(cmd.Args, " "), err))
+				mu.Unlock()
 			}
 		}(dir)
 	}
 	wg.Wait()
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Error(err)
+		}
+		t.Fatal("errors building")
+	}
 
 	t.Run("Check Hashes", func(t *testing.T) {
 		// Hash files in each bazel-bin directory.
@@ -232,7 +242,7 @@ func Test(t *testing.T) {
 
 		// Compare dir0 and dir2. They should be different.
 		if err := compareHashes(dirHashes[0], dirHashes[2]); err == nil {
-			t.Fatalf("dir0 and dir2 are the same)", len(dirHashes[0]))
+			t.Fatal("dir0 and dir2 are the same")
 		}
 	})
 

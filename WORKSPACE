@@ -35,7 +35,7 @@ go_download_sdk(
 )
 
 go_register_nogo(
-    nogo = "@//:tools_nogo",
+    nogo = "@//internal:nogo",
 )
 
 http_archive(

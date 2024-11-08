@@ -81,7 +81,7 @@ func Test(t *testing.T) {
 			}
 			p, err := bazel_testing.BazelOutput("info", "bazel-testlogs")
 			if err != nil {
-				t.Fatal("could not find testlog root: %s", err)
+				t.Fatalf("could not find testlog root: %s", err)
 			}
 			path := filepath.Join(strings.TrimSpace(string(p)), "filter_test/test.xml")
 			b, err := ioutil.ReadFile(path)

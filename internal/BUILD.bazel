@@ -1,0 +1,12 @@
+load("//go:def.bzl", "TOOLS_NOGO", "nogo")
+
+nogo(
+    name = "nogo",
+    visibility = ["//visibility:public"],
+    deps = [
+        a
+        for a in TOOLS_NOGO
+        # Filter out shadow as it triggers on err and is very noisy.
+        if a != "@org_golang_x_tools//go/analysis/passes/shadow:go_default_library"
+    ],
+)

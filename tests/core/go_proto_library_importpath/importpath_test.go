@@ -16,7 +16,7 @@ func Test(t *testing.T) {
 	var expected int64 = 5
 	if bar.Value.Value != expected {
 		t.Errorf(fmt.Sprintf("Not equal: \n"+
-			"expected: %s\n"+
-			"actual  : %s", expected, bar.Value.Value))
+			"expected: %d\n"+
+			"actual  : %d", expected, bar.Value.Value))
 	}
 }
