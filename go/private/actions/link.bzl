@@ -140,6 +140,11 @@ def emit_link(
     ]))
     extldflags.extend(cgo_rpaths)
 
+    godebug_default = archive.godebug_default
+    if godebug_default:
+        builder_args.add("-X", "runtime.godebugDefault={}".format(
+            ",".join(["{}={}".format(k, v) for k, v in godebug_default.items()])))
+
     # Process x_defs, and record whether stamping is used.
     stamp_x_defs_volatile = False
     stamp_x_defs_stable = False

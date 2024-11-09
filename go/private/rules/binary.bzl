@@ -439,6 +439,9 @@ def _go_binary_kwargs(go_cc_aspects = []):
                 """,
                 default = "//go/config:empty",
             ),
+            "godebug_default": attr.string_dict(
+                doc = """Map of default GODEBUG values to add to the go link command.""",
+            ),
             "_go_context_data": attr.label(default = "//:go_context_data", cfg = go_transition),
             "_allowlist_function_transition": attr.label(
                 default = "@bazel_tools//tools/allowlists/function_transition_allowlist",

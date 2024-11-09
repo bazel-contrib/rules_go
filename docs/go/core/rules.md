@@ -127,7 +127,7 @@ Rules
 <pre>
 go_binary(<a href="#go_binary-name">name</a>, <a href="#go_binary-basename">basename</a>, <a href="#go_binary-cdeps">cdeps</a>, <a href="#go_binary-cgo">cgo</a>, <a href="#go_binary-clinkopts">clinkopts</a>, <a href="#go_binary-copts">copts</a>, <a href="#go_binary-cppopts">cppopts</a>, <a href="#go_binary-cxxopts">cxxopts</a>, <a href="#go_binary-data">data</a>, <a href="#go_binary-deps">deps</a>, <a href="#go_binary-embed">embed</a>,
           <a href="#go_binary-embedsrcs">embedsrcs</a>, <a href="#go_binary-env">env</a>, <a href="#go_binary-gc_goopts">gc_goopts</a>, <a href="#go_binary-gc_linkopts">gc_linkopts</a>, <a href="#go_binary-goarch">goarch</a>, <a href="#go_binary-goos">goos</a>, <a href="#go_binary-gotags">gotags</a>, <a href="#go_binary-importpath">importpath</a>, <a href="#go_binary-linkmode">linkmode</a>, <a href="#go_binary-msan">msan</a>,
-          <a href="#go_binary-out">out</a>, <a href="#go_binary-pgoprofile">pgoprofile</a>, <a href="#go_binary-pure">pure</a>, <a href="#go_binary-race">race</a>, <a href="#go_binary-srcs">srcs</a>, <a href="#go_binary-static">static</a>, <a href="#go_binary-x_defs">x_defs</a>)
+          <a href="#go_binary-out">out</a>, <a href="#go_binary-pgoprofile">pgoprofile</a>, <a href="#go_binary-pure">pure</a>, <a href="#go_binary-race">race</a>, <a href="#go_binary-srcs">srcs</a>, <a href="#go_binary-static">static</a>, <a href="#go_binary-x_defs">x_defs</a>, <a href="#go_binary-godebug_default">godebug_default</a>)
 </pre>
 
 This builds an executable from a set of source files,
@@ -175,6 +175,7 @@ This builds an executable from a set of source files,
 | <a id="go_binary-srcs"></a>srcs |  The list of Go source files that are compiled to create the package.                 Only <code>.go</code>, <code>.s</code>, and <code>.syso</code> files are permitted, unless the <code>cgo</code>                 attribute is set, in which case,                 <code>.c .cc .cpp .cxx .h .hh .hpp .hxx .inc .m .mm</code>                 files are also permitted. Files may be filtered at build time                 using Go [build constraints].   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional | [] |
 | <a id="go_binary-static"></a>static |  Controls whether a binary is statically linked. May be one of <code>on</code>,                 <code>off</code>, or <code>auto</code>. Not available on all platforms or in all                 modes. It's usually better to control this on the command line with                 <code>--@io_bazel_rules_go//go/config:static</code>. See [mode attributes],                 specifically [static].   | String | optional | "auto" |
 | <a id="go_binary-x_defs"></a>x_defs |  Map of defines to add to the go link command.                 See [Defines and stamping] for examples of how to use these.   | <a href="https://bazel.build/rules/lib/dict">Dictionary: String -> String</a> | optional | {} |
+| <a id="go_binary-godebug_default"></a>godebug_default | Map of default GODEBUG keys and values |  <a href="https://bazel.build/rules/lib/dict">Dictionary: String -> String</a> | optional | {} |
 
 
 

@@ -68,3 +68,7 @@ prefix
 ------
 This binary has a name that conflicts with a subdirectory. Its output file
 name should not have this conflict. Verifies `#2463`_.
+
+godebug_test
+------------
+Test that the ``godebug_default`` sets the default ``GODEBUG`` variables.
