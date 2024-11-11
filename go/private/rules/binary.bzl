@@ -468,6 +468,12 @@ def _go_tool_binary_impl(ctx):
     # sandboxed, so care must be taken to make them hermetic, for example by
     # preventing `go build` from searching for go.mod or downloading a
     # different toolchain version.
+    #
+    # A side effect of the usage of GO111MODULE below is that the absolute
+    # path to the sources is included in the buildid, which would make the
+    # resulting binary non-reproducible. We thus need to blank it out.
+    # https://github.com/golang/go/blob/583d750fa119d504686c737be6a898994b674b69/src/cmd/go/internal/load/pkg.go#L1764-L1766
+    # https://github.com/golang/go/blob/583d750fa119d504686c737be6a898994b674b69/src/cmd/go/internal/work/exec.go#L284
 
     sdk = ctx.attr.sdk[GoSDK]
     name = ctx.label.name
@@ -485,7 +491,7 @@ set GOCACHE=%cd%\\{gotmp}\\gocache
 set GOPATH=%cd%"\\{gotmp}\\gopath
 set GOTOOLCHAIN=local
 set GO111MODULE=off
-{go} build -o {out} -trimpath -ldflags \"{ldflags}\" {srcs}
+{go} build -o {out} -trimpath -ldflags \"-buildid='' {ldflags}\" {srcs}
 set GO_EXIT_CODE=%ERRORLEVEL%
 RMDIR /S /Q "{gotmp}"
 MKDIR "{gotmp}"
@@ -521,7 +527,7 @@ GOCACHE="$GOTMP"/gocache \
 GOPATH="$GOTMP"/gopath \
 GOTOOLCHAIN=local \
 GO111MODULE=off \
-{go} build -o {out} -trimpath -ldflags '{ldflags}' {srcs}
+{go} build -o {out} -trimpath -ldflags '-buildid="" {ldflags}' {srcs}
 """.format(
             go = sdk.go.path,
             out = out.path,
