@@ -138,7 +138,8 @@ func (m *manifest) open(name string) (fs.File, error) {
 			// name refers to an actual file or dir listed in the manifest. The
 			// basename of name may not match the basename of the underlying
 			// file (e.g. in the case of a root symlink), so patch it.
-			f, err := os.Open(r)
+			var f *os.File
+			f, err = os.Open(r)
 			if err != nil {
 				return nil, err
 			}
