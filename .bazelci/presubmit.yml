@@ -19,6 +19,8 @@ tasks:
       - "-//tests/core/nogo/bzlmod:includes_exclude_test"
       # _repo_mapping is missing
       - "-//tests/runfiles:runfiles_test"
+      # TODO: Investigate why this fails.
+      - "-//tests/core/starlark/cgo:missing_cc_toolchain_explicit_pure_off_test"
   ubuntu2004:
     # enable some unflipped incompatible flags on this platform to ensure we don't regress.
     build_flags:
@@ -29,8 +31,6 @@ tasks:
       - "//..."
     test_targets:
       - "//..."
-      # TODO: Investigate why this fails.
-      - "-//tests/core/starlark/cgo:missing_cc_toolchain_explicit_pure_off_test"
   debian11_zig_cc:
     platform: debian11
     build_flags:
@@ -150,6 +150,7 @@ tasks:
       - "-//tests/core/nogo/coverage:gen_code_test"
       - "-//tests/core/stdlib:buildid_test"
       - "-//tests/examples/executable_name:executable_name"
+      - "-//tests/integration/gazelle:gazelle_test" # exceeds command line length limit
       - "-//tests/integration/reproducibility:reproducibility_test"
       - "-//tests/legacy/examples/cgo:generate_go_src"
       - "-//tests/legacy/examples/cgo:cgo_lib_test"
