@@ -92,7 +92,7 @@ protoc_toolchains(
     version = "v25.3",
 )
 
-# An up-to-date version is required by com_google_protobuf 27.0 below.
+# An up-to-date version is required by com_google_protobuf below.
 http_archive(
     name = "rules_python",
     sha256 = "ca77768989a7f311186a29747e3e95c936a41dffac779aff6b443db22290d913",
