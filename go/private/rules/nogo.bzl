@@ -57,6 +57,7 @@ def _nogo_impl(ctx):
         outputs = [nogo_main],
         mnemonic = "GoGenNogo",
         executable = go.toolchain._builder,
+        toolchain = GO_TOOLCHAIN,
         arguments = [nogo_args],
     )
 
