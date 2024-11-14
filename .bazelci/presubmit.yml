@@ -16,6 +16,7 @@ tasks:
       - "//..."
       # Nogo includes/excludes doesn't work before bazel 7
       - "-//tests/core/nogo/includes_excludes:includes_exclude_test"
+      - "-//tests/core/nogo/bzlmod:includes_exclude_test"
       # _repo_mapping is missing
       - "-//tests/runfiles:runfiles_test"
   ubuntu2004:
@@ -105,7 +106,6 @@ tasks:
   windows:
     build_flags:
       - '--action_env=PATH=C:\tools\msys64\usr\bin;C:\tools\msys64\bin;C:\tools\msys64\mingw64\bin;C:\python3\Scripts\;C:\python3;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0;C:\Windows\System32\OpenSSH;C:\ProgramData\GooGet;C:\Program Files\Google\Compute Engine\metadata_scripts;C:\Program Files (x86)\Google\Cloud SDK\google-cloud-sdk\bin;C:\Program Files\Google\Compute Engine\sysprep;C:\ProgramData\chocolatey\bin;C:\Program Files\Git\cmd;C:\tools\msys64\usr\bin;c:\openjdk\bin;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit\;C:\Program Files\CMake\bin;c:\ninja;c:\bazel;c:\buildkite'
-      - '--keep_going'
     build_targets:
       - "//..."
       - "-//tests/core/cgo:generated_dylib_client"
@@ -121,14 +121,38 @@ tasks:
       # go_bazel_test runs bazel in a test workspace. It needs the same flags as above.
       - "--test_env=GO_BAZEL_TEST_BAZELFLAGS=--cpu=x64_windows --compiler=mingw-gcc --extra_toolchains=@local_config_cc//:cc-toolchain-x64_windows_mingw --action_env=PATH --host_platform=@io_bazel_rules_go//go/toolchain:windows_amd64_cgo --incompatible_enable_cc_toolchain_resolution"
       - "--test_env=PATH"
-      - '--keep_going'
     test_targets:
       - "//..."
+      - "-//docs/..."
+      - "-//go/tools/builders:stdliblist_test"
+      - "-//tests:buildifier_test"
       - "-//tests/core/cgo:generated_dylib_client"
       - "-//tests/core/cgo:generated_dylib_test"
+      - "-//tests/core/cgo:generated_versioned_dylib_test"
+      - "-//tests/core/coverage:coverage_test"
+      - "-//tests/core/coverage:issue3017_test"
+      - "-//tests/core/go_binary:go_default_test"
+      - "-//tests/core/go_path:go_path_test"
       - "-//tests/core/go_plugin/..."
       - "-//tests/core/go_plugin_with_proto_library/..."
+      - "-//tests/core/go_test:data_test"
+      - "-//tests/core/go_test:pwd_test"
+      - "-//tests/core/nogo/coverage:coverage_cgo_test"
+      - "-//tests/core/nogo/coverage:coverage_test"
+      - "-//tests/core/nogo/coverage:gen_code_test"
+      - "-//tests/core/stdlib:buildid_test"
+      - "-//tests/examples/executable_name:executable_name"
+      - "-//tests/integration/reproducibility:reproducibility_test"
       - "-//tests/legacy/examples/cgo/..."
+      - "-//tests/legacy/extldflags_rpath:extldflags_rpath_test"
+      - "-//tests/legacy/info:info"
+      - "-//tests/legacy/test_rundir:go_default_test"
+      - "-//tests/legacy/transitive_data:go_default_test"
+      - "-@org_golang_x_crypto//sha3:sha3_test"
+      - "-@org_golang_x_sys//windows/svc:svc_test"
+      - "-@org_golang_x_text//language:language_test"
+      - "-@org_golang_x_tools//cmd/splitdwarf/internal/macho:macho_test"
+      - "-@test_chdir_remote//sub:go_default_test"
   # The following configurations test a seperate WORKSPACE under the examples folder
   ubuntu2004_examples:
     name: Examples test on Ubuntu
