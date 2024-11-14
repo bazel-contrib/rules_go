@@ -21,6 +21,30 @@ http_archive(
     url = "https://github.com/bazel-contrib/bazel_features/releases/download/v1.9.1/bazel_features-v1.9.1.tar.gz",
 )
 
+# Required by protobuf.
+http_archive(
+    name = "rules_cc",
+    sha256 = "bbf1ae2f83305b7053b11e4467d317a7ba3517a12cef608543c1b1c5bf48a4df",
+    strip_prefix = "rules_cc-0.0.16",
+    urls = ["https://github.com/bazelbuild/rules_cc/releases/download/0.0.16/rules_cc-0.0.16.tar.gz"],
+)
+
+# An up-to-date version is transitively required by Stardoc to fix
+# https://github.com/bazelbuild/rules_java/commit/9fd8c492e7e5751f809912554d5ee9a4cc3f53d9
+http_archive(
+    name = "rules_java",
+    sha256 = "9b9614f8a7f7b7ed93cb7975d227ece30fe7daed2c0a76f03a5ee37f69e437de",
+    urls = [
+        "https://github.com/bazelbuild/rules_java/releases/download/8.3.2/rules_java-8.3.2.tar.gz",
+    ],
+)
+
+load("@rules_java//java:repositories.bzl", "rules_java_dependencies", "rules_java_toolchains")
+
+rules_java_dependencies()
+
+rules_java_toolchains()
+
 load("@bazel_features//:deps.bzl", "bazel_features_deps")
 
 bazel_features_deps()
@@ -40,9 +64,9 @@ go_register_nogo(
 
 http_archive(
     name = "rules_proto",
-    sha256 = "303e86e722a520f6f326a50b41cfc16b98fe6d1955ce46642a5b7a67c11c0f5d",
-    strip_prefix = "rules_proto-6.0.0",
-    url = "https://github.com/bazelbuild/rules_proto/releases/download/6.0.0/rules_proto-6.0.0.tar.gz",
+    sha256 = "0e5c64a2599a6e26c6a03d6162242d231ecc0de219534c38cb4402171def21e8",
+    strip_prefix = "rules_proto-7.0.2",
+    url = "https://github.com/bazelbuild/rules_proto/releases/download/7.0.2/rules_proto-7.0.2.tar.gz",
 )
 
 load("@rules_proto//proto:repositories.bzl", "rules_proto_dependencies")
@@ -55,9 +79,9 @@ rules_proto_toolchains()
 
 http_archive(
     name = "toolchains_protoc",
-    sha256 = "1f3cd768bbb92164952301228bac5e5079743843488598f2b17fecd41163cadb",
-    strip_prefix = "toolchains_protoc-0.2.4",
-    url = "https://github.com/aspect-build/toolchains_protoc/releases/download/v0.2.4/toolchains_protoc-v0.2.4.tar.gz",
+    sha256 = "7a5e9bffb3d121786805647a42dff56427fdd5f47784a70819b0580a48f64a0e",
+    strip_prefix = "toolchains_protoc-0.3.3",
+    url = "https://github.com/aspect-build/toolchains_protoc/releases/download/v0.3.3/toolchains_protoc-v0.3.3.tar.gz",
 )
 
 load("@toolchains_protoc//protoc:toolchain.bzl", "protoc_toolchains")
@@ -81,11 +105,11 @@ py_repositories()
 
 http_archive(
     name = "com_google_protobuf",
-    integrity = "sha256-2iiL8dqmwE0DqQUXgcqlKs65FjWGv/mqbPsS9puTlao=",
-    strip_prefix = "protobuf-27.0",
+    integrity = "sha256-zl0At4RQoMpAC/NgrADA1ZnMIl8EnZhqJ+mk45bFqEo=",
+    strip_prefix = "protobuf-29.0-rc2",
     urls = [
-        "https://github.com/protocolbuffers/protobuf/archive/v27.0.tar.gz",
-        "https://mirror.bazel.build/github.com/protocolbuffers/protobuf/archive/v27.0.tar.gz",
+        "https://github.com/protocolbuffers/protobuf/archive/v29.0-rc2.tar.gz",
+        "https://mirror.bazel.build/github.com/protocolbuffers/protobuf/archive/v29.0-rc2.tar.gz",
     ],
 )
 
