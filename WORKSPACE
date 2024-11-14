@@ -1,5 +1,6 @@
 workspace(name = "io_bazel_rules_go")
 
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk", "go_register_nogo", "go_register_toolchains", "go_rules_dependencies")
 
@@ -77,11 +78,11 @@ load("@rules_proto//proto:toolchains.bzl", "rules_proto_toolchains")
 
 rules_proto_toolchains()
 
-http_archive(
+# TODO: Replace with an http_archive after the release of toolchains_protoc 0.3.4 or higher.
+git_repository(
     name = "toolchains_protoc",
-    sha256 = "7a5e9bffb3d121786805647a42dff56427fdd5f47784a70819b0580a48f64a0e",
-    strip_prefix = "toolchains_protoc-0.3.3",
-    url = "https://github.com/aspect-build/toolchains_protoc/releases/download/v0.3.3/toolchains_protoc-v0.3.3.tar.gz",
+    commit = "7da180adb5fd465dedefea3ed3c1392b402e8e72",
+    remote = "https://github.com/aspect-build/toolchains_protoc.git",
 )
 
 load("@toolchains_protoc//protoc:toolchain.bzl", "protoc_toolchains")
