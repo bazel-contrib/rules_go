@@ -176,6 +176,7 @@ tasks:
       # TODO: Update stardoc for consistent line endings.
       - "-//docs:all"
   # The following configurations test a seperate WORKSPACE under the examples folder
+  # TODO: Remove --override_repository after the next release.
   ubuntu2004_examples:
     name: Examples test on Ubuntu
     platform: ubuntu2404
