@@ -11,6 +11,9 @@ tasks:
     bazel: 6.5.0 # test minimum supported version of bazel
     build_targets:
       - "//..."
+    build_flags:
+      - "--per_file_copt=external/.*@-w"
+      - "--host_per_file_copt=external/.*@-w"
     test_targets:
       - "//..."
       # Nogo includes/excludes doesn't work before bazel 7
@@ -20,6 +23,9 @@ tasks:
       - "-//tests/runfiles:runfiles_test"
       # TODO: Investigate why this fails.
       - "-//tests/core/starlark/cgo:missing_cc_toolchain_explicit_pure_off_test"
+    test_flags:
+      - "--per_file_copt=external/.*@-w"
+      - "--host_per_file_copt=external/.*@-w"
   ubuntu2404:
     # enable some unflipped incompatible flags on this platform to ensure we don't regress.
     build_flags:
