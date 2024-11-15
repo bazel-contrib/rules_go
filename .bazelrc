@@ -6,9 +6,6 @@ common --enable_platform_specific_config
 common --noexperimental_enable_bzlmod
 test --test_output=errors
 
-# Disable warnings in external code.
-build --per_file_copt=external/.*@-w
-
 # Go requires a C toolchain that accepts options and emits errors like
 # gcc or clang. The Go SDK does not support MSVC.
 build:windows --cpu=x64_windows
