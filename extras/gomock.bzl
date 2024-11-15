@@ -52,6 +52,7 @@ def _gomock_source_impl(ctx):
         outputs = [source],
         inputs = [ctx.file.source],
         command = "mkdir -p {0} && cp -L {1} {0}".format(source.dirname, ctx.file.source.path),
+        mnemonic = "GoMockSourceCopyFile",
     )
 
     # passed in source needs to be in gopath to not trigger module mode
@@ -68,6 +69,7 @@ def _gomock_source_impl(ctx):
                 outputs = [aux],
                 inputs = [f],
                 command = "mkdir -p {0} && cp -L {1} {0}".format(aux.dirname, f.path),
+                mnemonic = "GoMockSourceCopyFile",
             )
             aux_files.append("{0}={1}".format(pkg, aux.path))
             needed_files.append(aux)
@@ -91,6 +93,7 @@ def _gomock_source_impl(ctx):
         command = """
             export GOPATH=$(pwd)/{gopath} &&
             export GOROOT=$(pwd)/{goroot} &&
+            export PATH=$GOROOT/bin:$PATH &&
             {cmd} {args} > {out}
         """.format(
             gopath = gopath,
@@ -308,6 +311,8 @@ _gomock_prog_gen = rule(
 )
 
 def _gomock_prog_exec_impl(ctx):
+    go = go_context(ctx, include_deprecated_properties = False)
+
     args = ["-exec_only", ctx.file.prog_bin.path]
     args, needed_files = _handle_shared_args(ctx, args)
 
@@ -318,9 +323,16 @@ def _gomock_prog_exec_impl(ctx):
 
     ctx.actions.run_shell(
         outputs = [ctx.outputs.out],
-        inputs = [ctx.file.prog_bin] + needed_files,
-        tools = [ctx.file.mockgen_tool],
-        command = """{cmd} {args} > {out}""".format(
+        inputs = needed_files + [ctx.file.prog_bin, go.sdk.go],
+        tools = [
+            ctx.file.mockgen_tool,
+            go.sdk.go,
+        ],
+        command = """
+            export GOROOT=$(pwd)/{goroot} &&
+            export PATH=$GOROOT/bin:$PATH &&
+            {cmd} {args} > {out}""".format(
+            goroot = go.sdk.root_file.dirname,
             cmd = "$(pwd)/" + ctx.file.mockgen_tool.path,
             args = " ".join(args),
             out = ctx.outputs.out.path,
