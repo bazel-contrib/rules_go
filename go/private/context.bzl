@@ -290,6 +290,7 @@ def _library_to_source(go, attr, library, coverage_instrumented, verify_resolver
         _merge_embed(source, e)
 
     source["deps"] = _dedup_archives(source["deps"])
+    source["godebug_default"] = getattr(attr, "godebug_default", None)
 
     x_defs = source["x_defs"]
     for k, v in getattr(attr, "x_defs", {}).items():

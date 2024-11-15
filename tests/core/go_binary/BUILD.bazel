@@ -241,7 +241,31 @@ go_binary(
 go_binary(
     name = "meaning2",
     srcs = [
-        "//tests/core/go_library:use_syso_srcs",
         "meaning2.go",
+        "//tests/core/go_library:use_syso_srcs",
     ],
+)
+
+go_binary(
+    name = "godebug_bin_godebug",
+    srcs = ["godebug_bin.go"],
+    godebug_default = {
+        "http2debug": "1",
+    },
+)
+
+go_binary(
+    name = "godebug_bin",
+    srcs = ["godebug_bin.go"],
+)
+
+go_test(
+    name = "godebug_test",
+    srcs = ["godebug_test.go"],
+    data = [
+        ":godebug_bin",
+        ":godebug_bin_godebug",
+    ],
+    rundir = ".",
+    deps = ["//go/tools/bazel:go_default_library"],
 )
