@@ -656,7 +656,6 @@ def _recompile_external_deps(go, external_source, internal_archive, library_labe
     i = 0
     for label in dep_list:
         i += 1
-        recompile_suffix = ".recompile%d" % i
 
         # If this library is the internal archive, use the recompiled version.
         if label == internal_archive.data.label:

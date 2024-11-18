@@ -43,8 +43,6 @@ load(
 GoProtoImports = provider()
 
 def get_imports(attr, importpath):
-    proto_deps = []
-
     # ctx.attr.proto is a one-element array since there is a Starlark transition attached to it.
     if hasattr(attr, "proto") and attr.proto and types.is_list(attr.proto) and ProtoInfo in attr.proto[0]:
         proto_deps = [attr.proto[0]]
