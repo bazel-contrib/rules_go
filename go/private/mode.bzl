@@ -122,6 +122,7 @@ _LINK_PIE_PLATFORMS = {
     "linux/386": None,
     "linux/s390x": None,
     "linux/ppc64le": None,
+    "linux/riscv64": None,
     "android/amd64": None,
     "android/arm": None,
     "android/arm64": None,
