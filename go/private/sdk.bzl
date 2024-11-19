@@ -130,6 +130,8 @@ def _go_download_sdk_impl(ctx):
             "sdks": ctx.attr.sdks,
             "urls": ctx.attr.urls,
             "version": version,
+            "patch": ctx.attr.patch,
+            "patch_strip": ctx.attr.patch_strip,
             "strip_prefix": ctx.attr.strip_prefix,
         }
     return None
@@ -145,6 +147,8 @@ go_download_sdk_rule = repository_rule(
         ),
         "urls": attr.string_list(default = ["https://dl.google.com/go/{}"]),
         "version": attr.string(),
+        "patch": attr.label(default = None),
+        "patch_strip": attr.int(default = 0),
         "strip_prefix": attr.string(default = "go"),
         "patches": attr.label_list(
             doc = "A list of patches to apply to the SDK after downloading it",
@@ -462,6 +466,8 @@ def _remote_sdk(ctx, urls, strip_prefix, sha256):
         res = ctx.execute(["tar", "-xf", "go_sdk.tar.gz", "--strip-components=1"])
         if res.return_code:
             fail("error extracting Go SDK:\n" + res.stdout + res.stderr)
+        if ctx.attr.patch:
+            ctx.patch(ctx.attr.patch, strip = ctx.attr.patch_strip)
         ctx.delete("go_sdk.tar.gz")
     elif (urls[0].endswith(".zip") and
           host_goos == "darwin" and
