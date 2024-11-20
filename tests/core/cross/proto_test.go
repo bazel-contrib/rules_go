@@ -23,7 +23,7 @@ import (
 var testArgs = bazel_testing.Args{
 	ModuleFileSuffix: `
 bazel_dep(name = "rules_proto", version = "6.0.0")
-bazel_dep(name = "toolchains_protoc", version = "0.2.4")
+bazel_dep(name = "toolchains_protoc", version = "0.3.4")
 `,
 	WorkspacePrefix: `
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
