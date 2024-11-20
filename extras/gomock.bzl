@@ -328,6 +328,7 @@ def _gomock_prog_exec_impl(ctx):
             ctx.file.mockgen_tool,
             go.sdk.go,
         ],
+        toolchain = GO_TOOLCHAIN_LABEL,
         command = """
             export GOROOT=$(pwd)/{goroot} &&
             export PATH=$GOROOT/bin:$PATH &&
