@@ -91,7 +91,7 @@ func runPrepare(ctx context.Context, stderr io.Writer, args []string) error {
 	if version == "" {
 		return usageErrorf(&prepareCmd, "-version must be set")
 	}
-	if semver.Canonical(version) != version || semver.Prerelease(version) != "" || semver.Build(version) != "" {
+	if semver.Canonical(version) != version || semver.Build(version) != "" {
 		return usageErrorf(&prepareCmd, "-version must be a canonical version, like v1.2.3")
 	}
 
