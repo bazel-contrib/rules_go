@@ -101,7 +101,7 @@ func runPrepare(ctx context.Context, stderr io.Writer, args []string) error {
 
 	// Get the GitHub release.
 	fmt.Fprintf(stderr, "checking if release %s exists...\n", version)
-	release, err := gh.getReleaseByTagIncludingDraft(ctx, "bazelbuild", "rules_go", version)
+	release, err := gh.getReleaseByTagIncludingDraft(ctx, "bazel-contrib", "rules_go", version)
 	if err != nil && !errors.Is(err, errReleaseNotFound) {
 		return err
 	}
@@ -181,7 +181,7 @@ func runPrepare(ctx context.Context, stderr io.Writer, args []string) error {
 	}
 
 	// Upload to mirror.bazel.build.
-	arcGHURLWithoutScheme := fmt.Sprintf("github.com/bazelbuild/rules_go/releases/download/%[1]s/rules_go-%[1]s.zip", version)
+	arcGHURLWithoutScheme := fmt.Sprintf("github.com/bazel-contrib/rules_go/releases/download/%[1]s/rules_go-%[1]s.zip", version)
 	if uploadToMirror {
 		fmt.Fprintf(stderr, "uploading archive to mirror.bazel.build...\n")
 		if err := copyFileToMirror(ctx, arcGHURLWithoutScheme, arcName); err != nil {
@@ -200,17 +200,17 @@ func runPrepare(ctx context.Context, stderr io.Writer, args []string) error {
 			Body:            &rnotesStr,
 			Draft:           &draft,
 		}
-		if release, _, err = gh.Repositories.CreateRelease(ctx, "bazelbuild", "rules_go", release); err != nil {
+		if release, _, err = gh.Repositories.CreateRelease(ctx, "bazel-contrib", "rules_go", release); err != nil {
 			return err
 		}
 	} else {
 		fmt.Fprintf(stderr, "updating release...\n")
 		release.Body = &rnotesStr
-		if release, _, err = gh.Repositories.EditRelease(ctx, "bazelbuild", "rules_go", release.GetID(), release); err != nil {
+		if release, _, err = gh.Repositories.EditRelease(ctx, "bazel-contrib", "rules_go", release.GetID(), release); err != nil {
 			return err
 		}
 		for _, asset := range release.Assets {
-			if _, err := gh.Repositories.DeleteReleaseAsset(ctx, "bazelbuild", "rules_go", asset.GetID()); err != nil {
+			if _, err := gh.Repositories.DeleteReleaseAsset(ctx, "bazel-contrib", "rules_go", asset.GetID()); err != nil {
 				return err
 			}
 		}
@@ -224,7 +224,7 @@ func runPrepare(ctx context.Context, stderr io.Writer, args []string) error {
 		Name:      "rules_go-" + version + ".zip",
 		MediaType: "application/zip",
 	}
-	if _, _, err := gh.Repositories.UploadReleaseAsset(ctx, "bazelbuild", "rules_go", release.GetID(), uploadOpts, arcFile); err != nil {
+	if _, _, err := gh.Repositories.UploadReleaseAsset(ctx, "bazel-contrib", "rules_go", release.GetID(), uploadOpts, arcFile); err != nil {
 		return err
 	}
 
