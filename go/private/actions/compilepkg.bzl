@@ -284,6 +284,7 @@ def _run_nogo(
         outputs = [out_validation],
         mnemonic = "ValidateNogo",
         executable = go.toolchain._builder,
+        toolchain = GO_TOOLCHAIN_LABEL,
         arguments = [validation_args],
         execution_requirements = SUPPORTS_PATH_MAPPING_REQUIREMENT,
         progress_message = "Validating nogo output for %{label}",

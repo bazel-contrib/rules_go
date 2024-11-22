@@ -512,10 +512,11 @@ exit /b %GO_EXIT_CODE%
         )
         ctx.actions.run(
             executable = bat,
-            inputs = depset(
+            tools = depset(
                 ctx.files.srcs + [sdk.go],
                 transitive = [sdk.headers, sdk.srcs, sdk.tools],
             ),
+            toolchain = None,
             outputs = [out, gotmp],
             mnemonic = "GoToolchainBinaryBuild",
         )
@@ -538,10 +539,11 @@ GO111MODULE=off \
         )
         ctx.actions.run_shell(
             command = cmd,
-            inputs = depset(
+            tools = depset(
                 ctx.files.srcs + [sdk.go],
                 transitive = [sdk.headers, sdk.srcs, sdk.libs, sdk.tools],
             ),
+            toolchain = None,
             outputs = [out],
             mnemonic = "GoToolchainBinaryBuild",
         )
