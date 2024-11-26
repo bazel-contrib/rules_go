@@ -12,9 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 """Tests that two files contain the same data."""
+
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 def files_equal_test(name, golden, actual, error_message = None, **kwargs):
     # This genrule creates a Bash script: the source of the actual test.
