@@ -253,7 +253,9 @@ http_archive(
 )
 
 load("@rules_shell//shell:repositories.bzl", "rules_shell_dependencies", "rules_shell_toolchains")
+
 rules_shell_dependencies()
+
 rules_shell_toolchains()
 
 load("@googleapis//:repository_rules.bzl", "switched_rules_by_language")
