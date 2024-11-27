@@ -40,10 +40,6 @@ with review. Specifically, prepare does the following:
 * Creates the release branch if it doesn't exist locally. Release branches
   have names like "release-X.Y" where X and Y are the major and minor version
   numbers.
-* Checks that RULES_GO_VERSION is set in go/def.bzl on the local release branch
-  for the minor version being released. RULES_GO_VERSION must be a sematic
-  version without the "v" prefix that Go uses, like "1.2.4". It must match
-  the -version flag, which does require the "v" prefix.
 * Creates an archive zip file from the tip of the local release branch.
 * Creates or updates a draft GitHub release with the given release notes.
   http_archive boilerplate is generated and appended to the release notes.
@@ -109,10 +105,9 @@ func runPrepare(ctx context.Context, stderr io.Writer, args []string) error {
 		return fmt.Errorf("release %s was already published", version)
 	}
 
-	// Check that RULES_GO_VERSION is set correctly on the release branch.
 	// If this is a minor release (x.y.0), create the release branch if it
 	// does not exist.
-	fmt.Fprintf(stderr, "checking RULES_GO_VERSION...\n")
+	fmt.Fprintf(stderr, "verifying release branch...\n")
 	rootDir, err := repoRoot()
 	if err != nil {
 		return err
@@ -125,17 +120,10 @@ func runPrepare(ctx context.Context, stderr io.Writer, args []string) error {
 	branchName := "release-" + majorMinor[len("v"):]
 	if !gitBranchExists(ctx, rootDir, branchName) {
 		if !isMinorRelease {
-			return fmt.Errorf("release branch %q does not exist locally. Fetch it, set RULES_GO_VERSION, add commits, and run this command again.", branchName)
-		}
-		if err := checkRulesGoVersion(ctx, rootDir, "HEAD", version); err != nil {
-			return err
+			return fmt.Errorf("release branch %q does not exist locally. Fetch it, add commits, and run this command again.", branchName)
 		}
 		fmt.Fprintf(stderr, "creating branch %s...\n", branchName)
 		if err := gitCreateBranch(ctx, rootDir, branchName, "HEAD"); err != nil {
-			return err
-		}
-	} else {
-		if err := checkRulesGoVersion(ctx, rootDir, branchName, version); err != nil {
 			return err
 		}
 	}
@@ -237,17 +225,5 @@ Release %s has been prepared and uploaded.
 * Update README.rst and WORKSPACE if necessary.
 `, version, testURL, release.GetHTMLURL())
 
-	return nil
-}
-
-func checkRulesGoVersion(ctx context.Context, dir, refName, version string) error {
-	data, err := gitCatFile(ctx, dir, refName, "go/def.bzl")
-	if err != nil {
-		return err
-	}
-	rulesGoVersionStr := []byte(fmt.Sprintf(`RULES_GO_VERSION = "%s"`, version[len("v"):]))
-	if !bytes.Contains(data, rulesGoVersionStr) {
-		return fmt.Errorf("RULES_GO_VERSION was not set to %q in go/def.bzl. Set it, add commits, and run this command again.", version)
-	}
 	return nil
 }

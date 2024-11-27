@@ -123,9 +123,10 @@ _TOOLS_NOGO = [
 # new analyses may discover issues in existing builds.
 TOOLS_NOGO = [str(Label(l)) for l in _TOOLS_NOGO]
 
-# Current version or next version to be tagged. Gazelle and other tools may
-# check this to determine compatibility.
-RULES_GO_VERSION = "0.51.0-rc1"
+# Deprecated field previously used for version detection. This will not be
+# updated for new releases, use bazel_dep in MODULE.bazel to specify a minimum
+# version of rules_go instead.
+RULES_GO_VERSION = "0.50.0"
 
 go_context = _go_context
 gomock = _gomock
