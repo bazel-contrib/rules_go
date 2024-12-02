@@ -18,7 +18,7 @@
     }
   ],
   "repository": [
-    "github:bazelbuild/rules_go"
+    "github:bazel-contrib/rules_go"
   ],
   "versions": [],
   "yanked_versions": {}
