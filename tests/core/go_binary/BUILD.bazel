@@ -1,3 +1,5 @@
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
+load("@bazel_skylib//rules:run_binary.bzl", "run_binary")
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
 load("@io_bazel_rules_go//go/tools/bazel_testing:def.bzl", "go_bazel_test")
 load(":linkmode.bzl", "linkmode_pie_wrapper")
@@ -241,7 +243,27 @@ go_binary(
 go_binary(
     name = "meaning2",
     srcs = [
-        "//tests/core/go_library:use_syso_srcs",
         "meaning2.go",
+        "//tests/core/go_library:use_syso_srcs",
     ],
+)
+
+# These three verify that testing.Testing() returns `false` in a
+# `go_binary`.
+go_binary(
+    name = "testing_testing_bin",
+    srcs = ["testing_testing.go"],
+)
+
+run_binary(
+    name = "testing_testing_bin_run",
+    outs = ["testing_testing_bin_run.out"],
+    args = ["$(location :testing_testing_bin_run.out)"],
+    tags = ["manual"],
+    tool = ":testing_testing_bin",
+)
+
+build_test(
+    name = "testing_testing_test",
+    targets = [":testing_testing_bin_run"],
 )
