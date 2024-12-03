@@ -60,7 +60,7 @@ def go_binary_macro(name, **kwargs):
                 # behaviour, so we forbid this.
                 fail("Cannot use select for go_binary with goos/goarch set, but {} was a select".format(key))
 
-    if kwargs.get("linkmode", default = LINKMODE_NORMAL) in LINKMODES_EXECUTABLE:
+    if kwargs.get("linkmode", LINKMODE_NORMAL) in LINKMODES_EXECUTABLE:
         go_binary(name = name, **kwargs)
     else:
         go_non_executable_binary(name = name, **kwargs)

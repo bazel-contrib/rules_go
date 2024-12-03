@@ -39,6 +39,9 @@ go_bazel_test(
     size = "enormous",
     srcs = ["gopackagesdriver_test.go"],
     embed = [":gopackagesdriver_lib"],
+    env = {
+        "GOPACKAGESDRIVER_BAZEL_COMMON_FLAGS": "--noexperimental_enable_bzlmod",
+    },
     rule_files = ["//:all_files"],
     x_defs = {
         "rulesGoRepositoryName": RULES_GO_REPO_NAME_FOR_TEST,

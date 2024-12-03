@@ -58,7 +58,7 @@ func (pr *PackageRegistry) ResolvePaths(prf PathResolverFunc) error {
 // ResolveImports adds stdlib imports to packages. This is required because
 // stdlib packages are not part of the JSON file exports as bazel is unaware of
 // them.
-func (pr *PackageRegistry) ResolveImports() error {
+func (pr *PackageRegistry) ResolveImports(overlays map[string][]byte) error {
 	resolve := func(importPath string) string {
 		if pkgID, ok := pr.stdlib[importPath]; ok {
 			return pkgID
@@ -68,7 +68,7 @@ func (pr *PackageRegistry) ResolveImports() error {
 	}
 
 	for _, pkg := range pr.packagesByID {
-		if err := pkg.ResolveImports(resolve); err != nil {
+		if err := pkg.ResolveImports(resolve, overlays); err != nil {
 			return err
 		}
 		testFp := pkg.MoveTestFiles()

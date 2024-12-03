@@ -300,6 +300,14 @@ def go_rules_dependencies(force = False):
         name = "io_bazel_rules_go_bazel_features",
     )
 
+    wrapper(
+        http_archive,
+        name = "rules_shell",
+        sha256 = "d8cd4a3a91fc1dc68d4c7d6b655f09def109f7186437e3f50a9b60ab436a0c53",
+        strip_prefix = "rules_shell-0.3.0",
+        url = "https://github.com/bazelbuild/rules_shell/releases/download/v0.3.0/rules_shell-v0.3.0.tar.gz",
+    )
+
 def _maybe(repo_rule, name, **kwargs):
     if name not in native.existing_rules():
         repo_rule(name = name, **kwargs)

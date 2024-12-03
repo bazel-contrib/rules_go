@@ -29,11 +29,22 @@ func TestMain(m *testing.M) {
 	bazel_testing.TestMain(m, bazel_testing.Args{
 		Main: `
 -- BUILD.bazel --
-load("@io_bazel_rules_go//go:def.bzl", "go_binary")
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+
+go_library(
+    name = "strip_lib",
+    srcs = ["strip.go"],
+)
 
 go_binary(
     name = "strip",
-    srcs = ["strip.go"],
+    embed = [":strip_lib"],
+)
+
+go_test(
+    name = "strip_test",
+    srcs = ["strip_test.go"],
+    embed = [":strip_lib"],
 )
 -- strip.go --
 package main
@@ -53,6 +64,10 @@ import (
 	"strings"
 )
 
+// Used to disable checking that the length of the captured stack trace exactly
+// matches the expected length. This allows the test for testing cases to not
+// encode so many details about internals of the go testing package.
+var checkStackTraceLenEq = flag.Bool("check-len-eq", true, "")
 var wantStrip = flag.Bool("wantstrip", false, "")
 
 func main() {
@@ -62,10 +77,16 @@ func main() {
 		panic(err)
 	}
 	gotStackTrace := strings.Split(stackTrace, "\n")
-	if len(gotStackTrace) != len(wantStackTrace) {
-		panic(fmt.Sprintf("got %d lines of stack trace, want %d", len(gotStackTrace), len(wantStackTrace)))
+	if *checkStackTraceLenEq {
+		if len(gotStackTrace) != len(wantStackTrace) {
+			panic(fmt.Sprintf("got %d lines of stack trace, want %d", len(gotStackTrace), len(wantStackTrace)))
+		}
+	} else {
+		if len(gotStackTrace) < len(wantStackTrace) {
+			panic(fmt.Sprintf("got %d lines of stack trace, want at least %d", len(gotStackTrace), len(wantStackTrace)))
+		}
 	}
-	for i := range gotStackTrace {
+	for i := range wantStackTrace {
 		expectedLine := regexp.MustCompile(wantStackTrace[i])
 		if !expectedLine.MatchString(gotStackTrace[i]) {
 			panic(fmt.Sprintf("got unexpected stack trace line %q at index %d", gotStackTrace[i], i))
@@ -155,15 +176,48 @@ func isStrippedPE(f io.ReaderAt) (bool, error) {
 }
 
 
-` + embedWantedStackTraces(),
+` + embedWantedStackTraces() + `
+-- strip_test.go --
+package main
+
+import "testing"
+
+func TestStrip(t *testing.T) {
+	defer func(prev []string) { wantStackTrace = prev }(wantStackTrace)
+	wantStackTrace = wantTestStackTrace
+	main()
+}
+` + embedWantedTestStackTrace(),
 	})
 }
 
 func Test(t *testing.T) {
-	for _, test := range []struct {
+	type testCase struct {
 		desc, stripFlag, compilationMode string
 		wantStrip                        bool
-	}{
+	}
+	testArgs := func(test testCase, bazelCmd string) []string {
+		args := []string{bazelCmd}
+		if len(test.stripFlag) > 0 {
+			args = append(args, "--strip", test.stripFlag)
+		}
+		if len(test.compilationMode) > 0 {
+			args = append(args, "--compilation_mode", test.compilationMode)
+		}
+		stripFlag := fmt.Sprintf("-wantstrip=%v", test.wantStrip)
+		switch bazelCmd {
+		case "test":
+			stripFlag = fmt.Sprintf("--test_arg=%s", stripFlag)
+			checkLenFlag := "--test_arg=-check-len-eq=false"
+			args = append(args, "//:strip_test", stripFlag, checkLenFlag)
+		case "run":
+			args = append(args, "//:strip", "--", stripFlag)
+		default:
+			panic(fmt.Sprintf("unknown command: %s", bazelCmd))
+		}
+		return args
+	}
+	cases := []testCase{
 		{
 			desc:      "run_auto",
 			wantStrip: true,
@@ -212,36 +266,40 @@ func Test(t *testing.T) {
 			stripFlag:       "sometimes",
 			compilationMode: "opt",
 		},
-	} {
-		t.Run(test.desc, func(t *testing.T) {
-			args := []string{"run"}
-			if len(test.stripFlag) > 0 {
-				args = append(args, "--strip", test.stripFlag)
+	}
+	run := func(t *testing.T, args []string) {
+		cmd := bazel_testing.BazelCmd(args...)
+		stderr := &bytes.Buffer{}
+		cmd.Stderr = stderr
+		t.Logf("running: bazel %s", strings.Join(args, " "))
+		if err := cmd.Run(); err != nil {
+			var xerr *exec.ExitError
+			if !errors.As(err, &xerr) {
+				t.Fatalf("unexpected error: %v", err)
 			}
-			if len(test.compilationMode) > 0 {
-				args = append(args, "--compilation_mode", test.compilationMode)
+			if xerr.ExitCode() == bazel_testing.BUILD_FAILURE {
+				t.Fatalf("unexpected build failure: %v\nstderr:\n%s", err, stderr.Bytes())
+				return
+			} else if xerr.ExitCode() == bazel_testing.TESTS_FAILED {
+				t.Fatalf("error running %s:\n%s", strings.Join(cmd.Args, " "), stderr.Bytes())
+			} else {
+				t.Fatalf("unexpected error: %v\nstderr:\n%s", err, stderr.Bytes())
 			}
-			args = append(args, "//:strip", "--", fmt.Sprintf("-wantstrip=%v", test.wantStrip))
-			cmd := bazel_testing.BazelCmd(args...)
-			stderr := &bytes.Buffer{}
-			cmd.Stderr = stderr
-			t.Logf("running: bazel %s", strings.Join(args, " "))
-			if err := cmd.Run(); err != nil {
-				var xerr *exec.ExitError
-				if !errors.As(err, &xerr) {
-					t.Fatalf("unexpected error: %v", err)
-				}
-				if xerr.ExitCode() == bazel_testing.BUILD_FAILURE {
-					t.Fatalf("unexpected build failure: %v\nstderr:\n%s", err, stderr.Bytes())
-					return
-				} else if xerr.ExitCode() == bazel_testing.TESTS_FAILED {
-					t.Fatalf("error running %s:\n%s", strings.Join(cmd.Args, " "), stderr.Bytes())
-				} else {
-					t.Fatalf("unexpected error: %v\nstderr:\n%s", err, stderr.Bytes())
-				}
+		}
+	}
+	for _, bazelCmd := range []string{"run", "test"} {
+		t.Run(bazelCmd, func(t *testing.T) {
+			for _, test := range cases {
+				t.Run(test.desc, func(t *testing.T) {
+					run(t, testArgs(test, bazelCmd))
+				})
 			}
 		})
 	}
+}
+
+func embedWantedStackTraces() string {
+	return embedStringSliceVar("wantStackTrace", wantStackTrace)
 }
 
 var wantStackTrace = []string{
@@ -259,10 +317,27 @@ var wantStackTrace = []string{
 	`^$`,
 }
 
-func embedWantedStackTraces() string {
+func embedWantedTestStackTrace() string {
+	return embedStringSliceVar("wantTestStackTrace", wantTestStackTrace)
+}
+
+var wantTestStackTrace = replaceStrings(
+	wantStackTrace[:len(wantStackTrace)-1], // remove the final empty line.
+	"^main", "^strip_test",
+)
+
+func replaceStrings(data []string, old, new string) []string {
+	ret := make([]string, len(data))
+	for i, s := range data {
+		ret[i] = strings.Replace(s, old, new, 1)
+	}
+	return ret
+}
+
+func embedStringSliceVar(name string, data []string) string {
 	buf := &bytes.Buffer{}
-	fmt.Fprintln(buf, "var wantStackTrace = []string{")
-	for _, s := range wantStackTrace {
+	fmt.Fprintf(buf, "var %s = []string{\n", name)
+	for _, s := range data {
 		fmt.Fprintf(buf, "`%s`,\n", s)
 	}
 	fmt.Fprintln(buf, "}")

@@ -29,6 +29,7 @@ load(
 load(
     "//go/private:context.bzl",
     _go_context = "go_context",
+    _new_go_info = "new_go_info",
 )
 load(
     "//go/private:go_toolchain.bzl",
@@ -38,10 +39,9 @@ load(
     "//go/private:providers.bzl",
     _GoArchive = "GoArchive",
     _GoArchiveData = "GoArchiveData",
-    _GoLibrary = "GoLibrary",
+    _GoInfo = "GoInfo",
     _GoPath = "GoPath",
     _GoSDK = "GoSDK",
-    _GoSource = "GoSource",
 )
 load(
     "//go/private/rules:cross.bzl",
@@ -123,9 +123,10 @@ _TOOLS_NOGO = [
 # new analyses may discover issues in existing builds.
 TOOLS_NOGO = [str(Label(l)) for l in _TOOLS_NOGO]
 
-# Current version or next version to be tagged. Gazelle and other tools may
-# check this to determine compatibility.
-RULES_GO_VERSION = "0.50.1"
+# Deprecated field previously used for version detection. This will not be
+# updated for new releases, use bazel_dep in MODULE.bazel to specify a minimum
+# version of rules_go instead.
+RULES_GO_VERSION = "0.50.0"
 
 go_context = _go_context
 gomock = _gomock
@@ -134,11 +135,19 @@ go_tool_library = _go_tool_library
 go_toolchain = _go_toolchain
 nogo = _nogo
 
-# See go/providers.rst#GoLibrary for full documentation.
-GoLibrary = _GoLibrary
+# This provider is deprecated and will be removed in a future release.
+# Use GoInfo instead.
+GoLibrary = _GoInfo
 
-# See go/providers.rst#GoSource for full documentation.
-GoSource = _GoSource
+# This provider is deprecated and will be removed in a future release.
+# Use GoInfo instead.
+GoSource = _GoInfo
+
+# See go/providers.rst#GoInfo for full documentation.
+GoInfo = _GoInfo
+
+# See go/toolchains.rst#new_go_info for full documentation.
+new_go_info = _new_go_info
 
 # See go/providers.rst#GoPath for full documentation.
 GoPath = _GoPath

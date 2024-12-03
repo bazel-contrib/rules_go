@@ -29,8 +29,7 @@ load(
 load(
     "//go/private:providers.bzl",
     "GoArchive",
-    "GoLibrary",
-    "GoSource",
+    "GoInfo",
 )
 
 # A list of rules_go settings that are possibly set by go_transition.
@@ -87,9 +86,7 @@ def _go_transition_impl(settings, attr):
         pure = "off"
         settings["//go/config:pure"] = False
     if pure == "on":
-        race = "off"
         settings["//go/config:race"] = False
-        msan = "off"
         settings["//go/config:msan"] = False
     cgo = pure == "off"
 
@@ -280,7 +277,7 @@ go_stdlib_transition = transition(
 
 def _go_reset_target_impl(ctx):
     t = ctx.attr.dep[0]  # [0] seems to be necessary with the transition
-    providers = [t[p] for p in [GoLibrary, GoSource, GoArchive] if p in t]
+    providers = [t[p] for p in [GoInfo, GoArchive] if p in t]
 
     # We can't pass DefaultInfo through as-is, since Bazel forbids executable
     # if it's a file declared in a different target. To emulate that, symlink
@@ -446,7 +443,7 @@ go_cross_transition = transition(
 # This should be updated to contain the union of all tags relevant for all
 # versions of Go that are still relevant.
 #
-# Currently supported versions: 1.18, 1.19, 1.20
+# Currently supported versions: 1.18..1.23
 #
 # To regenerate, run and paste the output of
 #     bazel run //go/tools/internal/stdlib_tags:stdlib_tags -- path/to/go_sdk_1/src ...
@@ -454,17 +451,22 @@ _TAG_AFFECTS_STDLIB = {
     "alpha": None,
     "appengine": None,
     "asan": None,
-    "boringcrypto": None,
+    "boringcrypto": None,  # Added in Go 1.19
+    "checknewoldreassignment": None,  # Added in Go 1.22
     "cmd_go_bootstrap": None,
     "compiler_bootstrap": None,
     "debuglog": None,
+    "debugtrace": None,  # Added in Go 1.22
     "faketime": None,
     "gc": None,
     "gccgo": None,
-    "gen": None,
+    "gen": None,  # Removed in Go 1.20
     "generate": None,
-    "gofuzz": None,
+    "gofuzz": None,  # Removed in Go 1.23
+    "icu": None,  # Added in Go 1.23
     "ignore": None,
+    "internal": None,  # Added in Go 1.21
+    "internal_pie": None,  # Added in Go 1.21, removed in Go 1.22
     "libfuzzer": None,
     "m68k": None,
     "math_big_pure_go": None,
@@ -473,13 +475,15 @@ _TAG_AFFECTS_STDLIB = {
     "netgo": None,
     "nethttpomithttp2": None,
     "nios2": None,
-    "noopt": None,
+    "noopt": None,  # Added in Go 1.20
     "osusergo": None,
     "purego": None,
     "race": None,
     "sh": None,
     "shbe": None,
-    "tablegen": None,
-    "testgo": None,
+    "static": None,  # Added in Go 1.21
+    "tablegen": None,  # Removed in Go 1.19
+    "testgo": None,  # Removed in Go 1.19
     "timetzdata": None,
+    "tools": None,  # Added in Go 1.21
 }

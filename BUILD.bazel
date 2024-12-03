@@ -43,6 +43,7 @@ stdlib(
     name = "stdlib",
     cgo_context_data = select({
         "//go/platform:internal_cgo_off": None,
+        "//go/private:is_pure": None,
         "//conditions:default": ":cgo_context_data",
     }),
     visibility = ["//visibility:public"],
@@ -72,6 +73,7 @@ go_context_data(
     name = "go_context_data",
     cgo_context_data = select({
         "//go/platform:internal_cgo_off": None,
+        "//go/private:is_pure": None,
         "//conditions:default": ":cgo_context_data",
     }),
     coverdata = "//go/tools/coverdata",
@@ -95,6 +97,7 @@ cgo_context_data_proxy(
     name = "cgo_context_data_proxy",
     actual = select({
         "//go/platform:internal_cgo_off": None,
+        "//go/private:is_pure": None,
         "//conditions:default": ":cgo_context_data",
     }),
     visibility = ["//visibility:public"],

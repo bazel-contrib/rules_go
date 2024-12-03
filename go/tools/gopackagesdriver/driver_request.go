@@ -79,7 +79,7 @@ type DriverRequest struct {
 	Tests bool `json:"tests"`
 	// Overlay maps file paths (relative to the driver's working directory) to the byte contents
 	// of overlay files.
-	// Overlay map[string][]byte `json:"overlay"`
+	Overlay map[string][]byte `json:"overlay"`
 }
 
 func ReadDriverRequest(r io.Reader) (*DriverRequest, error) {

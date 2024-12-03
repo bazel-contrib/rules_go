@@ -15,10 +15,12 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"go/parser"
 	"go/token"
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -132,14 +134,20 @@ func (fp *FlatPackage) filterTestSuffix(files []string) (err error, testFiles []
 
 func (fp *FlatPackage) MoveTestFiles() *FlatPackage {
 	err, tgf, xtgf, gf := fp.filterTestSuffix(fp.GoFiles)
-
 	if err != nil {
 		return nil
 	}
-	fp.GoFiles = append(gf, tgf...)
-	fp.CompiledGoFiles = append(gf, tgf...)
 
-	if len(xtgf) == 0 {
+	fp.GoFiles = append(gf, tgf...)
+
+	err, ctgf, cxtgf, cgf := fp.filterTestSuffix(fp.CompiledGoFiles)
+	if err != nil {
+		return nil
+	}
+
+	fp.CompiledGoFiles = append(cgf, ctgf...)
+
+	if len(xtgf) == 0 && len(cxtgf) == 0 {
 		return nil
 	}
 
@@ -158,7 +166,7 @@ func (fp *FlatPackage) MoveTestFiles() *FlatPackage {
 		Imports:         newImports,
 		Errors:          fp.Errors,
 		GoFiles:         append([]string{}, xtgf...),
-		CompiledGoFiles: append([]string{}, xtgf...),
+		CompiledGoFiles: append([]string{}, cxtgf...),
 		OtherFiles:      fp.OtherFiles,
 		ExportFile:      fp.ExportFile,
 		Standard:        fp.Standard,
@@ -169,7 +177,9 @@ func (fp *FlatPackage) IsStdlib() bool {
 	return fp.Standard
 }
 
-func (fp *FlatPackage) ResolveImports(resolve ResolvePkgFunc) error {
+// ResolveImports resolves imports for non-stdlib packages and integrates file overlays
+// to allow modification of package imports without modifying disk files.
+func (fp *FlatPackage) ResolveImports(resolve ResolvePkgFunc, overlays map[string][]byte) error {
 	// Stdlib packages are already complete import wise
 	if fp.IsStdlib() {
 		return nil
@@ -178,7 +188,14 @@ func (fp *FlatPackage) ResolveImports(resolve ResolvePkgFunc) error {
 	fset := token.NewFileSet()
 
 	for _, file := range fp.CompiledGoFiles {
-		f, err := parser.ParseFile(fset, file, nil, parser.ImportsOnly)
+		// Only assign overlayContent when an overlay for the file exists, since ParseFile checks by type.
+		// If overlay is assigned directly from the map, it will have []byte as type
+		// Empty []byte types are parsed into io.EOF
+		var overlayReader io.Reader
+		if content, ok := overlays[file]; ok {
+			overlayReader = bytes.NewReader(content)
+		}
+		f, err := parser.ParseFile(fset, file, overlayReader, parser.ImportsOnly)
 		if err != nil {
 			return err
 		}

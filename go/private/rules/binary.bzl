@@ -23,6 +23,7 @@ load(
 load(
     "//go/private:context.bzl",
     "go_context",
+    "new_go_info",
 )
 load(
     "//go/private:mode.bzl",
@@ -35,9 +36,8 @@ load(
 )
 load(
     "//go/private:providers.bzl",
-    "GoLibrary",
+    "GoInfo",
     "GoSDK",
-    "GoSource",
 )
 load(
     "//go/private/rules:transition.bzl",
@@ -96,7 +96,7 @@ def new_cc_import(
     )
 
 def _go_cc_aspect_impl(target, ctx):
-    if GoSource not in target:
+    if GoInfo not in target:
         return []
 
     deps = (
@@ -127,8 +127,12 @@ def _go_binary_impl(ctx):
     )
 
     is_main = go.mode.linkmode not in (LINKMODE_SHARED, LINKMODE_PLUGIN)
-    library = go.new_library(go, importable = False, is_main = is_main)
-    source = go.library_to_source(go, ctx.attr, library, ctx.coverage_instrumented())
+    go_info = new_go_info(
+        go,
+        ctx.attr,
+        importable = False,
+        is_main = is_main,
+    )
     name = ctx.attr.basename
     if not name:
         name = ctx.label.name
@@ -141,7 +145,7 @@ def _go_binary_impl(ctx):
     archive, executable, runfiles = go.binary(
         go,
         name = name,
-        source = source,
+        source = go_info,
         gc_linkopts = gc_linkopts(ctx),
         version_file = ctx.version_file,
         info_file = ctx.info_file,
@@ -238,20 +242,20 @@ def _go_binary_kwargs(go_cc_aspects = []):
                 """,
             ),
             "deps": attr.label_list(
-                providers = [GoLibrary],
+                providers = [GoInfo],
                 aspects = go_cc_aspects,
                 doc = """List of Go libraries this package imports directly.
-                These may be `go_library` rules or compatible rules with the [GoLibrary] provider.
+                These may be `go_library` rules or compatible rules with the [GoInfo] provider.
                 """,
                 cfg = go_transition,
             ),
             "embed": attr.label_list(
-                providers = [GoLibrary],
+                providers = [GoInfo],
                 aspects = go_cc_aspects,
                 doc = """List of Go libraries whose sources should be compiled together with this
                 binary's sources. Labels listed here must name `go_library`,
-                `go_proto_library`, or other compatible targets with the [GoLibrary] and
-                [GoSource] providers. Embedded libraries must all have the same `importpath`,
+                `go_proto_library`, or other compatible targets with the [GoInfo] provider.
+                Embedded libraries must all have the same `importpath`,
                 which must match the `importpath` for this `go_binary` if one is
                 specified. At most one embedded library may have `cgo = True`, and the
                 embedding binary may not also have `cgo = True`. See [Embedding] for
@@ -451,8 +455,6 @@ def _go_binary_kwargs(go_cc_aspects = []):
         ***Note:*** `name` should be the same as the desired name of the generated binary.<br><br>
         **Providers:**
         <ul>
-          <li>[GoLibrary]</li>
-          <li>[GoSource]</li>
           <li>[GoArchive]</li>
         </ul>
         """,
@@ -464,6 +466,17 @@ go_non_executable_binary = rule(executable = False, **_go_binary_kwargs(
 ))
 
 def _go_tool_binary_impl(ctx):
+    # Keep in mind that the actions registered by this rule may not be
+    # sandboxed, so care must be taken to make them hermetic, for example by
+    # preventing `go build` from searching for go.mod or downloading a
+    # different toolchain version.
+    #
+    # A side effect of the usage of GO111MODULE below is that the absolute
+    # path to the sources is included in the buildid, which would make the
+    # resulting binary non-reproducible. We thus need to blank it out.
+    # https://github.com/golang/go/blob/583d750fa119d504686c737be6a898994b674b69/src/cmd/go/internal/load/pkg.go#L1764-L1766
+    # https://github.com/golang/go/blob/583d750fa119d504686c737be6a898994b674b69/src/cmd/go/internal/work/exec.go#L284
+
     sdk = ctx.attr.sdk[GoSDK]
     name = ctx.label.name
     if sdk.goos == "windows":
@@ -478,7 +491,9 @@ def _go_tool_binary_impl(ctx):
 set GOMAXPROCS=1
 set GOCACHE=%cd%\\{gotmp}\\gocache
 set GOPATH=%cd%"\\{gotmp}\\gopath
-{go} build -o {out} -trimpath -ldflags \"{ldflags}\" {srcs}
+set GOTOOLCHAIN=local
+set GO111MODULE=off
+{go} build -o {out} -trimpath -ldflags \"-buildid='' {ldflags}\" {srcs}
 set GO_EXIT_CODE=%ERRORLEVEL%
 RMDIR /S /Q "{gotmp}"
 MKDIR "{gotmp}"
@@ -506,7 +521,16 @@ exit /b %GO_EXIT_CODE%
         )
     else:
         # Note: GOPATH is needed for Go 1.16.
-        cmd = """GOTMP=$(mktemp -d);trap "rm -rf \"$GOTMP\"" EXIT;GOMAXPROCS=1 GOCACHE="$GOTMP"/gocache GOPATH="$GOTMP"/gopath {go} build -o {out} -trimpath -ldflags '{ldflags}' {srcs}""".format(
+        cmd = """
+GOTMP=$(mktemp -d)
+trap "rm -rf \"$GOTMP\"" EXIT
+GOMAXPROCS=1 \
+GOCACHE="$GOTMP"/gocache \
+GOPATH="$GOTMP"/gopath \
+GOTOOLCHAIN=local \
+GO111MODULE=off \
+{go} build -o {out} -trimpath -ldflags '-buildid="" {ldflags}' {srcs}
+""".format(
             go = sdk.go.path,
             out = out.path,
             srcs = " ".join([f.path for f in ctx.files.srcs]),

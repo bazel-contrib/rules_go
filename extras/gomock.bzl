@@ -25,7 +25,7 @@
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load("//go/private:common.bzl", "GO_TOOLCHAIN", "GO_TOOLCHAIN_LABEL")
 load("//go/private:context.bzl", "go_context")
-load("//go/private:providers.bzl", "GoLibrary")
+load("//go/private:providers.bzl", "GoInfo")
 load("//go/private/rules:wrappers.bzl", go_binary = "go_binary_macro")
 
 _MOCKGEN_TOOL = Label("//extras/gomock:mockgen")
@@ -36,10 +36,10 @@ def _gomock_source_impl(ctx):
 
     # In Source mode, it's not necessary to pass through a library, as the only thing we use it for is setting up
     # the relative file locations. Forcing users to pass a library makes it difficult in the case where a mock should
-    # be included as part of that same library, as it results in a dependency loop (GoMock -> GoLibrary -> GoMock).
+    # be included as part of that same library, as it results in a dependency loop (GoMock -> GoInfo -> GoMock).
     # Allowing users to pass an importpath directly bypasses this issue.
     # See the test case in //tests/extras/gomock/source_with_importpath for an example.
-    importpath = ctx.attr.source_importpath if ctx.attr.source_importpath else ctx.attr.library[GoLibrary].importmap
+    importpath = ctx.attr.source_importpath if ctx.attr.source_importpath else ctx.attr.library[GoInfo].importmap
 
     # create GOPATH and copy source into GOPATH
     go_path_prefix = "gopath"
@@ -52,6 +52,7 @@ def _gomock_source_impl(ctx):
         outputs = [source],
         inputs = [ctx.file.source],
         command = "mkdir -p {0} && cp -L {1} {0}".format(source.dirname, ctx.file.source.path),
+        mnemonic = "GoMockSourceCopyFile",
     )
 
     # passed in source needs to be in gopath to not trigger module mode
@@ -68,6 +69,7 @@ def _gomock_source_impl(ctx):
                 outputs = [aux],
                 inputs = [f],
                 command = "mkdir -p {0} && cp -L {1} {0}".format(aux.dirname, f.path),
+                mnemonic = "GoMockSourceCopyFile",
             )
             aux_files.append("{0}={1}".format(pkg, aux.path))
             needed_files.append(aux)
@@ -91,6 +93,7 @@ def _gomock_source_impl(ctx):
         command = """
             export GOPATH=$(pwd)/{gopath} &&
             export GOROOT=$(pwd)/{goroot} &&
+            export PATH=$GOROOT/bin:$PATH &&
             {cmd} {args} > {out}
         """.format(
             gopath = gopath,
@@ -113,7 +116,7 @@ _gomock_source = rule(
     attrs = {
         "library": attr.label(
             doc = "The target the Go library where this source file belongs",
-            providers = [GoLibrary],
+            providers = [GoInfo],
             mandatory = False,
         ),
         "source_importpath": attr.string(
@@ -257,7 +260,7 @@ def _gomock_reflect(name, library, out, mockgen_tool, **kwargs):
 
 def _gomock_prog_gen_impl(ctx):
     args = ["-prog_only"]
-    args.append(ctx.attr.library[GoLibrary].importpath)
+    args.append(ctx.attr.library[GoInfo].importpath)
     args.append(",".join(ctx.attr.interfaces))
 
     cmd = ctx.file.mockgen_tool
@@ -280,7 +283,7 @@ _gomock_prog_gen = rule(
     attrs = {
         "library": attr.label(
             doc = "The target the Go library is at to look for the interfaces in. When this is set and source is not set, mockgen will use its reflect code to generate the mocks. If source is set, its dependencies will be included in the GOPATH that mockgen will be run in.",
-            providers = [GoLibrary],
+            providers = [GoInfo],
             mandatory = True,
         ),
         "out": attr.output(
@@ -308,19 +311,28 @@ _gomock_prog_gen = rule(
 )
 
 def _gomock_prog_exec_impl(ctx):
+    go = go_context(ctx, include_deprecated_properties = False)
+
     args = ["-exec_only", ctx.file.prog_bin.path]
     args, needed_files = _handle_shared_args(ctx, args)
 
     # annoyingly, the interfaces join has to go after the importpath so we can't
     # share those.
-    args.append(ctx.attr.library[GoLibrary].importpath)
+    args.append(ctx.attr.library[GoInfo].importpath)
     args.append(",".join(ctx.attr.interfaces))
 
     ctx.actions.run_shell(
         outputs = [ctx.outputs.out],
-        inputs = [ctx.file.prog_bin] + needed_files,
-        tools = [ctx.file.mockgen_tool],
-        command = """{cmd} {args} > {out}""".format(
+        inputs = needed_files + [ctx.file.prog_bin, go.sdk.go],
+        tools = [
+            ctx.file.mockgen_tool,
+            go.sdk.go,
+        ],
+        command = """
+            export GOROOT=$(pwd)/{goroot} &&
+            export PATH=$GOROOT/bin:$PATH &&
+            {cmd} {args} > {out}""".format(
+            goroot = go.sdk.root_file.dirname,
             cmd = "$(pwd)/" + ctx.file.mockgen_tool.path,
             args = " ".join(args),
             out = ctx.outputs.out.path,
@@ -337,7 +349,7 @@ _gomock_prog_exec = rule(
     attrs = {
         "library": attr.label(
             doc = "The target the Go library is at to look for the interfaces in. When this is set and source is not set, mockgen will use its reflect code to generate the mocks. If source is set, its dependencies will be included in the GOPATH that mockgen will be run in.",
-            providers = [GoLibrary],
+            providers = [GoInfo],
             mandatory = True,
         ),
         "out": attr.output(

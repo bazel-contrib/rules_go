@@ -403,7 +403,7 @@ func compileArchive(
 		for _, hdr := range srcs.hSrcs {
 			includeSet[filepath.Dir(hdr.filename)] = struct{}{}
 		}
-		includes := make([]string, len(includeSet))
+		includes := make([]string, 0, len(includeSet))
 		for inc := range includeSet {
 			includes = append(includes, inc)
 		}

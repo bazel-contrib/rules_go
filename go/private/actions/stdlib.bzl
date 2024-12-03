@@ -19,6 +19,10 @@ load(
     "SUPPORTS_PATH_MAPPING_REQUIREMENT",
 )
 load(
+    "//go/private:context.bzl",
+    "new_go_info",
+)
+load(
     "//go/private:mode.bzl",
     "LINKMODE_NORMAL",
     "extldflags_from_cc_toolchain",
@@ -38,12 +42,11 @@ def emit_stdlib(go):
     Otherwise, the standard library will be compiled for the target.
 
     Returns:
-        A list of providers containing GoLibrary, GoSource and GoStdLib.
+        A list of providers containing GoInfo and GoStdLib.
     """
-    library = go.new_library(go)
-    source = go.library_to_source(go, {}, library, False)
+    go_info = new_go_info(go, {}, coverage_instrumented = False)
     stdlib = _sdk_stdlib(go) if _should_use_sdk_stdlib(go) else _build_stdlib(go)
-    return [source, library, stdlib]
+    return [go_info, stdlib]
 
 def _should_use_sdk_stdlib(go):
     version = parse_version(go.sdk.version)

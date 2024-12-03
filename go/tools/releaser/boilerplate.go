@@ -32,8 +32,8 @@ http_archive(
     name = "io_bazel_rules_go",
     sha256 = "%[2]s",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/%[1]s/rules_go-%[1]s.zip",
-        "https://github.com/bazelbuild/rules_go/releases/download/%[1]s/rules_go-%[1]s.zip",
+        "https://mirror.bazel.build/github.com/bazel-contrib/rules_go/releases/download/%[1]s/rules_go-%[1]s.zip",
+        "https://github.com/bazel-contrib/rules_go/releases/download/%[1]s/rules_go-%[1]s.zip",
     ],
 )
 

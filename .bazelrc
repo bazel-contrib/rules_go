@@ -37,6 +37,4 @@ build:incompatible --incompatible_disable_starlark_host_transitions
 build:incompatible --nolegacy_external_runfiles
 build:incompatible --incompatible_enable_proto_toolchain_resolution
 # Also enable all incompatible flags in go_bazel_test by default.
-# TODO: Add --incompatible_disallow_empty_glob once
-# https://github.com/bazelbuild/bazel-gazelle/pull/1405 has been released.
-test:incompatible --test_env=GO_BAZEL_TEST_BAZELFLAGS='--incompatible_load_proto_rules_from_bzl --incompatible_enable_cc_toolchain_resolution --incompatible_config_setting_private_default_visibility --incompatible_enforce_config_setting_visibility --incompatible_disable_starlark_host_transitions --nolegacy_external_runfiles --incompatible_enable_proto_toolchain_resolution'
+test:incompatible --test_env=GO_BAZEL_TEST_BAZELFLAGS='--incompatible_disallow_empty_glob --incompatible_load_proto_rules_from_bzl --incompatible_enable_cc_toolchain_resolution --incompatible_config_setting_private_default_visibility --incompatible_enforce_config_setting_visibility --incompatible_disable_starlark_host_transitions --nolegacy_external_runfiles --incompatible_enable_proto_toolchain_resolution'

@@ -15,6 +15,7 @@
 load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@io_bazel_stardoc//stardoc:stardoc.bzl", "stardoc")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 
 def stardoc_with_diff_test(
         bzl_library_target,
@@ -91,7 +92,7 @@ def update_docs(
         content = content,
     )
 
-    native.sh_binary(
+    sh_binary(
         name = name,
         srcs = [update_script],
         data = data,

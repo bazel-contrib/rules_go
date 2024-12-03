@@ -79,11 +79,25 @@ func (f ManifestFile) parse() (manifest, error) {
 	s := bufio.NewScanner(r)
 	m := manifest{make(map[string]string),  nil}
 	for s.Scan() {
-		fields := strings.SplitN(s.Text(), " ", 2)
-		if len(fields) != 2 || fields[0] == "" {
-			return manifest{}, fmt.Errorf("runfiles: bad manifest line %q in file %s", s.Text(), f)
+		line := s.Text()
+		var link, target string
+		if strings.HasPrefix(line, " ") {
+			// In lines that start with a space, spaces, newlines, and backslashes are escaped as \s, \n, and \b in
+			// link and newlines and backslashes are escaped in target.
+			fields := strings.SplitN(s.Text()[1:], " ", 2)
+			link = fields[0]
+			target = fields[1]
+			link = strings.ReplaceAll(link, `\s`, " ")
+			link = strings.ReplaceAll(link, `\n`, "\n")
+			link = strings.ReplaceAll(link, `\b`, `\`)
+			target = strings.ReplaceAll(target, `\n`, "\n")
+			target = strings.ReplaceAll(target, `\b`, `\`)
+		} else {
+			fields := strings.SplitN(line, " ", 2)
+			link = fields[0]
+			target = fields[1]
 		}
-		m.index[fields[0]] = filepath.FromSlash(fields[1])
+		m.index[link] = filepath.FromSlash(target)
 	}
 
 	if err := s.Err(); err != nil {
@@ -124,7 +138,8 @@ func (m *manifest) open(name string) (fs.File, error) {
 			// name refers to an actual file or dir listed in the manifest. The
 			// basename of name may not match the basename of the underlying
 			// file (e.g. in the case of a root symlink), so patch it.
-			f, err := os.Open(r)
+			var f *os.File
+			f, err = os.Open(r)
 			if err != nil {
 				return nil, err
 			}

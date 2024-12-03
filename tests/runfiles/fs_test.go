@@ -87,12 +87,7 @@ func TestFS_directory(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, source := range append(mainRepoRunfiles(true), commonRunfiles...) {
-		targetSymlink, err := runfiles.Rlocation(source)
-		if err != nil {
-			t.Fatal(err)
-		}
-		// Runfiles directories created by Bazel consist of symlinks to the real files.
-		target, err := filepath.EvalSymlinks(targetSymlink)
+		target, err := runfiles.Rlocation(source)
 		if err != nil {
 			t.Fatal(err)
 		}

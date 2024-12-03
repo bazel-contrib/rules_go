@@ -4,6 +4,14 @@ import "fmt"
 
 var Expected = "Expected"
 
+// Please the "tests" nogo check.
+var (
+	HelloWorld      string
+	DontTestMe      string
+	TestEmptyOutput string
+	TestQuoting     string
+)
+
 func ExampleHelloWorld() {
 	fmt.Println("Hello Example!")
 	fmt.Println("expected: " + Expected)

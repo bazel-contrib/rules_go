@@ -184,6 +184,8 @@ func Test(t *testing.T) {
 	// Build the targets in each directory.
 	var wg sync.WaitGroup
 	wg.Add(len(dirs))
+	var errs []error
+	var mu sync.Mutex
 	for _, dir := range dirs {
 		go func(dir string) {
 			defer wg.Done()
@@ -196,11 +198,19 @@ func Test(t *testing.T) {
 			)
 			cmd.Dir = dir
 			if err := cmd.Run(); err != nil {
-				t.Fatalf("in %s, error running %s: %v", dir, strings.Join(cmd.Args, " "), err)
+				mu.Lock()
+				errs = append(errs, fmt.Errorf("in %s, error running %s: %v", dir, strings.Join(cmd.Args, " "), err))
+				mu.Unlock()
 			}
 		}(dir)
 	}
 	wg.Wait()
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Error(err)
+		}
+		t.Fatal("errors building")
+	}
 
 	t.Run("Check Hashes", func(t *testing.T) {
 		// Hash files in each bazel-bin directory.
@@ -232,7 +242,7 @@ func Test(t *testing.T) {
 
 		// Compare dir0 and dir2. They should be different.
 		if err := compareHashes(dirHashes[0], dirHashes[2]); err == nil {
-			t.Fatalf("dir0 and dir2 are the same)", len(dirHashes[0]))
+			t.Fatal("dir0 and dir2 are the same")
 		}
 	})
 
@@ -309,22 +319,27 @@ func copyTree(dstRoot, srcRoot string) error {
 
 		if info.IsDir() {
 			return os.Mkdir(dstPath, 0777)
+		} else {
+			return copyFile(dstPath, srcPath)
 		}
-		r, err := os.Open(srcPath)
-		if err != nil {
-			return nil
-		}
-		defer r.Close()
-		w, err := os.Create(dstPath)
-		if err != nil {
-			return err
-		}
-		defer w.Close()
-		if _, err := io.Copy(w, r); err != nil {
-			return err
-		}
-		return w.Close()
 	})
+}
+
+func copyFile(dstPath, srcPath string) error {
+	r, err := os.Open(srcPath)
+	if err != nil {
+		return nil
+	}
+	defer r.Close()
+	w, err := os.Create(dstPath)
+	if err != nil {
+		return err
+	}
+	defer w.Close()
+	if _, err := io.Copy(w, r); err != nil {
+		return err
+	}
+	return w.Close()
 }
 
 func compareHashes(lhs, rhs []fileHash) error {
@@ -342,6 +357,12 @@ func compareHashes(lhs, rhs []fileHash) error {
 		}
 		if lhs[li].hash != rhs[ri].hash {
 			fmt.Fprintf(buf, "%s is different: %s %s\n", lhs[li].rel, lhs[li].hash, rhs[ri].hash)
+			if err := copyToTestOutputs(lhs[li]); err != nil {
+				fmt.Fprintf(buf, "failed to copy file: %v\n", err)
+			}
+			if err := copyToTestOutputs(rhs[li]); err != nil {
+				fmt.Fprintf(buf, "failed to copy file: %v\n", err)
+			}
 		}
 		li++
 		ri++
@@ -353,7 +374,7 @@ func compareHashes(lhs, rhs []fileHash) error {
 }
 
 type fileHash struct {
-	rel, hash string
+	abs, rel, hash string
 }
 
 func hashFiles(dir string, exclude func(root, path string) bool) ([]fileHash, error) {
@@ -426,7 +447,7 @@ func hashFiles(dir string, exclude func(root, path string) bool) ([]fileHash, er
 		if _, err := io.Copy(h, r); err != nil {
 			return err
 		}
-		hashes = append(hashes, fileHash{rel: rel, hash: hex.EncodeToString(h.Sum(sum[:0]))})
+		hashes = append(hashes, fileHash{abs: path, rel: rel, hash: hex.EncodeToString(h.Sum(sum[:0]))})
 
 		return nil
 	})
@@ -434,4 +455,10 @@ func hashFiles(dir string, exclude func(root, path string) bool) ([]fileHash, er
 		return nil, err
 	}
 	return hashes, nil
+}
+
+// copyToTestOutputs copies a hashed file to the test outputs directory so that
+// it can be inspected manually under bazel-testlogs, e.g. using diffoscope.
+func copyToTestOutputs(hash fileHash) error {
+	return copyFile(filepath.Join(os.Getenv("TEST_UNDECLARED_OUTPUTS_DIR"), hash.hash), hash.abs)
 }

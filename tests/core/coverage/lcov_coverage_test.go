@@ -200,6 +200,7 @@ func TestLcovCoverageWithTool(t *testing.T) {
 	args := append([]string{
 		"coverage",
 		"--combined_report=lcov",
+		"--java_runtime_version=remotejdk_11",
 		"//src:lib_with_tool_test",
 	})
 

@@ -22,13 +22,16 @@ load(
 )
 load(
     "//go:def.bzl",
-    "GoLibrary",
-    "GoSource",
+    "GoInfo",
     "go_context",
 )
 load(
     "//go/private:common.bzl",
     "GO_TOOLCHAIN",
+)
+load(
+    "//go/private:context.bzl",
+    "new_go_info",
 )
 load(
     "//go/private/rules:transition.bzl",
@@ -43,8 +46,6 @@ load(
 GoProtoImports = provider()
 
 def get_imports(attr, importpath):
-    proto_deps = []
-
     # ctx.attr.proto is a one-element array since there is a Starlark transition attached to it.
     if hasattr(attr, "proto") and attr.proto and types.is_list(attr.proto) and ProtoInfo in attr.proto[0]:
         proto_deps = [attr.proto[0]]
@@ -93,8 +94,8 @@ def _proto_library_to_source(_go, attr, source, merge):
     else:
         compilers = attr.compilers
     for compiler in compilers:
-        if GoSource in compiler:
-            merge(source, compiler[GoSource])
+        if GoInfo in compiler:
+            merge(source, compiler[GoInfo])
 
 def _go_proto_library_impl(ctx):
     go = go_context(
@@ -138,18 +139,20 @@ def _go_proto_library_impl(ctx):
             imports = get_imports(ctx.attr, go.importpath),
             importpath = go.importpath,
         ))
-    library = go.new_library(
+
+    go_info = new_go_info(
         go,
+        ctx.attr,
         resolver = _proto_library_to_source,
-        srcs = go_srcs,
+        generated_srcs = go_srcs,
+        coverage_instrumented = False,
     )
-    source = go.library_to_source(go, ctx.attr, library, False, verify_resolver_deps = False)
-    providers = [library, source]
+    providers = [go_info]
     output_groups = {
         "go_generated_srcs": go_srcs,
     }
     if valid_archive:
-        archive = go.archive(go, source)
+        archive = go.archive(go, go_info)
         output_groups["compilation_outputs"] = [archive.data.file]
         providers.extend([
             archive,
@@ -173,13 +176,13 @@ go_proto_library = rule(
             default = [],
         ),
         "deps": attr.label_list(
-            providers = [GoLibrary],
+            providers = [GoInfo],
             aspects = [_go_proto_aspect],
         ),
         "importpath": attr.string(),
         "importmap": attr.string(),
         "importpath_aliases": attr.string_list(),  # experimental, undocumented
-        "embed": attr.label_list(providers = [GoLibrary]),
+        "embed": attr.label_list(providers = [GoInfo]),
         "gc_goopts": attr.string_list(),
         "compiler": attr.label(providers = [GoProtoCompiler]),
         "compilers": attr.label_list(

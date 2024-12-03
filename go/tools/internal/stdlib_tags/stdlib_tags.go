@@ -86,7 +86,7 @@ func walkFile(path string, tags map[string]struct{}) error {
 
 	scanner := bufio.NewScanner(file)
 	// The Go SDK contains some very long lines in vendored files (minified JS).
-	scanner.Buffer(make([]byte, 0, 128*1024), 1024*1024)
+	scanner.Buffer(make([]byte, 0, 128*1024), 2*1024*1024)
 	for scanner.Scan() {
 		line := scanner.Text()
 		if !isConstraint(line) {
@@ -102,6 +102,7 @@ func walkFile(path string, tags map[string]struct{}) error {
 	if err = scanner.Err(); err != nil {
 		return fmt.Errorf("%s: %w", path, err)
 	}
+
 	return nil
 }
 

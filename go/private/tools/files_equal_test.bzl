@@ -15,6 +15,8 @@
 
 """Tests that two files contain the same data."""
 
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+
 def files_equal_test(name, golden, actual, error_message = None, **kwargs):
     # This genrule creates a Bash script: the source of the actual test.
     # The script:
@@ -105,7 +107,7 @@ fi
 eof""",
     )
 
-    native.sh_test(
+    sh_test(
         name = name,
         srcs = [name + "-src.sh"],
         data = [

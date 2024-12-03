@@ -52,7 +52,6 @@ def _go_cross_impl(ctx):
     old_default_info = ctx.attr.target[DefaultInfo]
     old_executable = old_default_info.files_to_run.executable
 
-    new_default_info = None
     if old_executable:
         # Bazel requires executable rules to created the executable themselves,
         # so we create a symlink in this rule so that it appears this rule created its executable.
@@ -127,8 +126,6 @@ _go_cross_kwargs = {
     of the golang SDK.<br><br>
     **Providers:**
     <ul>
-      <li>[GoLibrary]</li>
-      <li>[GoSource]</li>
       <li>[GoArchive]</li>
     </ul>
     """,

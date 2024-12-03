@@ -179,6 +179,8 @@ def _go_sdk_impl(ctx):
                 tag_type = "download",
                 index = index,
             )
+
+            # Keep in sync with the other call to go_download_sdk_rule below.
             go_download_sdk_rule(
                 name = name,
                 goos = download_tag.goos,
@@ -227,8 +229,12 @@ def _go_sdk_impl(ctx):
                         goos = goos,
                         goarch = goarch,
                         sdks = download_tag.sdks,
+                        experiments = download_tag.experiments,
+                        patches = download_tag.patches,
+                        patch_strip = download_tag.patch_strip,
                         urls = download_tag.urls,
                         version = download_tag.version,
+                        strip_prefix = download_tag.strip_prefix,
                     )
 
                     toolchains.append(struct(

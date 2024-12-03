@@ -140,7 +140,7 @@ def get_versioned_shared_lib_extension(path):
     # something like 1.2.3, or so.1.2, or dylib.1.2, or foo.1.2
     return ""
 
-MINIMUM_BAZEL_VERSION = "5.4.0"
+MINIMUM_BAZEL_VERSION = "6.5.0"
 
 def as_list(v):
     """Returns a list, tuple, or depset as a list."""

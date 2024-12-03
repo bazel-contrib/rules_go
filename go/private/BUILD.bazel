@@ -209,3 +209,11 @@ config_setting(
     },
     visibility = ["//:__pkg__"],
 )
+
+config_setting(
+    name = "is_pure",
+    flag_values = {
+        "//go/config:pure": "True",
+    },
+    visibility = ["//:__pkg__"],
+)

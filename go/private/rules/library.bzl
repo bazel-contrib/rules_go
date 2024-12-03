@@ -18,14 +18,16 @@ load(
     "asm_exts",
     "cgo_exts",
     "go_exts",
+    "syso_exts",
 )
 load(
     "//go/private:context.bzl",
     "go_context",
+    "new_go_info",
 )
 load(
     "//go/private:providers.bzl",
-    "GoLibrary",
+    "GoInfo",
 )
 load(
     "//go/private/rules:transition.bzl",
@@ -44,14 +46,12 @@ def _go_library_impl(ctx):
         go_context_data = ctx.attr._go_context_data,
     )
 
-    library = go.new_library(go)
-    source = go.library_to_source(go, ctx.attr, library, ctx.coverage_instrumented())
-    archive = go.archive(go, source)
+    go_info = new_go_info(go, ctx.attr)
+    archive = go.archive(go, go_info)
     validation_output = archive.data._validation_output
 
     return [
-        library,
-        source,
+        go_info,
         archive,
         DefaultInfo(
             files = depset([archive.data.export_file]),
@@ -83,20 +83,20 @@ go_library = rule(
             """,
         ),
         "srcs": attr.label_list(
-            allow_files = go_exts + asm_exts + cgo_exts,
+            allow_files = go_exts + asm_exts + cgo_exts + syso_exts,
             cfg = non_go_transition,
             doc = """
             The list of Go source files that are compiled to create the package.
-            Only `.go` and `.s` files are permitted, unless the `cgo` attribute is set,
+            Only `.go`, `.s`, and `.syso` files are permitted, unless the `cgo` attribute is set,
             in which case, `.c .cc .cpp .cxx .h .hh .hpp .hxx .inc .m .mm` files are also permitted.
             Files may be filtered at build time using Go [build constraints].
             """,
         ),
         "deps": attr.label_list(
-            providers = [GoLibrary],
+            providers = [GoInfo],
             doc = """
             List of Go libraries this package imports directly.
-            These may be `go_library` rules or compatible rules with the [GoLibrary] provider.
+            These may be `go_library` rules or compatible rules with the [GoInfo] provider.
             """,
         ),
         "importpath": attr.string(
@@ -116,11 +116,11 @@ go_library = rule(
         "importpath_aliases": attr.string_list(
         ),  # experimental, undocumented
         "embed": attr.label_list(
-            providers = [GoLibrary],
+            providers = [GoInfo],
             doc = """
             List of Go libraries whose sources should be compiled together with this package's sources.
             Labels listed here must name `go_library`, `go_proto_library`, or other compatible targets with
-            the [GoLibrary] and [GoSource] providers. Embedded libraries must have the same `importpath` as the embedding library.
+            the [GoInfo] provider. Embedded libraries must have the same `importpath` as the embedding library.
             At most one embedded library may have `cgo = True`, and the embedding library may not also have `cgo = True`.
             See [Embedding] for more information.
             """,
@@ -198,8 +198,7 @@ go_library = rule(
     or `go_default_library`, with the old naming convention.<br><br>
     **Providers:**
     <ul>
-      <li>[GoLibrary]</li>
-      <li>[GoSource]</li>
+      <li>[GoInfo]</li>
       <li>[GoArchive]</li>
     </ul>
     """,
@@ -211,13 +210,11 @@ def _go_tool_library_impl(ctx):
     """Implements the go_tool_library() rule."""
     go = go_context(ctx, include_deprecated_properties = False)
 
-    library = go.new_library(go)
-    source = go.library_to_source(go, ctx.attr, library, ctx.coverage_instrumented())
-    archive = go.archive(go, source)
+    go_info = new_go_info(go, ctx.attr)
+    archive = go.archive(go, go_info)
 
     return [
-        library,
-        source,
+        go_info,
         archive,
     ]
 
@@ -226,10 +223,10 @@ go_tool_library = rule(
     attrs = {
         "data": attr.label_list(allow_files = True),
         "srcs": attr.label_list(allow_files = True),
-        "deps": attr.label_list(providers = [GoLibrary]),
+        "deps": attr.label_list(providers = [GoInfo]),
         "importpath": attr.string(),
         "importmap": attr.string(),
-        "embed": attr.label_list(providers = [GoLibrary]),
+        "embed": attr.label_list(providers = [GoInfo]),
         "gc_goopts": attr.string_list(),
         "x_defs": attr.string_dict(),
         "_go_config": attr.label(default = "//:go_config"),

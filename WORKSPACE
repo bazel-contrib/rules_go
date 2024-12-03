@@ -1,7 +1,7 @@
 workspace(name = "io_bazel_rules_go")
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
+load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk", "go_register_nogo", "go_register_toolchains", "go_rules_dependencies")
 
 # Required by toolchains_protoc.
 http_archive(
@@ -27,7 +27,16 @@ bazel_features_deps()
 
 go_rules_dependencies()
 
-go_register_toolchains(version = "1.21.8")
+go_register_toolchains(version = "1.23.1")
+
+go_download_sdk(
+    name = "rules_go_internal_compatibility_sdk",
+    version = "1.19.13",
+)
+
+go_register_nogo(
+    nogo = "@//internal:nogo",
+)
 
 http_archive(
     name = "rules_proto",
@@ -122,16 +131,22 @@ bazel_skylib_workspace()
 
 http_archive(
     name = "bazel_gazelle",
-    sha256 = "b7387f72efb59f876e4daae42f1d3912d0d45563eac7cb23d1de0b094ab588cf",
+    sha256 = "b760f7fe75173886007f7c2e616a21241208f3d90e8657dc65d36a771e916b6a",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/bazel-gazelle/releases/download/v0.34.0/bazel-gazelle-v0.34.0.tar.gz",
-        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.34.0/bazel-gazelle-v0.34.0.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-gazelle/releases/download/v0.39.1/bazel-gazelle-v0.39.1.tar.gz",
+        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.39.1/bazel-gazelle-v0.39.1.tar.gz",
     ],
 )
 
+# TODO: Move this back to the end after Gazelle updates golang.org/x/net to at least v0.26.0.
+# See https://github.com/bettercap/bettercap/issues/1106 for how this breaks Go 1.23 compatibility.
+load("@io_bazel_rules_go//tests:grpc_repos.bzl", "grpc_dependencies")
+
+grpc_dependencies()
+
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
 
-gazelle_dependencies()
+gazelle_dependencies(go_sdk = "go_sdk")
 
 go_repository(
     name = "com_github_google_go_github_v36",
@@ -187,18 +202,6 @@ go_repository(
     version = "v0.0.0-20221024183307-1bc688fe9f3e",
 )
 
-# TODO(sluongng): Gazelle v0.25.0 switched to static dependency resolution which cause
-# build files generation in external dependencies to wrongly resolve these repositories.
-# We should investigate in Gazelle why this happen and fix it.
-# For now, use manual mapping as a workaround.
-#
-# gazelle:repository go_repository name=org_golang_x_tools   importpath=golang.org/x/tools
-# gazelle:repository go_repository name=org_golang_x_text    importpath=golang.org/x/text
-# gazelle:repository go_repository name=org_golang_x_xerrors importpath=golang.org/x/xerrors
-# gazelle:repository go_repository name=org_golang_x_net     importpath=golang.org/x/net
-# gazelle:repository go_repository name=org_golang_x_sys     importpath=golang.org/x/sys
-# gazelle:repository go_repository name=org_golang_x_crypto  importpath=golang.org/x/crypto
-
 load("@io_bazel_rules_go//tests/legacy/test_chdir:remote.bzl", "test_chdir_remote")
 
 test_chdir_remote()
@@ -206,10 +209,6 @@ test_chdir_remote()
 load("@io_bazel_rules_go//tests/integration/popular_repos:popular_repos.bzl", "popular_repos")
 
 popular_repos()
-
-load("@io_bazel_rules_go//tests:grpc_repos.bzl", "grpc_dependencies")
-
-grpc_dependencies()
 
 local_repository(
     name = "runfiles_remote_test",
@@ -245,6 +244,19 @@ load(
 )
 
 apple_support_dependencies()
+
+http_archive(
+    name = "rules_shell",
+    sha256 = "d8cd4a3a91fc1dc68d4c7d6b655f09def109f7186437e3f50a9b60ab436a0c53",
+    strip_prefix = "rules_shell-0.3.0",
+    url = "https://github.com/bazelbuild/rules_shell/releases/download/v0.3.0/rules_shell-v0.3.0.tar.gz",
+)
+
+load("@rules_shell//shell:repositories.bzl", "rules_shell_dependencies", "rules_shell_toolchains")
+
+rules_shell_dependencies()
+
+rules_shell_toolchains()
 
 load("@googleapis//:repository_rules.bzl", "switched_rules_by_language")
 

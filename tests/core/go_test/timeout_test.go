@@ -45,7 +45,7 @@ func TestTimeout(t *testing.T) {
 	if err := bazel_testing.RunBazel("test", "//:timeout_test", "--test_timeout=3", "--test_arg=-test.v"); err == nil {
 		t.Fatal("expected bazel test to fail")
 	} else if exitErr, ok := err.(*bazel_testing.StderrExitError); !ok || exitErr.Err.ExitCode() != 3 {
-		t.Fatalf("expected bazel test to fail with exit code 3", err)
+		t.Fatalf("expected bazel test to fail with exit code 3, got %v", err)
 	} else {
 		stderr = string(exitErr.Err.Stderr)
 	}

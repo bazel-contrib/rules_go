@@ -58,6 +58,7 @@ var (
 	goDefaultAspect       = rulesGoRepositoryName + "//go/tools/gopackagesdriver:aspect.bzl%go_pkg_info_aspect"
 	bazelBin              = getenvDefault("GOPACKAGESDRIVER_BAZEL", "bazel")
 	bazelStartupFlags     = strings.Fields(os.Getenv("GOPACKAGESDRIVER_BAZEL_FLAGS"))
+	bazelCommonFlags      = strings.Fields(os.Getenv("GOPACKAGESDRIVER_BAZEL_COMMON_FLAGS"))
 	bazelQueryFlags       = strings.Fields(os.Getenv("GOPACKAGESDRIVER_BAZEL_QUERY_FLAGS"))
 	bazelQueryScope       = getenvDefault("GOPACKAGESDRIVER_BAZEL_QUERY_SCOPE", "")
 	bazelBuildFlags       = strings.Fields(os.Getenv("GOPACKAGESDRIVER_BAZEL_BUILD_FLAGS"))
@@ -82,7 +83,7 @@ func run(ctx context.Context, in io.Reader, out io.Writer, args []string) error 
 		return fmt.Errorf("unable to read request: %w", err)
 	}
 
-	bazel, err := NewBazel(ctx, bazelBin, workspaceRoot, buildWorkingDirectory, bazelStartupFlags)
+	bazel, err := NewBazel(ctx, bazelBin, workspaceRoot, buildWorkingDirectory, bazelCommonFlags, bazelStartupFlags)
 	if err != nil {
 		return fmt.Errorf("unable to create bazel instance: %w", err)
 	}
@@ -102,7 +103,7 @@ func run(ctx context.Context, in io.Reader, out io.Writer, args []string) error 
 		return fmt.Errorf("unable to build JSON files: %w", err)
 	}
 
-	driver, err := NewJSONPackagesDriver(jsonFiles, bazelJsonBuilder.PathResolver(), bazel.version)
+	driver, err := NewJSONPackagesDriver(jsonFiles, bazelJsonBuilder.PathResolver(), bazel.version, request.Overlay)
 	if err != nil {
 		return fmt.Errorf("unable to load JSON files: %w", err)
 	}

@@ -1,6 +1,7 @@
 module(
     name = "rules_go",
-    version = "0.50.1",
+    # Updated by the Publish to BCR app.
+    version = "0.0.0",
     compatibility_level = 0,
     repo_name = "io_bazel_rules_go",
 )
@@ -12,11 +13,12 @@ bazel_dep(name = "bazel_skylib", version = "1.2.0")
 bazel_dep(name = "platforms", version = "0.0.10")
 bazel_dep(name = "rules_proto", version = "6.0.0")
 bazel_dep(name = "protobuf", version = "3.19.2", repo_name = "com_google_protobuf")
+bazel_dep(name = "rules_shell", version = "0.3.0")
 
 go_sdk = use_extension("//go:extensions.bzl", "go_sdk")
 go_sdk.download(
     name = "go_default_sdk",
-    version = "1.21.8",
+    version = "1.22.7",
 )
 use_repo(
     go_sdk,
@@ -24,6 +26,7 @@ use_repo(
     # This name is ugly on purpose to avoid a conflict with a user-named SDK.
     "io_bazel_rules_nogo",
 )
+
 register_toolchains("@go_toolchains//:all")
 
 bazel_dep(name = "gazelle", version = "0.36.0")

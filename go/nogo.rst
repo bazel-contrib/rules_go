@@ -8,8 +8,7 @@
 .. _go_library: /docs/go/core/rules.md#go_library
 .. _analysis: https://godoc.org/golang.org/x/tools/go/analysis
 .. _Analyzer: https://godoc.org/golang.org/x/tools/go/analysis#Analyzer
-.. _GoLibrary: providers.rst#GoLibrary
-.. _GoSource: providers.rst#GoSource
+.. _GoInfo: providers.rst#GoInfo
 .. _GoArchive: providers.rst#GoArchive
 .. _vet: https://golang.org/cmd/vet/
 .. _golangci-lint: https://github.com/golangci/golangci-lint
@@ -75,7 +74,7 @@ instead.
 
     load("@io_bazel_rules_go//go:deps.bzl", "go_rules_dependencies", "go_register_nogo")
     go_rules_dependencies()
-    go_register_toolchains(version = "1.20.7")
+    go_register_toolchains(version = "1.23.1")
     go_register_nogo(
       nogo = "@//:my_nogo"  # my_nogo is in the top-level BUILD file of this workspace
       includes = ["@//:__subpackages__"],  # Labels to lint. By default only lints code in workspace.
