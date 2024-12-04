@@ -101,6 +101,8 @@ type Args struct {
 // instead of running tests.
 const debug = false
 
+var bzlmodEnabled = os.Getenv("BZLMOD_ENABLED") == "True"
+
 // outputUserRoot is set to the directory where Bazel should put its internal files.
 // Since Bazel 2.0.0, this needs to be set explicitly to avoid it defaulting to a
 // deeply nested directory within the test, which runs into Windows path length limits.
@@ -342,18 +344,18 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 		return "", cleanup, fmt.Errorf("building main workspace: %v", err)
 	}
 
+	var runfilesWorkspaceName string
 	// If some of the path arguments are missing an explicit workspace,
 	// read the workspace name from WORKSPACE. We need this to map arguments
 	// to runfiles in specific workspaces.
 	haveDefaultWorkspace := false
-	var defaultWorkspaceName string
 	for _, argPath := range files {
 		workspace, _, err := parseLocationArg(argPath)
 		if err == nil && workspace == "" {
 			haveDefaultWorkspace = true
 			cleanPath := path.Clean(argPath)
 			if cleanPath == "WORKSPACE" {
-				defaultWorkspaceName, err = loadWorkspaceName(cleanPath)
+				runfilesWorkspaceName, err = loadWorkspaceName(cleanPath)
 				if err != nil {
 					return "", cleanup, fmt.Errorf("could not load default workspace name: %v", err)
 				}
@@ -361,8 +363,16 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 			}
 		}
 	}
-	if haveDefaultWorkspace && defaultWorkspaceName == "" {
+	if haveDefaultWorkspace && runfilesWorkspaceName == "" {
 		return "", cleanup, fmt.Errorf("found files from default workspace, but not WORKSPACE")
+	}
+
+	var mainRepoName string
+	if bzlmodEnabled {
+		mainRepoName = runfilesWorkspaceName
+		runfilesWorkspaceName = "_main"
+	} else {
+		mainRepoName = runfilesWorkspaceName
 	}
 
 	// Index runfiles by workspace and short path. We need this to determine
@@ -379,20 +389,22 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 	}
 
 	// Copy or link file arguments from runfiles into fake workspace dirctories.
-	// Keep track of the workspace names we see, since we'll generate a WORKSPACE
+	// Keep track of the repo names we see, since we'll generate a WORKSPACE
 	// with local_repository rules later.
-	workspaceNames := make(map[string]bool)
+	canonicalRepoNames := make(map[string]bool)
 	for _, argPath := range files {
 		workspace, shortPath, err := parseLocationArg(argPath)
 		if err != nil {
 			return "", cleanup, err
 		}
+		key := runfileKey{workspace, shortPath}
 		if workspace == "" {
-			workspace = defaultWorkspaceName
+			workspace = mainRepoName
+			key.workspace = runfilesWorkspaceName
 		}
-		workspaceNames[workspace] = true
+		canonicalRepoNames[workspace] = true
 
-		srcPath, ok := runfileMap[runfileKey{workspace, shortPath}]
+		srcPath, ok := runfileMap[key]
 		if !ok {
 			return "", cleanup, fmt.Errorf("unknown runfile: %s", argPath)
 		}
@@ -422,10 +434,12 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 			NogoIncludes: args.NogoIncludes,
 			NogoExcludes: args.NogoExcludes,
 		}
-		for name := range workspaceNames {
-			info.WorkspaceNames = append(info.WorkspaceNames, name)
+		for name := range canonicalRepoNames {
+			info.WorkspaceNames = append(info.WorkspaceNames, makeApparent(name))
 		}
-		sort.Strings(info.WorkspaceNames)
+		sort.Slice(info.WorkspaceNames, func(i, j int) bool {
+			return info.WorkspaceNames[i].ApparentName < info.WorkspaceNames[j].ApparentName
+		})
 		if outBaseDir != "" {
 			goSDKPath := filepath.Join(outBaseDir, "external", "go_sdk")
 			rel, err := filepath.Rel(mainDir, goSDKPath)
@@ -472,6 +486,14 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 	}
 
 	return mainDir, cleanup, nil
+}
+
+func makeApparent(canonicalName string) workspaceName {
+	name := workspaceName{ApparentName: canonicalName, CanonicalName: canonicalName}
+	if canonicalName == "rules_go~"	|| canonicalName == "rules_go+" {
+		name.ApparentName = "io_bazel_rules_go"
+	}
+	return name
 }
 
 func extractTxtar(dir, txt string) error {
@@ -531,8 +553,13 @@ func loadWorkspaceName(workspacePath string) (string, error) {
 	return name, nil
 }
 
+type workspaceName struct {
+	ApparentName  string
+	CanonicalName string
+}
+
 type workspaceTemplateInfo struct {
-	WorkspaceNames []string
+	WorkspaceNames []workspaceName
 	GoSDKPath      string
 	Nogo           string
 	NogoIncludes   []string
@@ -544,8 +571,8 @@ type workspaceTemplateInfo struct {
 var defaultWorkspaceTpl = template.Must(template.New("").Parse(`
 {{range .WorkspaceNames}}
 local_repository(
-    name = "{{.}}",
-    path = "../{{.}}",
+    name = "{{.ApparentName}}",
+    path = "../{{.CanonicalName}}",
 )
 {{end}}
 
