@@ -16,7 +16,8 @@ package main
 
 import (
 	"fmt"
-	"runtime"
+
+	"golang.org/x/tools/go/packages"
 )
 
 type JSONPackagesDriver struct {
@@ -47,14 +48,12 @@ func NewJSONPackagesDriver(jsonFiles []string, prf PathResolverFunc, bazelVersio
 	return jpd, nil
 }
 
-func (b *JSONPackagesDriver) GetResponse(labels []string) *driverResponse {
-	rootPkgs, packages := b.registry.Match(labels)
+func (b *JSONPackagesDriver) GetResponse(labels []string) *packages.DriverResponse {
+	rootPkgs, paks := b.registry.Match(labels)
 
-	return &driverResponse{
+	return &packages.DriverResponse{
 		NotHandled: false,
-		Compiler:   "gc",
-		Arch:       runtime.GOARCH,
 		Roots:      rootPkgs,
-		Packages:   packages,
+		Packages:   paks,
 	}
 }
