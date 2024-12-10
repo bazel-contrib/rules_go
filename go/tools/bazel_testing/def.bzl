@@ -43,6 +43,9 @@ def go_bazel_test(rule_files = None, **kwargs):
                       ["-end_files"] +
                       kwargs["args"])
 
+    kwargs.setdefault("env", {})
+    kwargs["env"]["BZLMOD_ENABLED"] = str(str(Label("//:foo")).startswith("@@"))
+
     # Set rundir to the workspace root directory to ensure relative paths
     # are interpreted correctly.
     kwargs.setdefault("rundir", ".")
