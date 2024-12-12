@@ -583,8 +583,6 @@ go_register_nogo(
 		"{{ . }}",
 	{{ end }}
 	],
-	{{ else }}
-	includes = ["all"],
 	{{ end}}
 	{{ if .NogoExcludes }}
 	excludes = [
