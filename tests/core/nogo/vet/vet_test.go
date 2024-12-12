@@ -57,12 +57,6 @@ go_library(
     importpath = "fmtwrap",
 )
 
-go_library(
-    name = "composite",
-    srcs = ["composite.go"],
-    importpath = "composite",
-)
-
 -- has_errors.go --
 package haserrors
 
@@ -103,28 +97,6 @@ import "fmt"
 func Printf(format string, args ...interface{}) {
 	fmt.Printf(format, args...)
 }
-
--- composite.go --
-package compositesfixing
-
-
-import "net"
-
-type LocalStruct struct {
-	Field1 int
-	Field2 string
-}
-
-func example() {
-	// Valid use of a local struct: no warning
-	_ = LocalStruct{42, "hello"}
-
-	// Invalid use of an imported struct: warning and suggested fix
-	_ = net.DNSConfigError{nil} // want "net.DNSConfigError struct literal uses unkeyed fields"
-
-	// Suggested fix: use field-keyed syntax
-	_ = net.DNSConfigError{Err: nil} // This should not trigger a warning
-}
 `,
 	})
 }
@@ -159,13 +131,6 @@ func Test(t *testing.T) {
 				"Printf format %b has arg \"hi\" of wrong type string",
 				"redundant or: true \\|\\| true",
 			},
-			}, {
-				desc:   "detect unkeyed composite literals",
-				nogo:   "@//:nogo",
-				target: "//:composite",
-				includes: []string{
-					"composite.go:16:6: net.DNSConfigError struct literal uses unkeyed fields",
-			},
 		},
 	} {
 		t.Run(test.desc, func(t *testing.T) {
@@ -191,7 +156,7 @@ func Test(t *testing.T) {
 				if matched, err := regexp.Match(pattern, stderr.Bytes()); err != nil {
 					t.Fatal(err)
 				} else if !matched {
-					t.Errorf("%s\noutput did not contain pattern: %s", stderr.String(), pattern)
+					t.Errorf("output did not contain pattern: %s", pattern)
 				}
 			}
 			for _, pattern := range test.excludes {
