@@ -26,6 +26,7 @@ def _go_sdk_impl(ctx):
         goos = ctx.attr.goos,
         goarch = ctx.attr.goarch,
         experiments = ctx.attr.experiments,
+        exports_for_stdlib = ctx.attr.exports_for_stdlib,
         root_file = ctx.file.root_file,
         package_list = package_list,
         libs = depset(ctx.files.libs),
@@ -50,6 +51,10 @@ go_sdk = rule(
         "experiments": attr.string(
             mandatory = False,
             doc = "Comma-separated Go experiments to enable via GOEXPERIMENT",
+        ),
+        "exports_for_stdlib": attr.bool(
+            mandatory = True,
+            doc = "Generate export files for the stdlib.",
         ),
         "root_file": attr.label(
             mandatory = True,
