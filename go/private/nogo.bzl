@@ -13,7 +13,7 @@
 # limitations under the License.
 
 DEFAULT_NOGO = "@io_bazel_rules_go//:default_nogo"
-NOGO_DEFAULT_INCLUDES = [str(Label("//:__subpackages__"))]
+NOGO_DEFAULT_INCLUDES = ["@@//:__subpackages__"]
 NOGO_DEFAULT_EXCLUDES = []
 
 # repr(Label(...)) does not emit a canonical label literal.
