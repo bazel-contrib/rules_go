@@ -258,11 +258,11 @@ def _run_nogo(
         inputs_direct.append(cgo_go_srcs)
         nogo_args.add_all([cgo_go_srcs], before_each = "-ignore_src")
 
-    args.add_all(archives, before_each = "-facts", map_each = _facts)
-    args.add("-out_facts", out_facts)
-    args.add("-out_log", out_log)
-    args.add("-out_fix", out_nogo_fix_tmp)
-    args.add("-nogo", nogo)
+    nogo_args.add_all(archives, before_each = "-facts", map_each = _facts)
+    nogo_args.add("-out_facts", out_facts)
+    nogo_args.add("-out_log", out_log)
+    nogo_args.add("-out_fix", out_nogo_fix_tmp)
+    nogo_args.add("-nogo", nogo)
 
     # This action runs nogo and produces the facts files for downstream nogo actions.
     # It is important that this action doesn't fail if nogo produces findings, which allows users

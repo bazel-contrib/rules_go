@@ -61,9 +61,9 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
 
     nogo = get_nogo(go)
     if nogo:
-        out_facts = go.declare_file(go, name = source.library.name, ext = pre_ext + ".facts")
-        out_nogo_log = go.declare_file(go, name = source.library.name, ext = pre_ext + ".nogo.log")
-        out_nogo_validation = go.declare_file(go, name = source.library.name, ext = pre_ext + ".nogo")
+        out_facts = go.declare_file(go, name = source.name, ext = pre_ext + ".facts")
+        out_nogo_log = go.declare_file(go, name = source.name, ext = pre_ext + ".nogo.log")
+        out_nogo_validation = go.declare_file(go, name = source.name, ext = pre_ext + ".nogo")
 
         # out_nogo_fix_tmp holds the fixes produced by the RunNogo action, out_nogo_fix holds the fixes produced by the ValidateNogo action.
         # They have the same content, but ValidateNogo propagates the fixes and eventually externalizes the fixes via `_validation` in the OutputGroupInfo section.
@@ -71,8 +71,8 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
         # thereby producing available fixes for all targets.
         # Otherwise, if we externalize out_nogo_fix_tmp (not going through the ValidateNogo action) by putting it into a field (e.g., `nogo_fix`) in the OutputGroupInfo section of the input targets,
         # we can see the fix for the input targets, but will miss the fixes for the dependent targets.
-        out_nogo_fix_tmp = go.declare_file(go, name = source.library.name, ext = pre_ext + ".nogo.fix.tmp")
-        out_nogo_fix = go.declare_file(go, name = source.library.name, ext = pre_ext + ".nogo.fix")
+        out_nogo_fix_tmp = go.declare_file(go, name = source.name, ext = pre_ext + ".nogo.fix.tmp")
+        out_nogo_fix = go.declare_file(go, name = source.name, ext = pre_ext + ".nogo.fix")
     else:
         out_facts = None
         out_nogo_log = None
