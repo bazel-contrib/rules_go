@@ -61,7 +61,7 @@ go_test(
 )
 ```
 
-Embedding may also be used to add extra sources sources to a
+Embedding may also be used to add extra sources to a
 `go_proto_library`.
 
 ``` bzl
