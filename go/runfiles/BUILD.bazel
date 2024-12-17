@@ -33,19 +33,19 @@ alias(
     visibility = ["//visibility:public"],
 )
 
+filegroup(
+    name = "all_files",
+    testonly = True,
+    srcs = glob(["**"]),
+    visibility = ["//visibility:public"],
+)
+
 go_test(
-    name = "example_test",
+    name = "runfiles_test",
     srcs = [
         "caller_repository_example_test.go",
         "example_test.go",
         "rlocationpath_xdefs_example_test.go",
     ],
     deps = [":runfiles"],
-)
-
-filegroup(
-    name = "all_files",
-    testonly = True,
-    srcs = glob(["**"]),
-    visibility = ["//visibility:public"],
 )

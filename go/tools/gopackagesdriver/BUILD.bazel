@@ -19,6 +19,7 @@ go_library(
     visibility = [
         "//tests/integration/gopackagesdriver:__pkg__",
     ],
+    deps = ["@org_golang_x_tools//go/packages"],
 )
 
 go_binary(
