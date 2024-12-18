@@ -7,13 +7,12 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"unicode"
 
 	"golang.org/x/tools/go/analysis"
 )
 
-// DiagnosticEntry represents a diagnostic entry with the corresponding analyzer.
-type DiagnosticEntry struct {
+// diagnosticEntry represents a diagnostic entry with the corresponding analyzer.
+type diagnosticEntry struct {
 	analysis.Diagnostic
 	*analysis.Analyzer
 }
@@ -27,6 +26,24 @@ type Edit struct {
 	New   string `json:"new"`   // the replacement
 	Start int    `json:"start"` // starting byte offset of the region to replace
 	End   int    `json:"end"`   // (exclusive) ending byte offset of the region to replace
+}
+
+
+// FileEdits represents the mapping of analyzers to their edits for a specific file.
+type FileEdits struct {
+	AnalyzerToEdits map[string][]Edit `json:"analyzer_to_edits"` // Analyzer as the key, edits as the value
+}
+
+// Change represents a collection of file edits.
+type Change struct {
+	FileToEdits map[string]FileEdits `json:"file_to_edits"` // File path as the key, analyzer-to-edits mapping as the value
+}
+
+// NewChange creates a new Change object.
+func NewChange() *Change {
+	return &Change{
+		FileToEdits: make(map[string]FileEdits),
+	}
 }
 
 func (e Edit) String() string {
@@ -134,27 +151,15 @@ func validateBytes(src []byte, edits []Edit) ([]Edit, int, error) {
 	return edits, size, nil
 }
 
-// The following is about the `Change`, a high-level abstraction of edits.
-// Change represents a set of edits to be applied to a set of files.
-type Change struct {
-	AnalyzerToFileToEdits map[string]map[string][]Edit `json:"analyzer_file_to_edits"`
-}
-
-// NewChange creates a new Change object.
-func NewChange() *Change {
-	return &Change{
-		AnalyzerToFileToEdits: make(map[string]map[string][]Edit),
-	}
-}
 
 // NewChangeFromDiagnostics builds a Change from a set of diagnostics.
 // Unlike Diagnostic, Change is independent of the FileSet given it uses perf-file offsets instead of token.Pos.
 // This allows Change to be used in contexts where the FileSet is not available, e.g., it remains applicable after it is saved to disk and loaded back.
 // See https://github.com/golang/tools/blob/master/go/analysis/diagnostic.go for details.
-func NewChangeFromDiagnostics(entries []DiagnosticEntry, fileSet *token.FileSet) (*Change, error) {
+func NewChangeFromDiagnostics(entries []diagnosticEntry, fileSet *token.FileSet) (*Change, error) {
 	c := NewChange()
 
-	cwd, err := os.Getwd() // workspace root
+	cwd, err := os.Getwd()
 	if err != nil {
 		return c, fmt.Errorf("Error getting current working directory: (%v)", err)
 	}
@@ -167,7 +172,6 @@ func NewChangeFromDiagnostics(entries []DiagnosticEntry, fileSet *token.FileSet)
 			for _, edit := range sf.TextEdits {
 				start, end := edit.Pos, edit.End
 				if !end.IsValid() {
-					// In insertion, end could be token.NoPos
 					end = start
 				}
 
@@ -190,7 +194,7 @@ func NewChangeFromDiagnostics(entries []DiagnosticEntry, fileSet *token.FileSet)
 				if err != nil {
 					fileRelativePath = file.Name() // fallback logic
 				}
-				c.AddEdit(analyzer, fileRelativePath, edit)
+				c.AddEdit(fileRelativePath, analyzer, edit)
 			}
 		}
 	}
@@ -201,126 +205,146 @@ func NewChangeFromDiagnostics(entries []DiagnosticEntry, fileSet *token.FileSet)
 	return c, nil
 }
 
-// AddEdit adds an edit to the change.
-func (c *Change) AddEdit(analyzer string, file string, edit Edit) {
-	// Check if the analyzer exists in the map
-	if _, ok := c.AnalyzerToFileToEdits[analyzer]; !ok {
-		// Initialize the map for the analyzer if it doesn't exist
-		c.AnalyzerToFileToEdits[analyzer] = make(map[string][]Edit)
+
+// AddEdit adds an edit to the Change, organizing by file and analyzer.
+func (c *Change) AddEdit(file string, analyzer string, edit Edit) {
+	// Ensure the FileEdits structure exists for the file
+	fileEdits, exists := c.FileToEdits[file]
+	if !exists {
+		fileEdits = FileEdits{
+			AnalyzerToEdits: make(map[string][]Edit),
+		}
+		c.FileToEdits[file] = fileEdits
 	}
 
-	// Append the edit to the list of edits for the specific file under the analyzer
-	c.AnalyzerToFileToEdits[analyzer][file] = append(c.AnalyzerToFileToEdits[analyzer][file], edit)
+	// Append the edit to the list of edits for the analyzer
+	fileEdits.AnalyzerToEdits[analyzer] = append(fileEdits.AnalyzerToEdits[analyzer], edit)
 }
 
-// Flatten takes a Change and returns a map of FileToEdits, merging edits from all analyzers.
+
+
+// Flatten merges all edits for a file from different analyzers into a single map of file-to-edits.
+// Edits from each analyzer are processed in a deterministic order, and overlapping edits are skipped.
 func Flatten(change Change) map[string][]Edit {
 	fileToEdits := make(map[string][]Edit)
 
-	analyzers := make([]string, 0, len(change.AnalyzerToFileToEdits))
-	for analyzer := range change.AnalyzerToFileToEdits {
-		analyzers = append(analyzers, analyzer)
-	}
-	sort.Strings(analyzers)
-	for _, analyzer := range analyzers {
-		// following the order of analyzers, random iteration order over map makes testing flaky
-		fileToEditsMap := change.AnalyzerToFileToEdits[analyzer]
-		for file, edits := range fileToEditsMap {
-			var localEdits []Edit
-			if existingEdits, found := fileToEdits[file]; found {
-				localEdits = append(existingEdits, edits...)
-			} else {
-				localEdits = edits
-			}
+	for file, fileEdits := range change.FileToEdits {
+		// Get a sorted list of analyzers for deterministic processing order
+		analyzers := make([]string, 0, len(fileEdits.AnalyzerToEdits))
+		for analyzer := range fileEdits.AnalyzerToEdits {
+			analyzers = append(analyzers, analyzer)
+		}
+		sort.Strings(analyzers)
 
-			// Validate the local edits before updating the map
-			localEdits, invalidEditIndex := UniqueEdits(localEdits)
-			if invalidEditIndex >= 0 {
-				// Detected overlapping edits, skip the edits from this analyzer
-				// Note: we merge edits from as many analyzers as possible.
-				// This allows us to fix as many linter errors as possible. Also, after the initial set
-				// of fixing edits are applied to the source code, the next bazel build will run the analyzers again
-				// and produce edits that are no longer overlapping.
+		mergedEdits := make([]Edit, 0)
+
+		for _, analyzer := range analyzers {
+			edits := fileEdits.AnalyzerToEdits[analyzer]
+
+			// Deduplicate and sort edits for the current analyzer
+			edits, _ = UniqueEdits(edits)
+
+			// Merge edits into the current list, checking for overlaps
+			candidateEdits := append(mergedEdits, edits...)
+			candidateEdits, invalidIndex := UniqueEdits(candidateEdits)
+			if invalidIndex >= 0 {
+				// Skip edits from this analyzer if merging them would cause overlaps.
+				// Apply the non-overlapping edits first. After that, a rerun of bazel build will
+				// allows these skipped edits to be applied separately.
+				// Note the resolution happens to each file independently.
 				continue
 			}
-			fileToEdits[file] = localEdits
+
+			// Update the merged edits
+			mergedEdits = candidateEdits
 		}
+
+		// Store the final merged edits for the file
+		fileToEdits[file] = mergedEdits
 	}
 
 	return fileToEdits
 }
 
-// ToPatches converts the edits to patches.
-func ToPatches(fileToEdits map[string][]Edit) (map[string]string, error) {
-	patches := make(map[string]string)
-	for relativeFilePath, edits := range fileToEdits {
-		// Skip processing if edits are nil or empty
+
+// ToCombinedPatch converts all edits to a single consolidated patch.
+func ToCombinedPatch(fileToEdits map[string][]Edit) (string, error) {
+	var combinedPatch strings.Builder
+
+	filePaths := make([]string, 0, len(fileToEdits))
+	for filePath := range fileToEdits {
+		filePaths = append(filePaths, filePath)
+	}
+	sort.Strings(filePaths) // Sort file paths alphabetically
+
+	// Iterate over sorted file paths
+	for _, filePath := range filePaths {
+		edits := fileToEdits[filePath]
 		if len(edits) == 0 {
 			continue
 		}
 
+		// Ensure edits are unique and sorted
 		edits, _ = UniqueEdits(edits)
-		contents, err := os.ReadFile(relativeFilePath)
+		contents, err := os.ReadFile(filePath)
 		if err != nil {
-			return nil, err
+			return "", fmt.Errorf("failed to read file %s: %v", filePath, err)
 		}
 
 		out, err := ApplyEditsBytes(contents, edits)
 		if err != nil {
-			return nil, err
+			return "", fmt.Errorf("failed to apply edits for file %s: %v", filePath, err)
 		}
 
 		diff := UnifiedDiff{
-			// difflib.SplitLines does not handle well the whitespace at the beginning or the end.
-			// For example, it would add an extra \n at the end
-			// See https://github.com/pmezard/go-difflib/blob/master/difflib/difflib.go#L768
-			// trimWhitespaceHeadAndTail is a postprocessing to produce clean patches.
-			A: trimWhitespaceHeadAndTail(SplitLines(string(contents))),
-			B: trimWhitespaceHeadAndTail(SplitLines(string(out))),
-			// standard convention is to use "a" and "b" for the original and new versions of the file
-			// discovered by doing `git diff`
-			FromFile: fmt.Sprintf("a/%s", relativeFilePath),
-			ToFile:   fmt.Sprintf("b/%s", relativeFilePath),
-			// git needs lines of context to be able to apply the patch
-			// we use 3 lines of context because that's what `git diff` uses
-			Context: 3,
+			A:        trimWhitespaceHeadAndTail(SplitLines(string(contents))),
+			B:        trimWhitespaceHeadAndTail(SplitLines(string(out))),
+			FromFile: fmt.Sprintf("a/%s", filePath),
+			ToFile:   fmt.Sprintf("b/%s", filePath),
+			Context:  3,
 		}
+
 		patch, err := GetUnifiedDiffString(diff)
 		if err != nil {
-			return nil, err
+			return "", fmt.Errorf("failed to generate patch for file %s: %v", filePath, err)
 		}
-		patches[relativeFilePath] = patch
+
+		// Append the patch for this file to the giant patch
+		combinedPatch.WriteString(patch)
+		combinedPatch.WriteString("\n") // Ensure separation between file patches
 	}
-	return patches, nil
+
+	// Remove trailing newline
+	result := combinedPatch.String()
+	if len(result) > 0 && result[len(result)-1] == '\n' {
+		result = result[:len(result)-1]
+	}
+
+	return result, nil
 }
 
+
 func trimWhitespaceHeadAndTail(lines []string) []string {
-	if len(lines) == 0 {
-		return lines
-	}
-
-	// Inner function: returns true if the given string contains any non-whitespace characters.
-	hasNonWhitespaceCharacter := func(s string) bool {
-		return strings.ContainsFunc(s, func(r rune) bool {
-			return !unicode.IsSpace(r)
-		})
-	}
-
 	// Trim left
-	for i := 0; i < len(lines); i++ {
-		if hasNonWhitespaceCharacter(lines[i]) {
-			lines = lines[i:]
-			break
-		}
+	for len(lines) > 0 && strings.TrimSpace(lines[0]) == "" {
+		lines = lines[1:]
 	}
 
-	// Trim right.
-	for i := len(lines) - 1; i >= 0; i-- {
-		if hasNonWhitespaceCharacter(lines[i]) {
-			return lines[:i+1]
-		}
+	// Trim right
+	for len(lines) > 0 && strings.TrimSpace(lines[len(lines)-1]) == "" {
+		lines = lines[:len(lines)-1]
 	}
 
-	// If we didn't return above, all strings contained only whitespace, so return an empty slice.
-	return []string{}
+	return lines
+}
+
+
+
+func SaveToFile(filename string, combinedPatch string) error {
+	err := os.WriteFile(filename, []byte(combinedPatch), 0644)
+	if err != nil {
+		return fmt.Errorf("error writing to file: %v", err)
+	}
+
+	return nil
 }

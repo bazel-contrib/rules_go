@@ -37,8 +37,6 @@ go_test(
     srcs = [
         "difflib.go",
         "nogo_change.go",
-        "nogo_change_serialization.go",
-        "nogo_change_serialization_test.go",
         "nogo_change_test.go",
     ],
     deps = [
@@ -124,7 +122,6 @@ go_source(
         "env.go",
         "flags.go",
         "nogo_change.go",
-        "nogo_change_serialization.go",
         "nogo_main.go",
         "nogo_typeparams_go117.go",
         "nogo_typeparams_go118.go",

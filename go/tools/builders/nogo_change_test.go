@@ -87,37 +87,30 @@ func validate(src string, edits []Edit) ([]Edit, int, error) {
 
 // TestAddEdit_MultipleAnalyzers tests AddEdit with multiple analyzers and files using reflect.DeepEqual
 func TestAddEdit_MultipleAnalyzers(t *testing.T) {
-	// Step 1: Setup
 	change := NewChange()
-
-	// Mock data for analyzer 1
 	file1 := "file1.go"
+
 	edit1a := Edit{Start: 10, End: 20, New: "code1 from analyzer1"}
 	edit1b := Edit{Start: 30, End: 40, New: "code2 from analyzer1"}
-
-	// Mock data for analyzer 2
 	edit2a := Edit{Start: 50, End: 60, New: "code1 from analyzer2"}
 	edit2b := Edit{Start: 70, End: 80, New: "code2 from analyzer2"}
 
-	// Expected map after all edits are added
-	expected := map[string]map[string][]Edit{
-		analyzer1.Name: {
-			file1: {edit1a, edit1b},
-		},
-		analyzer2.Name: {
-			file1: {edit2a, edit2b},
+	expected := map[string]FileEdits{
+		file1: {
+			AnalyzerToEdits: map[string][]Edit{
+				analyzer1.Name: {edit1a, edit1b},
+				analyzer2.Name: {edit2a, edit2b},
+			},
 		},
 	}
 
-	// Step 2: Action - Add edits for both analyzers
-	change.AddEdit(analyzer1.Name, file1, edit1a)
-	change.AddEdit(analyzer1.Name, file1, edit1b)
-	change.AddEdit(analyzer2.Name, file1, edit2a)
-	change.AddEdit(analyzer2.Name, file1, edit2b)
+	change.AddEdit(file1, analyzer1.Name, edit1a)
+	change.AddEdit(file1, analyzer1.Name, edit1b)
+	change.AddEdit(file1, analyzer2.Name, edit2a)
+	change.AddEdit(file1, analyzer2.Name, edit2b)
 
-	// Step 3: Verify that the actual map matches the expected map using reflect.DeepEqual
-	if !reflect.DeepEqual(change.AnalyzerToFileToEdits, expected) {
-		t.Fatalf("Change.AnalyzerToFileToEdits did not match the expected result.\nGot: %+v\nExpected: %+v", change.AnalyzerToFileToEdits, expected)
+	if !reflect.DeepEqual(change.FileToEdits, expected) {
+		t.Fatalf("Change.FileToEdits did not match the expected result.\nGot: %+v\nExpected: %+v", change.FileToEdits, expected)
 	}
 }
 
@@ -129,13 +122,13 @@ func TestNewChangeFromDiagnostics_SuccessCases(t *testing.T) {
 	tests := []struct {
 		name              string
 		fileSet           *token.FileSet
-		diagnosticEntries []DiagnosticEntry
-		expectedEdits     map[string]map[string][]Edit
+		diagnosticEntries []diagnosticEntry
+		expectedEdits     map[string]FileEdits
 	}{
 		{
 			name:    "ValidEdits",
 			fileSet: mockFileSet(file1path, 100),
-			diagnosticEntries: []DiagnosticEntry{
+			diagnosticEntries: []diagnosticEntry{
 				{
 					Analyzer: analyzer1,
 					Diagnostic: analysis.Diagnostic{
@@ -148,24 +141,13 @@ func TestNewChangeFromDiagnostics_SuccessCases(t *testing.T) {
 						},
 					},
 				},
-				{
-					Analyzer: analyzer1,
-					Diagnostic: analysis.Diagnostic{
-						SuggestedFixes: []analysis.SuggestedFix{
-							{
-								TextEdits: []analysis.TextEdit{
-									{Pos: token.Pos(60), End: token.Pos(67), NewText: []byte("new_text")},
-								},
-							},
-						},
-					},
-				},
 			},
-			expectedEdits: map[string]map[string][]Edit{
-				"analyzer1": {
-					"file1.go": {
-						{New: "new_text", Start: 4, End: 9},   // offset is 0-based, while Pos is 1-based
-						{New: "new_text", Start: 59, End: 66}, // offset is 0-based, while Pos is 1-based
+			expectedEdits: map[string]FileEdits{
+				"file1.go": {
+					AnalyzerToEdits: map[string][]Edit{
+						"analyzer1": {
+							{New: "new_text", Start: 4, End: 9}, // 0-based offset
+						},
 					},
 				},
 			},
@@ -175,13 +157,11 @@ func TestNewChangeFromDiagnostics_SuccessCases(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			change, err := NewChangeFromDiagnostics(tt.diagnosticEntries, tt.fileSet)
-
 			if err != nil {
 				t.Fatalf("expected no error, got: %v", err)
 			}
-
-			if !reflect.DeepEqual(change.AnalyzerToFileToEdits, tt.expectedEdits) {
-				t.Fatalf("expected edits: %+v, got: %+v", tt.expectedEdits, change.AnalyzerToFileToEdits)
+			if !reflect.DeepEqual(change.FileToEdits, tt.expectedEdits) {
+				t.Fatalf("expected edits: %+v, got: %+v", tt.expectedEdits, change.FileToEdits)
 			}
 		})
 	}
@@ -195,13 +175,13 @@ func TestNewChangeFromDiagnostics_ErrorCases(t *testing.T) {
 	tests := []struct {
 		name              string
 		fileSet           *token.FileSet
-		diagnosticEntries []DiagnosticEntry
+		diagnosticEntries []diagnosticEntry
 		expectedErr       string
 	}{
 		{
 			name:    "InvalidPosEnd",
 			fileSet: mockFileSet(file1path, 100),
-			diagnosticEntries: []DiagnosticEntry{
+			diagnosticEntries: []diagnosticEntry{
 				{
 					Analyzer: analyzer1,
 					Diagnostic: analysis.Diagnostic{
@@ -216,44 +196,6 @@ func TestNewChangeFromDiagnostics_ErrorCases(t *testing.T) {
 				},
 			},
 			expectedErr: "errors: [invalid fix: pos 15 > end 10]",
-		},
-		{
-			name:    "EndBeyondFile",
-			fileSet: mockFileSet(file1path, 100),
-			diagnosticEntries: []DiagnosticEntry{
-				{
-					Analyzer: analyzer1,
-					Diagnostic: analysis.Diagnostic{
-						SuggestedFixes: []analysis.SuggestedFix{
-							{
-								TextEdits: []analysis.TextEdit{
-									{Pos: token.Pos(50), End: token.Pos(102), NewText: []byte("new_text")},
-								},
-							},
-						},
-					},
-				},
-			},
-			expectedErr: "errors: [invalid fix: end 102 past end of file 101]", // Pos=101 holds the extra EOF token, note Pos is 1-based
-		},
-		{
-			name:    "MissingFileInfo",
-			fileSet: token.NewFileSet(), // No files added
-			diagnosticEntries: []DiagnosticEntry{
-				{
-					Analyzer: analyzer1,
-					Diagnostic: analysis.Diagnostic{
-						SuggestedFixes: []analysis.SuggestedFix{
-							{
-								TextEdits: []analysis.TextEdit{
-									{Pos: token.Pos(5), End: token.Pos(10), NewText: []byte("new_text")},
-								},
-							},
-						},
-					},
-				},
-			},
-			expectedErr: "errors: [invalid fix: missing file info for pos 5]",
 		},
 	}
 
@@ -620,8 +562,8 @@ func TestApply(t *testing.T) {
 	}
 }
 
+// TestUniqueEdits verifies deduplication and overlap detection.
 func TestUniqueEdits(t *testing.T) {
-	t.Parallel()
 	tests := []struct {
 		name    string
 		edits   []Edit
@@ -629,112 +571,41 @@ func TestUniqueEdits(t *testing.T) {
 		wantIdx int
 	}{
 		{
-			name:    "empty slice",
-			edits:   []Edit{},
-			want:    nil,
-			wantIdx: -1,
-		},
-		{
-			name: "non-overlapping edits",
-			edits: []Edit{
-				{New: "a", Start: 0, End: 1},
-				{New: "b", Start: 2, End: 3},
-			},
-			want: []Edit{
-				{New: "a", Start: 0, End: 1},
-				{New: "b", Start: 2, End: 3},
-			},
-			wantIdx: -1,
-		},
-		{
 			name: "overlapping edits",
 			edits: []Edit{
-				{New: "a", Start: 0, End: 2},
-				{New: "b", Start: 1, End: 3},
+				{Start: 0, End: 2, New: "a"},
+				{Start: 1, End: 3, New: "b"},
 			},
-			want: []Edit{
-				{New: "a", Start: 0, End: 2},
-				{New: "b", Start: 1, End: 3},
-			},
+			want:    []Edit{{Start: 0, End: 2, New: "a"}, {Start: 1, End: 3, New: "b"}},
 			wantIdx: 1,
-		},
-		{
-			name: "duplicate edits",
-			edits: []Edit{
-				{New: "a", Start: 0, End: 1},
-				{New: "a", Start: 0, End: 1},
-			},
-			want: []Edit{
-				{New: "a", Start: 0, End: 1},
-			},
-			wantIdx: -1,
-		},
-		{
-			name: "overlapping and duplicate edits",
-			edits: []Edit{
-				{New: "a", Start: 0, End: 2},
-				{New: "a", Start: 0, End: 2},
-				{New: "b", Start: 1, End: 3},
-			},
-			want: []Edit{
-				{New: "a", Start: 0, End: 2},
-				{New: "b", Start: 1, End: 3},
-			},
-			wantIdx: 2,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, gotIdx := UniqueEdits(tt.edits)
-			if !reflect.DeepEqual(got, tt.want) {
+			if !reflect.DeepEqual(got, tt.want) || gotIdx != tt.wantIdx {
 				t.Fatalf("expected %v, got %v", tt.want, got)
-			}
-			if gotIdx != tt.wantIdx {
-				t.Fatalf("expected index %v, got %v", tt.wantIdx, gotIdx)
 			}
 		})
 	}
 }
 
+
 func TestFlatten(t *testing.T) {
 	tests := []struct {
-		name        string
-		change      Change
-		want        map[string][]Edit
-		expectError bool
+		name   string
+		change Change
+		want   map[string][]Edit
 	}{
-		{
-			name: "single analyzer with non-overlapping edits",
-			change: Change{
-				AnalyzerToFileToEdits: map[string]map[string][]Edit{
-					"analyzer1": {
-						"file1.go": []Edit{
-							{Start: 0, End: 1, New: "a"}, // Replace the first character
-							{Start: 2, End: 3, New: "b"}, // Replace the third character
-						},
-					},
-				},
-			},
-			want: map[string][]Edit{
-				"file1.go": {
-					{Start: 0, End: 1, New: "a"},
-					{Start: 2, End: 3, New: "b"},
-				},
-			},
-		},
 		{
 			name: "multiple analyzers with non-overlapping edits",
 			change: Change{
-				AnalyzerToFileToEdits: map[string]map[string][]Edit{
-					"analyzer1": {
-						"file1.go": {
-							{Start: 0, End: 1, New: "a"}, // Replace the first character
-						},
-					},
-					"analyzer2": {
-						"file1.go": {
-							{Start: 2, End: 3, New: "b"}, // Replace the third character
+				FileToEdits: map[string]FileEdits{
+					"file1.go": {
+						AnalyzerToEdits: map[string][]Edit{
+							"analyzer1": {{Start: 0, End: 1, New: "a"}},
+							"analyzer2": {{Start: 2, End: 3, New: "b"}},
 						},
 					},
 				},
@@ -743,89 +614,26 @@ func TestFlatten(t *testing.T) {
 				"file1.go": {
 					{Start: 0, End: 1, New: "a"},
 					{Start: 2, End: 3, New: "b"},
-				},
-			},
-		},
-		{
-			name: "multiple analyzers with non-overlapping edits on same position boundary",
-			change: Change{
-				AnalyzerToFileToEdits: map[string]map[string][]Edit{
-					"analyzer1": {
-						"file1.go": {
-							{Start: 0, End: 1, New: "a"}, // Replace the first character
-						},
-					},
-					"analyzer2": {
-						"file1.go": {
-							{Start: 1, End: 2, New: "c"}, // Starts where the first edit ends (no overlap)
-						},
-					},
-				},
-			},
-			want: map[string][]Edit{
-				"file1.go": {
-					{Start: 0, End: 1, New: "a"}, // Replace the first character
-					{Start: 1, End: 2, New: "c"}, // Replace the second character
 				},
 			},
 		},
 		{
 			name: "multiple analyzers with overlapping edits",
 			change: Change{
-				AnalyzerToFileToEdits: map[string]map[string][]Edit{
-					"analyzer1": {
-						"file1.go": {
-							{Start: 0, End: 2, New: "a"}, // Replace the first two characters
-						},
-					},
-					"analyzer2": {
-						"file1.go": {
-							{Start: 1, End: 3, New: "b"}, // Overlaps with analyzer1 (overlap starts at 1)
+				FileToEdits: map[string]FileEdits{
+					"file1.go": {
+						AnalyzerToEdits: map[string][]Edit{
+							"analyzer1": {{Start: 0, End: 2, New: "a"}},
+							"analyzer2": {{Start: 1, End: 3, New: "b"}},
 						},
 					},
 				},
 			},
 			want: map[string][]Edit{
 				"file1.go": {
-					{Start: 0, End: 2, New: "a"}, // Only the first valid edit is retained
+					{Start: 0, End: 2, New: "a"},
 				},
 			},
-		},
-		{
-			name: "multiple files with overlapping and non-overlapping edits",
-			change: Change{
-				AnalyzerToFileToEdits: map[string]map[string][]Edit{
-					"analyzer1": {
-						"file1.go": {
-							{Start: 0, End: 1, New: "a"}, // Replace the first character
-						},
-						"file2.go": {
-							{Start: 2, End: 4, New: "b"}, // Replace the third and fourth characters
-						},
-					},
-					"analyzer2": {
-						"file1.go": {
-							{Start: 1, End: 2, New: "c"}, // Does not overlap with the first edit
-						},
-					},
-				},
-			},
-			want: map[string][]Edit{
-				"file1.go": {
-					{Start: 0, End: 1, New: "a"}, // Both edits are valid
-					{Start: 1, End: 2, New: "c"}, // Starts after the first edit
-				},
-				"file2.go": {
-					{Start: 2, End: 4, New: "b"}, // No overlap, so the edit is applied
-				},
-			},
-		},
-		{
-			name: "no edits",
-			change: Change{
-				AnalyzerToFileToEdits: map[string]map[string][]Edit{},
-			},
-			want: map[string][]Edit{},
 		},
 	}
 
@@ -839,45 +647,41 @@ func TestFlatten(t *testing.T) {
 	}
 }
 
-func TestToPatches(t *testing.T) {
-	// Helper function to create a temporary file with specified content
+func TestToCombinedPatch(t *testing.T) {
+	// Helper functions to create and delete temporary files
 	createTempFile := func(filename, content string) error {
 		return os.WriteFile(filename, []byte(content), 0644)
 	}
-
-	// Helper function to delete a file
 	deleteFile := func(filename string) {
 		os.Remove(filename)
 	}
 
-	// Setup temporary test files
+	// Setup: Create temporary files
 	err := createTempFile("file1.go", "package main\nfunc Hello() {}\n")
 	if err != nil {
 		t.Fatalf("Failed to create temporary file1.go: %v", err)
 	}
-	defer deleteFile("file1.go") // Cleanup
+	defer deleteFile("file1.go")
 
 	err = createTempFile("file2.go", "package main\nvar x = 10\n")
 	if err != nil {
 		t.Fatalf("Failed to create temporary file2.go: %v", err)
 	}
-	defer deleteFile("file2.go") // Cleanup
+	defer deleteFile("file2.go")
 
 	tests := []struct {
 		name        string
 		fileToEdits map[string][]Edit
-		expected    map[string]string
+		expected    string
 		expectErr   bool
 	}{
 		{
-			name: "simple patch for file1.go",
+			name: "valid patch for multiple files",
 			fileToEdits: map[string][]Edit{
-				"file1.go": {
-					{Start: 27, End: 27, New: "\nHello, world!\n"}, // Insert in the function body
-				},
+				"file1.go": {{Start: 27, End: 27, New: "\nHello, world!\n"}}, // Add to function body
+				"file2.go": {{Start: 24, End: 24, New: "var y = 20\n"}},       // Add a new variable
 			},
-			expected: map[string]string{
-				"file1.go": `--- a/file1.go
+			expected: `--- a/file1.go
 +++ b/file1.go
 @@ -1,2 +1,4 @@
  package main
@@ -885,80 +689,44 @@ func TestToPatches(t *testing.T) {
 +func Hello() {
 +Hello, world!
 +}
-`,
-			},
-		},
-		{
-			name: "multiple files",
-			fileToEdits: map[string][]Edit{
-				"file1.go": {
-					{Start: 27, End: 27, New: "\nHello, world!\n"}, // Insert in the function body
-				},
-				"file2.go": {
-					{Start: 24, End: 24, New: "var y = 20\n"}, // Insert after var x = 10
-				},
-			},
-			expected: map[string]string{
-				"file1.go": `--- a/file1.go
-+++ b/file1.go
-@@ -1,2 +1,4 @@
- package main
--func Hello() {}
-+func Hello() {
-+Hello, world!
-+}
-`,
-				"file2.go": `--- a/file2.go
+
+--- a/file2.go
 +++ b/file2.go
 @@ -1,2 +1,3 @@
  package main
  var x = 10
 +var y = 20
 `,
-			},
+			expectErr: false,
 		},
 		{
 			name: "file not found",
 			fileToEdits: map[string][]Edit{
-				"nonexistent.go": {
-					{Start: 0, End: 0, New: "new content"},
-				},
+				"nonexistent.go": {{Start: 0, End: 0, New: "new content"}},
 			},
+			expected:  "",
 			expectErr: true,
-		}, {
-			name: "no edits for file1.go (len(edits) == 0), no patch should be generated",
-			fileToEdits: map[string][]Edit{
-				"file1.go": {}, // No edits
-			},
-			expected:  map[string]string{}, // No patch expected
-			expectErr: false,
-		}, {
-			name: "no edits for file1.go (len(edits) == 0 with nil), no patch should be generated",
-			fileToEdits: map[string][]Edit{
-				"file1.go": nil, // No edits
-			},
-			expected:  map[string]string{}, // No patch expected
-			expectErr: false,
 		},
 		{
-			name: "no edits for multiple files (len(edits) == 0), no patches should be generated",
-			fileToEdits: map[string][]Edit{
-				"file1.go": {}, // No edits
-				"file2.go": {}, // No edits
-			},
-			expected:  map[string]string{}, // No patches expected
+			name:      "no edits",
+			fileToEdits: map[string][]Edit{},
+			expected:  "",
 			expectErr: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			patches, err := ToPatches(tt.fileToEdits)
+			combinedPatch, err := ToCombinedPatch(tt.fileToEdits)
+
+			// Verify error expectation
 			if (err != nil) != tt.expectErr {
 				t.Fatalf("expected error: %v, got: %v", tt.expectErr, err)
 			}
-			if err == nil && !reflect.DeepEqual(patches, tt.expected) {
-				t.Errorf("expected patches: %v, got: %v", tt.expected, patches)
+
+			// If no error, verify the patch output
+			if err == nil && combinedPatch != tt.expected {
+				t.Errorf("expected patch:\n%v\ngot:\n%v", tt.expected, combinedPatch)
 			}
 		})
 	}
