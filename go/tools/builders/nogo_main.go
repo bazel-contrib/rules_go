@@ -460,7 +460,7 @@ func (g *goPackage) String() string {
 // and returns a string containing all the diagnostics that should be printed
 // to the build log.
 func checkAnalysisResults(actions []*action, pkg *goPackage, nogoFixPath string) string {
-	var diagnostics []DiagnosticEntry
+	var diagnostics []diagnosticEntry
 
 	var errs []error
 	cwd, err := os.Getwd()
@@ -503,7 +503,7 @@ func checkAnalysisResults(actions []*action, pkg *goPackage, nogoFixPath string)
 
 		if currentConfig.onlyFiles == nil && currentConfig.excludeFiles == nil {
 			for _, diag := range act.diagnostics {
-				diagnostics = append(diagnostics, DiagnosticEntry{Diagnostic: diag, Analyzer: act.a})
+				diagnostics = append(diagnostics, diagnosticEntry{Diagnostic: diag, Analyzer: act.a})
 			}
 			continue
 		}
@@ -541,7 +541,7 @@ func checkAnalysisResults(actions []*action, pkg *goPackage, nogoFixPath string)
 				}
 			}
 			if include {
-				diagnostics = append(diagnostics, DiagnosticEntry{Diagnostic: d, Analyzer: act.a})
+				diagnostics = append(diagnostics, diagnosticEntry{Diagnostic: d, Analyzer: act.a})
 			}
 		}
 	}
@@ -556,11 +556,11 @@ func checkAnalysisResults(actions []*action, pkg *goPackage, nogoFixPath string)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("errors in dumping nogo fix, specifically in converting diagnostics to change %v", err))
 		}
-		fileToPatch, err := ToPatches(Flatten(*change))
+		giantPatch, err := ToCombinedPatch(Flatten(*change))
 		if err != nil {
 			errs = append(errs, fmt.Errorf("errors in dumping nogo fix, specifically in generating the patches %v", err))
 		}
-		err = SavePatchesToFile(nogoFixPath, fileToPatch)
+		err = SaveToFile(nogoFixPath, giantPatch)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("errors in dumping nogo fix, specifically in file saving %v", err))
 		}

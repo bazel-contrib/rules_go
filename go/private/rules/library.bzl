@@ -72,6 +72,7 @@ def _go_library_impl(ctx):
         OutputGroupInfo(
             cgo_exports = archive.cgo_exports,
             compilation_outputs = [archive.data.file],
+            nogo_fix = [nogo_fix_output] if nogo_fix_output else [],
             _validation = nogo_validation_outputs,
         ),
     ]

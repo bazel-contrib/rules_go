@@ -65,19 +65,11 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
         out_nogo_log = go.declare_file(go, name = source.name, ext = pre_ext + ".nogo.log")
         out_nogo_validation = go.declare_file(go, name = source.name, ext = pre_ext + ".nogo")
 
-        # out_nogo_fix_tmp holds the fixes produced by the RunNogo action, out_nogo_fix holds the fixes produced by the ValidateNogo action.
-        # They have the same content, but ValidateNogo propagates the fixes and eventually externalizes the fixes via `_validation` in the OutputGroupInfo section.
-        # --run_validations (default=True) ensures nogo validation is applied to not only the input targets but also their dependent targets,
-        # thereby producing available fixes for all targets.
-        # Otherwise, if we externalize out_nogo_fix_tmp (not going through the ValidateNogo action) by putting it into a field (e.g., `nogo_fix`) in the OutputGroupInfo section of the input targets,
-        # we can see the fix for the input targets, but will miss the fixes for the dependent targets.
-        out_nogo_fix_tmp = go.declare_file(go, name = source.name, ext = pre_ext + ".nogo.fix.tmp")
         out_nogo_fix = go.declare_file(go, name = source.name, ext = pre_ext + ".nogo.fix")
     else:
         out_facts = None
         out_nogo_log = None
         out_nogo_validation = None
-        out_nogo_fix_tmp = None
         out_nogo_fix = None
 
     direct = source.deps
@@ -124,7 +116,6 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
             out_facts = out_facts,
             out_nogo_log = out_nogo_log,
             out_nogo_validation = out_nogo_validation,
-            out_nogo_fix_tmp = out_nogo_fix_tmp,
             out_nogo_fix = out_nogo_fix,
             nogo = nogo,
             out_cgo_export_h = out_cgo_export_h,
@@ -155,7 +146,6 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
             out_facts = out_facts,
             out_nogo_log = out_nogo_log,
             out_nogo_validation = out_nogo_validation,
-            out_nogo_fix_tmp = out_nogo_fix_tmp,
             out_nogo_fix = out_nogo_fix,
             nogo = nogo,
             gc_goopts = source.gc_goopts,

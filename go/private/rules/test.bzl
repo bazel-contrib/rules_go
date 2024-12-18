@@ -69,6 +69,7 @@ def _go_test_impl(ctx):
     )
 
     validation_outputs = []
+    nogo_fix_outputs = []
 
     # Compile the library to test with internal white box tests
     internal_go_info = new_go_info(
@@ -80,10 +81,8 @@ def _go_test_impl(ctx):
     if internal_archive.data._validation_output:
         validation_outputs.append(internal_archive.data._validation_output)
     if internal_archive.data._nogo_fix_output:
-        # We do not include those from external_archive that corresponds to a separate package
-        # since that package would be built separately, during which the nogo fixes are produced already.
         validation_outputs.append(internal_archive.data._nogo_fix_output)
-
+        nogo_fix_outputs.append(internal_archive.data._nogo_fix_output)
     go_srcs = [src for src in internal_go_info.srcs if src.extension == "go"]
 
     # Compile the library with the external black box tests
@@ -104,6 +103,11 @@ def _go_test_impl(ctx):
     external_archive = go.archive(go, external_go_info, is_external_pkg = True)
     if external_archive.data._validation_output:
         validation_outputs.append(external_archive.data._validation_output)
+    if external_archive.data._nogo_fix_output:
+        # internal vs external archive refers to the same package vs separate package.
+        # we include the nogo fixes for transitive dependency too.
+        validation_outputs.append(external_archive.data._nogo_fix_output)
+        nogo_fix_outputs.append(external_archive.data._nogo_fix_output)
 
     # now generate the main function
     repo_relative_rundir = ctx.attr.rundir or ctx.label.package or "."
@@ -212,6 +216,7 @@ def _go_test_impl(ctx):
         ),
         OutputGroupInfo(
             compilation_outputs = [internal_archive.data.file],
+            nogo_fix = nogo_fix_outputs,
             _validation = validation_outputs,
         ),
         coverage_common.instrumented_files_info(
