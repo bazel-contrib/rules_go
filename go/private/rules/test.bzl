@@ -81,7 +81,6 @@ def _go_test_impl(ctx):
     if internal_archive.data._validation_output:
         validation_outputs.append(internal_archive.data._validation_output)
     if internal_archive.data._nogo_fix_output:
-        validation_outputs.append(internal_archive.data._nogo_fix_output)
         nogo_fix_outputs.append(internal_archive.data._nogo_fix_output)
     go_srcs = [src for src in internal_go_info.srcs if src.extension == "go"]
 
@@ -106,7 +105,6 @@ def _go_test_impl(ctx):
     if external_archive.data._nogo_fix_output:
         # internal vs external archive refers to the same package vs separate package.
         # we include the nogo fixes for transitive dependency too.
-        validation_outputs.append(external_archive.data._nogo_fix_output)
         nogo_fix_outputs.append(external_archive.data._nogo_fix_output)
 
     # now generate the main function

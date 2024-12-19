@@ -32,11 +32,11 @@ func nogoValidation(args []string) error {
 		if len(nogoFixContent) > 0 {
 			// Format the message in a clean and clear way
 			nogoFixRelated = fmt.Sprintf(`
--------------------Suggested Fixes-------------------
-The suggested fixes are as follows:
+-------------------Suggested Fix-------------------
+The suggested fix is as follows:
 %s
 
-To apply the suggested fixes, run the following command:
+To apply the suggested fix, run the following command:
 $ patch -p1 < %s
 -----------------------------------------------------
 `, nogoFixContent, nogoFixFile)
