@@ -38,6 +38,7 @@ use_repo(
     "com_github_gogo_protobuf",
     "com_github_golang_mock",
     "com_github_golang_protobuf",
+    "com_github_pmezard_go_difflib",
     "org_golang_google_genproto",
     "org_golang_google_grpc",
     "org_golang_google_grpc_cmd_protoc_gen_go_grpc",
