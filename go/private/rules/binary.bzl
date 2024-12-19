@@ -157,8 +157,6 @@ def _go_binary_impl(ctx):
     nogo_validation_outputs = []
     if validation_output:
         nogo_validation_outputs.append(validation_output)
-    if nogo_fix_output:
-        nogo_validation_outputs.append(nogo_fix_output)
 
     providers = [
         archive,

@@ -552,17 +552,17 @@ func checkAnalysisResults(actions []*action, pkg *goPackage, nogoFixPath string)
 	if nogoFixPath != "" {
 		// If the nogo fixes are requested, we need to save the fixes to the file even if they are empty.
 		// Otherwise, bazel will complain "not all outputs were created or valid"
-		change, err := NewChangeFromDiagnostics(diagnostics, pkg.fset)
+		change, err := newChangeFromDiagnostics(diagnostics, pkg.fset)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("errors in dumping nogo fix, specifically in converting diagnostics to change %v", err))
+			errs = append(errs, fmt.Errorf("errors in dumping nogo fix, specifically in converting diagnostics to change: %v", err))
 		}
-		giantPatch, err := ToCombinedPatch(Flatten(*change))
+		combinedPatch, err := toCombinedPatch(flatten(*change))
 		if err != nil {
-			errs = append(errs, fmt.Errorf("errors in dumping nogo fix, specifically in generating the patches %v", err))
+			errs = append(errs, fmt.Errorf("errors in dumping nogo fix, specifically in generating the patches: %v", err))
 		}
-		err = SaveToFile(nogoFixPath, giantPatch)
+		err = os.WriteFile(nogoFixPath, []byte(combinedPatch), 0644)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("errors in dumping nogo fix, specifically in file saving %v", err))
+			errs = append(errs, fmt.Errorf("errors in dumping nogo fix, specifically in saving the file %s: %v", nogoFixPath, err))
 		}
 	}
 

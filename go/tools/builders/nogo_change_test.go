@@ -36,8 +36,8 @@ var (
 )
 
 // ApplyEdits() and validate() here provide the reference implementation for testing
-// ApplyEditsBytes() from nogo_change.go
-func ApplyEdits(src string, edits []Edit) (string, error) {
+// applyEditsBytes() from the refactored nogo_change code, now using NogoEdit.
+func ApplyEdits(src string, edits []NogoEdit) (string, error) {
 	edits, size, err := validate(src, edits)
 	if err != nil {
 		return "", err
@@ -56,16 +56,16 @@ func ApplyEdits(src string, edits []Edit) (string, error) {
 	out = append(out, src[lastEnd:]...)
 
 	if len(out) != size {
-		panic("wrong size")
+		return "", fmt.Errorf("applyEdits: unexpected output size, got %d, want %d", len(out), size)
 	}
 
 	return string(out), nil
 }
 
-func validate(src string, edits []Edit) ([]Edit, int, error) {
+func validate(src string, edits []NogoEdit) ([]NogoEdit, int, error) {
 	if !sort.IsSorted(editsSort(edits)) {
-		edits = append([]Edit(nil), edits...)
-		SortEdits(edits)
+		edits = append([]NogoEdit(nil), edits...)
+		sortEdits(edits) 
 	}
 
 	// Check validity of edits and compute final size.
@@ -85,32 +85,32 @@ func validate(src string, edits []Edit) ([]Edit, int, error) {
 	return edits, size, nil
 }
 
-// TestAddEdit_MultipleAnalyzers tests AddEdit with multiple analyzers and files using reflect.DeepEqual
+// TestAddEdit_MultipleAnalyzers tests addEdit with multiple analyzers and files using reflect.DeepEqual
 func TestAddEdit_MultipleAnalyzers(t *testing.T) {
-	change := NewChange()
+	change := newChange() 
 	file1 := "file1.go"
 
-	edit1a := Edit{Start: 10, End: 20, New: "code1 from analyzer1"}
-	edit1b := Edit{Start: 30, End: 40, New: "code2 from analyzer1"}
-	edit2a := Edit{Start: 50, End: 60, New: "code1 from analyzer2"}
-	edit2b := Edit{Start: 70, End: 80, New: "code2 from analyzer2"}
+	edit1a := NogoEdit{Start: 10, End: 20, New: "code1 from analyzer1"}
+	edit1b := NogoEdit{Start: 30, End: 40, New: "code2 from analyzer1"}
+	edit2a := NogoEdit{Start: 50, End: 60, New: "code1 from analyzer2"}
+	edit2b := NogoEdit{Start: 70, End: 80, New: "code2 from analyzer2"}
 
-	expected := map[string]FileEdits{
+	expected := map[string]NogoFileEdits{
 		file1: {
-			AnalyzerToEdits: map[string][]Edit{
+			AnalyzerToEdits: map[string][]NogoEdit{
 				analyzer1.Name: {edit1a, edit1b},
 				analyzer2.Name: {edit2a, edit2b},
 			},
 		},
 	}
 
-	change.AddEdit(file1, analyzer1.Name, edit1a)
-	change.AddEdit(file1, analyzer1.Name, edit1b)
-	change.AddEdit(file1, analyzer2.Name, edit2a)
-	change.AddEdit(file1, analyzer2.Name, edit2b)
+	change.addEdit(file1, analyzer1.Name, edit1a)
+	change.addEdit(file1, analyzer1.Name, edit1b)
+	change.addEdit(file1, analyzer2.Name, edit2a)
+	change.addEdit(file1, analyzer2.Name, edit2b)
 
 	if !reflect.DeepEqual(change.FileToEdits, expected) {
-		t.Fatalf("Change.FileToEdits did not match the expected result.\nGot: %+v\nExpected: %+v", change.FileToEdits, expected)
+		t.Fatalf("NogoChange.FileToEdits did not match the expected result.\nGot: %+v\nExpected: %+v", change.FileToEdits, expected)
 	}
 }
 
@@ -123,7 +123,7 @@ func TestNewChangeFromDiagnostics_SuccessCases(t *testing.T) {
 		name              string
 		fileSet           *token.FileSet
 		diagnosticEntries []diagnosticEntry
-		expectedEdits     map[string]FileEdits
+		expectedEdits     map[string]NogoFileEdits
 	}{
 		{
 			name:    "ValidEdits",
@@ -142,9 +142,9 @@ func TestNewChangeFromDiagnostics_SuccessCases(t *testing.T) {
 					},
 				},
 			},
-			expectedEdits: map[string]FileEdits{
+			expectedEdits: map[string]NogoFileEdits{
 				"file1.go": {
-					AnalyzerToEdits: map[string][]Edit{
+					AnalyzerToEdits: map[string][]NogoEdit{
 						"analyzer1": {
 							{New: "new_text", Start: 4, End: 9}, // 0-based offset
 						},
@@ -156,7 +156,7 @@ func TestNewChangeFromDiagnostics_SuccessCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			change, err := NewChangeFromDiagnostics(tt.diagnosticEntries, tt.fileSet)
+			change, err := newChangeFromDiagnostics(tt.diagnosticEntries, tt.fileSet)
 			if err != nil {
 				t.Fatalf("expected no error, got: %v", err)
 			}
@@ -195,14 +195,13 @@ func TestNewChangeFromDiagnostics_ErrorCases(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: "errors: [invalid fix: pos 15 > end 10]",
+			expectedErr: "errors:\ninvalid fix: pos 15 > end 10",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := NewChangeFromDiagnostics(tt.diagnosticEntries, tt.fileSet)
-
+			_, err := newChangeFromDiagnostics(tt.diagnosticEntries, tt.fileSet)
 			if err == nil {
 				t.Fatalf("expected an error, got none")
 			}
@@ -217,17 +216,17 @@ func TestNewChangeFromDiagnostics_ErrorCases(t *testing.T) {
 func TestSortEdits(t *testing.T) {
 	tests := []struct {
 		name   string
-		edits  []Edit
-		sorted []Edit
+		edits  []NogoEdit
+		sorted []NogoEdit
 	}{
 		{
 			name: "already sorted",
-			edits: []Edit{
+			edits: []NogoEdit{
 				{New: "a", Start: 0, End: 1},
 				{New: "b", Start: 1, End: 2},
 				{New: "c", Start: 2, End: 3},
 			},
-			sorted: []Edit{
+			sorted: []NogoEdit{
 				{New: "a", Start: 0, End: 1},
 				{New: "b", Start: 1, End: 2},
 				{New: "c", Start: 2, End: 3},
@@ -235,12 +234,12 @@ func TestSortEdits(t *testing.T) {
 		},
 		{
 			name: "unsorted",
-			edits: []Edit{
+			edits: []NogoEdit{
 				{New: "b", Start: 1, End: 2},
 				{New: "a", Start: 0, End: 1},
 				{New: "c", Start: 2, End: 3},
 			},
-			sorted: []Edit{
+			sorted: []NogoEdit{
 				{New: "a", Start: 0, End: 1},
 				{New: "b", Start: 1, End: 2},
 				{New: "c", Start: 2, End: 3},
@@ -248,11 +247,11 @@ func TestSortEdits(t *testing.T) {
 		},
 		{
 			name: "insert before delete at same position",
-			edits: []Edit{
+			edits: []NogoEdit{
 				{New: "", Start: 0, End: 1},       // delete
 				{New: "insert", Start: 0, End: 0}, // insert
 			},
-			sorted: []Edit{
+			sorted: []NogoEdit{
 				{New: "insert", Start: 0, End: 0}, // insert comes before delete
 				{New: "", Start: 0, End: 1},
 			},
@@ -261,7 +260,7 @@ func TestSortEdits(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			SortEdits(tt.edits)
+			sortEdits(tt.edits)
 			if !reflect.DeepEqual(tt.edits, tt.sorted) {
 				t.Fatalf("expected %v, got %v", tt.sorted, tt.edits)
 			}
@@ -269,124 +268,125 @@ func TestSortEdits(t *testing.T) {
 	}
 }
 
-// Put these test cases as the global variable so that indentation is simpler.
+// TestCases uses NogoEdit now instead of Edit
 var TestCases = []struct {
 	Name, In, Out, Unified string
-	Edits, LineEdits       []Edit // expectation (LineEdits=nil => already line-aligned)
+	Edits, LineEdits       []NogoEdit // expectation (LineEdits=nil => already line-aligned)
 	NoDiff                 bool
-}{{
-	Name: "empty",
-	In:   "",
-	Out:  "",
-}, {
-	Name: "no_diff",
-	In:   "gargantuan\n",
-	Out:  "gargantuan\n",
-}, {
-	Name: "replace_all",
-	In:   "fruit\n",
-	Out:  "cheese\n",
-	Unified: UnifiedPrefix + `
+}{
+	{
+		Name: "empty",
+		In:   "",
+		Out:  "",
+	}, {
+		Name: "no_diff",
+		In:   "gargantuan\n",
+		Out:  "gargantuan\n",
+	}, {
+		Name: "replace_all",
+		In:   "fruit\n",
+		Out:  "cheese\n",
+		Unified: UnifiedPrefix + `
 @@ -1 +1 @@
 -fruit
 +cheese
 `[1:],
-	Edits:     []Edit{{Start: 0, End: 5, New: "cheese"}},
-	LineEdits: []Edit{{Start: 0, End: 6, New: "cheese\n"}},
-}, {
-	Name: "insert_rune",
-	In:   "gord\n",
-	Out:  "gourd\n",
-	Unified: UnifiedPrefix + `
+		Edits:     []NogoEdit{{Start: 0, End: 5, New: "cheese"}},
+		LineEdits: []NogoEdit{{Start: 0, End: 6, New: "cheese\n"}},
+	}, {
+		Name: "insert_rune",
+		In:   "gord\n",
+		Out:  "gourd\n",
+		Unified: UnifiedPrefix + `
 @@ -1 +1 @@
 -gord
 +gourd
 `[1:],
-	Edits:     []Edit{{Start: 2, End: 2, New: "u"}},
-	LineEdits: []Edit{{Start: 0, End: 5, New: "gourd\n"}},
-}, {
-	Name: "delete_rune",
-	In:   "groat\n",
-	Out:  "goat\n",
-	Unified: UnifiedPrefix + `
+		Edits:     []NogoEdit{{Start: 2, End: 2, New: "u"}},
+		LineEdits: []NogoEdit{{Start: 0, End: 5, New: "gourd\n"}},
+	}, {
+		Name: "delete_rune",
+		In:   "groat\n",
+		Out:  "goat\n",
+		Unified: UnifiedPrefix + `
 @@ -1 +1 @@
 -groat
 +goat
 `[1:],
-	Edits:     []Edit{{Start: 1, End: 2, New: ""}},
-	LineEdits: []Edit{{Start: 0, End: 6, New: "goat\n"}},
-}, {
-	Name: "replace_rune",
-	In:   "loud\n",
-	Out:  "lord\n",
-	Unified: UnifiedPrefix + `
+		Edits:     []NogoEdit{{Start: 1, End: 2, New: ""}},
+		LineEdits: []NogoEdit{{Start: 0, End: 6, New: "goat\n"}},
+	}, {
+		Name: "replace_rune",
+		In:   "loud\n",
+		Out:  "lord\n",
+		Unified: UnifiedPrefix + `
 @@ -1 +1 @@
 -loud
 +lord
 `[1:],
-	Edits:     []Edit{{Start: 2, End: 3, New: "r"}},
-	LineEdits: []Edit{{Start: 0, End: 5, New: "lord\n"}},
-}, {
-	Name: "replace_partials",
-	In:   "blanket\n",
-	Out:  "bunker\n",
-	Unified: UnifiedPrefix + `
+		Edits:     []NogoEdit{{Start: 2, End: 3, New: "r"}},
+		LineEdits: []NogoEdit{{Start: 0, End: 5, New: "lord\n"}},
+	}, {
+		Name: "replace_partials",
+		In:   "blanket\n",
+		Out:  "bunker\n",
+		Unified: UnifiedPrefix + `
 @@ -1 +1 @@
 -blanket
 +bunker
 `[1:],
-	Edits: []Edit{
-		{Start: 1, End: 3, New: "u"},
-		{Start: 6, End: 7, New: "r"},
-	},
-	LineEdits: []Edit{{Start: 0, End: 8, New: "bunker\n"}},
-}, {
-	Name: "insert_line",
-	In:   "1: one\n3: three\n",
-	Out:  "1: one\n2: two\n3: three\n",
-	Unified: UnifiedPrefix + `
+		Edits: []NogoEdit{
+			{Start: 1, End: 3, New: "u"},
+			{Start: 6, End: 7, New: "r"},
+		},
+		LineEdits: []NogoEdit{{Start: 0, End: 8, New: "bunker\n"}},
+	}, {
+		Name: "insert_line",
+		In:   "1: one\n3: three\n",
+		Out:  "1: one\n2: two\n3: three\n",
+		Unified: UnifiedPrefix + `
 @@ -1,2 +1,3 @@
  1: one
 +2: two
  3: three
 `[1:],
-	Edits: []Edit{{Start: 7, End: 7, New: "2: two\n"}},
-}, {
-	Name: "replace_no_newline",
-	In:   "A",
-	Out:  "B",
-	Unified: UnifiedPrefix + `
+		Edits: []NogoEdit{{Start: 7, End: 7, New: "2: two\n"}},
+	}, {
+		Name: "replace_no_newline",
+		In:   "A",
+		Out:  "B",
+		Unified: UnifiedPrefix + `
 @@ -1 +1 @@
 -A
 \ No newline at end of file
 +B
 \ No newline at end of file
 `[1:],
-	Edits: []Edit{{Start: 0, End: 1, New: "B"}},
-}, {
-	Name: "delete_empty",
-	In:   "meow",
-	Out:  "", // GNU diff -u special case: +0,0
-	Unified: UnifiedPrefix + `
+		Edits: []NogoEdit{{Start: 0, End: 1, New: "B"}},
+	}, {
+		Name: "delete_empty",
+		In:   "meow",
+		Out:  "",
+		Unified: UnifiedPrefix + `
 @@ -1 +0,0 @@
 -meow
 \ No newline at end of file
 `[1:],
-	Edits:     []Edit{{Start: 0, End: 4, New: ""}},
-	LineEdits: []Edit{{Start: 0, End: 4, New: ""}},
-}, {
-	Name: "append_empty",
-	In:   "", // GNU diff -u special case: -0,0
-	Out:  "AB\nC",
-	Unified: UnifiedPrefix + `
+		Edits:     []NogoEdit{{Start: 0, End: 4, New: ""}},
+		LineEdits: []NogoEdit{{Start: 0, End: 4, New: ""}},
+	}, {
+		Name: "append_empty",
+		In:   "",
+		Out:  "AB\nC",
+		Unified: UnifiedPrefix + `
 @@ -0,0 +1,2 @@
 +AB
 +C
 \ No newline at end of file
 `[1:],
-	Edits:     []Edit{{Start: 0, End: 0, New: "AB\nC"}},
-	LineEdits: []Edit{{Start: 0, End: 0, New: "AB\nC"}},
-},
+		Edits:     []NogoEdit{{Start: 0, End: 0, New: "AB\nC"}},
+		LineEdits: []NogoEdit{{Start: 0, End: 0, New: "AB\nC"}},
+	},
 	{
 		Name: "add_end",
 		In:   "A",
@@ -398,8 +398,8 @@ var TestCases = []struct {
 +AB
 \ No newline at end of file
 `[1:],
-		Edits:     []Edit{{Start: 1, End: 1, New: "B"}},
-		LineEdits: []Edit{{Start: 0, End: 1, New: "AB"}},
+		Edits:     []NogoEdit{{Start: 1, End: 1, New: "B"}},
+		LineEdits: []NogoEdit{{Start: 0, End: 1, New: "AB"}},
 	}, {
 		Name: "add_empty",
 		In:   "",
@@ -410,8 +410,8 @@ var TestCases = []struct {
 +C
 \ No newline at end of file
 `[1:],
-		Edits:     []Edit{{Start: 0, End: 0, New: "AB\nC"}},
-		LineEdits: []Edit{{Start: 0, End: 0, New: "AB\nC"}},
+		Edits:     []NogoEdit{{Start: 0, End: 0, New: "AB\nC"}},
+		LineEdits: []NogoEdit{{Start: 0, End: 0, New: "AB\nC"}},
 	}, {
 		Name: "add_newline",
 		In:   "A",
@@ -422,8 +422,8 @@ var TestCases = []struct {
 \ No newline at end of file
 +A
 `[1:],
-		Edits:     []Edit{{Start: 1, End: 1, New: "\n"}},
-		LineEdits: []Edit{{Start: 0, End: 1, New: "A\n"}},
+		Edits:     []NogoEdit{{Start: 1, End: 1, New: "\n"}},
+		LineEdits: []NogoEdit{{Start: 0, End: 1, New: "A\n"}},
 	}, {
 		Name: "delete_front",
 		In:   "A\nB\nC\nA\nB\nB\nA\n",
@@ -440,14 +440,14 @@ var TestCases = []struct {
  A
 +C
 `[1:],
-		NoDiff: true, // unified diff is different but valid
-		Edits: []Edit{
+		NoDiff: true,
+		Edits: []NogoEdit{
 			{Start: 0, End: 4, New: ""},
 			{Start: 6, End: 6, New: "B\n"},
 			{Start: 10, End: 12, New: ""},
 			{Start: 14, End: 14, New: "C\n"},
 		},
-		LineEdits: []Edit{
+		LineEdits: []NogoEdit{
 			{Start: 0, End: 4, New: ""},
 			{Start: 6, End: 6, New: "B\n"},
 			{Start: 10, End: 12, New: ""},
@@ -464,8 +464,8 @@ var TestCases = []struct {
 +C
 +
 `[1:],
-		Edits:     []Edit{{Start: 2, End: 3, New: "C\n"}},
-		LineEdits: []Edit{{Start: 2, End: 4, New: "C\n\n"}},
+		Edits:     []NogoEdit{{Start: 2, End: 3, New: "C\n"}},
+		LineEdits: []NogoEdit{{Start: 2, End: 4, New: "C\n\n"}},
 	},
 	{
 		Name: "multiple_replace",
@@ -485,17 +485,16 @@ var TestCases = []struct {
 -G
 +K
 `[1:],
-		Edits: []Edit{
+		Edits: []NogoEdit{
 			{Start: 2, End: 8, New: "H\nI\nJ\n"},
 			{Start: 12, End: 14, New: "K\n"},
 		},
-		NoDiff: true, // diff algorithm produces different delete/insert pattern
-	},
-	{
+		NoDiff: true,
+	}, {
 		Name:  "extra_newline",
 		In:    "\nA\n",
 		Out:   "A\n",
-		Edits: []Edit{{Start: 0, End: 1, New: ""}},
+		Edits: []NogoEdit{{Start: 0, End: 1, New: ""}},
 		Unified: UnifiedPrefix + `@@ -1,2 +1 @@
 -
  A
@@ -504,8 +503,8 @@ var TestCases = []struct {
 		Name:      "unified_lines",
 		In:        "aaa\nccc\n",
 		Out:       "aaa\nbbb\nccc\n",
-		Edits:     []Edit{{Start: 3, End: 3, New: "\nbbb"}},
-		LineEdits: []Edit{{Start: 0, End: 4, New: "aaa\nbbb\n"}},
+		Edits:     []NogoEdit{{Start: 3, End: 3, New: "\nbbb"}},
+		LineEdits: []NogoEdit{{Start: 0, End: 4, New: "aaa\nbbb\n"}},
 		Unified:   UnifiedPrefix + "@@ -1,2 +1,3 @@\n aaa\n+bbb\n ccc\n",
 	}, {
 		Name: "60379",
@@ -521,8 +520,8 @@ type S struct {
 	s fmt.Stringer
 }
 `,
-		Edits:     []Edit{{Start: 27, End: 27, New: "\t"}},
-		LineEdits: []Edit{{Start: 27, End: 42, New: "\ts fmt.Stringer\n"}},
+		Edits:     []NogoEdit{{Start: 27, End: 27, New: "\t"}},
+		LineEdits: []NogoEdit{{Start: 27, End: 42, New: "\ts fmt.Stringer\n"}},
 		Unified:   UnifiedPrefix + "@@ -1,5 +1,5 @@\n package a\n \n type S struct {\n-s fmt.Stringer\n+\ts fmt.Stringer\n }\n",
 	},
 }
@@ -538,9 +537,12 @@ func TestApply(t *testing.T) {
 			if err != nil {
 				t.Fatalf("ApplyEdits failed: %v", err)
 			}
-			gotBytes, err := ApplyEditsBytes([]byte(tt.In), tt.Edits)
+			gotBytes, err := applyEditsBytes([]byte(tt.In), tt.Edits)
+			if err != nil {
+				t.Fatalf("applyEditsBytes failed: %v", err)
+			}
 			if got != string(gotBytes) {
-				t.Fatalf("ApplyEditsBytes: got %q, want %q", gotBytes, got)
+				t.Fatalf("applyEditsBytes: got %q, want %q", gotBytes, got)
 			}
 			if got != tt.Out {
 				t.Errorf("ApplyEdits: got %q, want %q", got, tt.Out)
@@ -550,9 +552,12 @@ func TestApply(t *testing.T) {
 				if err != nil {
 					t.Fatalf("ApplyEdits failed: %v", err)
 				}
-				gotBytes, err := ApplyEditsBytes([]byte(tt.In), tt.LineEdits)
+				gotBytes, err := applyEditsBytes([]byte(tt.In), tt.LineEdits)
+				if err != nil {
+					t.Fatalf("applyEditsBytes failed: %v", err)
+				}
 				if got != string(gotBytes) {
-					t.Fatalf("ApplyEditsBytes: got %q, want %q", gotBytes, got)
+					t.Fatalf("applyEditsBytes: got %q, want %q", gotBytes, got)
 				}
 				if got != tt.Out {
 					t.Errorf("ApplyEdits: got %q, want %q", got, tt.Out)
@@ -562,55 +567,54 @@ func TestApply(t *testing.T) {
 	}
 }
 
-// TestUniqueEdits verifies deduplication and overlap detection.
-func TestUniqueEdits(t *testing.T) {
+// TestUniqueSortedEdits verifies deduplication and overlap detection.
+func TestUniqueSortedEdits(t *testing.T) {
 	tests := []struct {
-		name    string
-		edits   []Edit
-		want    []Edit
-		wantIdx int
+		name           string
+		edits          []NogoEdit
+		want           []NogoEdit
+		wantHasOverlap bool
 	}{
 		{
 			name: "overlapping edits",
-			edits: []Edit{
+			edits: []NogoEdit{
 				{Start: 0, End: 2, New: "a"},
 				{Start: 1, End: 3, New: "b"},
 			},
-			want:    []Edit{{Start: 0, End: 2, New: "a"}, {Start: 1, End: 3, New: "b"}},
-			wantIdx: 1,
+			want:          []NogoEdit{{Start: 0, End: 2, New: "a"}, {Start: 1, End: 3, New: "b"}},
+			wantHasOverlap: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, gotIdx := UniqueEdits(tt.edits)
-			if !reflect.DeepEqual(got, tt.want) || gotIdx != tt.wantIdx {
+			got, hasOverlap := uniqueSortedEdits(tt.edits)
+			if !reflect.DeepEqual(got, tt.want) || hasOverlap != tt.wantHasOverlap {
 				t.Fatalf("expected %v, got %v", tt.want, got)
 			}
 		})
 	}
 }
 
-
 func TestFlatten(t *testing.T) {
 	tests := []struct {
 		name   string
-		change Change
-		want   map[string][]Edit
+		change NogoChange
+		want   map[string][]NogoEdit
 	}{
 		{
 			name: "multiple analyzers with non-overlapping edits",
-			change: Change{
-				FileToEdits: map[string]FileEdits{
+			change: NogoChange{
+				FileToEdits: map[string]NogoFileEdits{
 					"file1.go": {
-						AnalyzerToEdits: map[string][]Edit{
+						AnalyzerToEdits: map[string][]NogoEdit{
 							"analyzer1": {{Start: 0, End: 1, New: "a"}},
 							"analyzer2": {{Start: 2, End: 3, New: "b"}},
 						},
 					},
 				},
 			},
-			want: map[string][]Edit{
+			want: map[string][]NogoEdit{
 				"file1.go": {
 					{Start: 0, End: 1, New: "a"},
 					{Start: 2, End: 3, New: "b"},
@@ -619,17 +623,17 @@ func TestFlatten(t *testing.T) {
 		},
 		{
 			name: "multiple analyzers with overlapping edits",
-			change: Change{
-				FileToEdits: map[string]FileEdits{
+			change: NogoChange{
+				FileToEdits: map[string]NogoFileEdits{
 					"file1.go": {
-						AnalyzerToEdits: map[string][]Edit{
+						AnalyzerToEdits: map[string][]NogoEdit{
 							"analyzer1": {{Start: 0, End: 2, New: "a"}},
 							"analyzer2": {{Start: 1, End: 3, New: "b"}},
 						},
 					},
 				},
 			},
-			want: map[string][]Edit{
+			want: map[string][]NogoEdit{
 				"file1.go": {
 					{Start: 0, End: 2, New: "a"},
 				},
@@ -639,9 +643,9 @@ func TestFlatten(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := Flatten(tt.change)
+			got := flatten(tt.change)
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Flatten() = %v, want %v", got, tt.want)
+				t.Errorf("flatten() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -671,13 +675,13 @@ func TestToCombinedPatch(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		fileToEdits map[string][]Edit
+		fileToEdits map[string][]NogoEdit
 		expected    string
 		expectErr   bool
 	}{
 		{
 			name: "valid patch for multiple files",
-			fileToEdits: map[string][]Edit{
+			fileToEdits: map[string][]NogoEdit{
 				"file1.go": {{Start: 27, End: 27, New: "\nHello, world!\n"}}, // Add to function body
 				"file2.go": {{Start: 24, End: 24, New: "var y = 20\n"}},       // Add a new variable
 			},
@@ -701,7 +705,7 @@ func TestToCombinedPatch(t *testing.T) {
 		},
 		{
 			name: "file not found",
-			fileToEdits: map[string][]Edit{
+			fileToEdits: map[string][]NogoEdit{
 				"nonexistent.go": {{Start: 0, End: 0, New: "new content"}},
 			},
 			expected:  "",
@@ -709,7 +713,7 @@ func TestToCombinedPatch(t *testing.T) {
 		},
 		{
 			name:      "no edits",
-			fileToEdits: map[string][]Edit{},
+			fileToEdits: map[string][]NogoEdit{},
 			expected:  "",
 			expectErr: false,
 		},
@@ -717,7 +721,7 @@ func TestToCombinedPatch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			combinedPatch, err := ToCombinedPatch(tt.fileToEdits)
+			combinedPatch, err := toCombinedPatch(tt.fileToEdits)
 
 			// Verify error expectation
 			if (err != nil) != tt.expectErr {
@@ -779,3 +783,4 @@ func TestTrimWhitespaceHeadAndTail(t *testing.T) {
 		})
 	}
 }
+

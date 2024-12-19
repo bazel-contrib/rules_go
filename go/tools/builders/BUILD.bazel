@@ -39,8 +39,8 @@ go_test(
         "nogo_change_test.go",
     ],
     deps = [
-        "@org_golang_x_tools//go/analysis",
         "@com_github_pmezard_go_difflib//difflib:go_default_library",
+        "@org_golang_x_tools//go/analysis",
     ],
 )
 
