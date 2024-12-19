@@ -65,7 +65,7 @@ def validate_mode(mode):
             fail("race instrumentation can't be enabled when cgo is disabled. Check that pure is not set to \"off\" and a C/C++ toolchain is configured.")
         if mode.msan:
             fail("msan instrumentation can't be enabled when cgo is disabled. Check that pure is not set to \"off\" and a C/C++ toolchain is configured.")
-        if mode.linkmode in LINKMODES_REQUIRING_EXTERNAL_LINKING:
+        if mode.linkmode in LINKMODES_REQUIRING_EXTERNAL_LINKING and mode.goos != "wasip1":
             fail(("linkmode '{}' can't be used when cgo is disabled. Check that pure is not set to \"off\" and that a C/C++ toolchain is configured for " +
                   "your current platform. If you defined a custom platform, make sure that it has the @io_bazel_rules_go//go/toolchain:cgo_on constraint value.").format(mode.linkmode))
 

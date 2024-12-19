@@ -43,7 +43,8 @@ def emit_binary(
     archive = go.archive(go, source)
     if not executable:
         if go.mode.linkmode == LINKMODE_C_SHARED:
-            name = "lib" + name  # shared libraries need a "lib" prefix in their name
+            if go.mode.goos != "wasip1":
+                name = "lib" + name  # shared libraries need a "lib" prefix in their name
             extension = goos_to_shared_extension(go.mode.goos)
         elif go.mode.linkmode == LINKMODE_C_ARCHIVE:
             extension = ARCHIVE_EXTENSION
