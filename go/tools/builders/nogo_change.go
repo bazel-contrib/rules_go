@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/pmezard/go-difflib/difflib"
 	"golang.org/x/tools/go/analysis"
 )
 
@@ -296,15 +297,15 @@ func ToCombinedPatch(fileToEdits map[string][]Edit) (string, error) {
 			return "", fmt.Errorf("failed to apply edits for file %s: %v", filePath, err)
 		}
 
-		diff := UnifiedDiff{
-			A:        trimWhitespaceHeadAndTail(SplitLines(string(contents))),
-			B:        trimWhitespaceHeadAndTail(SplitLines(string(out))),
+		diff := difflib.UnifiedDiff{
+			A:        trimWhitespaceHeadAndTail(difflib.SplitLines(string(contents))),
+			B:        trimWhitespaceHeadAndTail(difflib.SplitLines(string(out))),
 			FromFile: fmt.Sprintf("a/%s", filePath),
 			ToFile:   fmt.Sprintf("b/%s", filePath),
 			Context:  3,
 		}
 
-		patch, err := GetUnifiedDiffString(diff)
+		patch, err := difflib.GetUnifiedDiffString(diff)
 		if err != nil {
 			return "", fmt.Errorf("failed to generate patch for file %s: %v", filePath, err)
 		}

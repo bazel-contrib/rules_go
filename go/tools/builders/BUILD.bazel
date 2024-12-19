@@ -35,12 +35,12 @@ go_test(
     name = "nogo_change_test",
     size = "small",
     srcs = [
-        "difflib.go",
         "nogo_change.go",
         "nogo_change_test.go",
     ],
     deps = [
         "@org_golang_x_tools//go/analysis",
+        "@com_github_pmezard_go_difflib//difflib:go_default_library",
     ],
 )
 
@@ -118,7 +118,6 @@ go_source(
     name = "nogo_srcs",
     srcs = [
         "constants.go",
-        "difflib.go",
         "env.go",
         "flags.go",
         "nogo_change.go",
