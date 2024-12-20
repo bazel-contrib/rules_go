@@ -19,122 +19,84 @@ type diagnosticEntry struct {
 	*analysis.Analyzer
 }
 
-// This file contains two main entities: NogoEdit and NogoChange, which correspond to the low-level
-// and high-level abstractions. See them below.
-
-// The following is about the `NogoEdit`, a low-level abstraction of edits.
-// A NogoEdit describes the replacement of a portion of a text file.
-type NogoEdit struct {
+// A nogoEdit describes the replacement of a portion of a text file.
+type nogoEdit struct {
 	New   string // the replacement
 	Start int    // starting byte offset of the region to replace
 	End   int    // (exclusive) ending byte offset of the region to replace
 }
 
-// NogoFileEdits represents the mapping of analyzers to their edits for a specific file.
-type NogoFileEdits struct {
-	AnalyzerToEdits map[string][]NogoEdit // Analyzer as the key, edits as the value
+// analyzerToEdits represents the mapping of analyzers to their edits for a specific file.
+type analyzerToEdits map[string][]nogoEdit // Analyzer as the key, edits as the value
+
+// nogoChange represents a collection of file edits.
+// It is a map with file paths as keys and analyzerToEdits as values.
+type nogoChange map[string]analyzerToEdits
+
+// newChange creates a new nogoChange object.
+func newChange() nogoChange {
+	return make(nogoChange)
 }
 
-// NogoChange represents a collection of file edits.
-type NogoChange struct {
-	FileToEdits map[string]NogoFileEdits // File path as the key, analyzer-to-edits mapping as the value
-}
-
-// newChange creates a new NogoChange object.
-func newChange() *NogoChange {
-	return &NogoChange{
-		FileToEdits: make(map[string]NogoFileEdits),
-	}
-}
-
-func (e NogoEdit) String() string {
+func (e nogoEdit) String() string {
 	return fmt.Sprintf("{Start:%d,End:%d,New:%q}", e.Start, e.End, e.New)
 }
 
-// sortEdits orders a slice of NogoEdits by (start, end) offset.
+// sortEdits orders a slice of nogoEdits by (start, end) offset.
 // This ordering puts insertions (end = start) before deletions
 // (end > start) at the same point, but uses a stable sort to preserve
 // the order of multiple insertions at the same point.
-// (applyEditsBytes detects multiple deletions at the same point as an error.)
-func sortEdits(edits []NogoEdit) {
-	sort.Stable(editsSort(edits))
+func sortEdits(edits []nogoEdit) {
+	sort.Stable(byStartEnd(edits))
 }
 
-type editsSort []NogoEdit
+type byStartEnd []nogoEdit
 
-func (a editsSort) Len() int { return len(a) }
-func (a editsSort) Less(i, j int) bool {
-	if cmp := a[i].Start - a[j].Start; cmp != 0 {
-		return cmp < 0
+func (a byStartEnd) Len() int { return len(a) }
+func (a byStartEnd) Less(i, j int) bool {
+	if a[i].Start != a[j].Start {
+		return a[i].Start < a[j].Start
 	}
 	return a[i].End < a[j].End
 }
-func (a editsSort) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a byStartEnd) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 
 
-// validateBytes checks that edits are consistent with the src byte slice,
-// and returns the size of the patched output. It may return a different slice if edits are sorted.
-func validateBytes(src []byte, edits []NogoEdit) ([]NogoEdit, int, error) {
-	if !sort.IsSorted(editsSort(edits)) {
-		edits = append([]NogoEdit(nil), edits...)
-		sortEdits(edits)
-	}
-
-	size := len(src)
-	lastEnd := 0
-	for _, edit := range edits {
-		if !(0 <= edit.Start && edit.Start <= edit.End && edit.End <= len(src)) {
-			return nil, 0, fmt.Errorf("the fix has an out-of-bounds edit with start=%d, end=%d", edit.Start, edit.End)
-		}
-		if edit.Start < lastEnd {
-			return nil, 0, fmt.Errorf("the fix has an edit with start=%d, which overlaps with a previous edit with end=%d", edit.Start, lastEnd)
-		}
-		size += len(edit.New) + edit.Start - edit.End
-		lastEnd = edit.End
-	}
-
-	return edits, size, nil
-}
-
-// applyEditsBytes applies a sequence of NogoEdits to the src byte slice and returns the result.
+// applyEditsBytes applies a sequence of nogoEdits to the src byte slice and returns the result.
 // Edits are applied in order of start offset; edits with the same start offset are applied in the order they were provided.
 // applyEditsBytes returns an error if any edit is out of bounds, or if any pair of edits is overlapping.
-func applyEditsBytes(src []byte, edits []NogoEdit) ([]byte, error) {
-	edits, size, err := validateBytes(src, edits)
-	if err != nil {
-		return nil, err
+func applyEditsBytes(src []byte, edits []nogoEdit) ([]byte, error) {
+	// assumption: at this point, edits should be unique, sorted and non-overlapping.
+	// this is guaranteed in nogo_main.go by invoking flatten() earlier.
+	size := len(src)
+	// performance only: this computes the size for preallocation to avoid the slice resizing below.
+	for _, edit := range edits {
+		size += len(edit.New) + edit.Start - edit.End
 	}
 
 	// Apply the edits.
 	out := make([]byte, 0, size)
 	lastEnd := 0
 	for _, edit := range edits {
-		if lastEnd < edit.Start {
-			out = append(out, src[lastEnd:edit.Start]...)
-		}
+		out = append(out, src[lastEnd:edit.Start]...)
 		out = append(out, edit.New...)
 		lastEnd = edit.End
 	}
 	out = append(out, src[lastEnd:]...)
 
-	if len(out) != size {
-		return nil, fmt.Errorf("applyEditsBytes: unexpected output size, got %d, want %d", len(out), size)
-	}
-
 	return out, nil
 }
 
-
-// newChangeFromDiagnostics builds a NogoChange from a set of diagnostics.
-// Unlike Diagnostic, NogoChange is independent of the FileSet given it uses perf-file offsets instead of token.Pos.
-// This allows NogoChange to be used in contexts where the FileSet is not available, e.g., it remains applicable after it is saved to disk and loaded back.
+// newChangeFromDiagnostics builds a nogoChange from a set of diagnostics.
+// Unlike Diagnostic, nogoChange is independent of the FileSet given it uses perf-file offsets instead of token.Pos.
+// This allows nogoChange to be used in contexts where the FileSet is not available, e.g., it remains applicable after it is saved to disk and loaded back.
 // See https://github.com/golang/tools/blob/master/go/analysis/diagnostic.go for details.
-func newChangeFromDiagnostics(entries []diagnosticEntry, fileSet *token.FileSet) (*NogoChange, error) {
+func newChangeFromDiagnostics(entries []diagnosticEntry, fileSet *token.FileSet) (nogoChange, error) {
 	c := newChange()
 
 	cwd, err := os.Getwd()
 	if err != nil {
-		return c, fmt.Errorf("Error getting current working directory: (%v)", err)
+		return c, fmt.Errorf("error getting current working directory: %v", err)
 	}
 
 	var allErrors []error
@@ -143,107 +105,123 @@ func newChangeFromDiagnostics(entries []diagnosticEntry, fileSet *token.FileSet)
 		analyzer := entry.Analyzer.Name
 		for _, sf := range entry.Diagnostic.SuggestedFixes {
 			for _, edit := range sf.TextEdits {
+				// Define start and end positions
 				start, end := edit.Pos, edit.End
 				if !end.IsValid() {
 					end = start
 				}
 
-				file := fileSet.File(edit.Pos)
+				file := fileSet.File(start)
 				if file == nil {
-					allErrors = append(allErrors, fmt.Errorf("invalid fix: missing file info for pos %v", edit.Pos))
+					allErrors = append(allErrors, fmt.Errorf(
+						"invalid fix from analyzer %q: missing file info for start=%v",
+						analyzer, start,
+					))
 					continue
 				}
-				if start > end {
-					allErrors = append(allErrors, fmt.Errorf("invalid fix: pos %v > end %v", start, end))
-					continue
-				}
-				if eof := token.Pos(file.Base() + file.Size()); end > eof {
-					allErrors = append(allErrors, fmt.Errorf("invalid fix: end %v past end of file %v", end, eof))
-					continue
+				// at this point, given file != nil, it is guaranteed start >= token.Pos(file.Base())
+
+				fileName := file.Name()
+				fileRelativePath, err := filepath.Rel(cwd, fileName)
+				if err != nil {
+					fileRelativePath = fileName // fallback logic
 				}
 
-				nogoEdit := NogoEdit{Start: file.Offset(start), End: file.Offset(end), New: string(edit.NewText)}
-				fileRelativePath, err := filepath.Rel(cwd, file.Name())
-				if err != nil {
-					fileRelativePath = file.Name() // fallback logic
+				// Validate start and end positions
+				if start > end {
+					allErrors = append(allErrors, fmt.Errorf(
+						"invalid fix from analyzer %q for file %q: start=%v > end=%v",
+						analyzer, fileRelativePath, start, end,
+					))
+					continue
 				}
-				c.addEdit(fileRelativePath, analyzer, nogoEdit)
+				if fileEOF := token.Pos(file.Base() + file.Size()); end > fileEOF {
+					allErrors = append(allErrors, fmt.Errorf(
+						"invalid fix from analyzer %q for file %q: end=%v is past the file's EOF=%v",
+						analyzer, fileRelativePath, end, fileEOF,
+					))
+					continue
+				}
+				// at this point, it is guaranteed that file.Pos(file.Base()) <= start <= end <= fileEOF.
+
+				// Create the edit
+				nEdit := nogoEdit{Start: file.Offset(start), End: file.Offset(end), New: string(edit.NewText)}
+				addEdit(c, fileRelativePath, analyzer, nEdit)
 			}
 		}
 	}
 
 	if len(allErrors) > 0 {
 		var errMsg bytes.Buffer
-		sep := ""
-		for _, err := range allErrors {
-			errMsg.WriteString(sep)
-			sep = "\n"
-			errMsg.WriteString(err.Error())
+		for _, e := range allErrors {
+			errMsg.WriteString("\n")
+			errMsg.WriteString(e.Error())
 		}
-		return c, fmt.Errorf("errors:\n%s", errMsg.String())
+		return c, fmt.Errorf("some suggested fixes are invalid:%s", errMsg.String())
 	}
 
 	return c, nil
 }
 
-// addEdit adds an edit to the NogoChange, organizing by file and analyzer.
-func (c *NogoChange) addEdit(file string, analyzer string, edit NogoEdit) {
-	// Ensure the NogoFileEdits structure exists for the file
-	fileEdits, exists := c.FileToEdits[file]
-	if !exists {
-		fileEdits = NogoFileEdits{
-			AnalyzerToEdits: make(map[string][]NogoEdit),
-		}
-		c.FileToEdits[file] = fileEdits
-	}
 
-	// Append the edit to the list of edits for the analyzer
-	fileEdits.AnalyzerToEdits[analyzer] = append(fileEdits.AnalyzerToEdits[analyzer], edit)
+// addEdit adds an edit to the nogoChange, organizing by file and analyzer.
+func addEdit(c nogoChange, file string, analyzer string, edit nogoEdit) {
+	fileEdits, exists := c[file]
+	if !exists {
+		fileEdits = make(analyzerToEdits)
+		c[file] = fileEdits
+	}
+	fileEdits[analyzer] = append(fileEdits[analyzer], edit)
 }
 
 // uniqueSortedEdits returns a list of edits that is sorted and
 // contains no duplicate edits. Returns whether there is overlap.
 // Deduplication helps in the cases where two analyzers produce duplicate edits.
-func uniqueSortedEdits(edits []NogoEdit) ([]NogoEdit, bool) {
+func uniqueSortedEdits(edits []nogoEdit) ([]nogoEdit, bool) {
 	hasOverlap := false
 	if len(edits) == 0 {
 		return edits, hasOverlap
 	}
-	equivalent := func(x, y NogoEdit) bool {
+	equivalent := func(x, y nogoEdit) bool {
 		return x.Start == y.Start && x.End == y.End && x.New == y.New
 	}
 	sortEdits(edits)
-	unique := []NogoEdit{edits[0]}
+	unique := []nogoEdit{edits[0]}
 	for i := 1; i < len(edits); i++ {
 		prev, cur := edits[i-1], edits[i]
-		if !equivalent(prev, cur) { // equivalent ones are safely skipped
-			unique = append(unique, cur)
-			if prev.End > cur.Start {
-				// hasOverlap = true means at least one overlap was detected.
-				hasOverlap = true
-			}
+		if equivalent(prev, cur) {
+			// equivalent ones are safely skipped
+			continue
+		}
+
+		unique = append(unique, cur)
+		if prev.End > cur.Start {
+			// hasOverlap = true means at least one overlap was detected.
+			hasOverlap = true
 		}
 	}
 	return unique, hasOverlap
 }
 
-// flatten merges all edits for a file from different analyzers into a single map of file-to-edits.
-// Edits from each analyzer are processed in a deterministic order, and overlapping edits are skipped.
-func flatten(change NogoChange) map[string][]NogoEdit {
-	fileToEdits := make(map[string][]NogoEdit)
+type fileToEdits map[string][]nogoEdit // File path as the key, list of nogoEdit as the value
 
-	for file, fileEdits := range change.FileToEdits {
+// flatten processes a nogoChange and returns a fileToEdits.
+// It also returns an error if any suggested fixes are skipped due to conflicts.
+func flatten(change nogoChange) (fileToEdits, error) {
+	result := make(fileToEdits)
+	var errs []error
+
+	for file, fileEdits := range change {
 		// Get a sorted list of analyzers for deterministic processing order
-		analyzers := make([]string, 0, len(fileEdits.AnalyzerToEdits))
-		for analyzer := range fileEdits.AnalyzerToEdits {
+		analyzers := make([]string, 0, len(fileEdits))
+		for analyzer := range fileEdits {
 			analyzers = append(analyzers, analyzer)
 		}
 		sort.Strings(analyzers)
 
-		mergedEdits := make([]NogoEdit, 0)
-
+		var mergedEdits []nogoEdit
 		for _, analyzer := range analyzers {
-			edits := fileEdits.AnalyzerToEdits[analyzer]
+			edits := fileEdits[analyzer]
 			if len(edits) == 0 {
 				continue
 			}
@@ -253,40 +231,49 @@ func flatten(change NogoChange) map[string][]NogoEdit {
 			candidateEdits, hasOverlap := uniqueSortedEdits(candidateEdits)
 			if hasOverlap {
 				// Skip edits from this analyzer if merging them would cause overlaps.
-				// Apply the non-overlapping edits first. After that, a rerun of bazel build will
-				// allows these skipped edits to be applied separately.
-				// Note the resolution happens to each file independently.
-				// Also for clarity, we would accept all or none of an analyzer.
+				// Collect an error message for the user.
+				errMsg := fmt.Errorf(
+					"suggested fixes from analyzer %q on file %q are skipped because they conflict with other analyzers",
+					analyzer, file,
+				)
+				errs = append(errs, errMsg)
 				continue
 			}
 
 			// Update the merged edits
+			// At this point, it is guaranteed the edits associated with the file are unique, sorted, and non-overlapping.
 			mergedEdits = candidateEdits
 		}
 
 		// Store the final merged edits for the file
-		fileToEdits[file] = mergedEdits
+		result[file] = mergedEdits
 	}
 
-	return fileToEdits
+	if len(errs) > 0 {
+		var errMsg strings.Builder
+		errMsg.WriteString("some suggested fixes are skipped due to conflicts in merging fixes from different analyzers for each file:")
+		for _, err := range errs {
+			errMsg.WriteString("\n")
+			errMsg.WriteString(err.Error())
+		}
+		return result, fmt.Errorf(errMsg.String())
+	}
+
+	return result, nil
 }
 
-// toCombinedPatch converts all edits to a single consolidated patch.
-func toCombinedPatch(fileToEdits map[string][]NogoEdit) (string, error) {
+func toCombinedPatch(fte fileToEdits) (string, error) {
 	var combinedPatch strings.Builder
 
-	filePaths := make([]string, 0, len(fileToEdits))
-	for filePath := range fileToEdits {
+	filePaths := make([]string, 0, len(fte))
+	for filePath := range fte {
 		filePaths = append(filePaths, filePath)
 	}
 	sort.Strings(filePaths) // Sort file paths alphabetically
 
 	// Iterate over sorted file paths
 	for _, filePath := range filePaths {
-		// edits are unique and sorted, as ensured by the flatten() method that is invoked earlier.
-		// for performance reason, let us skip uniqueSortedEdits() call here,
-		// although in general a library API shall not assume other calls have been made.
-		edits := fileToEdits[filePath]
+		edits := fte[filePath]
 		if len(edits) == 0 {
 			continue
 		}
@@ -296,6 +283,8 @@ func toCombinedPatch(fileToEdits map[string][]NogoEdit) (string, error) {
 			return "", fmt.Errorf("failed to read file %s: %v", filePath, err)
 		}
 
+		// edits are guaranteed to be unique, sorted and non-overlapping
+		// see flatten() that is called before this function.
 		out, err := applyEditsBytes(contents, edits)
 		if err != nil {
 			return "", fmt.Errorf("failed to apply edits for file %s: %v", filePath, err)
@@ -314,7 +303,6 @@ func toCombinedPatch(fileToEdits map[string][]NogoEdit) (string, error) {
 			return "", fmt.Errorf("failed to generate patch for file %s: %v", filePath, err)
 		}
 
-		// Append the patch for this file to the giant patch
 		combinedPatch.WriteString(patch)
 		combinedPatch.WriteString("\n") // Ensure separation between file patches
 	}

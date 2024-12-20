@@ -51,10 +51,6 @@ def _go_library_impl(ctx):
     validation_output = archive.data._validation_output
     nogo_fix_output = archive.data._nogo_fix_output
 
-    nogo_validation_outputs = []
-    if validation_output:
-        nogo_validation_outputs.append(validation_output)
-
     return [
         go_info,
         archive,
@@ -71,7 +67,7 @@ def _go_library_impl(ctx):
             cgo_exports = archive.cgo_exports,
             compilation_outputs = [archive.data.file],
             nogo_fix = [nogo_fix_output] if nogo_fix_output else [],
-            _validation = nogo_validation_outputs,
+            _validation = [validation_output] if validation_output else [],
         ),
     ]
 

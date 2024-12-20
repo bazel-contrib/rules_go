@@ -554,15 +554,19 @@ func checkAnalysisResults(actions []*action, pkg *goPackage, nogoFixPath string)
 		// Otherwise, bazel will complain "not all outputs were created or valid"
 		change, err := newChangeFromDiagnostics(diagnostics, pkg.fset)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("errors in dumping nogo fix, specifically in converting diagnostics to change: %v", err))
+			errs = append(errs, err)
 		}
-		combinedPatch, err := toCombinedPatch(flatten(*change))
+		editsPerFile, err := flatten(change)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("errors in dumping nogo fix, specifically in generating the patches: %v", err))
+			errs = append(errs, err)
+		}
+		combinedPatch, err := toCombinedPatch(editsPerFile)
+		if err != nil {
+			errs = append(errs, err)
 		}
 		err = os.WriteFile(nogoFixPath, []byte(combinedPatch), 0644)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("errors in dumping nogo fix, specifically in saving the file %s: %v", nogoFixPath, err))
+			errs = append(errs, fmt.Errorf("errors in saving the patch to the file %s: %v", nogoFixPath, err))
 		}
 	}
 
