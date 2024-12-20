@@ -208,6 +208,12 @@ test_suite(
     tests = ["same_package_{}_test".format(i) for i in range(1, 80)],
 )
 
+# Verifies that testing.Testing() is true in a `go_test`.
+go_test(
+    name = "testing_testing_test",
+    srcs = ["testing_testing_test.go"],
+)
+
 go_bazel_test(
     name = "testmain_without_exit_test",
     srcs = ["testmain_without_exit_test.go"],
@@ -289,7 +295,7 @@ go_test(
 go_test(
     name = "syso_direct_test",
     srcs = [
-        "//tests/core/go_library:use_syso_srcs",
         "syso_direct_test.go",
+        "//tests/core/go_library:use_syso_srcs",
     ],
 )

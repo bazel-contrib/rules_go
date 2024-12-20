@@ -1,0 +1,21 @@
+load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
+load("@rules_proto//proto:defs.bzl", "proto_library")
+load(":codegen.bzl", "go_generated_library")
+
+go_generated_library(
+    name = "go_generated",
+    importpath = "github.com/bazelbuild/rules_go/tests/core/go_proto_aspect",
+    visibility = ["//visibility:public"],
+)
+
+proto_library(
+    name = "foo_proto",
+    srcs = ["foo.proto"],
+)
+
+go_proto_library(
+    name = "foo_go_proto",
+    importpath = "github.com/bazelbuild/rules_go/tests/core/go_proto_aspectpb",
+    proto = ":foo_proto",
+    deps = [":go_generated"],
+)

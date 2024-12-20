@@ -155,6 +155,12 @@ def _go_test_impl(ctx):
     # in bzltestutil/init.go.
     test_gc_linkopts.extend(["-X", "+initfirst/github.com/bazelbuild/rules_go/go/tools/bzltestutil/chdir.RunDir=" + run_dir])
 
+    # This is needed for the testing.Testing() function to work in go
+    # 1.21+.  See
+    # https://cs.opensource.google/go/go/+/refs/tags/go1.21.0:src/testing/testing.go;l=647-661
+    # for more details.
+    test_gc_linkopts.extend(["-X", "testing.testBinary=1"])
+
     # Now compile the test binary itself
     test_deps = external_archive.direct + [external_archive] + ctx.attr._testmain_additional_deps
     if go.coverage_enabled:

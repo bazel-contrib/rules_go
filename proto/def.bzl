@@ -74,9 +74,6 @@ def _go_proto_aspect_impl(_target, ctx):
         attr,
         include_deprecated_properties = False,
         importpath = attr.importpath,
-        importmap = attr.importmap,
-        importpath_aliases = attr.importpath_aliases,
-        embed = attr.embed,
         go_context_data = attr._go_context_data,
     )
     imports = get_imports(attr, go.importpath)
