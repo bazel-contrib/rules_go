@@ -64,7 +64,6 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
         out_facts = go.declare_file(go, name = source.name, ext = pre_ext + ".facts")
         out_nogo_log = go.declare_file(go, name = source.name, ext = pre_ext + ".nogo.log")
         out_nogo_validation = go.declare_file(go, name = source.name, ext = pre_ext + ".nogo")
-
         out_nogo_fix = go.declare_file(go, name = source.name, ext = pre_ext + ".nogo.patch")
     else:
         out_facts = None

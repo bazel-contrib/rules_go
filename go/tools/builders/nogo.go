@@ -87,7 +87,7 @@ func nogo(args []string) error {
 	return runNogo(workDir, nogoPath, goSrcs, ignoreSrcs, facts, importPath, importcfgPath, outFactsPath, outLogPath, outFixPath)
 }
 
-func runNogo(workDir string, nogoPath string, srcs, ignores []string, facts []archive, packagePath, importcfgPath, outFactsPath string, outLogPath string, outFixPath string) error {
+func runNogo(workDir string, nogoPath string, srcs, ignores []string, facts []archive, packagePath, importcfgPath, outFactsPath, outLogPath, outFixPath string) error {
 	if len(srcs) == 0 {
 		// emit_compilepkg expects a nogo facts file, even if it's empty.
 		// We also need to write the validation output log.
@@ -107,7 +107,7 @@ func runNogo(workDir string, nogoPath string, srcs, ignores []string, facts []ar
 	}
 	args := []string{nogoPath}
 	args = append(args, "-p", packagePath)
-	args = append(args, "-fixpath", outFixPath)
+	args = append(args, "-fix", outFixPath)
 	args = append(args, "-importcfg", importcfgPath)
 	for _, fact := range facts {
 		args = append(args, "-fact", fmt.Sprintf("%s=%s", fact.importPath, fact.file))

@@ -32,11 +32,11 @@ go_test(
 )
 
 go_test(
-    name = "nogo_change_test",
+    name = "nogo_fix_test",
     size = "small",
     srcs = [
-        "nogo_change.go",
-        "nogo_change_test.go",
+        "nogo_fix.go",
+        "nogo_fix_test.go",
     ],
     deps = [
         "@com_github_pmezard_go_difflib//difflib:go_default_library",
@@ -120,7 +120,7 @@ go_source(
         "constants.go",
         "env.go",
         "flags.go",
-        "nogo_change.go",
+        "nogo_fix.go",
         "nogo_main.go",
         "nogo_typeparams_go117.go",
         "nogo_typeparams_go118.go",

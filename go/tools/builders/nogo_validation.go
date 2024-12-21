@@ -8,7 +8,7 @@ import (
 func nogoValidation(args []string) error {
 	validationOutput := args[0]
 	logFile := args[1]
-	nogoFixFile := args[2]
+	fixFile := args[2]
 
 	// Always create the output file and only fail if the log file is non-empty to
 	// avoid an "action failed to create outputs" error.
@@ -21,30 +21,28 @@ func nogoValidation(args []string) error {
 		return err
 	}
 
-	nogoFixContent, err := os.ReadFile(nogoFixFile)
+	fixContent, err := os.ReadFile(fixFile)
 	if err != nil {
 		return err
 	}
 
 	if len(logContent) > 0 {
-		nogoFixRelated := ""
-		// See nogo_change_serialization.go, if the patches are empty, then nogoFixContent is empty by design, rather than an empty json like {}.
-		if len(nogoFixContent) > 0 {
+		var fixMessage string
+		if len(fixContent) > 0 {
 			// Format the message in a clean and clear way
-			nogoFixRelated = fmt.Sprintf(`
+			fixMessage = fmt.Sprintf(`
 -------------------Suggested Fix-------------------
-The suggested fix is as follows:
 %s
+-----------------------------------------------------
 
 To apply the suggested fix, run the following command:
 $ patch -p1 < %s
------------------------------------------------------
-`, nogoFixContent, nogoFixFile)
+`, fixContent, fixFile)
 		}
 		// Separate nogo output from Bazel's --sandbox_debug message via an
 		// empty line.
 		// Don't return to avoid printing the "nogovalidation:" prefix.
-		_, _ = fmt.Fprintf(os.Stderr, "\n%s%s\n", logContent, nogoFixRelated)
+		_, _ = fmt.Fprintf(os.Stderr, "\n%s%s\n", logContent, fixMessage)
 		os.Exit(1)
 	}
 	return nil
