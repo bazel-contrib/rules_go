@@ -514,7 +514,7 @@ def go_context(
             if getattr(ctx.attr, "pure", None) == "off":
                 fail("{} has pure explicitly set to off, but no C++ toolchain could be found for its platform".format(ctx.label))
             mode_kwargs["pure"] = True
-        mode = struct(**mode_kwargs)
+        mode = GoConfigInfo(**mode_kwargs)
         validate_mode(mode)
 
     if stdlib:
