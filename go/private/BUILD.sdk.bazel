@@ -62,6 +62,7 @@ go_sdk(
     name = "go_sdk",
     srcs = [":srcs"],
     experiments = {experiments},
+    exports_for_stdlib = {exports_for_stdlib},
     go = "bin/go{exe}",
     goarch = "{goarch}",
     goos = "{goos}",

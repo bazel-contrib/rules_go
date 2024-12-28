@@ -44,6 +44,9 @@ _download_tag = tag_class(
         "experiments": attr.string_list(
             doc = "Go experiments to enable via GOEXPERIMENT",
         ),
+        "exports_for_stdlib": attr.bool(
+            doc = "Generate export files for the stdlib.",
+        ),
         "urls": attr.string_list(default = ["https://dl.google.com/go/{}"]),
         "version": attr.string(),
         "patches": attr.label_list(
@@ -63,6 +66,9 @@ _host_tag = tag_class(
         "version": attr.string(),
         "experiments": attr.string_list(
             doc = "Go experiments to enable via GOEXPERIMENT",
+        ),
+        "exports_for_stdlib": attr.bool(
+            doc = "Generate export files for the stdlib.",
         ),
     },
 )
@@ -187,6 +193,7 @@ def _go_sdk_impl(ctx):
                 goarch = download_tag.goarch,
                 sdks = download_tag.sdks,
                 experiments = download_tag.experiments,
+                exports_for_stdlib = download_tag.exports_for_stdlib,
                 patches = download_tag.patches,
                 patch_strip = download_tag.patch_strip,
                 urls = download_tag.urls,
@@ -262,6 +269,7 @@ def _go_sdk_impl(ctx):
                 name = name,
                 version = host_tag.version,
                 experiments = host_tag.experiments,
+                exports_for_stdlib = host_tag.exports_for_stdlib,
             )
 
             toolchains.append(struct(
