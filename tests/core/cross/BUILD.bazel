@@ -56,7 +56,7 @@ go_binary(
     srcs = ["main.go"],
     goarch = "amd64",
     goos = "darwin",
-    pure = "on",
+    pure = "off",
     target_compatible_with = ["@platforms//os:macos"],
     deps = [":platform_lib"],
 )
