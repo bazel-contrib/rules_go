@@ -7,6 +7,16 @@ test_suite(
 )
 
 go_binary(
+    name = "non_pure_cross",
+    srcs = ["main.go"],
+    goarch = "amd64",
+    goos = "darwin",
+    pure = "off",
+    target_compatible_with = ["@platforms//os:macos"],
+    deps = [":platform_lib"],
+)
+
+go_binary(
     name = "windows_cross",
     srcs = ["main.go"],
     goarch = "amd64",
