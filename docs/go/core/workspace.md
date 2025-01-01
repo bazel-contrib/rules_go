@@ -146,7 +146,7 @@ go_library(
 ```
 
 For tests, add a `go_test` rule like the one below. The library being tested
-should be listed in an ``embed`` attribute.
+should be listed in an `embed` attribute.
 
 ```starlark
 go_test(
@@ -174,7 +174,7 @@ go_binary(
 
 ## Adding external repositories
 
-For each Go repository, add a `go_repository` rule to ``WORKSPACE`` like the
+For each Go repository, add a `go_repository` rule to `WORKSPACE` like the
 one below.  This rule comes from the Gazelle repository, so you will need to
 load it. `gazelle update-repos` can generate or update these rules
 automatically from a go.mod or Gopkg.lock file.
@@ -225,7 +225,7 @@ gazelle_dependencies()
 # protobuf and gRPC
 
 To generate code from protocol buffers, you'll need to add a dependency on
-``com_google_protobuf`` to your ``WORKSPACE``.
+`com_google_protobuf` to your `WORKSPACE`.
 
 ```starlark
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
