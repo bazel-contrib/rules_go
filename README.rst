@@ -3,6 +3,7 @@ Go rules for Bazel_
 
 .. Links to external sites and pages
 .. _//tests/core/cross: https://github.com/bazelbuild/rules_go/blob/master/tests/core/cross/BUILD.bazel
+.. _Avoiding conflicts: proto/core.rst#avoiding-conflicts
 .. _Bazel labels: https://docs.bazel.build/versions/master/build-ref.html#labels
 .. _Bazel: https://bazel.build/
 .. _Build modes: go/modes.rst
