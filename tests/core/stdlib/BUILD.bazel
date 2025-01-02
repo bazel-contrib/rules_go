@@ -8,4 +8,11 @@ go_test(
     deps = ["//go/runfiles"],
 )
 
+go_test(
+    name = "tzdata_test",
+    srcs = ["tzdata_test.go"],
+    race = "on",
+    gotags = ["timetzdata"],
+)
+
 stdlib_files(name = "stdlib_files")
