@@ -21,12 +21,11 @@ func nogoValidation(args []string) error {
 		return err
 	}
 
-	fixContent, err := os.ReadFile(fixFile)
-	if err != nil {
-		return err
-	}
-
 	if len(logContent) > 0 {
+		fixContent, err := os.ReadFile(fixFile)
+		if err != nil {
+			return err
+		}
 		var fixMessage string
 		if len(fixContent) > 0 {
 			// Format the message in a clean and clear way
