@@ -516,7 +516,7 @@ def _sdk_build_file(ctx, platform, version, experiments):
             "{goarch}": goarch,
             "{exe}": ".exe" if goos == "windows" else "",
             "{version}": version,
-            "{experiments}": repr(",".join(experiments)),
+            "{experiments}": repr(experiments),
             "{exec_compatible_with}": repr([
                 GOARCH_CONSTRAINTS[goarch],
                 GOOS_CONSTRAINTS[goos],
