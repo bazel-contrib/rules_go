@@ -90,7 +90,7 @@ def emit_compilepkg(
         fail("nogo must be specified if and only if out_nogo_log is specified")
     if have_nogo != (out_nogo_validation != None):
         fail("nogo must be specified if and only if out_nogo_validation is specified")
-    if bool(nogo) != bool(out_nogo_fix):
+    if have_nogo != (out_nogo_fix != None):
         fail("nogo must be specified if and only if out_nogo_fix is specified")
 
     if cover and go.coverdata:
