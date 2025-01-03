@@ -10,7 +10,7 @@ Go toolchains
 .. _binary distribution: https://golang.org/dl/
 .. _compilation modes: modes.rst#compilation-modes
 .. _control the version: `Forcing the Go version`_
-.. _core: core.bzl
+.. _core: core.rst
 .. _forked version of Go: `Registering a custom SDK`_
 .. _go assembly: https://golang.org/doc/asm
 .. _go sdk rules: `The SDK`_
