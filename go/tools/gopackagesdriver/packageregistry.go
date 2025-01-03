@@ -18,18 +18,20 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"golang.org/x/tools/go/packages"
 )
 
 type PackageRegistry struct {
-	packagesByID map[string]*FlatPackage
-	stdlib       map[string]string
+	packagesByID map[string]*packages.Package
+	stdlib       map[string]*packages.Package
 	bazelVersion bazelVersion
 }
 
 func NewPackageRegistry(bazelVersion bazelVersion, pkgs ...*FlatPackage) *PackageRegistry {
 	pr := &PackageRegistry{
-		packagesByID: map[string]*FlatPackage{},
-		stdlib:       map[string]string{},
+		packagesByID: map[string]*packages.Package{},
+		stdlib:       map[string]*packages.Package{},
 		bazelVersion: bazelVersion,
 	}
 	pr.Add(pkgs...)
@@ -37,11 +39,30 @@ func NewPackageRegistry(bazelVersion bazelVersion, pkgs ...*FlatPackage) *Packag
 }
 
 func (pr *PackageRegistry) Add(pkgs ...*FlatPackage) *PackageRegistry {
-	for _, pkg := range pkgs {
+	for _, flatPkg := range pkgs {
+		imports := make(map[string]*packages.Package)
+		for impKey, imp := range flatPkg.Imports {
+			imports[impKey] = &packages.Package{
+				ID: imp,
+			}
+		}
+
+		pkg := &packages.Package{
+			ID:              flatPkg.ID,
+			Name:            flatPkg.Name,
+			PkgPath:         flatPkg.PkgPath,
+			GoFiles:         flatPkg.GoFiles,
+			CompiledGoFiles: flatPkg.CompiledGoFiles,
+			OtherFiles:      flatPkg.OtherFiles,
+			ExportFile:      flatPkg.ExportFile,
+			Imports:         imports,
+		}
+
 		pr.packagesByID[pkg.ID] = pkg
 
-		if pkg.IsStdlib() {
-			pr.stdlib[pkg.PkgPath] = pkg.ID
+		if flatPkg.IsStdlib() {
+			pkg.CompiledGoFiles = pkg.GoFiles
+			pr.stdlib[pkg.PkgPath] = pkg
 		}
 	}
 	return pr
@@ -49,8 +70,8 @@ func (pr *PackageRegistry) Add(pkgs ...*FlatPackage) *PackageRegistry {
 
 func (pr *PackageRegistry) ResolvePaths(prf PathResolverFunc) error {
 	for _, pkg := range pr.packagesByID {
-		pkg.ResolvePaths(prf)
-		pkg.FilterFilesForBuildTags()
+		ResolvePaths(pkg, prf)
+		FilterFilesForBuildTags(pkg)
 	}
 	return nil
 }
@@ -59,28 +80,29 @@ func (pr *PackageRegistry) ResolvePaths(prf PathResolverFunc) error {
 // stdlib packages are not part of the JSON file exports as bazel is unaware of
 // them.
 func (pr *PackageRegistry) ResolveImports(overlays map[string][]byte) error {
-	resolve := func(importPath string) string {
-		if pkgID, ok := pr.stdlib[importPath]; ok {
-			return pkgID
+	resolve := func(importPath string) *packages.Package {
+		if pkg, ok := pr.stdlib[importPath]; ok {
+			return pkg
 		}
 
-		return ""
+		return nil
 	}
 
 	for _, pkg := range pr.packagesByID {
-		if err := pkg.ResolveImports(resolve, overlays); err != nil {
+		if err := ResolveImports(pkg, resolve, overlays); err != nil {
 			return err
 		}
-		testFp := pkg.MoveTestFiles()
-		if testFp != nil {
-			pr.packagesByID[testFp.ID] = testFp
+
+		testPkg := MoveTestFiles(pkg)
+		if testPkg != nil {
+			pr.packagesByID[testPkg.ID] = testPkg
 		}
 	}
 
 	return nil
 }
 
-func (pr *PackageRegistry) walk(acc map[string]*FlatPackage, root string) {
+func (pr *PackageRegistry) walk(acc map[string]*packages.Package, root string) {
 	pkg := pr.packagesByID[root]
 
 	if pkg == nil {
@@ -89,14 +111,21 @@ func (pr *PackageRegistry) walk(acc map[string]*FlatPackage, root string) {
 	}
 
 	acc[pkg.ID] = pkg
-	for _, pkgID := range pkg.Imports {
-		if _, ok := acc[pkgID]; !ok {
-			pr.walk(acc, pkgID)
+	for imp, pkgI := range pkg.Imports {
+		if pkgI == nil {
+			fmt.Fprintf(os.Stderr, "Error: import %s for package %v not resolved\n", imp, root)
+			if _, ok := pr.stdlib[imp]; ok {
+				fmt.Fprintf(os.Stderr, "import was stdlib\n")
+			}
+			continue
+		}
+		if _, ok := acc[pkgI.ID]; !ok {
+			pr.walk(acc, pkgI.ID)
 		}
 	}
 }
 
-func (pr *PackageRegistry) Match(labels []string) ([]string, []*FlatPackage) {
+func (pr *PackageRegistry) Match(labels []string) ([]string, []*packages.Package) {
 	roots := map[string]struct{}{}
 
 	for _, label := range labels {
@@ -110,10 +139,8 @@ func (pr *PackageRegistry) Match(labels []string) ([]string, []*FlatPackage) {
 		if label == RulesGoStdlibLabel {
 			// For stdlib, we need to append all the subpackages as roots
 			// since RulesGoStdLibLabel doesn't actually show up in the stdlib pkg.json
-			for _, pkg := range pr.packagesByID {
-				if pkg.Standard {
-					roots[pkg.ID] = struct{}{}
-				}
+			for _, pkg := range pr.stdlib {
+				roots[pkg.ID] = struct{}{}
 			}
 		} else {
 			roots[label] = struct{}{}
@@ -124,14 +151,14 @@ func (pr *PackageRegistry) Match(labels []string) ([]string, []*FlatPackage) {
 		}
 	}
 
-	walkedPackages := map[string]*FlatPackage{}
+	walkedPackages := map[string]*packages.Package{}
 	retRoots := make([]string, 0, len(roots))
 	for rootPkg := range roots {
 		retRoots = append(retRoots, rootPkg)
 		pr.walk(walkedPackages, rootPkg)
 	}
 
-	retPkgs := make([]*FlatPackage, 0, len(walkedPackages))
+	retPkgs := make([]*packages.Package, 0, len(walkedPackages))
 	for _, pkg := range walkedPackages {
 		retPkgs = append(retPkgs, pkg)
 	}

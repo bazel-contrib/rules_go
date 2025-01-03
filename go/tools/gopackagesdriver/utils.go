@@ -22,6 +22,8 @@ import (
 	"os/signal"
 	"path"
 	"path/filepath"
+
+	"golang.org/x/tools/go/packages"
 )
 
 func getenvDefault(key, defaultValue string) string {
@@ -76,7 +78,7 @@ func packageID(pattern string) string {
 	return fmt.Sprintf("//%s", pattern)
 }
 
-func findPackageByID(packages []*FlatPackage, id string) *FlatPackage {
+func findPackageByID(packages []*packages.Package, id string) *packages.Package {
 	for _, pkg := range packages {
 		if pkg.ID == id {
 			return pkg
