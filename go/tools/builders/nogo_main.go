@@ -77,6 +77,7 @@ func run(args []string) (error, int) {
 	importcfg := flags.String("importcfg", "", "The import configuration file")
 	packagePath := flags.String("p", "", "The package path (importmap) of the package being compiled")
 	xPath := flags.String("x", "", "The archive file where serialized facts should be written")
+	nogoFixPath := flags.String("fix", "", "The path of the file to store the nogo fixes")
 	var ignores multiFlag
 	flags.Var(&ignores, "ignore", "Names of files to ignore")
 	flags.Parse(args)
@@ -87,27 +88,65 @@ func run(args []string) (error, int) {
 		return fmt.Errorf("error parsing importcfg: %v", err), nogoError
 	}
 
-	diagnostics, facts, err := checkPackage(analyzers, *packagePath, packageFile, importMap, factMap, srcs, ignores)
+
+	diagnostics, pkg, err := checkPackage(analyzers, *packagePath, packageFile, importMap, factMap, srcs, ignores)
 	if err != nil {
 		return fmt.Errorf("error running analyzers: %v", err), nogoError
 	}
 	// Write the facts file for downstream consumers before failing due to diagnostics.
 	if *xPath != "" {
-		if err := ioutil.WriteFile(abs(*xPath), facts, 0o666); err != nil {
+		if err := os.WriteFile(abs(*xPath), pkg.facts.Encode(), 0o666); err != nil {
 			return fmt.Errorf("error writing facts: %v", err), nogoError
 		}
 	}
-	if diagnostics != "" {
+	exitCode := nogoSuccess
+	var errMsg bytes.Buffer
+	if len(diagnostics) > 0 {
 		// debugMode is defined by the template in generate_nogo_main.go.
-		exitCode := nogoViolation
+		exitCode = nogoViolation
 		if debugMode {
 			// Force actions running nogo to fail to help debug issues.
 			exitCode = nogoError
 		}
-		return fmt.Errorf("errors found by nogo during build-time code analysis:\n%s\n", diagnostics), exitCode
+		errMsg.WriteString("errors found by nogo during build-time code analysis:")
+		for _, d := range diagnostics {
+			fmt.Fprintf(&errMsg, "\n%s: %s (%s)", pkg.fset.Position(d.Pos), d.Message, d.analyzerName)
+		}
 	}
 
-	return nil, nogoSuccess
+	if errs := saveSuggestedFixes(*nogoFixPath, diagnostics, pkg); len(errs) > 0 {
+		errMsg.WriteString("\nsaving suggested fixes:")
+		for _, err := range errs {
+			fmt.Fprintf(&errMsg, "\n%v", err)
+		}
+	}
+
+	if errMsg.Len() > 0 {
+		return errors.New(errMsg.String()), exitCode
+	}
+	return nil, exitCode
+}
+
+func saveSuggestedFixes(nogoFixPath string, diagnostics []diagnosticEntry, pkg *goPackage) []error {
+	if nogoFixPath == "" {
+		return nil
+	}
+	var errs []error
+	// the patch file has to be created even if there is no fix.
+	patchFile, err := os.Create(nogoFixPath)
+	if err != nil {
+		errs = append(errs, fmt.Errorf("creating %q: %w", nogoFixPath, err))
+		return errs
+	}
+	defer patchFile.Close()
+	fixes, err := getFixes(diagnostics, pkg.fset)
+	if err != nil {
+		errs = append(errs, err)
+	}
+	if err := writePatch(patchFile, fixes); err != nil {
+		errs = append(errs, err)
+	}
+	return errs
 }
 
 // Adapted from go/src/cmd/compile/internal/gc/main.go. Keep in sync.
@@ -158,7 +197,7 @@ func readImportCfg(file string) (packageFile map[string]string, importMap map[st
 // It returns an empty string if no source code diagnostics need to be printed.
 //
 // This implementation was adapted from that of golang.org/x/tools/go/checker/internal/checker.
-func checkPackage(analyzers []*analysis.Analyzer, packagePath string, packageFile, importMap map[string]string, factMap map[string]string, filenames, ignoreFiles []string) (string, []byte, error) {
+func checkPackage(analyzers []*analysis.Analyzer, packagePath string, packageFile, importMap, factMap map[string]string, filenames, ignoreFiles []string) ([]diagnosticEntry, *goPackage, error) {
 	// Register fact types and establish dependencies between analyzers.
 	actions := make(map[*analysis.Analyzer]*action)
 	var visit func(a *analysis.Analyzer) *action
@@ -188,14 +227,14 @@ func checkPackage(analyzers []*analysis.Analyzer, packagePath string, packageFil
 		if cfg, ok := configs[a.Name]; ok {
 			for flagKey, flagVal := range cfg.analyzerFlags {
 				if strings.HasPrefix(flagKey, "-") {
-					return "", nil, fmt.Errorf(
+					return nil, nil, fmt.Errorf(
 						"%s: flag should not begin with '-': %s", a.Name, flagKey)
 				}
 				if flag := a.Flags.Lookup(flagKey); flag == nil {
-					return "", nil, fmt.Errorf("%s: unrecognized flag: %s", a.Name, flagKey)
+					return nil, nil, fmt.Errorf("%s: unrecognized flag: %s", a.Name, flagKey)
 				}
 				if err := a.Flags.Set(flagKey, flagVal); err != nil {
-					return "", nil, fmt.Errorf(
+					return nil, nil, fmt.Errorf(
 						"%s: invalid value for flag: %s=%s: %w", a.Name, flagKey, flagVal, err)
 				}
 			}
@@ -207,8 +246,9 @@ func checkPackage(analyzers []*analysis.Analyzer, packagePath string, packageFil
 	imp := newImporter(importMap, packageFile, factMap)
 	pkg, err := load(packagePath, imp, filenames)
 	if err != nil {
-		return "", nil, fmt.Errorf("error loading package: %v", err)
+		return nil, nil, fmt.Errorf("error loading package: %v", err)
 	}
+
 	for _, act := range actions {
 		act.pkg = pkg
 	}
@@ -257,10 +297,8 @@ func checkPackage(analyzers []*analysis.Analyzer, packagePath string, packageFil
 	// Execute the analyzers.
 	execAll(roots)
 
-	// Process diagnostics and encode facts for importers of this package.
-	diagnostics := checkAnalysisResults(roots, pkg)
-	facts := pkg.facts.Encode()
-	return diagnostics, facts, nil
+	diagnostics, err := checkAnalysisResults(roots, pkg)
+	return diagnostics, pkg, err
 }
 
 type Range struct {
@@ -458,12 +496,8 @@ func (g *goPackage) String() string {
 // checkAnalysisResults checks the analysis diagnostics in the given actions
 // and returns a string containing all the diagnostics that should be printed
 // to the build log.
-func checkAnalysisResults(actions []*action, pkg *goPackage) string {
-	type entry struct {
-		analysis.Diagnostic
-		*analysis.Analyzer
-	}
-	var diagnostics []entry
+func checkAnalysisResults(actions []*action, pkg *goPackage) ([]diagnosticEntry, error) {
+	var diagnostics []diagnosticEntry
 	var errs []error
 	cwd, err := os.Getwd()
 	if cwd == "" || err != nil {
@@ -505,7 +539,7 @@ func checkAnalysisResults(actions []*action, pkg *goPackage) string {
 
 		if currentConfig.onlyFiles == nil && currentConfig.excludeFiles == nil {
 			for _, diag := range act.diagnostics {
-				diagnostics = append(diagnostics, entry{Diagnostic: diag, Analyzer: act.a})
+				diagnostics = append(diagnostics, diagnosticEntry{Diagnostic: diag, analyzerName: act.a.Name})
 			}
 			continue
 		}
@@ -543,20 +577,21 @@ func checkAnalysisResults(actions []*action, pkg *goPackage) string {
 				}
 			}
 			if include {
-				diagnostics = append(diagnostics, entry{Diagnostic: d, Analyzer: act.a})
+				diagnostics = append(diagnostics, diagnosticEntry{Diagnostic: d, analyzerName: act.a.Name})
 			}
 		}
 	}
 	if numSkipped > 0 {
 		errs = append(errs, fmt.Errorf("%d analyzers skipped due to type-checking error: %v", numSkipped, pkg.typeCheckError))
 	}
-	if len(diagnostics) == 0 && len(errs) == 0 {
-		return ""
-	}
-
 	sort.Slice(diagnostics, func(i, j int) bool {
 		return diagnostics[i].Pos < diagnostics[j].Pos
 	})
+
+	if len(errs) == 0 {
+		return diagnostics, nil
+	}
+
 	errMsg := &bytes.Buffer{}
 	sep := ""
 	for _, err := range errs {
@@ -564,12 +599,7 @@ func checkAnalysisResults(actions []*action, pkg *goPackage) string {
 		sep = "\n"
 		errMsg.WriteString(err.Error())
 	}
-	for _, d := range diagnostics {
-		errMsg.WriteString(sep)
-		sep = "\n"
-		fmt.Fprintf(errMsg, "%s: %s (%s)", pkg.fset.Position(d.Pos), d.Message, d.Name)
-	}
-	return errMsg.String()
+	return diagnostics, errors.New(errMsg.String())
 }
 
 // config determines which source files an analyzer will emit diagnostics for.

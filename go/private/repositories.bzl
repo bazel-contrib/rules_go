@@ -102,6 +102,25 @@ def go_rules_dependencies(force = False):
         patch_args = ["-p1"],
     )
 
+    # Needed for nogo to generate unified diff
+    # releaser:upgrade-dep pmezard go-difflib
+    wrapper(
+        http_archive,
+        name = "com_github_pmezard_go_difflib",
+        # v1.0.0, latest as of 2024-12-19
+        urls = [
+            "https://mirror.bazel.build/github.com/pmezard/go-difflib/archive/refs/tags/v1.0.0.tar.gz",
+            "https://github.com/pmezard/go-difflib/archive/refs/tags/v1.0.0.tar.gz",
+        ],
+        sha256 = "28f3dc1b5c0efd61203ab07233f774740d3bf08da4d8153fb5310db6cea0ebda",
+        strip_prefix = "go-difflib-1.0.0",
+        patches = [
+            # releaser:patch-cmd gazelle -repo_root . -go_prefix github.com/pmezard/go-difflib -go_naming_convention import_alias
+            Label("//third_party:com_github_pmezard_go_difflib-gazelle.patch"),
+        ],
+        patch_args = ["-p1"],
+    )
+
     # releaser:upgrade-dep golang sys
     wrapper(
         http_archive,

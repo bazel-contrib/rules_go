@@ -24,7 +24,7 @@ func nogo(args []string) error {
 	var deps, facts archiveMultiFlag
 	var importPath, packagePath, nogoPath, packageListPath string
 	var testFilter string
-	var outFactsPath, outLogPath string
+	var outFactsPath, outLogPath, outFixPath string
 	var coverMode string
 	fs.Var(&unfilteredSrcs, "src", ".go, .c, .cc, .m, .mm, .s, or .S file to be filtered and checked")
 	fs.Var(&ignoreSrcs, "ignore_src", ".go, .c, .cc, .m, .mm, .s, or .S file to be filtered and checked, but with its diagnostics ignored")
@@ -39,6 +39,8 @@ func nogo(args []string) error {
 	fs.StringVar(&nogoPath, "nogo", "", "The nogo binary")
 	fs.StringVar(&outFactsPath, "out_facts", "", "The file to emit serialized nogo facts to")
 	fs.StringVar(&outLogPath, "out_log", "", "The file to emit nogo logs into")
+	fs.StringVar(&outFixPath, "out_fix", "", "The path of the file that stores the nogo fixes")
+
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -82,10 +84,10 @@ func nogo(args []string) error {
 		return err
 	}
 
-	return runNogo(workDir, nogoPath, goSrcs, ignoreSrcs, facts, importPath, importcfgPath, outFactsPath, outLogPath)
+	return runNogo(workDir, nogoPath, goSrcs, ignoreSrcs, facts, importPath, importcfgPath, outFactsPath, outLogPath, outFixPath)
 }
 
-func runNogo(workDir string, nogoPath string, srcs, ignores []string, facts []archive, packagePath, importcfgPath, outFactsPath string, outLogPath string) error {
+func runNogo(workDir string, nogoPath string, srcs, ignores []string, facts []archive, packagePath, importcfgPath, outFactsPath, outLogPath, outFixPath string) error {
 	if len(srcs) == 0 {
 		// emit_compilepkg expects a nogo facts file, even if it's empty.
 		// We also need to write the validation output log.
@@ -97,10 +99,15 @@ func runNogo(workDir string, nogoPath string, srcs, ignores []string, facts []ar
 		if err != nil {
 			return fmt.Errorf("error writing empty nogo log file: %v", err)
 		}
+		err = os.WriteFile(outFixPath, nil, 0o666)
+		if err != nil {
+			return fmt.Errorf("error writing empty nogo fix file: %v", err)
+		}
 		return nil
 	}
 	args := []string{nogoPath}
 	args = append(args, "-p", packagePath)
+	args = append(args, "-fix", outFixPath)
 	args = append(args, "-importcfg", importcfgPath)
 	for _, fact := range facts {
 		args = append(args, "-fact", fmt.Sprintf("%s=%s", fact.importPath, fact.file))
@@ -148,4 +155,3 @@ func runNogo(workDir string, nogoPath string, srcs, ignores []string, facts []ar
 	}
 	return nil
 }
-
