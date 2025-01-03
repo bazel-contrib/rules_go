@@ -74,6 +74,7 @@ tasks:
       - "//..."
   macos_arm64:
     build_flags:
+      - "--remote_cache="
       - "--apple_crosstool_top=@local_config_apple_cc//:toolchain"
       - "--crosstool_top=@local_config_apple_cc//:toolchain"
       - "--host_crosstool_top=@local_config_apple_cc//:toolchain"
