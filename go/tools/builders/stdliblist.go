@@ -257,7 +257,7 @@ func stdliblist(args []string) error {
 	}
 	os.Setenv("CC", quotePathIfNeeded(abs(ccEnv)))
 
-	if err := absCCCompiler(cgoEnvVars, cgoAbsEnvFlags); err != nil {
+	if err := absCCCompiler(cgoAbsEnvVars, cgoAbsEnvFlags); err != nil {
 		return fmt.Errorf("error modifying cgo environment to absolute path: %v", err)
 	}
 

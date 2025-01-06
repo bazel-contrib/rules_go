@@ -154,11 +154,23 @@ You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 			break
 		}
 	}
+	absoluteLdFlags, nonAbsoluteLdFlags, err := splitAbsEnvVar(os.Getenv("CGO_LDFLAGS"), cgoAbsEnvFlags)
+	if err != nil {
+		return fmt.Errorf("error splitting cgo ldflags: %v", err)
+	}
+	os.Setenv("CGO_LDFLAGS", nonAbsoluteLdFlags)
+	if len(absoluteLdFlags) > 0 {
+		ldflags = append(ldflags, "-extldflags")
+		splitFlags := strings.Split(absoluteLdFlags, " ")
+		absArgs(splitFlags, cgoAbsEnvFlags)
+		ldflags = append(ldflags, splitFlags...)
+	}
+
 	installArgs = append(installArgs, "-gcflags="+allSlug+strings.Join(gcflags, " "))
 	installArgs = append(installArgs, "-ldflags="+allSlug+strings.Join(ldflags, " "))
 	installArgs = append(installArgs, "-asmflags="+allSlug+strings.Join(asmflags, " "))
 
-	if err := absCCCompiler(cgoEnvVars, cgoAbsEnvFlags); err != nil {
+	if err := absCCCompiler(cgoAbsEnvVars, cgoAbsEnvFlags); err != nil {
 		return fmt.Errorf("error modifying cgo environment to absolute path: %v", err)
 	}
 
