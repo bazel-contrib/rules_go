@@ -133,6 +133,8 @@ def _build_stdlib(go):
     args.add_all("-out", [pkg], map_each = _dirname, expand_directories = False)
     if go.mode.race:
         args.add("-race")
+    if go.mode.msan:
+        args.add("-msan")
     args.add("-package", "std")
     if not go.mode.pure:
         args.add("-package", "runtime/cgo")
