@@ -222,7 +222,6 @@ Release %s has been prepared and uploaded.
 
 * Ensure that all tests pass in CI at %s.
 * Review and publish the release at %s.
-* Update README.rst and WORKSPACE if necessary.
 `, version, testURL, release.GetHTMLURL())
 
 	return nil
