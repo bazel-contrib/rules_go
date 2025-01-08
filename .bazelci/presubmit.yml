@@ -2,7 +2,6 @@
 matrix:
   platform:
     - ubuntu2404
-    - macos
     - macos_arm64
     - windows
 
@@ -190,8 +189,8 @@ tasks:
     test_targets:
       - "//..."
   macos_examples:
-    name: Examples test on MacOS
-    platform: macos
+    name: Examples test on macOS
+    platform: macos_arm64
     working_directory: examples/basic-gazelle
     build_flags:
       - "--config=incompatible"
