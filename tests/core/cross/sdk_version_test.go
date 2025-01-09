@@ -54,42 +54,14 @@ var testCases = []testcase{
 		expectedVersion: "go1.17.1",
 	},
 	{
-		Name:             "1_17_release_candidate",
-		SDKVersion:       "1.17rc1",
-		expectedVersion:  "go1.17rc1",
+		Name:            "1_17_release_candidate",
+		SDKVersion:      "1.17rc1",
+		expectedVersion: "go1.17rc1",
 	},
 }
 
 func TestMain(m *testing.M) {
 	mainFilesTmpl := template.Must(template.New("").Parse(`
--- WORKSPACE --
-local_repository(
-    name = "io_bazel_rules_go",
-    path = "../io_bazel_rules_go",
-)
-
-load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk", "go_rules_dependencies", "go_register_toolchains")
-
-go_rules_dependencies()
-
-go_download_sdk(
-    name = "go_sdk",
-    version = "1.16",
-)
-go_download_sdk(
-    name = "go_sdk_1_17",
-    version = "1.17",
-)
-go_download_sdk(
-    name = "go_sdk_1_17_1",
-    version = "1.17.1",
-)
-go_download_sdk(
-    name = "go_sdk_1_17_rc1",
-    version = "1.17rc1",
-)
-
-go_register_toolchains()
 -- main.go --
 package main
 
@@ -116,17 +88,39 @@ go_cross_binary(
 )
 {{end}}
 `))
-  tmplValues := struct{
-    TestCases []testcase
-  }{
-    TestCases: testCases,
-  }
-  mainFilesBuilder := &strings.Builder{}
-  if err := mainFilesTmpl.Execute(mainFilesBuilder, tmplValues); err != nil {
-    panic(err)
-  }
+	tmplValues := struct {
+		TestCases []testcase
+	}{
+		TestCases: testCases,
+	}
+	mainFilesBuilder := &strings.Builder{}
+	if err := mainFilesTmpl.Execute(mainFilesBuilder, tmplValues); err != nil {
+		panic(err)
+	}
 
-  bazel_testing.TestMain(m, bazel_testing.Args{Main: mainFilesBuilder.String()})
+	bazel_testing.TestMain(m, bazel_testing.Args{
+		Main: mainFilesBuilder.String(),
+		WorkspacePrefix: `
+load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk")
+
+go_download_sdk(
+    name = "go_sdk",
+    version = "1.16",
+)
+go_download_sdk(
+    name = "go_sdk_1_17",
+    version = "1.17",
+)
+go_download_sdk(
+    name = "go_sdk_1_17_1",
+    version = "1.17.1",
+)
+go_download_sdk(
+    name = "go_sdk_1_17_rc1",
+    version = "1.17rc1",
+)
+`,
+	})
 }
 
 func Test(t *testing.T) {

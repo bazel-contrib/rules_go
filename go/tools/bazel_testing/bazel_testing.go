@@ -403,13 +403,13 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 		}
 		info := workspaceTemplateInfo{
 			TestedModuleRepoName: testedModuleRepoName,
-			TestedModulePath:     testedRepoDir,
+			TestedModulePath:     strings.ReplaceAll(testedRepoDir, "\\", "\\\\"),
 			Prefix:               args.WorkspacePrefix,
 			Suffix:               args.WorkspaceSuffix,
 			Nogo:                 args.Nogo,
 			NogoIncludes:         args.NogoIncludes,
 			NogoExcludes:         args.NogoExcludes,
-			GoSDKPath:            filepath.Dir(goRootFileRealPath),
+			GoSDKPath:            strings.ReplaceAll(filepath.Dir(goRootFileRealPath), "\\", "\\\\"),
 		}
 		if err := defaultWorkspaceTpl.Execute(w, info); err != nil {
 			return "", cleanup, err
@@ -435,7 +435,7 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 		info := moduleFileTemplateInfo{
 			TestedModuleName:     testedModuleName,
 			TestedModuleRepoName: testedModuleRepoName,
-			TestedModulePath:     testedRepoDir,
+			TestedModulePath:     strings.ReplaceAll(testedRepoDir, "\\", "\\\\"),
 			Suffix:      args.ModuleFileSuffix,
 		}
 		if err := defaultModuleBazelTpl.Execute(w, info); err != nil {
