@@ -21,8 +21,7 @@ def go_bazel_test(rule_files = None, **kwargs):
     """
 
     if not rule_files:
-        # Resolve the //:all_files target in the repo using this rule.
-        rule_files = ["//:all_files"]
+        rule_files = [Label("//:all_files")]
 
     # Add dependency on bazel_testing library.
     kwargs.setdefault("deps", [])
@@ -59,9 +58,5 @@ def go_bazel_test(rule_files = None, **kwargs):
         kwargs["tags"].append("local")
     if "exclusive" not in kwargs["tags"]:
         kwargs["tags"].append("exclusive")
-
-    kwargs.setdefault("x_defs", {}).update({
-        "github.com/bazelbuild/rules_go/go/tools/bazel_testing.testedModuleName": native.module_name(),
-    })
 
     go_test(**kwargs)

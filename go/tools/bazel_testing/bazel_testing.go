@@ -44,7 +44,6 @@ import (
 
 // Set via x_defs.
 var goRootFile = ""
-var testedModuleName = ""
 
 const (
 	// Standard Bazel exit codes.
@@ -322,23 +321,34 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 
 	// Copy or link the files for the tested repository.
 	testedRepoDir := filepath.Join(execDir, "tested_repo")
+	singleRepoPrefix := ""
 	for _, f := range files {
-		if !strings.HasPrefix(f, "_main/") {
-			return "", cleanup, fmt.Errorf("unexpected data file from a non-main repo: %s", f)
+		if singleRepoPrefix == "" {
+			singleRepoPrefix = f[:strings.Index(f, "/")+1]
+		} else if !strings.HasPrefix(f, singleRepoPrefix) {
+			return "", cleanup, fmt.Errorf("data files from more than one repo are unsupported, got %s and %s", singleRepoPrefix, f[:strings.Index(f, "/")+1])
 		}
 		srcPath, err := runfiles.Rlocation(f)
 		if err != nil {
 			return "", cleanup, fmt.Errorf("unknown runfile %s: %v", f, err)
 		}
-		dstPath := filepath.Join(testedRepoDir, strings.TrimPrefix(f, "_main/"))
+		dstPath := filepath.Join(testedRepoDir, strings.TrimPrefix(f, singleRepoPrefix))
 		if err := copyOrLink(dstPath, srcPath); err != nil {
 			return "", cleanup, fmt.Errorf("copying %s to %s: %v", srcPath, dstPath, err)
+		}
+	}
+	testedRepoModulePath := filepath.Join(testedRepoDir, "MODULE.bazel")
+	testedModuleName := ""
+	if _, err := os.Stat(testedRepoModulePath); err == nil {
+		testedModuleName, err = loadName(testedRepoModulePath)
+		if err != nil {
+			return "", cleanup, fmt.Errorf("loading module name: %v", err)
 		}
 	}
 	testedRepoWorkspacePath := filepath.Join(testedRepoDir, "WORKSPACE")
 	testedModuleRepoName := testedModuleName
 	if _, err = os.Stat(testedRepoWorkspacePath); err == nil {
-		testedModuleRepoName, err = loadWorkspaceName(filepath.Join(testedRepoDir, "WORKSPACE"))
+		testedModuleRepoName, err = loadName(testedRepoWorkspacePath)
 		if err != nil {
 			return "", cleanup, fmt.Errorf("loading workspace name: %v", err)
 		}
@@ -451,19 +461,19 @@ func extractTxtar(dir, txt string) error {
 	return nil
 }
 
-func loadWorkspaceName(workspacePath string) (string, error) {
-	workspaceData, err := os.ReadFile(workspacePath)
+func loadName(bazelFilePath string) (string, error) {
+	content, err := os.ReadFile(bazelFilePath)
 	if err != nil {
 		return "", err
 	}
-	nameRe := regexp.MustCompile(`(?m)^workspace\(\s*name\s*=\s*("[^"]*"|'[^']*')\s*,?\s*\)\s*$`)
-	match := nameRe.FindSubmatchIndex(workspaceData)
+	nameRe := regexp.MustCompile(`(?m)^(?:\s*|workspace\()name\s*=\s*("[^"]*"|'[^']*')\s*,?\s*\)?\s*$`)
+	match := nameRe.FindSubmatchIndex(content)
 	if match == nil {
-		return "", fmt.Errorf("%s: workspace name not set", workspacePath)
+		return "", fmt.Errorf("%s: name not set", bazelFilePath)
 	}
-	name := string(workspaceData[match[2]+1 : match[3]-1])
+	name := string(content[match[2]+1 : match[3]-1])
 	if name == "" {
-		return "", fmt.Errorf("%s: workspace name is empty", workspacePath)
+		return "", fmt.Errorf("%s: name is empty", bazelFilePath)
 	}
 	return name, nil
 }
