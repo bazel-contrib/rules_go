@@ -25,6 +25,7 @@ use_repo(
     "go_toolchains",
     # This name is ugly on purpose to avoid a conflict with a user-named SDK.
     "io_bazel_rules_nogo",
+    go_sdk = "go_default_sdk",
 )
 
 register_toolchains("@go_toolchains//:all")

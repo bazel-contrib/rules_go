@@ -4,9 +4,17 @@ load("//go:def.bzl", "go_library")
 go_library(
     name = "bazel_testing",
     srcs = ["bazel_testing.go"],
+    data = [
+        "@go_sdk//:ROOT",
+        "@go_sdk//:files",
+    ],
     importpath = "github.com/bazelbuild/rules_go/go/tools/bazel_testing",
     visibility = ["//visibility:public"],
+    x_defs = {
+        "goRootFile": "$(rlocationpath @go_sdk//:ROOT)",
+    },
     deps = [
+        "//go/runfiles",
         "//go/tools/bazel",
         "//go/tools/internal/txtar",
     ],
