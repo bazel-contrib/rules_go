@@ -35,10 +35,8 @@ gazelle(
 -- hello.go --
 package hello
 `,
-		WorkspaceSuffix: `
-load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
-
-gazelle_dependencies()
+		ModuleFileSuffix: `
+bazel_dep(name = "gazelle", version = "0.41.0", repo_name = "bazel_gazelle")
 `,
 	})
 }
