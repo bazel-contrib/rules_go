@@ -43,7 +43,7 @@ import (
 )
 
 // Set via x_defs.
-var goRootFile = ""
+var goRootFile string
 
 const (
 	// Standard Bazel exit codes.
@@ -321,7 +321,7 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 
 	// Copy or link the files for the tested repository.
 	testedRepoDir := filepath.Join(execDir, "tested_repo")
-	singleRepoPrefix := ""
+	var singleRepoPrefix string
 	for _, f := range files {
 		if singleRepoPrefix == "" {
 			singleRepoPrefix = f[:strings.Index(f, "/")+1]
@@ -338,7 +338,7 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 		}
 	}
 	testedRepoModulePath := filepath.Join(testedRepoDir, "MODULE.bazel")
-	testedModuleName := ""
+	var testedModuleName string
 	if _, err := os.Stat(testedRepoModulePath); err == nil {
 		testedModuleName, err = loadName(testedRepoModulePath)
 		if err != nil {

@@ -93,7 +93,7 @@ go_cross_binary(
 	}{
 		TestCases: testCases,
 	}
-	mainFilesBuilder := &strings.Builder{}
+	mainFilesBuilder := new(strings.Builder)
 	if err := mainFilesTmpl.Execute(mainFilesBuilder, tmplValues); err != nil {
 		panic(err)
 	}
