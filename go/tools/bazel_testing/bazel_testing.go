@@ -96,7 +96,7 @@ type Args struct {
 	// workspace. It is executed once and only once before the beginning of
 	// all tests. If SetUp returns a non-nil error, execution is halted and
 	// tests cases are not executed.
-	SetUp           func() error
+	SetUp func() error
 }
 
 // debug may be set to make the test print the test workspace path and stop
@@ -321,18 +321,19 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 
 	// Copy or link the files for the tested repository.
 	testedRepoDir := filepath.Join(execDir, "tested_repo")
-	var singleRepoPrefix string
+	var singleRepoName string
 	for _, f := range files {
-		if singleRepoPrefix == "" {
-			singleRepoPrefix = f[:strings.Index(f, "/")+1]
-		} else if !strings.HasPrefix(f, singleRepoPrefix) {
-			return "", cleanup, fmt.Errorf("data files from more than one repo are unsupported, got %s and %s", singleRepoPrefix, f[:strings.Index(f, "/")+1])
+		repoName, _, _ := strings.Cut(f, "/")
+		if singleRepoName == "" {
+			singleRepoName = repoName
+		} else if repoName != singleRepoName {
+			return "", cleanup, fmt.Errorf("data files from more than one repo are unsupported, got %s and %s", singleRepoName, repoName)
 		}
 		srcPath, err := runfiles.Rlocation(f)
 		if err != nil {
 			return "", cleanup, fmt.Errorf("unknown runfile %s: %v", f, err)
 		}
-		dstPath := filepath.Join(testedRepoDir, strings.TrimPrefix(f, singleRepoPrefix))
+		dstPath := filepath.Join(testedRepoDir, strings.TrimPrefix(f, singleRepoName+"/"))
 		if err := copyOrLink(dstPath, srcPath); err != nil {
 			return "", cleanup, fmt.Errorf("copying %s to %s: %v", srcPath, dstPath, err)
 		}
@@ -441,7 +442,7 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 			TestedModuleName:     testedModuleName,
 			TestedModuleRepoName: testedModuleRepoName,
 			TestedModulePath:     strings.ReplaceAll(testedRepoDir, "\\", "\\\\"),
-			Suffix:      args.ModuleFileSuffix,
+			Suffix:               args.ModuleFileSuffix,
 		}
 		if err := defaultModuleBazelTpl.Execute(w, info); err != nil {
 			return "", cleanup, err
@@ -466,12 +467,14 @@ func extractTxtar(dir, txt string) error {
 	return nil
 }
 
+// Picks out the first "name = ..." attribute in a WORKSPACE or MODULE.bazel file.
+var nameRe = regexp.MustCompile(`(?m)^(?:\s*|workspace\(|module\()name\s*=\s*("[^"]*"|'[^']*')\s*,?\s*\)?\s*$`)
+
 func loadName(bazelFilePath string) (string, error) {
 	content, err := os.ReadFile(bazelFilePath)
 	if err != nil {
 		return "", err
 	}
-	nameRe := regexp.MustCompile(`(?m)^(?:\s*|workspace\()name\s*=\s*("[^"]*"|'[^']*')\s*,?\s*\)?\s*$`)
 	match := nameRe.FindSubmatchIndex(content)
 	if match == nil {
 		return "", fmt.Errorf("%s: name not set", bazelFilePath)
@@ -486,12 +489,12 @@ func loadName(bazelFilePath string) (string, error) {
 type workspaceTemplateInfo struct {
 	TestedModuleRepoName string
 	TestedModulePath     string
-	GoSDKPath      string
-	Nogo           string
-	NogoIncludes   []string
-	NogoExcludes   []string
-	Prefix         string
-	Suffix         string
+	GoSDKPath            string
+	Nogo                 string
+	NogoIncludes         []string
+	NogoExcludes         []string
+	Prefix               string
+	Suffix               string
 }
 
 var defaultWorkspaceTpl = template.Must(template.New("").Parse(`
@@ -547,7 +550,7 @@ type moduleFileTemplateInfo struct {
 	TestedModuleName     string
 	TestedModuleRepoName string
 	TestedModulePath     string
-	Suffix      string
+	Suffix               string
 }
 
 // TODO: Also reuse the current Go SDK as in the WORKSPACE file.
