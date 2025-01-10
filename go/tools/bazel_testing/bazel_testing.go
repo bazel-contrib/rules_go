@@ -364,11 +364,16 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 	// The test can override this with its own .bazelrc or with flags in commands.
 	bazelrcPath := filepath.Join(mainDir, ".bazelrc")
 	bazelrcBuf := &bytes.Buffer{}
+	if args.ModuleFileSuffix == "" {
+		fmt.Fprintf(bazelrcBuf, "common --noenable_bzlmod\n")
+	} else {
+		fmt.Fprintf(bazelrcBuf, "common --enable_bzlmod\n")
+	}
 	if outputUserRoot != "" {
 		fmt.Fprintf(bazelrcBuf, "startup --output_user_root=%s\n", outputUserRoot)
 	}
 	if flags := os.Getenv("GO_BAZEL_TEST_BAZELFLAGS"); flags != "" {
-		fmt.Fprintf(bazelrcBuf, "build %s\n", flags)
+		fmt.Fprintf(bazelrcBuf, "common %s\n", flags)
 	}
 	if err := os.WriteFile(bazelrcPath, bazelrcBuf.Bytes(), 0666); err != nil {
 		return "", cleanup, err
