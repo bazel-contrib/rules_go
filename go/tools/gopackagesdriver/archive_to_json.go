@@ -62,7 +62,7 @@ func (p *bazelArgsParser) WithParamsReaderGetter(getter paramsReaderGetter) *baz
 
 func (p *bazelArgsParser) WithArg(flag string, setter func(value string)) *bazelArgsParser {
 	arg := arg{
-		Setter:   setter,
+		Setter: setter,
 	}
 	p.args[flag] = arg
 	return p
@@ -122,12 +122,54 @@ func NewBazelArgsParser() *bazelArgsParser {
 }
 
 type archive struct {
-	ID              string   `json:"ID"`
-	PkgPath         string   `json:"PkgPath"`
-	ExportFile      string   `json:"ExportFile"`
-	GoFiles         []string `json:"GoFiles"`
-	CompiledGoFiles []string `json:"CompiledGoFiles"`
-	OtherFiles      []string `json:"OtherFiles"`
+	ID              string            `json:"ID"`
+	PkgPath         string            `json:"PkgPath"`
+	ExportFile      string            `json:"ExportFile"`
+	GoFiles         []string          `json:"GoFiles"`
+	CompiledGoFiles []string          `json:"CompiledGoFiles"`
+	OtherFiles      []string          `json:"OtherFiles"`
+	Imports         map[string]string `json:"Imports"`
+}
+
+// Parse a delimiter escaped string, for instace:
+// value = "foo\\\==\\ba\=r, delimiter = '=', escape = '\'
+// returns ["foo\=", "\ba=r"]
+func splitEscapedString(value string, delimiter, escape rune) []string {
+	var field strings.Builder
+	escaped := false
+	values := []string{}
+	for _, r := range value {
+		switch {
+		case escaped:
+			// The previous character was the escape char,
+			// so we treat the current character as literal.
+			field.WriteRune(r)
+			escaped = false
+		case r == escape:
+			// We see an escape character, so we mark that
+			// the next character should be taken literally.
+			escaped = true
+		case r == delimiter:
+			// We reached a real delimiter (not escaped).
+			// Finish the current field and start a new one.
+			values = append(values, field.String())
+			field.Reset()
+		default:
+			// Normal character, just append.
+			field.WriteRune(r)
+		}
+	}
+	// Add the last field if any
+	return append(values, field.String())
+}
+
+func parseKeyValueArg(value string, m map[string]string) error {
+	fields := splitEscapedString(value, '=', '\\')
+	if len(fields) != 2 {
+		return fmt.Errorf("could not parse key value pair: %s", value)
+	}
+	m[fields[0]] = fields[1]
+	return nil
 }
 
 // The bazel args will be parsed either from the program args or
@@ -136,22 +178,24 @@ func parseArchiveAndOutputPath(arguments []string, archive *archive) (string, er
 	var outputPath string
 	parser := NewBazelArgsParser().
 		WithArg("--id", func(value string) {
-			archive.ID = value }).
+			archive.ID = value
+		}).
 		WithArg("--pkg-path", func(value string) {
-			archive.PkgPath = value }).
+			archive.PkgPath = value
+		}).
 		WithArg("--export-file", func(value string) {
-			archive.ExportFile = value }).
-		WithArg("--orig-srcs", func(value string) {
-			if strings.HasSuffix(value, ".go") {
-				archive.GoFiles = append(archive.GoFiles, value)
-			} else {
-				archive.GoFiles = append(archive.OtherFiles, value)
-			}
+			archive.ExportFile = value
 		}).
 		WithArg("--data-srcs", func(value string) {
 			if strings.HasSuffix(value, ".go") {
- 				archive.CompiledGoFiles = append(archive.CompiledGoFiles, value)
- 			}
+				archive.GoFiles = append(archive.GoFiles, value)
+				archive.CompiledGoFiles = append(archive.CompiledGoFiles, value)
+			} else {
+				archive.OtherFiles = append(archive.OtherFiles, value)
+			}
+		}).
+		WithArg("--direct-pkg", func(value string) {
+			parseKeyValueArg(value, archive.Imports)
 		}).
 		WithArg("--output-file", func(value string) {
 			outputPath = value
@@ -169,7 +213,9 @@ func parseArchiveAndOutputPath(arguments []string, archive *archive) (string, er
 // Parse bazel generated arguments encoding an archive contents and generate
 // a corresponding json file.
 func main() {
-	var archive archive
+	archive := archive{
+		Imports: make(map[string]string),
+	}
 	outputPath, err := parseArchiveAndOutputPath(
 		os.Args[1:],
 		&archive,

@@ -49,30 +49,49 @@ def file_path(f):
         prefix = "__BAZEL_OUTPUT_BASE__"
     return paths.join(prefix, f.path)
 
+def _escape_special_chars(value, delimiter):
+    # We only have "\" and "=" as special characters.
+    # Double escape the escaper char.
+    escaped = value.replace("\\", "\\\\")
+
+    # Escape delimiter.
+    return escaped.replace(delimiter, "\\" + delimiter)
+
+def format_key_value_arg(key, value, delimiter = "="):
+    escaped_key = _escape_special_chars(key, delimiter)
+    escaped_value = _escape_special_chars(value, delimiter)
+    return "{}{}{}".format(escaped_key, delimiter, escaped_value)
+
 def _go_archive_to_pkg_json(ctx, name, archive):
     pkg_json_file = ctx.actions.declare_file(name + ".pkg.json")
 
     # Build the args in a config file.
     args = ctx.actions.args()
-    args.add("--id", archive.data.label)
+    args.add("--id", str(archive.data.label))
     args.add("--pkg-path", archive.data.importpath)
     args.add("--export-file", archive.data.export_file)
 
-    # Will expand into GoFiles and OtherFiles.
-    args.add_all("--orig-srcs", archive.data.orig_srcs, map_each=file_path)
-
     # Expands in CompiledGoFiles
-    args.add_all("--data-srcs", archive.data.srcs, map_each=file_path)
+    args.add_all("--data-srcs", archive.data.srcs, map_each = file_path)
+
+    # Encode in escaped key=value pairs the direct pkgs imports.
+    for pkg in archive.direct:
+        delimiter = "="  # Must match the archive_to_json delimiter.
+        args.add("--direct-pkg", format_key_value_arg(
+            pkg.data.importpath,
+            str(pkg.data.label),
+            delimiter,
+        ))
+
     args.add("--output-file", pkg_json_file)
     args.use_param_file("@%s")
 
-    inputs = archive.data.orig_srcs + archive.data.srcs
     ctx.actions.run(
-        inputs = inputs,
+        inputs = archive.data.srcs,
         outputs = [pkg_json_file],
         executable = ctx.executable._archive_to_json,
         execution_requirements = {
-            "local": "1"
+            "local": "1",
         },
         mnemonic = "ArchiveToJSON",
         arguments = [args],

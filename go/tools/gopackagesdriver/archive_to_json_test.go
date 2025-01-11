@@ -127,3 +127,33 @@ func TestBazelParser(t *testing.T) {
 		})
 	}
 }
+
+// Depending on the arguments provided
+// tokenize bazel arguments from the arguments themselves or from a file.
+func TestEscapedFieldsArgParser(t *testing.T) {
+	tests := []struct {
+		value          string
+		expectedFields []string
+	}{{
+		value:          "foo\\\\\\==\\\\ba\\=r",
+		expectedFields: []string{"foo\\=", "\\ba=r"},
+	}, {
+		value:          "\\=baz\\==\\=\\\\",
+		expectedFields: []string{"=baz=", "=\\"},
+	}}
+	for _, tc := range tests {
+		t.Run(tc.value, func(t *testing.T) {
+			fields := splitEscapedString(tc.value, '=', '\\')
+			if len(fields) != len(tc.expectedFields) {
+				t.Errorf("invalid number of fields '%d', expected: '%d'", len(fields), len(tc.expectedFields))
+				return
+			}
+			for i, expectedField := range tc.expectedFields {
+				field := fields[i]
+				if field != expectedField {
+					t.Errorf("invalid field '%s', expected: '%s'", field, expectedField)
+				}
+			}
+		})
+	}
+}
