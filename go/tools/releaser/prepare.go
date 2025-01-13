@@ -15,7 +15,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"flag"
@@ -65,12 +64,11 @@ func init() {
 func runPrepare(ctx context.Context, stderr io.Writer, args []string) error {
 	// Parse arguments.
 	flags := flag.NewFlagSet("releaser prepare", flag.ContinueOnError)
-	var rnotesPath, version string
+	var version string
 	var githubToken githubTokenFlag
 	var uploadToMirror bool
 	flags.Var(&githubToken, "githubtoken", "GitHub personal access token or path to a file containing it")
 	flags.BoolVar(&uploadToMirror, "mirror", false, "whether to upload dependency archives to mirror.bazel.build")
-	flags.StringVar(&rnotesPath, "rnotes", "", "Name of file containing release notes in Markdown")
 	flags.StringVar(&version, "version", "", "Version to release")
 	if err := flags.Parse(args); err != nil {
 		return err
@@ -80,9 +78,6 @@ func runPrepare(ctx context.Context, stderr io.Writer, args []string) error {
 	}
 	if githubToken == "" {
 		return usageErrorf(&prepareCmd, "-githubtoken must be set")
-	}
-	if rnotesPath == "" {
-		return usageErrorf(&prepareCmd, "-rnotes must be set")
 	}
 	if version == "" {
 		return usageErrorf(&prepareCmd, "-version must be set")
@@ -149,18 +144,11 @@ func runPrepare(ctx context.Context, stderr io.Writer, args []string) error {
 		return err
 	}
 
-	// Read release notes, append boilerplate.
-	rnotesData, err := os.ReadFile(rnotesPath)
-	if err != nil {
-		return err
-	}
-	rnotesData = bytes.TrimSpace(rnotesData)
 	goVersion, err := findLatestGoVersion()
 	if err != nil {
 		return err
 	}
-	boilerplate := genBoilerplate(version, arcSum, goVersion)
-	rnotesStr := string(rnotesData) + "\n\n## `WORKSPACE` code\n\n```\n" + boilerplate + "\n```\n"
+	rnotesStr := genBoilerplate(version, arcSum, goVersion)
 
 	// Push the release branch.
 	fmt.Fprintf(stderr, "pushing branch %s to origin...\n", branchName)

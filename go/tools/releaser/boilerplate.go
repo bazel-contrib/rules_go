@@ -21,19 +21,33 @@ import (
 	"io"
 	"net/http"
 	"sort"
+	"strings"
 
 	"golang.org/x/mod/semver"
 )
 
 func genBoilerplate(version, shasum, goVersion string) string {
-	return fmt.Sprintf(`load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+	trimmedVersion := strings.TrimPrefix(version, "v")
+	return fmt.Sprintf(`## `+"`MODULE.bazel`"+` code
+
+`+"```"+`
+bazel_dep(name = "rules_go", version = "%[1]s")
+
+go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
+go_sdk.from_file(go_mod = "//:go.mod")
+`+"```"+`
+
+## `+"`WORKSPACE`"+` code
+
+`+"```"+`
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
     name = "io_bazel_rules_go",
     sha256 = "%[2]s",
     urls = [
-        "https://mirror.bazel.build/github.com/bazel-contrib/rules_go/releases/download/%[1]s/rules_go-%[1]s.zip",
-        "https://github.com/bazel-contrib/rules_go/releases/download/%[1]s/rules_go-%[1]s.zip",
+        "https://mirror.bazel.build/github.com/bazel-contrib/rules_go/releases/download/v%[1]s/rules_go-v%[1]s.zip",
+        "https://github.com/bazel-contrib/rules_go/releases/download/v%[1]s/rules_go-v%[1]s.zip",
     ],
 )
 
@@ -48,10 +62,10 @@ load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 load("@platforms//host:extension.bzl", "host_platform_repo")
 
 maybe(
-	host_platform_repo,
-	name = "host_platform",
+    host_platform_repo,
+    name = "host_platform",
 )
-`, version, shasum, goVersion)
+`+"```", trimmedVersion, shasum, goVersion)
 }
 
 func findLatestGoVersion() (v string, err error) {
