@@ -319,6 +319,11 @@ def go_rules_dependencies(force = False):
         name = "io_bazel_rules_go_bazel_features",
     )
 
+    _maybe(
+        _go_host_compatible_sdk_label,
+        name = "go_host_compatible_sdk_label",
+    )
+
     wrapper(
         http_archive,
         name = "rules_shell",
@@ -326,6 +331,12 @@ def go_rules_dependencies(force = False):
         strip_prefix = "rules_shell-0.3.0",
         url = "https://github.com/bazelbuild/rules_shell/releases/download/v0.3.0/rules_shell-v0.3.0.tar.gz",
     )
+
+def _go_host_compatible_sdk_label_impl(ctx):
+    ctx.file("BUILD.bazel")
+    ctx.file("defs.bzl", """HOST_COMPATIBLE_SDK = Label("@go_sdk//:ROOT")""")
+
+_go_host_compatible_sdk_label = repository_rule(_go_host_compatible_sdk_label_impl)
 
 def _maybe(repo_rule, name, **kwargs):
     if name not in native.existing_rules():

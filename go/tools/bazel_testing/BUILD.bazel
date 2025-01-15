@@ -1,17 +1,22 @@
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@go_host_compatible_sdk_label//:defs.bzl", "HOST_COMPATIBLE_SDK")
 load("//go:def.bzl", "go_library")
+
+_HOST_COMPATIBLE_SDK_ROOT = HOST_COMPATIBLE_SDK.same_package_label("ROOT")
+
+_HOST_COMPATIBLE_SDK_FILES = HOST_COMPATIBLE_SDK.same_package_label("files")
 
 go_library(
     name = "bazel_testing",
     srcs = ["bazel_testing.go"],
     data = [
-        "@go_sdk//:ROOT",
-        "@go_sdk//:files",
+        _HOST_COMPATIBLE_SDK_FILES,
+        _HOST_COMPATIBLE_SDK_ROOT,
     ],
     importpath = "github.com/bazelbuild/rules_go/go/tools/bazel_testing",
     visibility = ["//visibility:public"],
     x_defs = {
-        "goRootFile": "$(rlocationpath @go_sdk//:ROOT)",
+        "goRootFile": "$(rlocationpath {})".format(_HOST_COMPATIBLE_SDK_ROOT),
     },
     deps = [
         "//go/runfiles",
