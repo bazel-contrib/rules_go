@@ -33,14 +33,14 @@ go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
 # Download an SDK for the host OS & architecture as well as common remote execution platforms.
 go_sdk.download(version = "1.23.1")
 
-# Alternately, download an SDK for a fixed OS/architecture.
+# Alternatively, download an SDK for a fixed OS/architecture.
 go_sdk.download(
     version = "1.23.1",
     goarch = "amd64",
     goos = "linux",
 )
 
-# Register the Go SDK installed on the host.
+# Another alternative is to register the Go SDK installed on the host (see the nota bene below).
 go_sdk.host()
 ```
 
