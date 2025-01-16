@@ -123,15 +123,27 @@ def has_simple_shared_lib_extension(path):
     """
     return any([path.endswith(ext) for ext in SHARED_LIB_EXTENSIONS])
 
+def is_valid_shared_lib_version_part(part):
+    """
+    Checks if the version part is valid. Matches the same check from
+    //src/main/java/com/google/devtools/build/lib/rules/cpp:CppFileTypes.java
+    """
+    if not part[:1].isdigit():
+        return False
+    for c in part[1:].elems():
+        if c != "_" and not c.isalnum():
+            return False
+    return True
+
 def get_versioned_shared_lib_extension(path):
     """If appears to be an versioned .so or .dylib file, return the extension; otherwise empty"""
     parts = path.split("/")[-1].split(".")
-    if not parts[-1].isdigit():
+    if not is_valid_shared_lib_version_part(parts[-1]):
         return ""
 
     # only iterating to 1 because parts[0] has to be the lib name
     for i in range(len(parts) - 1, 0, -1):
-        if not parts[i].isdigit():
+        if not is_valid_shared_lib_version_part(parts[i]):
             if parts[i] == "dylib" or parts[i] == "so":
                 return ".".join(parts[i:])
 
