@@ -71,20 +71,20 @@ tasks:
       - "@go_default_sdk//..."
     test_targets:
       - "//..."
-  # macos_arm64:
-  #   build_flags:
-  #     - "--apple_crosstool_top=@local_config_apple_cc//:toolchain"
-  #     - "--crosstool_top=@local_config_apple_cc//:toolchain"
-  #     - "--host_crosstool_top=@local_config_apple_cc//:toolchain"
-  #   build_targets:
-  #     - "//..."
-  #     - "--"
-  #   test_flags:
-  #     - "--apple_crosstool_top=@local_config_apple_cc//:toolchain"
-  #     - "--crosstool_top=@local_config_apple_cc//:toolchain"
-  #     - "--host_crosstool_top=@local_config_apple_cc//:toolchain"
-  #   test_targets:
-  #     - "//..."
+  macos_arm64:
+    build_flags:
+      - "--apple_crosstool_top=@local_config_apple_cc//:toolchain"
+      - "--crosstool_top=@local_config_apple_cc//:toolchain"
+      - "--host_crosstool_top=@local_config_apple_cc//:toolchain"
+    build_targets:
+      - "//..."
+      - "--"
+    test_flags:
+      - "--apple_crosstool_top=@local_config_apple_cc//:toolchain"
+      - "--crosstool_top=@local_config_apple_cc//:toolchain"
+      - "--host_crosstool_top=@local_config_apple_cc//:toolchain"
+    test_targets:
+      - "//..."
   rbe_ubuntu2404:
     build_targets:
       - "//..."
