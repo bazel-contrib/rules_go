@@ -25,6 +25,8 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+
+	"golang.org/x/tools/go/packages"
 )
 
 type BazelJSONBuilder struct {
@@ -136,7 +138,7 @@ func (b *BazelJSONBuilder) queryFromRequests(requests ...string) string {
 		} else if isLocalPattern(request) {
 			result = b.localQuery(request)
 		} else if request == "builtin" || request == "std" {
-			result = fmt.Sprintf(RulesGoStdlibLabel)
+			result = fmt.Sprintf("%s", RulesGoStdlibLabel)
 		}
 
 		if result != "" {
@@ -156,9 +158,9 @@ func NewBazelJSONBuilder(bazel *Bazel, includeTests bool) (*BazelJSONBuilder, er
 	}, nil
 }
 
-func (b *BazelJSONBuilder) outputGroupsForMode(mode LoadMode) string {
+func (b *BazelJSONBuilder) outputGroupsForMode(mode packages.LoadMode) string {
 	og := "go_pkg_driver_json_file,go_pkg_driver_stdlib_json_file,go_pkg_driver_srcs"
-	if mode&NeedExportsFile != 0 {
+	if mode&packages.NeedExportsFile != 0 {
 		og += ",go_pkg_driver_export_file"
 	}
 	return og
@@ -200,7 +202,7 @@ func (b *BazelJSONBuilder) Labels(ctx context.Context, requests []string) ([]str
 	return labels, nil
 }
 
-func (b *BazelJSONBuilder) Build(ctx context.Context, labels []string, mode LoadMode) ([]string, error) {
+func (b *BazelJSONBuilder) Build(ctx context.Context, labels []string, mode packages.LoadMode) ([]string, error) {
 	aspects := append(additionalAspects, goDefaultAspect)
 
 	buildArgs := concatStringsArrays([]string{

@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 
+	"golang.org/x/tools/go/packages"
+
 	"github.com/bazelbuild/rules_go/go/tools/bazel_testing"
 )
 
@@ -85,35 +87,8 @@ const (
 	bzlmodOsPkgID = "@@io_bazel_rules_go//stdlib:os"
 )
 
-func TestStdlib(t *testing.T) {
-	resp := runForTest(t, DriverRequest{}, ".", "std")
-
-	if len(resp.Packages) == 0 {
-		t.Fatal("Expected stdlib packages")
-	}
-
-	for _, pkg := range resp.Packages {
-		// net, plugin and user stdlib packages seem to have compiled files only for Linux.
-		if pkg.Name != "cgo" {
-			continue
-		}
-
-		var hasCompiledFiles bool
-		for _, x := range pkg.CompiledGoFiles {
-			if filepath.Ext(x) == "" {
-				hasCompiledFiles = true
-				break
-			}
-		}
-
-		if !hasCompiledFiles {
-			t.Errorf("%q stdlib package should have compiled files", pkg.Name)
-		}
-	}
-}
-
 func TestBaseFileLookup(t *testing.T) {
-	resp := runForTest(t, DriverRequest{}, ".", "file=hello.go")
+	resp := runForTest(t, packages.DriverRequest{}, ".", "file=hello.go")
 
 	t.Run("roots", func(t *testing.T) {
 		if len(resp.Roots) != 1 {
@@ -141,24 +116,19 @@ func TestBaseFileLookup(t *testing.T) {
 			return
 		}
 
-		if pkg.Standard {
-			t.Errorf("Expected package to not be Standard:\n%+v", pkg)
-			return
-		}
-
 		if len(pkg.Imports) != 1 {
 			t.Errorf("Expected one import:\n%+v", pkg)
 			return
 		}
 
-		if pkg.Imports["os"] != osPkgID && pkg.Imports["os"] != bzlmodOsPkgID {
+		if pkg.Imports["os"].ID != osPkgID && pkg.Imports["os"].ID != bzlmodOsPkgID {
 			t.Errorf("Expected os import to map to %q or %q:\n%+v", osPkgID, bzlmodOsPkgID, pkg)
 			return
 		}
 	})
 
 	t.Run("dependency", func(t *testing.T) {
-		var osPkg *FlatPackage
+		var osPkg *packages.Package
 		for _, p := range resp.Packages {
 			if p.ID == osPkgID || p.ID == bzlmodOsPkgID {
 				osPkg = p
@@ -169,16 +139,11 @@ func TestBaseFileLookup(t *testing.T) {
 			t.Errorf("Expected os package to be included:\n%+v", osPkg)
 			return
 		}
-
-		if !osPkg.Standard {
-			t.Errorf("Expected os import to be standard:\n%+v", osPkg)
-			return
-		}
 	})
 }
 
 func TestRelativeFileLookup(t *testing.T) {
-	resp := runForTest(t, DriverRequest{}, "subhello", "file=./subhello.go")
+	resp := runForTest(t, packages.DriverRequest{}, "subhello", "file=./subhello.go")
 
 	t.Run("roots", func(t *testing.T) {
 		if len(resp.Roots) != 1 {
@@ -209,7 +174,7 @@ func TestRelativeFileLookup(t *testing.T) {
 }
 
 func TestRelativePatternWildcardLookup(t *testing.T) {
-	resp := runForTest(t, DriverRequest{}, "subhello", "./...")
+	resp := runForTest(t, packages.DriverRequest{}, "subhello", "./...")
 
 	t.Run("roots", func(t *testing.T) {
 		if len(resp.Roots) != 1 {
@@ -240,7 +205,7 @@ func TestRelativePatternWildcardLookup(t *testing.T) {
 }
 
 func TestExternalTests(t *testing.T) {
-	resp := runForTest(t, DriverRequest{}, ".", "file=hello_external_test.go")
+	resp := runForTest(t, packages.DriverRequest{}, ".", "file=hello_external_test.go")
 	if len(resp.Roots) != 2 {
 		t.Errorf("Expected exactly two roots for package: %+v", resp.Roots)
 	}
@@ -278,11 +243,11 @@ func TestOverlay(t *testing.T) {
 	subhelloPath := path.Join(wd, "subhello/subhello.go")
 
 	expectedImportsPerFile := map[string][]string{
-		helloPath:    []string{"fmt"},
-		subhelloPath: []string{"os", "encoding/json"},
+		helloPath:    {"fmt"},
+		subhelloPath: {"os", "encoding/json"},
 	}
 
-	overlayDriverRequest := DriverRequest{
+	overlayDriverRequest := packages.DriverRequest{
 		Overlay: map[string][]byte{
 			helloPath: []byte(`
 				package hello
@@ -324,7 +289,7 @@ func TestOverlay(t *testing.T) {
 	expectSetEquality(t, expectedImportsPerFile[subhelloPath], subhelloPkgImportPaths, "subhello imports")
 }
 
-func runForTest(t *testing.T, driverRequest DriverRequest, relativeWorkingDir string, args ...string) driverResponse {
+func runForTest(t *testing.T, driverRequest packages.DriverRequest, relativeWorkingDir string, args ...string) packages.DriverResponse {
 	t.Helper()
 
 	// Remove most environment variables, other than those on an allowlist.
@@ -392,7 +357,7 @@ func runForTest(t *testing.T, driverRequest DriverRequest, relativeWorkingDir st
 	if err := run(context.Background(), in, out, args); err != nil {
 		t.Fatalf("running gopackagesdriver: %v", err)
 	}
-	var resp driverResponse
+	var resp packages.DriverResponse
 	if err := json.Unmarshal(out.Bytes(), &resp); err != nil {
 		t.Fatalf("unmarshaling response: %v", err)
 	}
