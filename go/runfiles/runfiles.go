@@ -71,7 +71,7 @@ type repoMappingKey struct {
 
 // Runfiles allows access to Bazel runfiles.  Use New to create Runfiles
 // objects; the zero Runfiles object always returns errors.  See
-// https://docs.bazel.build/skylark/rules.html#runfiles for some information on
+// https://bazel.build/extending/rules#runfiles for some information on
 // Bazel runfiles.
 //
 // Runfiles implements fs.FS regardless of the type of runfiles that backs it.
