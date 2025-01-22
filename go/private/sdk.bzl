@@ -420,8 +420,6 @@ def _register_toolchains(repo):
 def _remote_sdk(ctx, urls, strip_prefix, sha256):
     if len(urls) == 0:
         fail("no urls specified")
-    host_goos, _ = detect_host_platform(ctx)
-
     ctx.report_progress("Downloading and extracting Go toolchain")
 
     auth = use_netrc(read_user_netrc(ctx), urls, {})
