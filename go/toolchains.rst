@@ -297,6 +297,14 @@ This downloads a Go SDK for use in toolchains.
 | This attribute is seldom used. It is only needed for downloading Go from                                   |
 | an alternative location (for example, an internal mirror).                                                 |
 +--------------------------------+-----------------------------+---------------------------------------------+
+| :param:`patch`                 | :type:`label`               | :value:`None`                               |
++--------------------------------+-----------------------------+---------------------------------------------+
+| An optional patch to apply to the toolchain.                                                               |
++--------------------------------+-----------------------------+---------------------------------------------+
+| :param:`patch_strip`           | :type:`int`                 | :value:`0`                                  |
++--------------------------------+-----------------------------+---------------------------------------------+
+| The number of leading components to be stripped from ``patch`` above, if applicable.                       |
++--------------------------------+-----------------------------+---------------------------------------------+
 | :param:`strip_prefix`          | :type:`string`              | :value:`"go"`                               |
 +--------------------------------+-----------------------------+---------------------------------------------+
 | A directory prefix to strip from the extracted files.                                                      |
