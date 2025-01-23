@@ -307,9 +307,9 @@ Initial project setup
 There are two ways to setup:
 
 * With Bazel's external dependency management system `Bzlmod`_,
-refer to the dedicated `Go with Bzlmod`_ guide.
+  refer to the dedicated `Go with Bzlmod`_ guide.
 * With the older ``WORKSPACE`` dependency file, refer to the
-`Go with WORKSPACE`_ setup docs.
+  `Go with WORKSPACE`_ setup docs.
 
 FAQ
 ---
