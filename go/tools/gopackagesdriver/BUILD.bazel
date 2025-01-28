@@ -40,7 +40,7 @@ go_bazel_test(
     srcs = ["gopackagesdriver_test.go"],
     embed = [":gopackagesdriver_lib"],
     env = {
-        "GOPACKAGESDRIVER_BAZEL_COMMON_FLAGS": "--noexperimental_enable_bzlmod",
+        "GOPACKAGESDRIVER_BAZEL_COMMON_FLAGS": "--noenable_bzlmod",
     },
     rule_files = ["//:all_files"],
     x_defs = {
