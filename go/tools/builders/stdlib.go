@@ -31,6 +31,7 @@ func stdlib(args []string) error {
 	goenv := envFlags(flags)
 	out := flags.String("out", "", "Path to output go root")
 	race := flags.Bool("race", false, "Build in race mode")
+	msan := flags.Bool("msan", false, "Build in msan mode")
 	shared := flags.Bool("shared", false, "Build in shared mode")
 	dynlink := flags.Bool("dynlink", false, "Build in dynlink mode")
 	pgoprofile := flags.String("pgoprofile", "", "Build with pgo using the given pprof file")
@@ -129,6 +130,9 @@ You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 	asmflags := []string{"-trimpath", output}
 	if *race {
 		installArgs = append(installArgs, "-race")
+	}
+	if *msan {
+		installArgs = append(installArgs, "-msan")
 	}
 	if *pgoprofile != "" {
 		gcflags = append(gcflags, "-pgoprofile=" + abs(*pgoprofile))

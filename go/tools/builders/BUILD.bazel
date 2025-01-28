@@ -32,6 +32,19 @@ go_test(
 )
 
 go_test(
+    name = "nogo_fix_test",
+    size = "small",
+    srcs = [
+        "nogo_fix.go",
+        "nogo_fix_test.go",
+    ],
+    deps = [
+        "@com_github_pmezard_go_difflib//difflib:go_default_library",
+        "@org_golang_x_tools//go/analysis",
+    ],
+)
+
+go_test(
     name = "stdliblist_test",
     size = "small",
     srcs = [
@@ -107,6 +120,7 @@ go_source(
         "constants.go",
         "env.go",
         "flags.go",
+        "nogo_fix.go",
         "nogo_main.go",
         "nogo_typeparams_go117.go",
         "nogo_typeparams_go118.go",

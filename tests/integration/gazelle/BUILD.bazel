@@ -4,8 +4,4 @@ go_bazel_test(
     name = "gazelle_test",
     size = "medium",
     srcs = ["gazelle_test.go"],
-    rule_files = [
-        "//:all_files",
-        "@bazel_gazelle//:all_files",
-    ],
 )

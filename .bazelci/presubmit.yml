@@ -1,14 +1,13 @@
 ---
 matrix:
   platform:
-    - ubuntu2004
-    - macos
+    - ubuntu2404
     - macos_arm64
     - windows
 
 tasks:
-  ubuntu1804_bazel6:
-    platform: ubuntu1804
+  debian11_bazel6:
+    platform: debian11
     bazel: 6.5.0 # test minimum supported version of bazel
     build_targets:
       - "//..."
@@ -21,7 +20,7 @@ tasks:
       - "-//tests/runfiles:runfiles_test"
       # TODO: Investigate why this fails.
       - "-//tests/core/starlark/cgo:missing_cc_toolchain_explicit_pure_off_test"
-  ubuntu2004:
+  ubuntu2404:
     # enable some unflipped incompatible flags on this platform to ensure we don't regress.
     build_flags:
       - "--config=incompatible"
@@ -86,7 +85,7 @@ tasks:
       - "--host_crosstool_top=@local_config_apple_cc//:toolchain"
     test_targets:
       - "//..."
-  rbe_ubuntu1604:
+  rbe_ubuntu2404:
     build_targets:
       - "//..."
     test_flags:
@@ -179,7 +178,7 @@ tasks:
   # The following configurations test a seperate WORKSPACE under the examples folder
   ubuntu2004_examples:
     name: Examples test on Ubuntu
-    platform: ubuntu2004
+    platform: ubuntu2404
     working_directory: examples/basic-gazelle
     build_flags:
       - "--config=incompatible"
@@ -190,8 +189,8 @@ tasks:
     test_targets:
       - "//..."
   macos_examples:
-    name: Examples test on MacOS
-    platform: macos
+    name: Examples test on macOS
+    platform: macos_arm64
     working_directory: examples/basic-gazelle
     build_flags:
       - "--config=incompatible"
