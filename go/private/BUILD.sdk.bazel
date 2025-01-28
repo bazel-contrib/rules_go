@@ -17,6 +17,15 @@ filegroup(
 )
 
 filegroup(
+    name = "exports",
+    srcs = glob(
+        ["pkg/{goos}_{goarch}/**/*.x"],
+        allow_empty = True,
+        exclude = ["pkg/{goos}_{goarch}/**/cmd/**"],
+    ),
+)
+
+filegroup(
     name = "headers",
     srcs = glob(["pkg/include/*.h"]),
 )
@@ -71,6 +80,7 @@ go_sdk(
     root_file = "ROOT",
     tools = [":tools"],
     version = "{version}",
+    exports = [":exports"],
 )
 
 go_tool_binary(

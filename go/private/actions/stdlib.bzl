@@ -86,7 +86,7 @@ def _build_stdlib_list_json(go):
         env = _build_env(go),
         toolchain = GO_TOOLCHAIN_LABEL,
     )
-    return out
+    return out, cache_dir
 
 def _build_env(go):
     env = go.env
@@ -115,8 +115,10 @@ def _build_env(go):
     return env
 
 def _sdk_stdlib(go):
+    [list_json, cache_dir] = _build_stdlib_list_json(go)
     return GoStdLib(
-        _list_json = _build_stdlib_list_json(go),
+        _list_json = list_json,
+        cache_dir = depset([cache_dir]),
         libs = go.sdk.libs,
         root_file = go.sdk.root_file,
     )
@@ -162,8 +164,10 @@ def _build_stdlib(go):
         toolchain = GO_TOOLCHAIN_LABEL,
         execution_requirements = SUPPORTS_PATH_MAPPING_REQUIREMENT,
     )
+    [list_json, cache_dir] = _build_stdlib_list_json(go)
     return GoStdLib(
-        _list_json = _build_stdlib_list_json(go),
+        _list_json = list_json,
         libs = depset([pkg]),
+        cache_dir = depset([cache_dir]),
         root_file = pkg,
     )

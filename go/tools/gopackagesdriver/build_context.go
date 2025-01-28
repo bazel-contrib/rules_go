@@ -28,6 +28,7 @@ func filterSourceFilesForTags(files []string) []string {
 		// the cache), we want them.
 		if match || ext == "" {
 			ret = append(ret, f)
+		} else {
 		}
 	}
 	return ret

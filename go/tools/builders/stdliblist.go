@@ -166,7 +166,7 @@ func flatPackageForStd(cloneBase string, pkg *goListPackage, pathReplaceFn func(
 		ID:              stdlibPackageID(pkg.ImportPath),
 		Name:            pkg.Name,
 		PkgPath:         pkg.ImportPath,
-		ExportFile:      outputBasePath(cloneBase, pkg.Target),
+		ExportFile:      pathReplaceFn(pkg.Export),
 		Imports:         map[string]string{},
 		Standard:        pkg.Standard,
 		GoFiles:         goFiles,
@@ -276,7 +276,7 @@ func stdliblist(args []string) error {
 		listArgs = append(listArgs, "-compiled=true")
 	}
 
-	listArgs = append(listArgs, "-json", "builtin", "std", "runtime/cgo")
+	listArgs = append(listArgs, "-e", "-export", "-json", "-deps", "-compiled", "builtin", "std", "runtime/cgo", "internal/runtime/syscall")
 
 	jsonFile, err := os.Create(*out)
 	if err != nil {

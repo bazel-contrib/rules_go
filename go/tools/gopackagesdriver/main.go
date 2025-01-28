@@ -76,34 +76,57 @@ var (
 )
 
 func run(ctx context.Context, in io.Reader, out io.Writer, args []string) error {
-	queries := args
+	var pathResolver PathResolverFunc
+	var jsonFiles []string
+	var version bazelVersion
+	var overlay map[string][]byte
+	var labels []string
+	if args[0] == "-json_file_mode" {
+		labels = []string{strings.Split(args[1], "=")[1]}
+		pwd := strings.Split(args[2], "=")[1]
+		jsonFiles = make([]string, len(args)-3)
+		for i, file := range args[3:] {
+			jsonFiles[i] = pwd + "/" + file
+		}
+		pathResolver = func(p string) string {
+			p = strings.Replace(p, "__BAZEL_EXECROOT__", pwd, 1)
+			p = strings.Replace(p, "__BAZEL_OUTPUT_BASE__", pwd, 1)
+			p = strings.Replace(p, "__BAZEL_WORKSPACE__", pwd, 1)
+			return p
+		}
+		version = bazelVersion{7, 0, 0}
+		overlay = make(map[string][]byte)
+	} else {
+		queries := args
+		request, err := ReadDriverRequest(in)
+		if err != nil {
+			return fmt.Errorf("unable to read request: %w", err)
+		}
+		overlay = request.Overlay
+		bazel, err := NewBazel(ctx, bazelBin, workspaceRoot, buildWorkingDirectory, bazelCommonFlags, bazelStartupFlags)
+		if err != nil {
+			return fmt.Errorf("unable to create bazel instance: %w", err)
+		}
+		version = bazel.version
 
-	request, err := ReadDriverRequest(in)
-	if err != nil {
-		return fmt.Errorf("unable to read request: %w", err)
+		bazelJsonBuilder, err := NewBazelJSONBuilder(bazel, request.Tests)
+		if err != nil {
+			return fmt.Errorf("unable to build JSON files: %w", err)
+		}
+
+		pathResolver = bazelJsonBuilder.PathResolver()
+		labels, err = bazelJsonBuilder.Labels(ctx, queries)
+		if err != nil {
+			return fmt.Errorf("unable to lookup package: %w", err)
+		}
+
+		jsonFiles, err = bazelJsonBuilder.Build(ctx, labels, request.Mode)
+		if err != nil {
+			return fmt.Errorf("unable to build JSON files: %w", err)
+		}
 	}
 
-	bazel, err := NewBazel(ctx, bazelBin, workspaceRoot, buildWorkingDirectory, bazelCommonFlags, bazelStartupFlags)
-	if err != nil {
-		return fmt.Errorf("unable to create bazel instance: %w", err)
-	}
-
-	bazelJsonBuilder, err := NewBazelJSONBuilder(bazel, request.Tests)
-	if err != nil {
-		return fmt.Errorf("unable to build JSON files: %w", err)
-	}
-
-	labels, err := bazelJsonBuilder.Labels(ctx, queries)
-	if err != nil {
-		return fmt.Errorf("unable to lookup package: %w", err)
-	}
-
-	jsonFiles, err := bazelJsonBuilder.Build(ctx, labels, request.Mode)
-	if err != nil {
-		return fmt.Errorf("unable to build JSON files: %w", err)
-	}
-
-	driver, err := NewJSONPackagesDriver(jsonFiles, bazelJsonBuilder.PathResolver(), bazel.version, request.Overlay)
+	driver, err := NewJSONPackagesDriver(jsonFiles, pathResolver, version, overlay)
 	if err != nil {
 		return fmt.Errorf("unable to load JSON files: %w", err)
 	}
@@ -117,6 +140,7 @@ func run(ctx context.Context, in io.Reader, out io.Writer, args []string) error 
 		return fmt.Errorf("unable to marshal response: %v", err)
 	}
 	_, err = out.Write(data)
+	// os.Stderr.Write(data)
 	return err
 }
 
