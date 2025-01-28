@@ -127,6 +127,7 @@ go_config(
         "//go/private:is_compilation_mode_dbg": "//go/private:always_true",
         "//conditions:default": "//go/config:debug",
     }),
+    export_stdlib = "//go/config:export_stdlib",
     gc_goopts = "//go/config:gc_goopts",
     gc_linkopts = "//go/config:gc_linkopts",
     gotags = "//go/config:tags",
