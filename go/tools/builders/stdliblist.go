@@ -203,6 +203,8 @@ func stdliblist(args []string) error {
 	goenv := envFlags(flags)
 	out := flags.String("out", "", "Path to output go list json")
 	cachePath := flags.String("cache", "", "Path to use for GOCACHE")
+	export := flags.Bool("export", false, "Should -export be passed to go list")
+
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
@@ -276,7 +278,11 @@ func stdliblist(args []string) error {
 		listArgs = append(listArgs, "-compiled=true")
 	}
 
-	listArgs = append(listArgs, "-e", "-export", "-json", "-deps", "-compiled", "builtin", "std", "runtime/cgo", "internal/runtime/syscall")
+	if *export {
+		listArgs = append(listArgs, "-export")
+	}
+
+	listArgs = append(listArgs, "-json", "builtin", "std", "runtime/cgo")
 
 	jsonFile, err := os.Create(*out)
 	if err != nil {

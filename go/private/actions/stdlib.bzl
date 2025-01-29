@@ -71,6 +71,8 @@ def _build_stdlib_list_json(go):
     args.add("-sdk", sdk.root_file.dirname)
     args.add("-out", out)
     args.add("-cache", cache_dir.path)
+    if go.export_stdlib:
+        args.add("-export", go.export_stdlib)
 
     inputs_direct = [sdk.go]
     inputs_transitive = [sdk.headers, sdk.srcs, sdk.libs, sdk.tools]
