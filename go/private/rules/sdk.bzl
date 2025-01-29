@@ -71,7 +71,7 @@ go_sdk = rule(
                    "built for the execution platform"),
         ),
         "exports": attr.label_list(
-            allow_files = ".x",
+            allow_files = [".x"],
             doc = ("Pre-compiled .x export files for the standard library, " +
                    "built for the execution platform"),
         ),
