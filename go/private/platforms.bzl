@@ -34,6 +34,7 @@ BAZEL_GOARCH_CONSTRAINTS = {
     "ppc64": "@platforms//cpu:ppc",
     "ppc64le": "@platforms//cpu:ppc64le",
     "s390x": "@platforms//cpu:s390x",
+    "loong64": "@platforms//cpu:loongarch64",
 }
 
 GOOS_GOARCH = (
@@ -95,6 +96,7 @@ GOOS_GOARCH = (
     ("windows", "amd64"),
     ("windows", "arm"),
     ("windows", "arm64"),
+    ("linux", "loong64"),
 )
 
 RACE_GOOS_GOARCH = {
@@ -148,6 +150,7 @@ CGO_GOOS_GOARCH = {
     ("windows", "386"): None,
     ("windows", "amd64"): None,
     ("windows", "arm64"): None,
+    ("linux", "loong64"): None,
 }
 
 def _generate_constraints(names, bazel_constraints):
