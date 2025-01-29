@@ -625,7 +625,7 @@ def go_context(
         coverdata = go_context_info.coverdata if go_context_info else None,
         coverage_enabled = ctx.configuration.coverage_enabled,
         coverage_instrumented = ctx.coverage_instrumented(),
-        export_stdlib = go_config_info.export_stdlib,
+        export_stdlib = go_config_info.export_stdlib if go_config_info else False,
         env = env,
         # Path mapping can't map the values of environment variables, so we pass GOROOT to the action
         # via an argument instead in builder_args. We need to drop it from the environment to get cache
