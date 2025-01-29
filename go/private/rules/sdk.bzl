@@ -71,7 +71,9 @@ go_sdk = rule(
                    "built for the execution platform"),
         ),
         "exports": attr.label_list(
-            allow_files = [".x"],
+            # allow_files is not set to [".x"] because that wouldn't allow
+            # for zero files to be present, as is the case when //go/config:export_stdlib is not set.
+            allow_files = True,
             doc = ("Pre-compiled .x export files for the standard library, " +
                    "built for the execution platform"),
         ),
