@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gopackagesdriver
+package main
 
 import (
 	"fmt"
@@ -32,7 +32,7 @@ func NewJSONPackagesDriver(jsonFiles []string, prf PathResolverFunc, bazelVersio
 		if err := WalkFlatPackagesFromJSON(f, func(pkg *FlatPackage) {
 			jpd.registry.Add(pkg)
 		}); err != nil {
-			return nil, fmt.Errorf("unable to walk json: %w %v", err, f)
+			return nil, fmt.Errorf("unable to walk json: %w", err)
 		}
 	}
 

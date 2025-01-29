@@ -91,6 +91,7 @@ func WalkFlatPackagesFromJSON(jsonFile string, onPkg PackageFunc) error {
 		if err := decoder.Decode(&pkg); err != nil {
 			return fmt.Errorf("unable to decode package in %s: %w", f.Name(), err)
 		}
+
 		onPkg(pkg)
 	}
 	return nil
@@ -185,6 +186,7 @@ func (fp *FlatPackage) ResolveImports(resolve ResolvePkgFunc, overlays map[strin
 	}
 
 	fset := token.NewFileSet()
+
 	for _, file := range fp.CompiledGoFiles {
 		// Only assign overlayContent when an overlay for the file exists, since ParseFile checks by type.
 		// If overlay is assigned directly from the map, it will have []byte as type
