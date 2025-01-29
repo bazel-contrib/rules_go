@@ -16,11 +16,9 @@ import (
 	"github.com/bazelbuild/rules_go/go/runfiles"
 )
 
-var (
-	GoBinRlocationPath  = "not set"
-	ConfigRlocationPath = "not set"
-	HasBazelModTidy     = "not set"
-)
+var GoBinRlocationPath = "not set"
+var ConfigRlocationPath = "not set"
+var HasBazelModTidy = "not set"
 
 type bazelEnvVars struct {
 	workspaceDir string
@@ -54,7 +52,6 @@ func run(args []string, stdout, stderr io.Writer) error {
 	}
 
 	goBin, err := runfiles.Rlocation(GoBinRlocationPath)
-	fmt.Println("Go bin " + goBin)
 	if err != nil {
 		return err
 	}
@@ -170,7 +167,7 @@ func markRequiresAsDirect(goBin string, getArgs []string, stderr io.Writer) erro
 	}
 
 	var modJson struct {
-		Require []struct {
+		Require []struct{
 			Path     string
 			Version  string
 			Indirect bool
