@@ -250,7 +250,7 @@ def _go_sdk_impl(ctx):
             # configure a specific version of the SDK to use. However, they should not add a
             # dependency on the host's Go SDK.
             if not module.is_root:
-                fail("go_sdk.host: cannot be used in non-root module " + module.name)
+                fail("go_sdk.host: cannot be used in non-root module {}, consider using use_extension(..., dev_dependency = True)".format(module.name))
 
             name = host_tag.name or _default_go_sdk_name(
                 module = module,
