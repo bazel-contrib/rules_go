@@ -90,3 +90,9 @@ filegroup(
     name = "empty",
     visibility = ["//visibility:public"],
 )
+
+bool_flag(
+    name = "export_stdlib",
+    build_setting_default = False,
+    visibility = ["//visibility:public"],
+)

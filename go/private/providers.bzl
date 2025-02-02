@@ -39,6 +39,8 @@ GoSDK = provider(
         "root_file": "A file in the SDK root directory",
         "libs": ("Depset of pre-compiled .a files for the standard library " +
                  "built for the execution platform."),
+        "exports": ("Depset of pre-compiled .x files for the standard library " +
+                    "built for the execution platform."),
         "headers": ("Depset of .h files from pkg/include that may be included " +
                     "in assembly sources."),
         "srcs": ("Depset of source files for importable packages in the " +

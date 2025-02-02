@@ -453,6 +453,7 @@ default_go_config_info = GoConfigInfo(
     amd64 = None,
     arm = None,
     pgoprofile = None,
+    export_stdlib = False,
 )
 
 def go_context(
@@ -625,6 +626,7 @@ def go_context(
         coverdata = go_context_info.coverdata if go_context_info else None,
         coverage_enabled = ctx.configuration.coverage_enabled,
         coverage_instrumented = ctx.coverage_instrumented(),
+        export_stdlib = go_config_info.export_stdlib,
         env = env,
         # Path mapping can't map the values of environment variables, so we pass GOROOT to the action
         # via an argument instead in builder_args. We need to drop it from the environment to get cache
@@ -1001,6 +1003,7 @@ def _go_config_impl(ctx):
         amd64 = ctx.attr.amd64,
         arm = ctx.attr.arm,
         pgoprofile = pgoprofile,
+        export_stdlib = ctx.attr.export_stdlib[BuildSettingInfo].value,
     )
     validate_mode(go_config_info)
 
@@ -1056,6 +1059,10 @@ go_config = rule(
         "pgoprofile": attr.label(
             mandatory = True,
             allow_files = True,
+        ),
+        "export_stdlib": attr.label(
+            mandatory = False,
+            providers = [BuildSettingInfo],
         ),
     },
     provides = [GoConfigInfo],

@@ -29,6 +29,7 @@ def _go_sdk_impl(ctx):
         root_file = ctx.file.root_file,
         package_list = package_list,
         libs = depset(ctx.files.libs),
+        exports = depset(ctx.files.exports),
         headers = depset(ctx.files.headers),
         srcs = depset(ctx.files.srcs),
         tools = depset(ctx.files.tools),
@@ -67,6 +68,13 @@ go_sdk = rule(
             # See also https://github.com/bazelbuild/bazel/issues/7516
             allow_files = True,
             doc = ("Pre-compiled .a files for the standard library, " +
+                   "built for the execution platform"),
+        ),
+        "exports": attr.label_list(
+            # allow_files is not set to [".x"] because that wouldn't allow
+            # for zero files to be present, as is the case when //go/config:export_stdlib is not set.
+            allow_files = True,
+            doc = ("Pre-compiled .x export files for the standard library, " +
                    "built for the execution platform"),
         ),
         "headers": attr.label_list(
