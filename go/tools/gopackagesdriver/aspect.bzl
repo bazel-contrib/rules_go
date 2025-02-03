@@ -49,32 +49,53 @@ def file_path(f):
         prefix = "__BAZEL_OUTPUT_BASE__"
     return paths.join(prefix, f.path)
 
-def _go_archive_to_pkg(archive):
-    go_files = [
-        file_path(src)
-        for src in archive.data.srcs
-        if src.path.endswith(".go")
-    ]
-    return struct(
-        ID = str(archive.data.label),
-        PkgPath = archive.data.importpath,
-        ExportFile = file_path(archive.data.export_file),
-        GoFiles = go_files,
-        CompiledGoFiles = go_files,
-        OtherFiles = [
-            file_path(src)
-            for src in archive.data.srcs
-            if not src.path.endswith(".go")
-        ],
-        Imports = {
-            pkg.data.importpath: str(pkg.data.label)
-            for pkg in archive.direct
-        },
-    )
+def _escape_special_chars(value, delimiter):
+    # We only have "\" and "=" as special characters.
+    # Double escape the escaper char.
+    escaped = value.replace("\\", "\\\\")
 
-def make_pkg_json(ctx, name, pkg_info):
+    # Escape delimiter.
+    return escaped.replace(delimiter, "\\" + delimiter)
+
+def format_key_value_arg(key, value, delimiter = "="):
+    escaped_key = _escape_special_chars(key, delimiter)
+    escaped_value = _escape_special_chars(value, delimiter)
+    return "{}{}{}".format(escaped_key, delimiter, escaped_value)
+
+def _go_archive_to_pkg_json(ctx, name, archive):
     pkg_json_file = ctx.actions.declare_file(name + ".pkg.json")
-    ctx.actions.write(pkg_json_file, content = json.encode(pkg_info))
+
+    # Build the args in a config file.
+    args = ctx.actions.args()
+    args.add("--id", str(archive.data.label))
+    args.add("--pkg-path", archive.data.importpath)
+    args.add("--export-file", archive.data.export_file)
+
+    # Expands in CompiledGoFiles
+    args.add_all("--data-srcs", archive.data.srcs, map_each = file_path)
+
+    # Encode in escaped key=value pairs the direct pkgs imports.
+    for pkg in archive.direct:
+        delimiter = "="  # Must match the archive_to_json delimiter.
+        args.add("--direct-pkg", format_key_value_arg(
+            pkg.data.importpath,
+            str(pkg.data.label),
+            delimiter,
+        ))
+
+    args.add("--output-file", pkg_json_file)
+    args.use_param_file("@%s")
+
+    ctx.actions.run(
+        inputs = archive.data.srcs,
+        outputs = [pkg_json_file],
+        executable = ctx.executable._archive_to_json,
+        execution_requirements = {
+            "local": "1",
+        },
+        mnemonic = "ArchiveToJSON",
+        arguments = [args],
+    )
     return pkg_json_file
 
 def _go_pkg_info_aspect_impl(target, ctx):
@@ -111,15 +132,13 @@ def _go_pkg_info_aspect_impl(target, ctx):
         archive = target[GoArchive]
         compiled_go_files.extend(archive.source.srcs)
         export_files.append(archive.data.export_file)
-        pkg = _go_archive_to_pkg(archive)
-        pkg_json_files.append(make_pkg_json(ctx, archive.data.name, pkg))
+        pkg_json_files.append(_go_archive_to_pkg_json(ctx, archive.data.name, archive))
 
         if ctx.rule.kind == "go_test":
             for dep_archive in archive.direct:
                 # find the archive containing the test sources
                 if archive.data.label == dep_archive.data.label:
-                    pkg = _go_archive_to_pkg(dep_archive)
-                    pkg_json_files.append(make_pkg_json(ctx, dep_archive.data.name, pkg))
+                    pkg_json_files.append(_go_archive_to_pkg_json(ctx, dep_archive.data.name, dep_archive))
                     compiled_go_files.extend(dep_archive.source.srcs)
                     export_files.append(dep_archive.data.export_file)
                     break
@@ -161,6 +180,11 @@ go_pkg_info_aspect = aspect(
     attrs = {
         "_go_stdlib": attr.label(
             default = "//:stdlib",
+        ),
+        "_archive_to_json": attr.label(
+            executable = True,
+            cfg = "exec",
+            default = "//go/tools/gopackagesdriver:archive_to_json",
         ),
     },
 )
