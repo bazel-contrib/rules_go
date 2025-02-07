@@ -890,7 +890,7 @@ def _cgo_context_data_impl(ctx):
     for tool_path in tool_paths:
         tool_dir = tool_path[:tool_path.rfind("/")]
         path_set[tool_dir] = None
-    paths = sorted(path_set.keys())
+    paths = path_set.keys()
     if ctx.configuration.host_path_separator == ":":
         # HACK: ":" is a proxy for a UNIX-like host.
         # The tools returned above may be bash scripts that reference commands
