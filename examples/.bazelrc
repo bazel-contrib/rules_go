@@ -4,19 +4,6 @@
 # This file is separate from the main .bazelrc because bzlmod is disabled
 # there, but it is required to build the examples.
 
-common --enable_platform_specific_config
-
-# Go requires a C toolchain that accepts options and emits errors like
-# gcc or clang. The Go SDK does not support MSVC.
-build:windows --cpu=x64_windows
-build:windows --compiler=mingw-gcc
-
-# NOTE(bazelbuild/bazel#10529): bazel doesn't register the mingw toolchain automatically.
-# We also need the host and target platforms to have the mingw constraint value.
-build:windows --host_platform=@rules_go//go/toolchain:windows_amd64_cgo
-build:windows --platforms=@rules_go//go/toolchain:windows_amd64_cgo
-build:windows --incompatible_enable_cc_toolchain_resolution
-
 common:ci --enable_bzlmod
 common:ci --color=no
 build:ci --verbose_failures
