@@ -26,6 +26,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -149,18 +150,25 @@ func (b *Bazel) Build(ctx context.Context, args ...string) ([]string, error) {
 	return files, nil
 }
 
+var newlineRe = regexp.MustCompile(`\r?\n`)
+
 func (b *Bazel) Query(ctx context.Context, args ...string) ([]string, error) {
 	output, err := b.run(ctx, "query", args...)
 	if err != nil {
 		return nil, fmt.Errorf("bazel query failed: %w", err)
 	}
 
-	trimmedOutput := strings.TrimSpace(output)
-	if len(trimmedOutput) == 0 {
-		return nil, nil
+	lines := newlineRe.Split(output, -1)
+	r, w := 0, 0
+	for ; r < len(lines); r++ {
+		line := strings.TrimSpace(lines[r])
+		if line != "" {
+			lines[w] = line
+			w++
+		}
 	}
-
-	return strings.Split(trimmedOutput, "\n"), nil
+	lines = lines[:w]
+	return lines, nil
 }
 
 func (b *Bazel) WorkspaceRoot() string {
