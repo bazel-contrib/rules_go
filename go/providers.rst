@@ -389,9 +389,13 @@ from GoSDK_, or it may be another library compiled for the target mode.
 +--------------------------------+-----------------------------------------------------------------+
 | :param:`root_file`             | :type:`File`                                                    |
 +--------------------------------+-----------------------------------------------------------------+
-| A file or directory in the standard library root directory. Used to determine ``GOROOT``.                     |
+| A file or directory in the standard library root directory. Used to determine ``GOROOT``.        |
 +--------------------------------+-----------------------------------------------------------------+
 | :param:`libs`                  | :type:`list of File`                                            |
 +--------------------------------+-----------------------------------------------------------------+
 | .a files for the standard library, built for the target platform.                                |
++--------------------------------+-----------------------------------------------------------------+
+| :param:`cache_dir`             | :type:`list of File`                                            |
++--------------------------------+-----------------------------------------------------------------+
+| GOCACHE directory for the stdlib after running `go list`.                                        |
 +--------------------------------+-----------------------------------------------------------------+

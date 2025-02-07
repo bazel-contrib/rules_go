@@ -120,7 +120,7 @@ def _sdk_stdlib(go):
     list_json, cache_dir = _build_stdlib_list_json(go)
     return GoStdLib(
         _list_json = list_json,
-        _cache_dir = depset([cache_dir]),
+        cache_dir = depset([cache_dir]),
         libs = go.sdk.libs,
         root_file = go.sdk.root_file,
     )
@@ -172,6 +172,6 @@ def _build_stdlib(go):
     return GoStdLib(
         _list_json = list_json,
         libs = depset([pkg]),
-        _cache_dir = depset([cache_dir]),
+        cache_dir = depset([cache_dir]),
         root_file = pkg,
     )
