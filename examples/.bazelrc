@@ -13,9 +13,8 @@ build:windows --compiler=mingw-gcc
 
 # NOTE(bazelbuild/bazel#10529): bazel doesn't register the mingw toolchain automatically.
 # We also need the host and target platforms to have the mingw constraint value.
-build:windows --extra_toolchains=@local_config_cc//:cc-toolchain-x64_windows_mingw
-build:windows --host_platform=@io_bazel_rules_go//go/toolchain:windows_amd64_cgo
-build:windows --platforms=@io_bazel_rules_go//go/toolchain:windows_amd64_cgo
+build:windows --host_platform=@rules_go//go/toolchain:windows_amd64_cgo
+build:windows --platforms=@rules_go//go/toolchain:windows_amd64_cgo
 build:windows --incompatible_enable_cc_toolchain_resolution
 
 common:ci --enable_bzlmod
