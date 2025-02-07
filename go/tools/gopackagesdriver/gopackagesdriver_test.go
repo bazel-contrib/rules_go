@@ -65,6 +65,10 @@ import "testing"
 
 func TestHelloExternal(t *testing.T) {}
 
+-- incompatible.go --
+//go:build ignore
+package hello
+
 -- subhello/BUILD.bazel --
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
@@ -83,10 +87,6 @@ import "os"
 func main() {
 	fmt.Fprintln(os.Stderr, "Subdirectory Hello World!")
 }
-
--- incompatible.go --
-//go:build ignore
-package hello
 `,
 	})
 }
@@ -338,7 +338,7 @@ func TestOverlay(t *testing.T) {
 // TestIncompatible checks that a target that can be queried but not analyzed
 // does not appear in .Roots.
 func TestIncompatible(t *testing.T) {
-	resp := runForTest(t, DriverRequest{}, "./...")
+	resp := runForTest(t, DriverRequest{}, ".", "./...")
 
 	rootLabels := make(map[string]bool)
 	for _, root := range resp.Roots {
