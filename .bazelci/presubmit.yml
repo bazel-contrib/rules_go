@@ -180,12 +180,6 @@ tasks:
     name: Hello example on Ubuntu
     platform: ubuntu2404
     working_directory: examples/hello
-    build_flags:
-      - "--config=incompatible"
-      - "--config=examples"
-    test_flags:
-      - "--config=incompatible"
-      - "--config=examples"
     build_targets:
       - "//..."
     test_targets:
@@ -194,12 +188,6 @@ tasks:
     name: Hello example on macOS
     platform: macos_arm64
     working_directory: examples/hello
-    build_flags:
-      - "--config=incompatible"
-      - "--config=examples"
-    test_flags:
-      - "--config=incompatible"
-      - "--config=examples"
     build_targets:
       - "//..."
     test_targets:
@@ -209,8 +197,6 @@ tasks:
     platform: windows
     working_directory: examples/hello
     build_flags:
-      - "--config=incompatible"
-      - "--config=examples"
       # Go requires a C toolchain that accepts options and emits errors like
       # gcc or clang. The Go SDK does not support MSVC.
       - '--action_env=PATH=C:\tools\msys64\usr\bin;C:\tools\msys64\bin;C:\tools\msys64\mingw64\bin;C:\python3\Scripts\;C:\python3;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0;C:\Windows\System32\OpenSSH;C:\ProgramData\GooGet;C:\Program Files\Google\Compute Engine\metadata_scripts;C:\Program Files (x86)\Google\Cloud SDK\google-cloud-sdk\bin;C:\Program Files\Google\Compute Engine\sysprep;C:\ProgramData\chocolatey\bin;C:\Program Files\Git\cmd;C:\tools\msys64\usr\bin;c:\openjdk\bin;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit\;C:\Program Files\CMake\bin;c:\ninja;c:\bazel;c:\buildkite'
@@ -221,8 +207,6 @@ tasks:
     test_targets:
       - "//..."
     test_flags:
-      - "--config=incompatible"
-      - "--config=examples"
       - '--action_env=PATH=C:\tools\msys64\usr\bin;C:\tools\msys64\bin;C:\tools\msys64\mingw64\bin;C:\python3\Scripts\;C:\python3;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0;C:\Windows\System32\OpenSSH;C:\ProgramData\GooGet;C:\Program Files\Google\Compute Engine\metadata_scripts;C:\Program Files (x86)\Google\Cloud SDK\google-cloud-sdk\bin;C:\Program Files\Google\Compute Engine\sysprep;C:\ProgramData\chocolatey\bin;C:\Program Files\Git\cmd;C:\tools\msys64\usr\bin;c:\openjdk\bin;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit\;C:\Program Files\CMake\bin;c:\ninja;c:\bazel;c:\buildkite'
       # On Windows CI, bazel (bazelisk) needs %LocalAppData% to find the cache directory.
       # We invoke bazel in tests, so the tests need this, too.
@@ -234,12 +218,6 @@ tasks:
     name: Basic Gazelle example on Ubuntu
     platform: ubuntu2404
     working_directory: examples/basic_gazelle
-    build_flags:
-      - "--config=incompatible"
-      - "--config=examples"
-    test_flags:
-      - "--config=incompatible"
-      - "--config=examples"
     build_targets:
       - "//..."
     test_targets:
@@ -248,12 +226,6 @@ tasks:
     name: Basic Gazelle example on macOS
     platform: macos_arm64
     working_directory: examples/basic_gazelle
-    build_flags:
-      - "--config=incompatible"
-      - "--config=examples"
-    test_flags:
-      - "--config=incompatible"
-      - "--config=examples"
     build_targets:
       - "//..."
     test_targets:
@@ -263,8 +235,6 @@ tasks:
     platform: windows
     working_directory: examples/basic_gazelle
     build_flags:
-      - "--config=incompatible"
-      - "--config=examples"
       # Go requires a C toolchain that accepts options and emits errors like
       # gcc or clang. The Go SDK does not support MSVC.
       - '--action_env=PATH=C:\tools\msys64\usr\bin;C:\tools\msys64\bin;C:\tools\msys64\mingw64\bin;C:\python3\Scripts\;C:\python3;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0;C:\Windows\System32\OpenSSH;C:\ProgramData\GooGet;C:\Program Files\Google\Compute Engine\metadata_scripts;C:\Program Files (x86)\Google\Cloud SDK\google-cloud-sdk\bin;C:\Program Files\Google\Compute Engine\sysprep;C:\ProgramData\chocolatey\bin;C:\Program Files\Git\cmd;C:\tools\msys64\usr\bin;c:\openjdk\bin;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit\;C:\Program Files\CMake\bin;c:\ninja;c:\bazel;c:\buildkite'
@@ -275,8 +245,6 @@ tasks:
     test_targets:
       - "//..."
     test_flags:
-      - "--config=incompatible"
-      - "--config=examples"
       - '--action_env=PATH=C:\tools\msys64\usr\bin;C:\tools\msys64\bin;C:\tools\msys64\mingw64\bin;C:\python3\Scripts\;C:\python3;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0;C:\Windows\System32\OpenSSH;C:\ProgramData\GooGet;C:\Program Files\Google\Compute Engine\metadata_scripts;C:\Program Files (x86)\Google\Cloud SDK\google-cloud-sdk\bin;C:\Program Files\Google\Compute Engine\sysprep;C:\ProgramData\chocolatey\bin;C:\Program Files\Git\cmd;C:\tools\msys64\usr\bin;c:\openjdk\bin;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit\;C:\Program Files\CMake\bin;c:\ninja;c:\bazel;c:\buildkite'
       # On Windows CI, bazel (bazelisk) needs %LocalAppData% to find the cache directory.
       # We invoke bazel in tests, so the tests need this, too.
