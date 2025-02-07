@@ -118,7 +118,7 @@ func Wrap(pkg string) error {
 
 	args := os.Args[1:]
 	if shouldAddTestV() {
-		args = append([]string{"-test.v"}, args...)
+		args = append([]string{"-test.v", "test2json"}, args...)
 	}
 	exePath := os.Args[0]
 	if !filepath.IsAbs(exePath) && strings.ContainsRune(exePath, filepath.Separator) && chdir.TestExecDir != "" {
