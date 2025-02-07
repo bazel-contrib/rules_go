@@ -265,17 +265,21 @@ switched_rules_by_language(
 )
 
 # For testing the compatibility with a hermetic cc toolchain. Users should not have to enable it.
-HERMETIC_CC_TOOLCHAIN_VERSION = "v3.1.1"
-
 http_archive(
     name = "hermetic_cc_toolchain",
-    sha256 = "907745bf91555f77e8234c0b953371e6cac5ba715d1cf12ff641496dd1bce9d1",
-    urls = [
-        "https://mirror.bazel.build/github.com/uber/hermetic_cc_toolchain/releases/download/{0}/hermetic_cc_toolchain-{0}.tar.gz".format(HERMETIC_CC_TOOLCHAIN_VERSION),
-        "https://github.com/uber/hermetic_cc_toolchain/releases/download/{0}/hermetic_cc_toolchain-{0}.tar.gz".format(HERMETIC_CC_TOOLCHAIN_VERSION),
-    ],
+    sha256 = "bd2234acd0837251361be3270d7d3ce599b418be123d902d84762302e31a3014",
+    strip_prefix = "hermetic_cc_toolchain-13c904dce0cb9b6d07f0d557e6ce3cf7013a562e",
+    urls = ["https://github.com/uber/hermetic_cc_toolchain/archive/13c904dce0cb9b6d07f0d557e6ce3cf7013a562e.zip"],
 )
 
 load("@hermetic_cc_toolchain//toolchain:defs.bzl", zig_toolchains = "toolchains")
 
-zig_toolchains()
+zig_toolchains(
+    host_platform_sha256 = {
+        "linux-aarch64": "12be476ed53c219507e77737dbb7f2a77b280760b8acbc6ba2eaaeb42b7d145e",
+        "linux-x86_64": "1b1c115c4ccbdc215cc3b07833c7957336d9f5fff816f97e5cafee556a9d8be8",
+        "macos-aarch64": "3943612c560dd066fba5698968317a146a0f585f6cdaa1e7c1df86685c7c4eaf",
+        "macos-x86_64": "0c89e5d934ecbf9f4d2dea6e3b8dfcc548a3d4184a856178b3db74e361031a2b",
+    },
+    version = "0.11.0-dev.3886+0c1bfe271",
+)
