@@ -23,7 +23,7 @@ bazel_dep(name = "protobuf", version = "3.19.6")
 
 # Required with --incompatible_enable_proto_toolchain_resolution.
 # Avoids building protoc from source, which speeds up CI runs.
-bazel_dep(name = "toolchains_protoc", version = "0.2.1")
+bazel_dep(name = "toolchains_protoc", version = "0.3.4")
 
 go_sdk = use_extension("@my_rules_go//go:extensions.bzl", "go_sdk")
 go_sdk.download(
