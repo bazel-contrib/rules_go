@@ -6,6 +6,7 @@ Go rules for Bazel_
 .. _Avoiding conflicts: proto/core.rst#avoiding-conflicts
 .. _Bazel labels: https://docs.bazel.build/versions/master/build-ref.html#labels
 .. _Bazel: https://bazel.build/
+.. _Bazel Tutorial\: Build a Go Project: https://bazel.build/start/go
 .. _Build modes: go/modes.rst
 .. _Bzlmod: https://bazel.build/external/overview#bzlmod
 .. _Go with Bzlmod: docs/go/core/bzlmod.md
@@ -14,6 +15,8 @@ Go rules for Bazel_
 .. _Coverage: https://bazel.google.cn/docs/coverage
 .. _Dependencies: go/dependencies.rst
 .. _Deprecation schedule: https://github.com/bazelbuild/rules_go/wiki/Deprecation-schedule
+.. _examples/basic_gazelle: examples/basic_gazelle
+.. _examples/hello: examples/hello
 .. _Gopher Slack: https://invite.slack.golangbridge.org/
 .. _gopls integration: https://github.com/bazelbuild/rules_go/wiki/Editor-setup
 .. _Overriding dependencies: go/dependencies.rst#overriding-dependencies
@@ -36,6 +39,7 @@ Go rules for Bazel_
 .. Go rules
 .. _go_binary: docs/go/core/rules.md#go_binary
 .. _go_context: go/toolchains.rst#go_context
+.. _go_deps: https://github.com/bazel-contrib/bazel-gazelle/blob/master/extensions.md#go_deps
 .. _go_download_sdk: go/toolchains.rst#go_download_sdk
 .. _go_host_sdk: go/toolchains.rst#go_host_sdk
 .. _go_library: docs/go/core/rules.md#go_library
@@ -69,132 +73,6 @@ Go rules for Bazel_
 Mailing list: `bazel-go-discuss`_
 
 Slack: `#go on Bazel Slack`_, `#bazel on Go Slack`_
-
-Announcements
--------------
-2024-07-19
-  `v0.48.1 <https://github.com/bazelbuild/rules_go/releases/tag/v0.48.1>`_
-  is now available. This includes a bug fix (https://github.com/bazelbuild/rules_go/pull/3961).
-
-2024-05-21
-  `v0.48.0 <https://github.com/bazelbuild/rules_go/releases/tag/v0.48.0>`_
-  is now available. This release enables support for `--incompatible_enable_proto_toolchain_resolution`
-  (https://github.com/bazelbuild/rules_go/pull/3919).
-
-2024-05-06
-  `v0.47.1 <https://github.com/bazelbuild/rules_go/releases/tag/v0.47.1>`_
-  is now available. This release includes a bug fix (https://github.com/bazelbuild/rules_go/pull/3929).
-
-2024-04-23
-  `v0.47.0 <https://github.com/bazelbuild/rules_go/releases/tag/v0.47.0>`_
-  is now available. This release includes bug fixes and enhancements.
-
-2024-02-09
-  `v0.46.0 <https://github.com/bazelbuild/rules_go/releases/tag/v0.46.0>`_
-  is now available. This release includes a change to emit Nogo facts to a separate archive, and
-  Bzlmod support for Nogo (https://github.com/bazelbuild/rules_go/pull/3842, https://github.com/bazelbuild/rules_go/pull/3789).
-
-2024-01-19
-  `v0.45.1 <https://github.com/bazelbuild/rules_go/releases/tag/v0.45.1>`_
-  is now available. This release includes a bug fix (https://github.com/bazelbuild/rules_go/pull/3832).
-
-2024-01-12
-  `v0.45.0 <https://github.com/bazelbuild/rules_go/releases/tag/v0.45.0>`_
-  is now available. This release includes bug fixes and enhancements.
-
-2024-01-04
-  Release
-  `v0.44.2 <https://github.com/bazelbuild/rules_go/releases/tag/v0.44.2>`_
-  is now available. This includes two bug fixes (https://github.com/bazelbuild/rules_go/pull/3808 and https://github.com/bazelbuild/rules_go/pull/3810) with
-  the test timeout handler.
-
-2023-12-29
-  Release
-  `v0.44.1 <https://github.com/bazelbuild/rules_go/releases/tag/v0.44.1>`_
-  is now available. This release reverts a forced upgrade (https://github.com/bazelbuild/rules_go/pull/3803) of genproto from
-  `v0.44.0`.
-
-2023-12-15
-  Release
-  `v0.44.0 <https://github.com/bazelbuild/rules_go/releases/tag/v0.44.0>`_
-  is now available. This release adds a stacktrace when a test times out and
-  adds support for nogo in Bzlmod.
-
-2023-11-20
-  Release
-  `v0.43.0 <https://github.com/bazelbuild/rules_go/releases/tag/v0.43.0>`_
-  is now available. This release fixes a couple bugs and upgrades `x/tools`
-  to the latest version.
-
-2023-09-28
-  Release
-  `v0.42.0 <https://github.com/bazelbuild/rules_go/releases/tag/v0.42.0>`_
-  is now available. This release fixes a couple bugs and adds support for
-  patching the standard library.
-
-2023-07-10
-  Release
-  `v0.41.0 <https://github.com/bazelbuild/rules_go/releases/tag/v0.41.0>`_
-  is now available. rules_go no longer ship with `@go_googleapis` repo.
-  It requires Gazelle v0.32.0 or later.
-
-2023-06-28
-  Release
-  `v0.40.1 <https://github.com/bazelbuild/rules_go/releases/tag/v0.40.1>`_
-  is now available. This release fixes a couple bugs in
-  the go packages driver that were introduced in 0.40.0.
-
-2023-06-22
-  Release
-  `v0.40.0 <https://github.com/bazelbuild/rules_go/releases/tag/v0.40.0>`_
-  is now available. This release includes support for `//nolint` parsing,
-  as well as a large set of additional changes. Please check the release notes
-  for details.
-
-2023-03-27
-  Release
-  `v0.39.0 <https://github.com/bazelbuild/rules_go/releases/tag/v0.39.0>`_
-  is now available. This release includes a simpler interface for Bzlmod
-  `go_sdk` registration, makes the `//go` tool available to users, and
-  fixes various bugs.
-
-2022-12-06
-  Release
-  `v0.37.0 <https://github.com/bazelbuild/rules_go/releases/tag/v0.37.0>`_
-  is now available. This release includes support for generated code in
-  the packages driver as well as various bugfixes.
-
-2022-11-22
-  Release
-  `v0.36.0 <https://github.com/bazelbuild/rules_go/releases/tag/v0.36.0>`_
-  is now available. This release adds a Go library to look up runfiles, and
-  two command line flags to pass additional compiler and linker options.
-
-2022-09-11
-  Release
-  `v0.35.0 <https://github.com/bazelbuild/rules_go/releases/tag/v0.35.0>`_
-  is now available. This release supports switching Go SDK version from a
-  build flag. Starting this release, rules_go requires Bazel 5.1.0, because
-  it needs to read CPU architecture from Bazel to better support Apple M1
-  with Rosetta translation.
-
-2022-07-19
-  Release
-  `v0.34.0 <https://github.com/bazelbuild/rules_go/releases/tag/v0.34.0>`_
-  is now available. This release brings very experimental support for bzlmod,
-  several improvements to nogo and gopackagesdriver.
-
-2022-06-06
-  Release
-  `v0.33.0 <https://github.com/bazelbuild/rules_go/releases/tag/v0.33.0>`_
-  is now available. This release consists mostly of bug fixes and deprecates
-  the `asm`, `compile`, `cover`, and `pack` actions on `go_context`.
-2022-05-11
-  Release
-  `v0.32.0 <https://github.com/bazelbuild/rules_go/releases/tag/v0.32.0>`_
-  is now available. This adds `gomock` to rules_go and supports lcov format
-  for code coverage report, as well as a long list of other changes listed
-  in the release notes.
 
 Contents
 --------
@@ -236,6 +114,7 @@ Documentation
   * `go_context`_
 
 * `Extra rules <docs/go/extras/extras.md>`_
+
   * `gomock`_
 
 * `nogo build-time static analysis`_
@@ -251,15 +130,16 @@ Quick links
 Overview
 --------
 
-The rules are in the beta stage of development. They support:
+These rules support:
 
 * Building libraries, binaries, and tests (`go_library`_, `go_binary`_,
   `go_test`_)
+* Go modules via `go_deps`_.
 * Vendoring
 * cgo
 * Cross-compilation
 * Generating BUILD files via gazelle_
-* Build-time code analysis via nogo_
+* Build-time static code analysis via nogo_
 * `Protocol buffers`_
 * Remote execution
 * `Coverage`_
@@ -273,7 +153,7 @@ They currently do not support or have limited support for:
 The Go rules are tested and supported on the following host platforms:
 
 * Linux, macOS, Windows
-* amd64
+* amd64, arm64
 
 Users have reported success on several other platforms, but the rules are
 only tested on those listed above.
@@ -285,9 +165,6 @@ The ``master`` branch is only guaranteed to work with the latest version of Baze
 
 Setup
 -----
-
-System setup
-~~~~~~~~~~~~
 
 To build Go code with Bazel, you will need:
 
@@ -301,15 +178,18 @@ You normally won't need a Go toolchain installed. Bazel will download one.
 See `Using rules_go on Windows`_ for Windows-specific setup instructions.
 Several additional tools need to be installed and configured.
 
-Initial project setup
-~~~~~~~~~~~~~~~~~~~~~
+If you're new to Bazel, read `Bazel Tutorial: Build a Go Project`_, which
+introduces Bazel concepts and shows you how to set up a small Go workspace to
+be built with Bazel.
 
-There are two ways to setup:
+For a quicker "hello world" example, see `examples/hello`_.
 
-* With Bazel's external dependency management system `Bzlmod`_,
-  refer to the dedicated `Go with Bzlmod`_ guide.
-* With the older ``WORKSPACE`` dependency file, refer to the
-  `Go with WORKSPACE`_ setup docs.
+For an example that generates build files and retrieves external dependencies
+using Gazelle, see `examples/basic_gazelle`_.
+
+For more detailed `Bzlmod`_ documentation, see `Go with Bzlmod`_.
+
+For legacy ``WORKSPACE`` instructions, see `Go with WORKSPACE`_.
 
 FAQ
 ---

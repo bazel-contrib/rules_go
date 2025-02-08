@@ -176,36 +176,27 @@ tasks:
       # TODO: Update stardoc for consistent line endings.
       - "-//docs:all"
   # The following configurations test a seperate WORKSPACE under the examples folder
-  ubuntu2004_examples:
-    name: Examples test on Ubuntu
+  ubuntu_hello_example:
+    name: Hello example on Ubuntu
     platform: ubuntu2404
-    working_directory: examples/basic-gazelle
-    build_flags:
-      - "--config=incompatible"
-    test_flags:
-      - "--config=incompatible"
+    working_directory: examples/hello
     build_targets:
       - "//..."
     test_targets:
       - "//..."
-  macos_examples:
-    name: Examples test on macOS
+  macos_hello_example:
+    name: Hello example on macOS
     platform: macos_arm64
-    working_directory: examples/basic-gazelle
-    build_flags:
-      - "--config=incompatible"
-    test_flags:
-      - "--config=incompatible"
+    working_directory: examples/hello
     build_targets:
       - "//..."
     test_targets:
       - "//..."
   windows_examples:
-    name: Examples test on Windows
+    name: Hello example on Windows
     platform: windows
-    working_directory: examples/basic-gazelle
+    working_directory: examples/hello
     build_flags:
-      - "--config=incompatible"
       # Go requires a C toolchain that accepts options and emits errors like
       # gcc or clang. The Go SDK does not support MSVC.
       - '--action_env=PATH=C:\tools\msys64\usr\bin;C:\tools\msys64\bin;C:\tools\msys64\mingw64\bin;C:\python3\Scripts\;C:\python3;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0;C:\Windows\System32\OpenSSH;C:\ProgramData\GooGet;C:\Program Files\Google\Compute Engine\metadata_scripts;C:\Program Files (x86)\Google\Cloud SDK\google-cloud-sdk\bin;C:\Program Files\Google\Compute Engine\sysprep;C:\ProgramData\chocolatey\bin;C:\Program Files\Git\cmd;C:\tools\msys64\usr\bin;c:\openjdk\bin;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit\;C:\Program Files\CMake\bin;c:\ninja;c:\bazel;c:\buildkite'
@@ -216,7 +207,44 @@ tasks:
     test_targets:
       - "//..."
     test_flags:
-      - "--config=incompatible"
+      - '--action_env=PATH=C:\tools\msys64\usr\bin;C:\tools\msys64\bin;C:\tools\msys64\mingw64\bin;C:\python3\Scripts\;C:\python3;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0;C:\Windows\System32\OpenSSH;C:\ProgramData\GooGet;C:\Program Files\Google\Compute Engine\metadata_scripts;C:\Program Files (x86)\Google\Cloud SDK\google-cloud-sdk\bin;C:\Program Files\Google\Compute Engine\sysprep;C:\ProgramData\chocolatey\bin;C:\Program Files\Git\cmd;C:\tools\msys64\usr\bin;c:\openjdk\bin;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit\;C:\Program Files\CMake\bin;c:\ninja;c:\bazel;c:\buildkite'
+      # On Windows CI, bazel (bazelisk) needs %LocalAppData% to find the cache directory.
+      # We invoke bazel in tests, so the tests need this, too.
+      - "--test_env=LOCALAPPDATA"
+      # go_bazel_test runs bazel in a test workspace. It needs the same flags as above.
+      - "--test_env=GO_BAZEL_TEST_BAZELFLAGS=--cpu=x64_windows --compiler=mingw-gcc --extra_toolchains=@local_config_cc//:cc-toolchain-x64_windows_mingw --action_env=PATH --host_platform=@io_bazel_rules_go//go/toolchain:windows_amd64_cgo --incompatible_enable_cc_toolchain_resolution"
+      - "--test_env=PATH"
+  ubuntu_basic_gazelle_example:
+    name: Basic Gazelle example on Ubuntu
+    platform: ubuntu2404
+    working_directory: examples/basic_gazelle
+    build_targets:
+      - "//..."
+    test_targets:
+      - "//..."
+  macos_basic_gazelle_example:
+    name: Basic Gazelle example on macOS
+    platform: macos_arm64
+    working_directory: examples/basic_gazelle
+    build_targets:
+      - "//..."
+    test_targets:
+      - "//..."
+  windows_basic_gazelle_example:
+    name: Basic Gazelle example on Windows
+    platform: windows
+    working_directory: examples/basic_gazelle
+    build_flags:
+      # Go requires a C toolchain that accepts options and emits errors like
+      # gcc or clang. The Go SDK does not support MSVC.
+      - '--action_env=PATH=C:\tools\msys64\usr\bin;C:\tools\msys64\bin;C:\tools\msys64\mingw64\bin;C:\python3\Scripts\;C:\python3;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0;C:\Windows\System32\OpenSSH;C:\ProgramData\GooGet;C:\Program Files\Google\Compute Engine\metadata_scripts;C:\Program Files (x86)\Google\Cloud SDK\google-cloud-sdk\bin;C:\Program Files\Google\Compute Engine\sysprep;C:\ProgramData\chocolatey\bin;C:\Program Files\Git\cmd;C:\tools\msys64\usr\bin;c:\openjdk\bin;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit\;C:\Program Files\CMake\bin;c:\ninja;c:\bazel;c:\buildkite'
+    # NOTE(bazelbuild/bazel#10529): bazel doesn't register the mingw toolchain automatically.
+    # We also need the host and target platforms to have the mingw constraint value.
+    build_targets:
+      - "//..."
+    test_targets:
+      - "//..."
+    test_flags:
       - '--action_env=PATH=C:\tools\msys64\usr\bin;C:\tools\msys64\bin;C:\tools\msys64\mingw64\bin;C:\python3\Scripts\;C:\python3;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0;C:\Windows\System32\OpenSSH;C:\ProgramData\GooGet;C:\Program Files\Google\Compute Engine\metadata_scripts;C:\Program Files (x86)\Google\Cloud SDK\google-cloud-sdk\bin;C:\Program Files\Google\Compute Engine\sysprep;C:\ProgramData\chocolatey\bin;C:\Program Files\Git\cmd;C:\tools\msys64\usr\bin;c:\openjdk\bin;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit\;C:\Program Files\CMake\bin;c:\ninja;c:\bazel;c:\buildkite'
       # On Windows CI, bazel (bazelisk) needs %LocalAppData% to find the cache directory.
       # We invoke bazel in tests, so the tests need this, too.

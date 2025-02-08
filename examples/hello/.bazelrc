@@ -1,0 +1,2 @@
+# This helps with rules_go's testing. It's not part of the example.
+import %workspace%/../.bazelrc
