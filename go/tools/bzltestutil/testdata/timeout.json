@@ -1,0 +1,26 @@
+{"Time":"2025-02-07T17:15:47.557152-08:00","Action":"start","Package":"pkg/testing"}
+{"Time":"2025-02-07T17:15:48.107123-08:00","Action":"run","Package":"pkg/testing","Test":"TestReport"}
+{"Time":"2025-02-07T17:15:48.107189-08:00","Action":"output","Package":"pkg/testing","Test":"TestReport","Output":"=== RUN   TestReport\n"}
+{"Time":"2025-02-07T17:15:48.107222-08:00","Action":"run","Package":"pkg/testing","Test":"TestReport/test_0"}
+{"Time":"2025-02-07T17:15:48.107227-08:00","Action":"output","Package":"pkg/testing","Test":"TestReport/test_0","Output":"=== RUN   TestReport/test_0\n"}
+{"Time":"2025-02-07T17:15:50.108298-08:00","Action":"output","Package":"pkg/testing","Test":"TestReport/test_0","Output":"--- PASS: TestReport/test_0 (2.00s)\n"}
+{"Time":"2025-02-07T17:15:50.108365-08:00","Action":"pass","Package":"pkg/testing","Test":"TestReport/test_0","Elapsed":2}
+{"Time":"2025-02-07T17:15:50.108385-08:00","Action":"run","Package":"pkg/testing","Test":"TestReport/test_1"}
+{"Time":"2025-02-07T17:15:50.108392-08:00","Action":"output","Package":"pkg/testing","Test":"TestReport/test_1","Output":"=== RUN   TestReport/test_1\n"}
+{"Time":"2025-02-07T17:15:52.1095-08:00","Action":"output","Package":"pkg/testing","Test":"TestReport/test_1","Output":"--- PASS: TestReport/test_1 (2.00s)\n"}
+{"Time":"2025-02-07T17:15:52.109693-08:00","Action":"pass","Package":"pkg/testing","Test":"TestReport/test_1","Elapsed":2}
+{"Time":"2025-02-07T17:15:52.109806-08:00","Action":"run","Package":"pkg/testing","Test":"TestReport/test_2"}
+{"Time":"2025-02-07T17:15:52.109841-08:00","Action":"output","Package":"pkg/testing","Test":"TestReport/test_2","Output":"=== RUN   TestReport/test_2\n"}
+{"Time":"2025-02-07T17:15:54.110684-08:00","Action":"output","Package":"pkg/testing","Test":"TestReport/test_2","Output":"--- PASS: TestReport/test_2 (2.00s)\n"}
+{"Time":"2025-02-07T17:15:54.110864-08:00","Action":"pass","Package":"pkg/testing","Test":"TestReport/test_2","Elapsed":2}
+{"Time":"2025-02-07T17:15:54.1109-08:00","Action":"run","Package":"pkg/testing","Test":"TestReport/test_3"}
+{"Time":"2025-02-07T17:15:54.110923-08:00","Action":"output","Package":"pkg/testing","Test":"TestReport/test_3","Output":"=== RUN   TestReport/test_3\n"}
+{"Time":"2025-02-07T17:15:56.110984-08:00","Action":"output","Package":"pkg/testing","Test":"TestReport/test_3","Output":"panic: test timed out after 8s\n"}
+{"Time":"2025-02-07T17:15:56.11102-08:00","Action":"output","Package":"pkg/testing","Test":"TestReport/test_3","Output":"\trunning tests:\n"}
+{"Time":"2025-02-07T17:15:56.111039-08:00","Action":"output","Package":"pkg/testing","Test":"TestReport/test_3","Output":"\t\tTestReport (8s)\n"}
+{"Time":"2025-02-07T17:15:56.111046-08:00","Action":"output","Package":"pkg/testing","Test":"TestReport/test_3","Output":"\t\tTestReport/test_3 (2s)\n"}
+{"Time":"2025-02-07T17:15:56.111051-08:00","Action":"output","Package":"pkg/testing","Test":"TestReport/test_3","Output":"\n"}
+{"Time":"2025-02-07T17:15:56.111056-08:00","Action":"output","Package":"pkg/testing","Test":"TestReport/test_3","Output":"goroutine 33 [running]:\n"}
+{"Time":"2025-02-07T17:15:56.111067-08:00","Action":"output","Package":"pkg/testing","Test":"TestReport/test_3","Output":"testing.(*M).startAlarm.func1()\n"}
+{"Time":"2025-02-07T17:15:56.11168-08:00","Action":"output","Package":"pkg/testing","Output":"FAIL\tpkg/testing\t8.554s\n"}
+{"Time":"2025-02-07T17:15:56.111693-08:00","Action":"fail","Package":"pkg/testing","Elapsed":8.555}

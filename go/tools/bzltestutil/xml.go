@@ -73,6 +73,10 @@ type testCase struct {
 	duration *float64
 }
 
+const (
+	timeoutPanicPrefix = "panic: test timed out after "
+)
+
 // json2xml converts test2json's output into an xml output readable by Bazel.
 // http://windyroad.com.au/dl/Open%20Source/JUnit.xsd
 func json2xml(r io.Reader, pkgName string) ([]byte, error) {
@@ -89,6 +93,7 @@ func json2xml(r io.Reader, pkgName string) ([]byte, error) {
 	}
 
 	dec := json.NewDecoder(r)
+	var inTimeoutSection, inRunningTestSection bool
 	for {
 		var e jsonEvent
 		if err := dec.Decode(&e); err == io.EOF {
@@ -102,6 +107,38 @@ func json2xml(r io.Reader, pkgName string) ([]byte, error) {
 				c.state = s
 			}
 		case "output":
+			trimmedOutput := strings.TrimSpace(e.Output)
+			if strings.HasPrefix(trimmedOutput, timeoutPanicPrefix) {
+				inTimeoutSection = true
+				// the final "fail" action with "Elapsed" may not appear. If not, using the timeout setting as
+				// pkgDuration; if it appears, it will override pkgDuration.
+				if duration, err := time.ParseDuration(strings.TrimSpace(trimmedOutput[len(timeoutPanicPrefix):])); err == nil {
+					seconds := duration.Seconds()
+					pkgDuration = &seconds
+				}
+				continue
+			}
+			if inTimeoutSection && strings.HasPrefix(trimmedOutput, "running tests:") {
+				inRunningTestSection = true
+				continue
+			}
+			if inRunningTestSection {
+				// looking for something like "TestReport/test_3 (2s)"
+				parts := strings.Fields(e.Output)
+				if len(parts) != 2 || !strings.HasPrefix(parts[1], "(") || !strings.HasSuffix(parts[1], ")") {
+					inTimeoutSection = false
+					inRunningTestSection = false
+				} else if duration, err := time.ParseDuration(parts[1][1:len(parts[1])-1]); err != nil {
+					inTimeoutSection = false
+					inRunningTestSection = false
+				} else if c := testCaseByName(parts[0]); c != nil {
+					c.state = "interrupt"
+					seconds := duration.Seconds()
+					c.duration = &seconds
+					c.output.WriteString(e.Output)
+				}
+				continue
+			}
 			if c := testCaseByName(e.Test); c != nil {
 				c.output.WriteString(e.Output)
 			}
@@ -164,6 +201,12 @@ func toXML(pkgName string, pkgDuration *float64, testcases map[string]*testCase)
 			suite.Failures++
 			newCase.Failure = &xmlMessage{
 				Message:  "Failed",
+				Contents: c.output.String(),
+			}
+		case "interrupt":
+			suite.Errors++
+			newCase.Error = &xmlMessage{
+				Message:  "Interrupted",
 				Contents: c.output.String(),
 			}
 		case "pass":
