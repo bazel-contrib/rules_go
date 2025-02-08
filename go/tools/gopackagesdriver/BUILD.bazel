@@ -54,3 +54,16 @@ filegroup(
     srcs = glob(["**"]),
     visibility = ["//visibility:public"],
 )
+
+go_library(
+    name = "archive_to_json_lib",
+    srcs = ["archive_to_json.go"],
+    importpath = "github.com/bazelbuild/rules_go/go/tools/gopackagesdriver/archivetojson",
+    visibility = ["//visibility:private"],
+)
+
+go_binary(
+    name = "archive_to_json",
+    embed = [":archive_to_json_lib"],
+    visibility = ["//visibility:public"],
+)
