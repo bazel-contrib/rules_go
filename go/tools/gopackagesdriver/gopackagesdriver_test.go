@@ -27,12 +27,19 @@ go_library(
 )
 
 go_test(
-	name = "hello_test",
-	srcs = [
-		"hello_test.go",
-		"hello_external_test.go",
-	],
-	embed = [":hello"],
+    name = "hello_test",
+    srcs = [
+        "hello_test.go",
+        "hello_external_test.go",
+    ],
+    embed = [":hello"],
+)
+
+go_library(
+    name = "incompatible",
+    srcs = ["incompatible.go"],
+    importpath = "example.com/incompatible",
+    target_compatible_with = ["@platforms//:incompatible"],
 )
 
 -- hello.go --
@@ -58,6 +65,10 @@ import "testing"
 
 func TestHelloExternal(t *testing.T) {}
 
+-- incompatible.go --
+//go:build ignore
+package hello
+
 -- subhello/BUILD.bazel --
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
@@ -76,7 +87,7 @@ import "os"
 func main() {
 	fmt.Fprintln(os.Stderr, "Subdirectory Hello World!")
 }
-		`,
+`,
 	})
 }
 
@@ -278,8 +289,8 @@ func TestOverlay(t *testing.T) {
 	subhelloPath := path.Join(wd, "subhello/subhello.go")
 
 	expectedImportsPerFile := map[string][]string{
-		helloPath:    []string{"fmt"},
-		subhelloPath: []string{"os", "encoding/json"},
+		helloPath:    {"fmt"},
+		subhelloPath: {"os", "encoding/json"},
 	}
 
 	overlayDriverRequest := DriverRequest{
@@ -322,6 +333,33 @@ func TestOverlay(t *testing.T) {
 
 	expectSetEquality(t, expectedImportsPerFile[helloPath], helloPkgImportPaths, "hello imports")
 	expectSetEquality(t, expectedImportsPerFile[subhelloPath], subhelloPkgImportPaths, "subhello imports")
+}
+
+// TestIncompatible checks that a target that can be queried but not analyzed
+// does not appear in .Roots.
+func TestIncompatible(t *testing.T) {
+	resp := runForTest(t, DriverRequest{}, ".", "./...")
+
+	rootLabels := make(map[string]bool)
+	for _, root := range resp.Roots {
+		rootLabels[root] = true
+	}
+
+	// Verify //:hello is in .Roots and check whether its label starts with
+	// "@@" (bzlmod) or "@" (not bzlmod).
+	var incompatibleLabel string
+	if rootLabels["@@//:hello"] {
+		incompatibleLabel = "@@//:incompatible"
+	} else if rootLabels["@//:hello"] {
+		incompatibleLabel = "@//:incompatible"
+	} else {
+		t.Fatalf("response does not contain //:hello; roots were %s", strings.Join(resp.Roots, ", "))
+	}
+
+	// Verify //:incompatible is NOT in .Roots.
+	if rootLabels[incompatibleLabel] {
+		t.Fatalf("response contains root %s", incompatibleLabel)
+	}
 }
 
 func runForTest(t *testing.T, driverRequest DriverRequest, relativeWorkingDir string, args ...string) driverResponse {
