@@ -118,7 +118,10 @@ func Wrap(pkg string) error {
 
 	args := os.Args[1:]
 	if shouldAddTestV() {
-		args = append([]string{"-test.v"}, args...)
+		// The -test.v=test2json flag is like -test.v=true but causes the test to add
+		// extra ^V characters before testing output lines and other framing,
+		// which helps test2json do a better job creating the JSON events.
+		args = append([]string{"-test.v=test2json"}, args...)
 	}
 	exePath := os.Args[0]
 	if !filepath.IsAbs(exePath) && strings.ContainsRune(exePath, filepath.Separator) && chdir.TestExecDir != "" {
