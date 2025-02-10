@@ -461,8 +461,8 @@ func upgradeDepDecl(ctx context.Context, gh *githubClient, workDir, name string,
 			}
 			patchName := patchLabelValue[len("//third_party:"):]
 			patchPath := filepath.Join(rootDir, "third_party", patchName)
-			prevDir := filepath.Join(workDir, name, fmt.Sprintf("a%d", patchIndex))
-			patchDir := filepath.Join(workDir, name, fmt.Sprintf("a%d", patchIndex+1))
+			prevDir := filepath.Join(workDir, name, string(rune('a'+patchIndex)))
+			patchDir := filepath.Join(workDir, name, string(rune('a'+patchIndex+1)))
 			var patchCmd []string
 			for _, c := range comments.Before {
 				words := strings.Fields(strings.TrimPrefix(c.Token, "#"))
@@ -484,7 +484,7 @@ func upgradeDepDecl(ctx context.Context, gh *githubClient, workDir, name string,
 					return err
 				}
 			}
-			patch, _ := runForOutput(ctx, filepath.Join(workDir, name), "diff", "-urN", fmt.Sprintf("a%d", patchIndex), fmt.Sprintf("a%d", patchIndex+1))
+			patch, _ := runForOutput(ctx, filepath.Join(workDir, name), "diff", "-urN", filepath.Base(prevDir), filepath.Base(patchDir))
 			patch = sanitizePatch(patch)
 			if err := os.WriteFile(patchPath, patch, 0666); err != nil {
 				return err

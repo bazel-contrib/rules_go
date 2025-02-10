@@ -1,0 +1,13 @@
+<testsuites>
+	<testsuite errors="2" failures="0" skipped="0" tests="5" time="8.555" name="pkg/testing">
+		<testcase classname="testing" name="TestReport" time="8.000">
+			<error message="Interrupted" type="">=== RUN   TestReport&#xA;&#x9;&#x9;TestReport (8s)&#xA;</error>
+		</testcase>
+		<testcase classname="testing" name="TestReport/test_0" time="2.000"></testcase>
+		<testcase classname="testing" name="TestReport/test_1" time="2.000"></testcase>
+		<testcase classname="testing" name="TestReport/test_2" time="2.000"></testcase>
+		<testcase classname="testing" name="TestReport/test_3" time="2.000">
+			<error message="Interrupted" type="">=== RUN   TestReport/test_3&#xA;&#x9;&#x9;TestReport/test_3 (2s)&#xA;goroutine 33 [running]:&#xA;testing.(*M).startAlarm.func1()&#xA;</error>
+		</testcase>
+	</testsuite>
+</testsuites>
