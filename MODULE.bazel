@@ -11,8 +11,8 @@ module(
 bazel_dep(name = "bazel_features", version = "1.9.1", repo_name = "io_bazel_rules_go_bazel_features")
 bazel_dep(name = "bazel_skylib", version = "1.2.0")
 bazel_dep(name = "platforms", version = "0.0.10")
-bazel_dep(name = "rules_proto", version = "6.0.0")
-bazel_dep(name = "protobuf", version = "3.19.2", repo_name = "com_google_protobuf")
+bazel_dep(name = "rules_proto", version = "7.0.2")
+bazel_dep(name = "protobuf", version = "29.0-rc2.bcr.1", repo_name = "com_google_protobuf")
 bazel_dep(name = "rules_shell", version = "0.3.0")
 
 go_sdk = use_extension("//go:extensions.bzl", "go_sdk")
