@@ -18,6 +18,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/html"
 )
 
@@ -38,9 +39,5 @@ func TestParseAndGetLinks(t *testing.T) {
 		t.Fatal(err)
 	}
 	links := getLinks(node)
-	got := strings.Join(links, ",")
-	want := "example.com/a,example.com/b"
-	if got != want {
-		t.Fatalf("got %q; want %q", got, want)
-	}
+	assert.Equal(t, links, []string{"example.com/a", "example.com/b"})
 }

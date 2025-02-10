@@ -21,6 +21,5 @@ For example, rename `printlinks.go` to `print_links.go`, run Gazelle, and observ
 To add a new external dependency:
 
 1. Import the external package from any `.go` file.
-1. Add the dependency to `go.mod` with `go get` or `go mod tidy`.
-1. In `MODULE.bazel`, update the list of external modules in the `use_repo` declaration at the bottom.
-1. Run `bazel run //:gazelle` again.
+1. Run `bazel run @rules_go//go -- mod tidy`. This command runs `go mod tidy` to update `go.mod` using the toolchain downloaded by `rules_go`. This command also runs `bazel mod tidy` to update `MODULE.bazel` .
+1. Run `bazel run //:gazelle` again to update dependencies in `BUILD.bazel` files.

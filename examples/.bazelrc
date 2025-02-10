@@ -6,8 +6,8 @@
 
 common:ci --enable_bzlmod
 common:ci --color=no
-build:ci --verbose_failures
-build:ci --sandbox_debug
-build:ci --spawn_strategy=standalone
-build:ci --genrule_strategy=standalone
-test:ci --test_strategy=standalone
+common:ci --verbose_failures
+common:ci --sandbox_debug
+common:ci --spawn_strategy=standalone
+common:ci --genrule_strategy=standalone
+common:ci --test_strategy=standalone

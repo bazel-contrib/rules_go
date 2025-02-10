@@ -14,9 +14,9 @@ gazelle(name = "gazelle")
 # then run the command above. It should update the go_library target.
 
 go_library(
-    name = "basic-gazelle_lib",
+    name = "basic_gazelle_lib",
     srcs = ["printlinks.go"],
-    importpath = "github.com/bazel-contrib/rules_go/examples/basic-gazelle",
+    importpath = "github.com/bazel-contrib/rules_go/examples/basic_gazelle",
     visibility = ["//visibility:private"],
     deps = [
         "@org_golang_x_net//html",
@@ -25,14 +25,17 @@ go_library(
 )
 
 go_binary(
-    name = "basic-gazelle",
-    embed = [":basic-gazelle_lib"],
+    name = "basic_gazelle",
+    embed = [":basic_gazelle_lib"],
     visibility = ["//visibility:public"],
 )
 
 go_test(
-    name = "basic-gazelle_test",
+    name = "basic_gazelle_test",
     srcs = ["printlinks_test.go"],
-    embed = [":basic-gazelle_lib"],
-    deps = ["@org_golang_x_net//html"],
+    embed = [":basic_gazelle_lib"],
+    deps = [
+        "@com_github_stretchr_testify//assert",
+        "@org_golang_x_net//html",
+    ],
 )
