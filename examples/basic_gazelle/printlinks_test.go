@@ -1,4 +1,4 @@
-// Copyright 2022 The Bazel Authors. All rights reserved.
+// Copyright 2025 The Bazel Authors. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,23 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package roll
+package main
 
 import (
-	"math/rand"
-	"strconv"
-	"time"
+	"strings"
+	"testing"
 
-	"k8s.io/klog/v2"
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/net/html"
 )
 
-func Roll() string {
-	klog.Info("rolling the dice")
-	return generateNumber()
-}
-
-func generateNumber() string {
-	source := rand.NewSource(time.Now().UnixNano())
-	random := rand.New(source)
-	return strconv.Itoa(random.Intn(100))
+func TestParseAndGetLinks(t *testing.T) {
+	r := strings.NewReader(`<!DOCTYPE html>
+<html>
+  <head>
+	  <title>example</title>
+	</head>
+	<body>
+	  <a href="example.com/a">A</a><br>
+		<a href="example.com/b">B</a>
+	</body>
+</html>
+`)
+	node, err := html.Parse(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	links := getLinks(node)
+	assert.Equal(t, links, []string{"example.com/a", "example.com/b"})
 }

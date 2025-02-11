@@ -1,0 +1,41 @@
+# This file tells Bazel what to build.
+#
+# The part that loads the "gazelle" rule and declares the "gazelle" target
+# are hand-written. Gazelle can be run with:
+#
+#     bazel run //:gazelle
+
+load("@gazelle//:def.bzl", "gazelle")
+load("@rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+
+gazelle(name = "gazelle")
+
+# Everything below here was generated with Gazelle. Try renaming printlinks.go,
+# then run the command above. It should update the go_library target.
+
+go_library(
+    name = "basic_gazelle_lib",
+    srcs = ["printlinks.go"],
+    importpath = "github.com/bazel-contrib/rules_go/examples/basic_gazelle",
+    visibility = ["//visibility:private"],
+    deps = [
+        "@org_golang_x_net//html",
+        "@org_golang_x_net//html/atom",
+    ],
+)
+
+go_binary(
+    name = "basic_gazelle",
+    embed = [":basic_gazelle_lib"],
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "basic_gazelle_test",
+    srcs = ["printlinks_test.go"],
+    embed = [":basic_gazelle_lib"],
+    deps = [
+        "@com_github_stretchr_testify//assert",
+        "@org_golang_x_net//html",
+    ],
+)

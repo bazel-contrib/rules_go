@@ -39,6 +39,7 @@ type xmlTestSuite struct {
 	Tests     int           `xml:"tests,attr"`
 	Time      string        `xml:"time,attr"`
 	Name      string        `xml:"name,attr"`
+	Timestamp string        `xml:"timestamp,attr,omitempty"`
 }
 
 type xmlTestCase struct {
@@ -80,7 +81,10 @@ const (
 // json2xml converts test2json's output into an xml output readable by Bazel.
 // http://windyroad.com.au/dl/Open%20Source/JUnit.xsd
 func json2xml(r io.Reader, pkgName string) ([]byte, error) {
-	var pkgDuration *float64
+	var (
+		pkgDuration  *float64
+		pkgTimestamp *time.Time
+	)
 	testcases := make(map[string]*testCase)
 	testCaseByName := func(name string) *testCase {
 		if name == "" {
@@ -100,6 +104,9 @@ func json2xml(r io.Reader, pkgName string) ([]byte, error) {
 			break
 		} else if err != nil {
 			return nil, fmt.Errorf("error decoding test2json output: %s", err)
+		}
+		if pkgTimestamp == nil || (e.Time != nil && e.Time.Unix() < pkgTimestamp.Unix()) {
+			pkgTimestamp = e.Time
 		}
 		switch s := e.Action; s {
 		case "run":
@@ -128,7 +135,7 @@ func json2xml(r io.Reader, pkgName string) ([]byte, error) {
 				if len(parts) != 2 || !strings.HasPrefix(parts[1], "(") || !strings.HasSuffix(parts[1], ")") {
 					inTimeoutSection = false
 					inRunningTestSection = false
-				} else if duration, err := time.ParseDuration(parts[1][1:len(parts[1])-1]); err != nil {
+				} else if duration, err := time.ParseDuration(parts[1][1 : len(parts[1])-1]); err != nil {
 					inTimeoutSection = false
 					inRunningTestSection = false
 				} else if c := testCaseByName(parts[0]); c != nil {
@@ -165,10 +172,10 @@ func json2xml(r io.Reader, pkgName string) ([]byte, error) {
 		}
 	}
 
-	return xml.MarshalIndent(toXML(pkgName, pkgDuration, testcases), "", "\t")
+	return xml.MarshalIndent(toXML(pkgName, pkgDuration, pkgTimestamp, testcases), "", "\t")
 }
 
-func toXML(pkgName string, pkgDuration *float64, testcases map[string]*testCase) *xmlTestSuites {
+func toXML(pkgName string, pkgDuration *float64, pkgTimestamp *time.Time, testcases map[string]*testCase) *xmlTestSuites {
 	cases := make([]string, 0, len(testcases))
 	for k := range testcases {
 		cases = append(cases, k)
@@ -179,6 +186,9 @@ func toXML(pkgName string, pkgDuration *float64, testcases map[string]*testCase)
 	}
 	if pkgDuration != nil {
 		suite.Time = fmt.Sprintf("%.3f", *pkgDuration)
+	}
+	if pkgTimestamp != nil {
+		suite.Timestamp = pkgTimestamp.Format("2006-01-02T15:04:05.000Z")
 	}
 	for _, name := range cases {
 		c := testcases[name]
