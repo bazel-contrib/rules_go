@@ -1,0 +1,24 @@
+# This file lists targets that can be built with Bazel.
+#
+# Each target is declared with a rule (like go_library) and is described
+# by a set of attributes like srcs and importpath.
+load("@rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+
+go_library(
+    name = "hello_lib",
+    srcs = ["hello.go"],
+    importpath = "github.com/bazel-contrib/rules_go/examples/hello",
+    visibility = ["//visibility:private"],
+)
+
+go_binary(
+    name = "hello",
+    embed = [":hello_lib"],
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "hello_test",
+    srcs = ["hello_test.go"],
+    embed = [":hello_lib"],
+)
