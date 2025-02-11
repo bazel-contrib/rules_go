@@ -7,8 +7,8 @@ import (
 )
 
 func TestCPPAdder(t *testing.T) {
-	a := rand.Int31()
-	b := rand.Int31()
+	a := int32(rand.Intn(100))
+	b := int32(rand.Intn(100))
 	expected := a + b
 	if result := AddC(a, b); result != expected {
 		t.Error(fmt.Errorf("wrong result: got %d, expected %d", result, expected))
