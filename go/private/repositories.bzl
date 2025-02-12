@@ -320,7 +320,7 @@ def go_rules_dependencies(force = False):
     )
 
     _maybe(
-        _go_host_compatible_sdk_label,
+        _go_host_compatible_s_d_k_label,
         name = "go_host_compatible_sdk_label",
     )
 
@@ -336,7 +336,10 @@ def _go_host_compatible_sdk_label_impl(ctx):
     ctx.file("BUILD.bazel")
     ctx.file("defs.bzl", """HOST_COMPATIBLE_SDK = Label("@go_sdk//:ROOT")""")
 
-_go_host_compatible_sdk_label = repository_rule(_go_host_compatible_sdk_label_impl)
+# This rule name has to avoid containing both "go_" and "_sdk" as substrings
+# due to this check in Gazelle:
+# https://github.com/bazelbuild/bazel-gazelle/blob/f08119735757370319d4f8c7653c0805fdae4817/deps.bzl#L92
+_go_host_compatible_s_d_k_label = repository_rule(_go_host_compatible_sdk_label_impl)
 
 def _maybe(repo_rule, name, **kwargs):
     if name not in native.existing_rules():
