@@ -115,12 +115,18 @@ func (pr *PackageRegistry) Match(labels []string) ([]string, []*FlatPackage) {
 					roots[pkg.ID] = struct{}{}
 				}
 			}
-		} else {
+		} else if _, ok := pr.packagesByID[label]; ok {
 			roots[label] = struct{}{}
 			// If an xtest package exists for this package add it to the roots
 			if _, ok := pr.packagesByID[label+"_xtest"]; ok {
 				roots[label+"_xtest"] = struct{}{}
 			}
+		} else {
+			// Skip a package if we don't have .pkg.json for it.
+			// This happens if 'bazel query' matches the target, but 'bazel build'
+			// can't analyze it, for example, if target_compatible_with is set
+			// with contraints not compatible with the host platform.
+			continue
 		}
 	}
 
