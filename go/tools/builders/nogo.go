@@ -152,6 +152,7 @@ func runNogo(workDir string, nogoPath string, srcs, ignores []string, facts []ar
 		if err != nil {
 			return fmt.Errorf("error writing nogo log file: %v", err)
 		}
+		return nil
 	}
-	return nil
+	return err
 }
