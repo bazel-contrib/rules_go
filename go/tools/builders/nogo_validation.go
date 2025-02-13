@@ -6,12 +6,11 @@ import (
 )
 
 func nogoValidation(args []string) error {
-	if len(args) != 3 {
-		return fmt.Errorf("usage: nogovalidation <validation_output> <log_file> <fix_file>\n\tgot: %v+", args)
+	if len(args) < 2 || len(args) > 3 {
+		return fmt.Errorf("usage: nogovalidation <validation_output> <log_file> [<fix_file>]\n\tgot: %v+", args)
 	}
 	validationOutput := args[0]
 	logFile := args[1]
-	fixFile := args[2]
 	// Always create the output file and only fail if the log file is non-empty to
 	// avoid an "action failed to create outputs" error.
 	logContent, err := os.ReadFile(logFile)
@@ -22,7 +21,8 @@ func nogoValidation(args []string) error {
 	if err != nil {
 		return err
 	}
-	if len(logContent) > 0 {
+	if len(logContent) > 0 && len(args) == 3 {
+		fixFile := args[2]
 		fixContent, err := os.ReadFile(fixFile)
 		if err != nil {
 			return err
