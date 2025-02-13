@@ -13,9 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from subprocess import check_output, call
-from sys import exit
 from os import path
+from subprocess import check_output
 
 POPULAR_REPOS = [
     dict(
@@ -89,7 +88,6 @@ POPULAR_REPOS = [
             "cmd/deadcode:deadcode_test", # Needs GOROOT
             "cmd/godoc:godoc_test", # TODO(#417)
             "cmd/gonew:gonew_test", # requires build cache
-            "cmd/gorename:gorename_test", # TODO(#417)
             "cmd/guru/testdata/src/referrers:referrers_test", # Not a real test
             # "cmd/guru:guru_test", # Needs testdata directory
             "cmd/signature-fuzzer/fuzz-driver:fuzz-driver_test", # requires working GOROOT

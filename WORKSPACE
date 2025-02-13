@@ -27,7 +27,7 @@ bazel_features_deps()
 
 go_rules_dependencies()
 
-go_register_toolchains(version = "1.23.1")
+go_register_toolchains(version = "1.24.0")
 
 go_download_sdk(
     name = "rules_go_internal_compatibility_sdk",
