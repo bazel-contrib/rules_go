@@ -99,10 +99,6 @@ func runNogo(workDir string, nogoPath string, srcs, ignores []string, facts []ar
 		if err != nil {
 			return fmt.Errorf("error writing empty nogo log file: %v", err)
 		}
-		err = os.WriteFile(outFixPath, nil, 0o666)
-		if err != nil {
-			return fmt.Errorf("error writing empty nogo fix file: %v", err)
-		}
 		return nil
 	}
 	args := []string{nogoPath}

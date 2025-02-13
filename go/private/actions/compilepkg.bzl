@@ -254,7 +254,7 @@ def _run_nogo(
     nogo_args.add_all(archives, before_each = "-facts", map_each = _facts)
     nogo_args.add("-out_facts", out_facts)
     nogo_args.add("-out_log", out_log)
-    nogo_args.add("-out_fix", out_fix)
+    nogo_args.add_all("-out_fix", [out_fix], expand_directories = False)
     nogo_args.add("-nogo", nogo.executable)
 
     # This action runs nogo and produces the facts files for downstream nogo actions.
@@ -285,7 +285,7 @@ def _run_nogo(
         validation_args.add("nogovalidation")
         validation_args.add(out_validation)
         validation_args.add(out_log)
-        validation_args.add(out_fix)
+        validation_args.add_all([out_fix])
 
         go.actions.run(
             inputs = [out_log, out_fix],
