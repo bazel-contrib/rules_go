@@ -14,7 +14,7 @@
 
 load(
     "//go/private:context.bzl",
-    "get_nogo",
+    "validate_nogo",
 )
 load(
     "//go/private:mode.bzl",
@@ -59,17 +59,20 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
     out_export = go.declare_file(go, name = source.name, ext = pre_ext + ".x")
     out_cgo_export_h = None  # set if cgo used in c-shared or c-archive mode
 
-    nogo = get_nogo(go)
+    nogo = go.nogo
     if nogo:
         out_facts = go.declare_file(go, name = source.name, ext = pre_ext + ".facts")
         out_nogo_log = go.declare_file(go, name = source.name, ext = pre_ext + ".nogo.log")
-        out_nogo_validation = go.declare_file(go, name = source.name, ext = pre_ext + ".nogo")
         out_nogo_fix = go.declare_file(go, name = source.name, ext = pre_ext + ".nogo.patch")
+        if validate_nogo(go):
+            out_nogo_validation = go.declare_file(go, name = source.name, ext = pre_ext + ".nogo")
+        else:
+            out_nogo_validation = None
     else:
         out_facts = None
         out_nogo_log = None
-        out_nogo_validation = None
         out_nogo_fix = None
+        out_nogo_validation = None
 
     direct = source.deps
 
@@ -114,8 +117,8 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
             out_export = out_export,
             out_facts = out_facts,
             out_nogo_log = out_nogo_log,
-            out_nogo_validation = out_nogo_validation,
             out_nogo_fix = out_nogo_fix,
+            out_nogo_validation = out_nogo_validation,
             nogo = nogo,
             out_cgo_export_h = out_cgo_export_h,
             gc_goopts = source.gc_goopts,

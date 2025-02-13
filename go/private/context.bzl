@@ -429,13 +429,11 @@ def _matches_scopes(label, scopes):
             return True
     return False
 
-def get_nogo(go):
-    """Returns the nogo file for this target, if enabled and in scope."""
+def validate_nogo(go):
+    """Whether nogo should be run as a validation action rather than just to generate fact files for the current
+    target."""
     label = go.label
-    if _matches_scopes(label, NOGO_INCLUDES) and not _matches_scopes(label, NOGO_EXCLUDES):
-        return go.nogo
-    else:
-        return None
+    return _matches_scopes(label, NOGO_INCLUDES) and not _matches_scopes(label, NOGO_EXCLUDES)
 
 default_go_config_info = GoConfigInfo(
     static = False,

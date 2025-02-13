@@ -69,8 +69,8 @@ def emit_compilepkg(
         out_export = None,
         out_facts = None,
         out_nogo_log = None,
-        out_nogo_validation = None,
         out_nogo_fix = None,
+        out_nogo_validation = None,
         nogo = None,
         out_cgo_export_h = None,
         gc_goopts = [],
@@ -88,8 +88,6 @@ def emit_compilepkg(
         fail("nogo must be specified if and only if out_facts is specified")
     if have_nogo != (out_nogo_log != None):
         fail("nogo must be specified if and only if out_nogo_log is specified")
-    if have_nogo != (out_nogo_validation != None):
-        fail("nogo must be specified if and only if out_nogo_validation is specified")
     if have_nogo != (out_nogo_fix != None):
         fail("nogo must be specified if and only if out_nogo_fix is specified")
 
@@ -222,8 +220,8 @@ def emit_compilepkg(
             archives = archives,
             out_facts = out_facts,
             out_log = out_nogo_log,
-            out_validation = out_nogo_validation,
             out_fix = out_nogo_fix,
+            out_validation = out_nogo_validation,
             nogo = nogo,
         )
 
@@ -278,21 +276,22 @@ def _run_nogo(
         progress_message = "Running nogo on %{label}",
     )
 
-    # This is a separate action that produces the validation output registered with Bazel. It
-    # prints any nogo findings and, crucially, fails if there are any findings. This is necessary
-    # to actually fail the build on nogo findings, which RunNogo doesn't do.
-    validation_args = go.actions.args()
-    validation_args.add("nogovalidation")
-    validation_args.add(out_validation)
-    validation_args.add(out_log)
-    validation_args.add(out_fix)
+    if out_validation:
+        # This is a separate action that produces the validation output registered with Bazel. It
+        # prints any nogo findings and, crucially, fails if there are any findings. This is necessary
+        # to actually fail the build on nogo findings, which RunNogo doesn't do.
+        validation_args = go.actions.args()
+        validation_args.add("nogovalidation")
+        validation_args.add(out_validation)
+        validation_args.add(out_log)
+        validation_args.add(out_fix)
 
-    go.actions.run(
-        inputs = [out_log, out_fix],
-        outputs = [out_validation],
-        mnemonic = "ValidateNogo",
-        executable = go.toolchain._builder,
-        arguments = [validation_args],
-        execution_requirements = SUPPORTS_PATH_MAPPING_REQUIREMENT,
-        progress_message = "Validating nogo output for %{label}",
-    )
+        go.actions.run(
+            inputs = [out_log, out_fix],
+            outputs = [out_validation],
+            mnemonic = "ValidateNogo",
+            executable = go.toolchain._builder,
+            arguments = [validation_args],
+            execution_requirements = SUPPORTS_PATH_MAPPING_REQUIREMENT,
+            progress_message = "Validating nogo output for %{label}",
+        )
