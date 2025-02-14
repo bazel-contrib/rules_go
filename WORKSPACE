@@ -29,9 +29,13 @@ go_rules_dependencies()
 
 go_register_toolchains(version = "1.24.0")
 
+# Required since nogo depends on golang.org/x/tools, which needs to be at
+# least version 0.30.0 to be compatible with Go 1.24, but references
+# types.Info.FileVersions, which was only added to Go 1.22.
+
 go_download_sdk(
     name = "rules_go_internal_compatibility_sdk",
-    version = "1.19.13",
+    version = "1.22.12",
 )
 
 go_register_nogo(

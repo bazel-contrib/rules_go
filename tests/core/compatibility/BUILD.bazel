@@ -7,6 +7,6 @@ go_binary(
 
 go_cross_binary(
     name = "hello_old",
-    sdk_version = "1.19",
+    sdk_version = "1.22",
     target = ":hello",
 )
