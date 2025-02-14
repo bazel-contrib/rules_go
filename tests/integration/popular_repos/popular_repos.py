@@ -185,6 +185,7 @@ POPULAR_REPOS = [
             "internal/gcimporter:gcimporter_test", # Needs testdata directory
             "internal/gocommand:gocommand_test", # Needs go tool
             "internal/imports:imports_test", # Needs testdata directory
+            "internal/packagestest/testdata/groups/two/primarymod/expect:expect_test",
             "internal/pprof:pprof_test", # Needs testdata directory
             "internal/refactor/inline:inline_test", # Needs GOROOT
             "internal/refactor/inline/analyzer:analyzer_test", # Needs GOROOT

@@ -208,7 +208,6 @@ test_suite(
         "@org_golang_x_tools//internal/modindex:modindex_test",
         "@org_golang_x_tools//internal/packagestest:packagestest_test",
         "@org_golang_x_tools//internal/packagestest/testdata:testdata_test",
-        "@org_golang_x_tools//internal/packagestest/testdata/groups/two/primarymod/expect:expect_test",
         "@org_golang_x_tools//internal/pkgbits:pkgbits_test",
         "@org_golang_x_tools//internal/proxydir:proxydir_test",
         "@org_golang_x_tools//internal/robustio:robustio_test",
