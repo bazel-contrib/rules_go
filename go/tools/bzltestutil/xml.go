@@ -39,6 +39,7 @@ type xmlTestSuite struct {
 	Tests     int           `xml:"tests,attr"`
 	Time      string        `xml:"time,attr"`
 	Name      string        `xml:"name,attr"`
+	Timestamp string        `xml:"timestamp,attr,omitempty"`
 }
 
 type xmlTestCase struct {
@@ -73,10 +74,17 @@ type testCase struct {
 	duration *float64
 }
 
+const (
+	timeoutPanicPrefix = "panic: test timed out after "
+)
+
 // json2xml converts test2json's output into an xml output readable by Bazel.
 // http://windyroad.com.au/dl/Open%20Source/JUnit.xsd
 func json2xml(r io.Reader, pkgName string) ([]byte, error) {
-	var pkgDuration *float64
+	var (
+		pkgDuration  *float64
+		pkgTimestamp *time.Time
+	)
 	testcases := make(map[string]*testCase)
 	testCaseByName := func(name string) *testCase {
 		if name == "" {
@@ -89,6 +97,7 @@ func json2xml(r io.Reader, pkgName string) ([]byte, error) {
 	}
 
 	dec := json.NewDecoder(r)
+	var inTimeoutSection, inRunningTestSection bool
 	for {
 		var e jsonEvent
 		if err := dec.Decode(&e); err == io.EOF {
@@ -96,12 +105,47 @@ func json2xml(r io.Reader, pkgName string) ([]byte, error) {
 		} else if err != nil {
 			return nil, fmt.Errorf("error decoding test2json output: %s", err)
 		}
+		if pkgTimestamp == nil || (e.Time != nil && e.Time.Unix() < pkgTimestamp.Unix()) {
+			pkgTimestamp = e.Time
+		}
 		switch s := e.Action; s {
 		case "run":
 			if c := testCaseByName(e.Test); c != nil {
 				c.state = s
 			}
 		case "output":
+			trimmedOutput := strings.TrimSpace(e.Output)
+			if strings.HasPrefix(trimmedOutput, timeoutPanicPrefix) {
+				inTimeoutSection = true
+				// the final "fail" action with "Elapsed" may not appear. If not, using the timeout setting as
+				// pkgDuration; if it appears, it will override pkgDuration.
+				if duration, err := time.ParseDuration(strings.TrimSpace(trimmedOutput[len(timeoutPanicPrefix):])); err == nil {
+					seconds := duration.Seconds()
+					pkgDuration = &seconds
+				}
+				continue
+			}
+			if inTimeoutSection && strings.HasPrefix(trimmedOutput, "running tests:") {
+				inRunningTestSection = true
+				continue
+			}
+			if inRunningTestSection {
+				// looking for something like "TestReport/test_3 (2s)"
+				parts := strings.Fields(e.Output)
+				if len(parts) != 2 || !strings.HasPrefix(parts[1], "(") || !strings.HasSuffix(parts[1], ")") {
+					inTimeoutSection = false
+					inRunningTestSection = false
+				} else if duration, err := time.ParseDuration(parts[1][1 : len(parts[1])-1]); err != nil {
+					inTimeoutSection = false
+					inRunningTestSection = false
+				} else if c := testCaseByName(parts[0]); c != nil {
+					c.state = "interrupt"
+					seconds := duration.Seconds()
+					c.duration = &seconds
+					c.output.WriteString(e.Output)
+				}
+				continue
+			}
 			if c := testCaseByName(e.Test); c != nil {
 				c.output.WriteString(e.Output)
 			}
@@ -128,10 +172,10 @@ func json2xml(r io.Reader, pkgName string) ([]byte, error) {
 		}
 	}
 
-	return xml.MarshalIndent(toXML(pkgName, pkgDuration, testcases), "", "\t")
+	return xml.MarshalIndent(toXML(pkgName, pkgDuration, pkgTimestamp, testcases), "", "\t")
 }
 
-func toXML(pkgName string, pkgDuration *float64, testcases map[string]*testCase) *xmlTestSuites {
+func toXML(pkgName string, pkgDuration *float64, pkgTimestamp *time.Time, testcases map[string]*testCase) *xmlTestSuites {
 	cases := make([]string, 0, len(testcases))
 	for k := range testcases {
 		cases = append(cases, k)
@@ -142,6 +186,9 @@ func toXML(pkgName string, pkgDuration *float64, testcases map[string]*testCase)
 	}
 	if pkgDuration != nil {
 		suite.Time = fmt.Sprintf("%.3f", *pkgDuration)
+	}
+	if pkgTimestamp != nil {
+		suite.Timestamp = pkgTimestamp.Format("2006-01-02T15:04:05.000Z")
 	}
 	for _, name := range cases {
 		c := testcases[name]
@@ -164,6 +211,12 @@ func toXML(pkgName string, pkgDuration *float64, testcases map[string]*testCase)
 			suite.Failures++
 			newCase.Failure = &xmlMessage{
 				Message:  "Failed",
+				Contents: c.output.String(),
+			}
+		case "interrupt":
+			suite.Errors++
+			newCase.Error = &xmlMessage{
+				Message:  "Interrupted",
 				Contents: c.output.String(),
 			}
 		case "pass":

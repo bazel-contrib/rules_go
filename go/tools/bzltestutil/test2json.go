@@ -8,8 +8,7 @@
 // See the cmd/test2json documentation for details of the JSON encoding.
 //
 // The file test2json.go was copied from upstream go at
-// src/cmd/internal/test2json/test2json.go, revision
-// https://github.com/golang/go/commit/1c72ee7f13831b215b8744f6b35bc4fd53aba5e2.
+// https://github.com/golang/go/blob/go1.23.6/src/cmd/internal/test2json/test2json.go.
 // At the time of writing this was
 // deemed the best way of depending on this code that is otherwise not exposed
 // outside of the go toolchain. These files should be kept in sync.
@@ -127,6 +126,7 @@ func NewConverter(w io.Writer, pkg string, mode Mode) *Converter {
 			part: c.writeOutputEvent,
 		},
 	}
+	c.writeEvent(&event{Action: "start"})
 	return c
 }
 
@@ -139,7 +139,9 @@ func (c *Converter) Write(b []byte) (int, error) {
 // Exited marks the test process as having exited with the given error.
 func (c *Converter) Exited(err error) {
 	if err == nil {
-		c.result = "pass"
+		if c.result != "skip" {
+			c.result = "pass"
+		}
 	} else {
 		c.result = "fail"
 	}

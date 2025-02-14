@@ -241,12 +241,14 @@ def _gomock_reflect(name, library, out, mockgen_tool, **kwargs):
         library = library,
         out = prog_src_out,
         mockgen_tool = mockgen_tool,
+        tags = ["manual"],
     )
     prog_bin = name + "_gomock_prog_bin"
     go_binary(
         name = prog_bin,
         srcs = [prog_src_out],
         deps = [library, mockgen_model_lib],
+        tags = ["manual"],
     )
     _gomock_prog_exec(
         name = name,

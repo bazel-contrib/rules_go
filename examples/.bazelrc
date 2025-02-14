@@ -1,0 +1,13 @@
+# This helps configure rules_go CI to test the examples.
+# It's not part of the examples themselves.
+#
+# This file is separate from the main .bazelrc because bzlmod is disabled
+# there, but it is required to build the examples.
+
+common:ci --enable_bzlmod
+common:ci --color=no
+common:ci --verbose_failures
+common:ci --sandbox_debug
+common:ci --spawn_strategy=standalone
+common:ci --genrule_strategy=standalone
+common:ci --test_strategy=standalone

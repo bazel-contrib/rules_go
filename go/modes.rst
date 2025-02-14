@@ -44,47 +44,54 @@ The build settings below are defined in the package
 ``@io_bazel_rules_go//go/config``. They can all be set on the command line
 or using `Bazel configuration transitions`_.
 
-+-------------------+----------------+-----------------------------------------+
-| **Name**          | **Type**       | **Default value**                       |
-+-------------------+---------------------+------------------------------------+
-| :param:`static`   | :type:`bool`        | :value:`false`                     |
-+-------------------+---------------------+------------------------------------+
++------------------------+---------------------+-------------------------------+
+| **Name**               | **Type**            | **Default value**             |
++------------------------+---------------------+-------------------------------+
+| :param:`static`        | :type:`bool`        | :value:`false`                |
++------------------------+---------------------+-------------------------------+
 | Statically links the target binary. May not always work since parts of the   |
 | standard library and other C dependencies won't tolerate static linking.     |
 | Works best with ``pure`` set as well.                                        |
-+-------------------+---------------------+------------------------------------+
-| :param:`race`     | :type:`bool`        | :value:`false`                     |
-+-------------------+---------------------+------------------------------------+
++------------------------+---------------------+-------------------------------+
+| :param:`race`          | :type:`bool`        | :value:`false`                |
++------------------------+---------------------+-------------------------------+
 | Instruments the binary for race detection. Programs will panic when a data   |
 | race is detected. Requires cgo. Mutually exclusive with ``msan``.            |
-+-------------------+---------------------+------------------------------------+
-| :param:`msan`     | :type:`bool`        | :value:`false`                     |
-+-------------------+---------------------+------------------------------------+
++------------------------+---------------------+-------------------------------+
+| :param:`msan`          | :type:`bool`        | :value:`false`                |
++------------------------+---------------------+-------------------------------+
 | Instruments the binary for memory sanitization. Requires cgo. Mutually       |
 | exclusive with ``race``.                                                     |
-+-------------------+---------------------+------------------------------------+
-| :param:`pure`     | :type:`bool`        | :value:`false`                     |
-+-------------------+---------------------+------------------------------------+
++------------------------+---------------------+-------------------------------+
+| :param:`pure`          | :type:`bool`        | :value:`false`                |
++------------------------+---------------------+-------------------------------+
 | Disables cgo, even when a C/C++ toolchain is configured (similar to setting  |
 | ``CGO_ENABLED=0``). Packages that contain cgo code may still be built, but   |
 | the cgo code will be filtered out, and the ``cgo`` build tag will be false.  |
-+-------------------+---------------------+------------------------------------+
-| :param:`debug`    | :type:`bool`        | :value:`false`                     |
-+-------------------+---------------------+------------------------------------+
++------------------------+---------------------+-------------------------------+
+| :param:`debug`         | :type:`bool`        | :value:`false`                |
++------------------------+---------------------+-------------------------------+
 | Includes debugging information in compiled packages (using the ``-N`` and    |
 | ``-l`` flags). This is always true with ``-c dbg``.                          |
-+-------------------+---------------------+------------------------------------+
-| :param:`gotags`   | :type:`string_list` | :value:`[]`                        |
-+-------------------+---------------------+------------------------------------+
++------------------------+---------------------+-------------------------------+
+| :param:`gotags`        | :type:`string_list` | :value:`[]`                   |
++------------------------+---------------------+-------------------------------+
 | Controls which build tags are enabled when evaluating build constraints in   |
 | source files. Useful for conditional compilation.                            |
-+-------------------+---------------------+------------------------------------+
-| :param:`linkmode` | :type:`string`      | :value:`"normal"`                  |
-+-------------------+---------------------+------------------------------------+
++------------------------+---------------------+-------------------------------+
+| :param:`linkmode`      | :type:`string`      | :value:`"normal"`             |
++------------------------+---------------------+-------------------------------+
 | Determines how the Go binary is built and linked. Similar to ``-buildmode``. |
 | Must be one of ``"normal"``, ``"shared"``, ``"pie"``, ``"plugin"``,          |
 | ``"c-shared"``, ``"c-archive"``.                                             |
-+-------------------+---------------------+------------------------------------+
++------------------------+---------------------+-------------------------------+
+| :param:`export_stdlib` | :type:`bool`        | :value:`false`                |
++------------------------+---------------------+-------------------------------+
+| This controls whether exports for the stdlib are generated by rules_go.      |
+| This is useful for running tools like golintci-lint via GOPACKAGESDRIVER     |
+| but adds time to the initial build. Leave false unless you want to use       |
+| golangci-lint or another tool that relies on GOPACKAGESDRIVER.               |
++------------------------+---------------------+-------------------------------+
 
 Platforms
 ---------
