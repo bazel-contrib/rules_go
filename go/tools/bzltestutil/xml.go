@@ -72,6 +72,7 @@ type testCase struct {
 	state    string
 	output   strings.Builder
 	duration *float64
+	timestamp *time.Time
 }
 
 const (
@@ -81,10 +82,6 @@ const (
 // json2xml converts test2json's output into an xml output readable by Bazel.
 // http://windyroad.com.au/dl/Open%20Source/JUnit.xsd
 func json2xml(r io.Reader, pkgName string) ([]byte, error) {
-	var (
-		pkgDuration  *float64
-		pkgTimestamp *time.Time
-	)
 	testcases := make(map[string]*testCase)
 	testCaseByName := func(name string) *testCase {
 		if name == "" {
@@ -105,24 +102,16 @@ func json2xml(r io.Reader, pkgName string) ([]byte, error) {
 		} else if err != nil {
 			return nil, fmt.Errorf("error decoding test2json output: %s", err)
 		}
-		if pkgTimestamp == nil || (e.Time != nil && e.Time.Unix() < pkgTimestamp.Unix()) {
-			pkgTimestamp = e.Time
-		}
 		switch s := e.Action; s {
 		case "run":
 			if c := testCaseByName(e.Test); c != nil {
 				c.state = s
+				c.timestamp = e.Time
 			}
 		case "output":
 			trimmedOutput := strings.TrimSpace(e.Output)
 			if strings.HasPrefix(trimmedOutput, timeoutPanicPrefix) {
 				inTimeoutSection = true
-				// the final "fail" action with "Elapsed" may not appear. If not, using the timeout setting as
-				// pkgDuration; if it appears, it will override pkgDuration.
-				if duration, err := time.ParseDuration(strings.TrimSpace(trimmedOutput[len(timeoutPanicPrefix):])); err == nil {
-					seconds := duration.Seconds()
-					pkgDuration = &seconds
-				}
 				continue
 			}
 			if inTimeoutSection && strings.HasPrefix(trimmedOutput, "running tests:") {
@@ -159,39 +148,48 @@ func json2xml(r io.Reader, pkgName string) ([]byte, error) {
 			if c := testCaseByName(e.Test); c != nil {
 				c.state = s
 				c.duration = e.Elapsed
-			} else {
-				pkgDuration = e.Elapsed
 			}
 		case "pass":
 			if c := testCaseByName(e.Test); c != nil {
 				c.duration = e.Elapsed
 				c.state = s
-			} else {
-				pkgDuration = e.Elapsed
 			}
 		}
 	}
 
-	return xml.MarshalIndent(toXML(pkgName, pkgDuration, pkgTimestamp, testcases), "", "\t")
+	return xml.MarshalIndent(toXML(pkgName, testcases), "", "\t")
 }
 
-func toXML(pkgName string, pkgDuration *float64, pkgTimestamp *time.Time, testcases map[string]*testCase) *xmlTestSuites {
+func toXML(pkgName string, testcases map[string]*testCase) *xmlTestSuites {
 	cases := make([]string, 0, len(testcases))
 	for k := range testcases {
 		cases = append(cases, k)
 	}
 	sort.Strings(cases)
-	suite := xmlTestSuite{
-		Name: pkgName,
-	}
-	if pkgDuration != nil {
-		suite.Time = fmt.Sprintf("%.3f", *pkgDuration)
-	}
-	if pkgTimestamp != nil {
-		suite.Timestamp = pkgTimestamp.Format("2006-01-02T15:04:05.000Z")
-	}
+
+	suiteByName := make(map[string]*xmlTestSuite)
+	var suiteNames []string
+
 	for _, name := range cases {
+		suiteName, _, _ := strings.Cut(name, "/")
+		var suite *xmlTestSuite
+		suite, ok := suiteByName[suiteName]
+		if !ok {
+			suite = &xmlTestSuite{
+				Name: pkgName + "." + suiteName,
+			}
+			suiteByName[suiteName] = suite
+			suiteNames = append(suiteNames, suiteName)
+		}
 		c := testcases[name]
+		if name == suiteName {
+			if c.duration != nil {
+				suite.Time = fmt.Sprintf("%.3f", *c.duration)
+			}
+			if c.timestamp != nil {
+				suite.Timestamp = c.timestamp.Format("2006-01-02T15:04:05.000Z")
+			}
+		}
 		suite.Tests++
 		newCase := xmlTestCase{
 			Name:      name,
@@ -230,5 +228,10 @@ func toXML(pkgName string, pkgDuration *float64, pkgTimestamp *time.Time, testca
 		}
 		suite.TestCases = append(suite.TestCases, newCase)
 	}
-	return &xmlTestSuites{Suites: []xmlTestSuite{suite}}
+	var suites xmlTestSuites
+	// because test cases are sorted by name, the suite names are also sorted.
+	for _, name := range suiteNames {
+		suites.Suites = append(suites.Suites, *suiteByName[name])
+	}
+	return &suites
 }

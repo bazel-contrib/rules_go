@@ -1,10 +1,16 @@
 <testsuites>
-	<testsuite errors="0" failures="3" skipped="1" tests="7" time="0.030" name="pkg/testing">
+	<testsuite errors="0" failures="1" skipped="0" tests="1" time="0.000" name="pkg/testing.TestFail">
 		<testcase classname="testing" name="TestFail" time="0.000">
 			<failure message="Failed" type="">=== RUN   TestFail&#xA;--- FAIL: TestFail (0.00s)&#xA;    test_test.go:23: Not working&#xA;</failure>
 		</testcase>
+	</testsuite>
+	<testsuite errors="0" failures="0" skipped="0" tests="1" time="0.000" name="pkg/testing.TestPass">
 		<testcase classname="testing" name="TestPass" time="0.000"></testcase>
+	</testsuite>
+	<testsuite errors="0" failures="0" skipped="0" tests="1" time="0.000" name="pkg/testing.TestPassLog">
 		<testcase classname="testing" name="TestPassLog" time="0.000"></testcase>
+	</testsuite>
+	<testsuite errors="0" failures="2" skipped="1" tests="4" time="0.020" name="pkg/testing.TestSubtests">
 		<testcase classname="testing" name="TestSubtests" time="0.020">
 			<failure message="Failed" type="">=== RUN   TestSubtests&#xA;--- FAIL: TestSubtests (0.02s)&#xA;</failure>
 		</testcase>

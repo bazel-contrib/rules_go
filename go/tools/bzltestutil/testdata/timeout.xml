@@ -1,5 +1,5 @@
 <testsuites>
-	<testsuite errors="2" failures="0" skipped="0" tests="5" time="8.555" name="pkg/testing" timestamp="2025-02-07T17:15:47.557Z">
+	<testsuite errors="2" failures="0" skipped="0" tests="5" time="8.000" name="pkg/testing.TestReport" timestamp="2025-02-07T17:15:48.107Z">
 		<testcase classname="testing" name="TestReport" time="8.000">
 			<error message="Interrupted" type="">=== RUN   TestReport&#xA;&#x9;&#x9;TestReport (8s)&#xA;</error>
 		</testcase>

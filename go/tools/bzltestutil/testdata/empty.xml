@@ -1,3 +1,1 @@
-<testsuites>
-	<testsuite errors="0" failures="0" skipped="0" tests="0" time="" name="pkg/testing"></testsuite>
-</testsuites>
+<testsuites></testsuites>
