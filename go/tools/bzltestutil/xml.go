@@ -171,7 +171,7 @@ func toXML(pkgName string, testcases map[string]*testCase) *xmlTestSuites {
 	var suiteNames []string
 
 	for _, name := range cases {
-		suiteName, _, _ := strings.Cut(name, "/")
+		suiteName := strings.SplitN(name, "/", 2)[0]
 		var suite *xmlTestSuite
 		suite, ok := suiteByName[suiteName]
 		if !ok {
