@@ -97,6 +97,7 @@ POPULAR_REPOS = [
             "container/intsets:intsets_test", # TODO(#413): External test depends on symbols defined in internal test.
             "copyright:copyright_test", # # requires runfiles
             "go/analysis/analysistest:analysistest_test", # requires build cache
+            "go/analysis/checker:checker_test", # Needs go tool
             "go/analysis/internal/analysisflags:analysisflags_test", # calls os.Exit(0) in a test
             "go/analysis/internal/checker:checker_test", # loads test package with go/packages, which probably needs go list
             "go/analysis/internal/versiontest:versiontest_test", # Needs GOROOT
@@ -153,11 +154,13 @@ POPULAR_REPOS = [
             "go/analysis/passes/unusedwrite:unusedwrite_test", # Needs testdata directory
             "go/analysis/passes/timeformat:timeformat_test", # Needs go tool
             "go/analysis/passes/usesgenerics:usesgenerics_test", # Needs go tool
+            "go/analysis/passes/waitgroup:waitgroup_test", # Needs go tool
             "go/analysis/unitchecker:unitchecker_test", # requires go vet
             "go/ast/inspector:inspector_test", # requires GOROOT and GOPATH
             "go/buildutil:buildutil_test", # Needs testdata directory
             "go/callgraph/cha:cha_test", # Needs testdata directory
             "go/callgraph/rta:rta_test", # Needs testdata directory
+            "go/callgraph/static:static_test", # Needs go tool
             "go/callgraph/vta:vta_test", # Needs testdata directory
             "go/cfg:cfg_test", # Needs GOROOT
             "go/expect:expect_test", # Needs testdata directory
@@ -178,13 +181,18 @@ POPULAR_REPOS = [
             "godoc/static:static_test", # requires data files
             "godoc/vfs/zipfs:zipfs_test", # requires GOROOT
             "godoc:godoc_test", # requires GOROOT and GOPATH
+            "internal/analysisinternal:analysisinternal_test", # requires GOROOT and GOPATH
             "internal/apidiff:apidiff_test", # Needs testdata directory
+            "internal/astutil/cursor:cursor_test", # requires GOROOT
             "internal/diff/difftest:difftest_test", # Needs diff tool
             "internal/diffp:diffp_test", # Needs testdata directory
+            "internal/drivertest:drivertest_test", # Needs go tool
+            "internal/expect:expect_test", # Needs testdata directory
             "internal/facts:facts_test", # loads test package with go/packages, which probably needs go list
             "internal/gcimporter:gcimporter_test", # Needs testdata directory
             "internal/gocommand:gocommand_test", # Needs go tool
             "internal/imports:imports_test", # Needs testdata directory
+            "internal/packagestest:packagestest_test", # Needs go tool
             "internal/packagestest/testdata/groups/two/primarymod/expect:expect_test",
             "internal/pprof:pprof_test", # Needs testdata directory
             "internal/refactor/inline:inline_test", # Needs GOROOT
