@@ -27,7 +27,7 @@ def popular_repos():
         go_repository,
         name = "org_golang_x_crypto",
         importpath = "golang.org/x/crypto",
-        commit = "0d375be9b61cb69eb94173d0375a05e90875bbf6",
+        commit = "e47973b1c1089f6c67ab89261f7aa067b3d611d2",
     )
     _maybe(
         go_repository,

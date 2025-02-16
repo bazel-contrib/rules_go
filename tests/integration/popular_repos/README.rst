@@ -26,7 +26,6 @@ This runs tests from the repository `golang.org/x/crypto <https://golang.org/x/c
 * @org_golang_x_crypto//chacha20poly1305:chacha20poly1305_test
 * @org_golang_x_crypto//cryptobyte:cryptobyte_test
 * @org_golang_x_crypto//curve25519:curve25519_test
-* @org_golang_x_crypto//curve25519/internal/field:field_test
 * @org_golang_x_crypto//ed25519:ed25519_test
 * @org_golang_x_crypto//hkdf:hkdf_test
 * @org_golang_x_crypto//internal/alias:alias_test
