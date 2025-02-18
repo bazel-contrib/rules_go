@@ -60,7 +60,8 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
     out_cgo_export_h = None  # set if cgo used in c-shared or c-archive mode
 
     nogo = go.nogo
-    if nogo:
+    # nogo is a FilesToRunProvider and some targets don't have it, some have it but no executable.
+    if nogo != None and nogo.executable != None:
         out_facts = go.declare_file(go, name = source.name, ext = pre_ext + ".facts")
         out_nogo_log = go.declare_file(go, name = source.name, ext = pre_ext + ".nogo.log")
         out_nogo_fix = go.declare_file(go, name = source.name, ext = pre_ext + ".nogo.patch")
