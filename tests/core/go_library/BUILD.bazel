@@ -186,9 +186,9 @@ genrule(
 go_source(
     name = "use_syso_srcs",
     srcs = [
-        ":sysolib",
         "wrap_imported_amd64.s",
         "wrap_imported_arm64.s",
+        ":sysolib",
     ],
     visibility = [
         "//tests/core/go_binary:__pkg__",

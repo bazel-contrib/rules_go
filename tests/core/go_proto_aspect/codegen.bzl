@@ -27,7 +27,6 @@ def _go_generated_library_impl(ctx):
         ),
     ]
 
-
 go_generated_library = rule(
     implementation = _go_generated_library_impl,
     attrs = {

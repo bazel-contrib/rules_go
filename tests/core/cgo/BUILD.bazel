@@ -99,23 +99,21 @@ go_library(
     tags = ["manual"],
 )
 
-
 genrule(
     name = "generate_imported_dylib_linux",
     srcs = ["imported.c"],
-    tools = ["generate_imported_dylib.sh"],
     outs = [
         "libimported.so",
         "libversioned.so.2",
     ],
     cmd = "$(location generate_imported_dylib.sh) $(location imported.c) $(@D)",
     target_compatible_with = ["@platforms//os:linux"],
+    tools = ["generate_imported_dylib.sh"],
 )
 
 genrule(
     name = "generate_imported_dylib_darwin",
     srcs = ["imported.c"],
-    tools = ["generate_imported_dylib.sh"],
     outs = [
         "libimported.dylib",
         "libversioned.2.dylib",
@@ -124,6 +122,7 @@ genrule(
     ],
     cmd = "$(location generate_imported_dylib.sh) $(location imported.c) $(@D)",
     target_compatible_with = ["@platforms//os:macos"],
+    tools = ["generate_imported_dylib.sh"],
 )
 
 cc_import(

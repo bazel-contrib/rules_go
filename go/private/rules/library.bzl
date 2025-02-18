@@ -115,8 +115,7 @@ go_library = rule(
             with the same path (for example, from different vendor directories).
             """,
         ),
-        "importpath_aliases": attr.string_list(
-        ),  # experimental, undocumented
+        "importpath_aliases": attr.string_list(),  # experimental, undocumented
         "embed": attr.label_list(
             providers = [GoInfo],
             doc = """
