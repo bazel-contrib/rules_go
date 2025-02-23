@@ -72,7 +72,8 @@ type testCase struct {
 	state    string
 	output   strings.Builder
 	duration *float64
-	timestamp *time.Time
+	start *time.Time
+	end *time.Time
 }
 
 const (
@@ -106,7 +107,7 @@ func json2xml(r io.Reader, pkgName string) ([]byte, error) {
 		case "run":
 			if c := testCaseByName(e.Test); c != nil {
 				c.state = s
-				c.timestamp = e.Time
+				c.start = e.Time
 			}
 		case "output":
 			trimmedOutput := strings.TrimSpace(e.Output)
@@ -137,22 +138,26 @@ func json2xml(r io.Reader, pkgName string) ([]byte, error) {
 			}
 			if c := testCaseByName(e.Test); c != nil {
 				c.output.WriteString(e.Output)
+				c.end = e.Time
 			}
 		case "skip":
 			if c := testCaseByName(e.Test); c != nil {
 				c.output.WriteString(e.Output)
 				c.state = s
 				c.duration = e.Elapsed
+				c.end = e.Time
 			}
 		case "fail":
 			if c := testCaseByName(e.Test); c != nil {
 				c.state = s
 				c.duration = e.Elapsed
+				c.end = e.Time
 			}
 		case "pass":
 			if c := testCaseByName(e.Test); c != nil {
 				c.duration = e.Elapsed
 				c.state = s
+				c.end = e.Time
 			}
 		}
 	}
@@ -183,11 +188,18 @@ func toXML(pkgName string, testcases map[string]*testCase) *xmlTestSuites {
 		}
 		c := testcases[name]
 		if name == suiteName {
-			if c.duration != nil {
-				suite.Time = fmt.Sprintf("%.3f", *c.duration)
+			duration := *c.duration
+			if c.start != nil && c.end != nil {
+				// the duration of a test suite may be greater than c.duration
+				// when any test case uses t.Parallel().
+				d := c.end.Sub(*c.start).Seconds()
+				if d > duration {
+					duration = d
+				}
 			}
-			if c.timestamp != nil {
-				suite.Timestamp = c.timestamp.Format("2006-01-02T15:04:05.000Z")
+			suite.Time = fmt.Sprintf("%.3f", duration)
+			if c.start != nil {
+				suite.Timestamp = c.start.Format("2006-01-02T15:04:05.000Z")
 			}
 		}
 		suite.Tests++
