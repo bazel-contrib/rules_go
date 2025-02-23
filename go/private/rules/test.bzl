@@ -107,12 +107,12 @@ def _go_test_impl(ctx):
 
     # now generate the main function
     repo_relative_rundir = ctx.attr.rundir or ctx.label.package or "."
-    if ctx.label.workspace_name:
-        # The test is contained in an external repository (Label.workspace_name is always the empty
+    if ctx.label.repo_name:
+        # The test is contained in an external repository (Label.repo_name is always the empty
         # string for the main repository, which is the canonical repository name of this repo).
         # The test runner cd's into the directory corresponding to the main repository, so walk up
         # and then down.
-        run_dir = "../" + ctx.label.workspace_name + "/" + repo_relative_rundir
+        run_dir = "../" + ctx.label.repo_name + "/" + repo_relative_rundir
     else:
         run_dir = repo_relative_rundir
 

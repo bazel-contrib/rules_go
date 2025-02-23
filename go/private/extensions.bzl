@@ -129,7 +129,7 @@ def _go_sdk_impl(ctx):
         for scope in nogo_tag.includes + nogo_tag.excludes:
             # Validate that the scope references a valid, visible repository.
             # buildifier: disable=no-effect
-            scope.workspace_name
+            scope.repo_name
             if scope.name != "__pkg__" and scope.name != "__subpackages__":
                 fail(
                     "go_sdk.nogo: all entries in includes and excludes must end with ':__pkg__' or ':__subpackages__', got '{}' in".format(scope.name),

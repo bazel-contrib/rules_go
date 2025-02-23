@@ -413,7 +413,7 @@ def _infer_importpath(ctx, embeds, importpath, importmap):
 def matches_scope(label, scope):
     if scope == "all":
         return True
-    if scope.workspace_name != label.workspace_name:
+    if scope.repo_name != label.repo_name:
         return False
     if scope.name == "__pkg__":
         return scope.package == label.package
