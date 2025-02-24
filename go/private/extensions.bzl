@@ -74,16 +74,15 @@ _nogo_tag = tag_class(
         ),
         "includes": attr.label_list(
             default = NOGO_DEFAULT_INCLUDES,
-            # The special include "all" is undocumented on purpose: With it, adding a new transitive
-            # dependency to a Go module can cause a build failure if the new dependency has lint
-            # issues.
             doc = """
 A Go target is checked with nogo if its package matches at least one of the entries in 'includes'
 and none of the entries in 'excludes'. By default, nogo is applied to all targets in the main
 repository.
 
 Uses the same format as 'visibility', i.e., every entry must be a label that ends with ':__pkg__' or
-':__subpackages__'.
+':__subpackages__'. As an exception to this rule, the special value ["all"] is allowed for 'includes'
+and means that nogo should be applied to all Go targets, including those in all external
+repositories.
 """,
         ),
         "excludes": attr.label_list(
@@ -111,11 +110,9 @@ _MAX_NUM_TOOLCHAINS = 9999
 _TOOLCHAIN_INDEX_PAD_LENGTH = len(str(_MAX_NUM_TOOLCHAINS))
 
 def _go_sdk_impl(ctx):
-    nogo_tag = struct(
-        nogo = DEFAULT_NOGO,
-        includes = NOGO_DEFAULT_INCLUDES,
-        excludes = NOGO_DEFAULT_EXCLUDES,
-    )
+    nogo = DEFAULT_NOGO
+    nogo_includes = NOGO_DEFAULT_INCLUDES
+    nogo_excludes = NOGO_DEFAULT_EXCLUDES
     for module in ctx.modules:
         if not module.is_root or not module.tags.nogo:
             continue
@@ -126,22 +123,26 @@ def _go_sdk_impl(ctx):
                 *[t for p in zip(module.tags.nogo, len(module.tags.nogo) * ["\n"]) for t in p]
             )
         nogo_tag = module.tags.nogo[0]
-        for scope in nogo_tag.includes + nogo_tag.excludes:
-            # Validate that the scope references a valid, visible repository.
-            # buildifier: disable=no-effect
-            scope.workspace_name
-            if scope.name != "__pkg__" and scope.name != "__subpackages__":
-                fail(
-                    "go_sdk.nogo: all entries in includes and excludes must end with ':__pkg__' or ':__subpackages__', got '{}' in".format(scope.name),
-                    nogo_tag,
-                )
+        nogo = nogo_tag.nogo
+        nogo_includes = nogo_tag.includes
+        nogo_excludes = nogo_tag.excludes
+
+        # "all" is still processed into a Label instance, so we just check its name.
+        if len(nogo_includes) == 1 and nogo_includes[0].name == "all":
+            nogo_includes = ["all"]
+        else:
+            for scope in nogo_includes:
+                _check_nogo_scope(scope, nogo_tag)
+        for scope in nogo_excludes:
+            _check_nogo_scope(scope, nogo_tag)
+
     go_register_nogo(
         name = "io_bazel_rules_nogo",
-        nogo = str(nogo_tag.nogo),
+        nogo = str(nogo),
         # Go through canonical label literals to avoid a dependency edge on the packages in the
         # scope.
-        includes = [str(l) for l in nogo_tag.includes],
-        excludes = [str(l) for l in nogo_tag.excludes],
+        includes = [str(l) for l in nogo_includes],
+        excludes = [str(l) for l in nogo_excludes],
     )
 
     multi_version_module = {}
@@ -299,6 +300,16 @@ def _go_sdk_impl(ctx):
         return ctx.extension_metadata(reproducible = True)
     else:
         return None
+
+def _check_nogo_scope(scope, nogo_tag):
+    # Validate that the scope references a valid, visible repository.
+    # buildifier: disable=no-effect
+    scope.workspace_name
+    if scope.name != "__pkg__" and scope.name != "__subpackages__":
+        fail(
+            "go_sdk.nogo: all entries in includes and excludes must end with ':__pkg__' or ':__subpackages__', got '{}' in".format(scope.name),
+            nogo_tag,
+        )
 
 def _default_go_sdk_name(*, module, multi_version, tag_type, index, suffix = ""):
     # Keep the version out of the repository name if possible to prevent unnecessary rebuilds when
