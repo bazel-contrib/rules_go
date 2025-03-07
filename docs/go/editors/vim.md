@@ -40,6 +40,11 @@ autocompletion for Bazel-generated Go files, among other things.
 
       " See https://github.com/golang/tools/blob/master/gopls/doc/settings.md
       let g:go_gopls_settings = {
+        \ 'build.workspaceFiles': [
+          \ '**/BUILD',
+          \ '**/WORKSPACE',
+          \ '**/*.{bzl,bazel}',
+        \ ], 
         \ 'build.directoryFilters': [
           \ '-bazel-bin',
           \ '-bazel-out',
