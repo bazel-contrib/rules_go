@@ -147,6 +147,7 @@ bzl_library(
         "//go/private:mode",
         "//go/private:platforms",
         "//go/private:providers",
+        "//go/private/tools:copy_cmd",
     ],
 )
 
@@ -160,6 +161,7 @@ bzl_library(
     deps = [
         "//go/private:providers",
         "//go/private/rules:transition",
+        "//go/private/tools:copy_cmd",
     ],
 )
 
