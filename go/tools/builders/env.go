@@ -33,7 +33,7 @@ import (
 
 var (
 	// cgoEnvVars is the list of all cgo environment variable
-	cgoEnvVars = []string{"CGO_CFLAGS", "CGO_CXXFLAGS", "CGO_CPPFLAGS", "CGO_LDFLAGS"}
+	cgoAbsEnvVars = []string{"CGO_CFLAGS", "CGO_CXXFLAGS", "CGO_CPPFLAGS"}
 	// cgoAbsEnvFlags are all the flags that need absolute path in cgoEnvVars
 	cgoAbsEnvFlags = []string{"-I", "-L", "-isysroot", "-isystem", "-iquote", "-include", "-gcc-toolchain", "--sysroot", "-resource-dir", "-fsanitize-blacklist", "-fsanitize-ignorelist"}
 	// cgoAbsPlaceholder is placed in front of flag values that must be absolutized
@@ -593,4 +593,41 @@ func useResponseFile(path string, argLen int) bool {
 		return true
 	}
 	return false
+}
+
+// The go build system collects the CGO_LDFLAGS from manifests (_go_.o) and uses them in the user module linking.
+// In some cases, such as when using the distributed Bazel executor, these paths may not exist (different build agents uses different sandboxing paths).
+// It is better to use flags with absolute paths in the -extldflags option (in this case, they will not be saved inside the manifest).
+func splitAbsEnvVar(originVar string, absArs []string) (string, string, error) {
+	var absolute []string
+	var nonAbsolute []string
+	absNext := false
+	splited, err := splitQuoted(originVar)
+	if err != nil {
+		return "", "", err
+	}
+	for i := range splited {
+		if absNext {
+			absolute = append(absolute, splited[i])
+			absNext = false
+			continue
+		}
+		isAbsolute := false
+		for _, f := range absArs {
+			if !strings.HasPrefix(splited[i], f) {
+				continue
+			}
+			isAbsolute = true
+			absolute = append(absolute, splited[i])
+			possibleValue := splited[i][len(f):]
+			if len(possibleValue) == 0 {
+				absNext = true
+			}
+			break
+		}
+		if !isAbsolute {
+			nonAbsolute = append(nonAbsolute, splited[i])
+		}
+	}
+	return strings.Join(absolute, " "), strings.Join(nonAbsolute, " "), nil
 }
