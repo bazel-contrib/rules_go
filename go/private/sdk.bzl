@@ -403,15 +403,15 @@ _go_wrap_sdk = repository_rule(
 )
 
 def go_wrap_sdk(name, register_toolchains = True, **kwargs):
-    _go_wrap_sdk(name = name, **kwargs)
     _go_toolchains(
         name = name + "_toolchains",
         sdk_repo = name,
         sdk_type = "remote",
         sdk_version = kwargs.get("version"),
-        goos = kwargs.get("goos"),
-        goarch = kwargs.get("goarch"),
+        goos = kwargs.pop("goos", None),
+        goarch = kwargs.pop("goarch", None),
     )
+    _go_wrap_sdk(name = name, **kwargs)
     if register_toolchains:
         _register_toolchains(name)
 
