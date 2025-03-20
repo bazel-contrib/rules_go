@@ -58,7 +58,10 @@ def cgo_configure(go, srcs, cdeps, cppopts, copts, cxxopts, clinkopts):
     cxxopts = go.cgo_tools.cxx_compile_options + cxxopts
     objcopts = go.cgo_tools.objc_compile_options + copts
     objcxxopts = go.cgo_tools.objcxx_compile_options + cxxopts
-    clinkopts = extldflags_from_cc_toolchain(go) + clinkopts
+    clinkopts = [
+        option for option in extldflags_from_cc_toolchain(go)
+        if option != "-static"
+    ] + clinkopts
 
     # NOTE(#2545): avoid unnecessary dynamic link
     if "-static-libstdc++" in clinkopts:
