@@ -13,6 +13,7 @@
 # limitations under the License.
 
 load("@io_bazel_rules_go_bazel_features//:features.bzl", "bazel_features")
+load("//go/private:go_mod.bzl", "version_from_go_mod")
 load("//go/private:nogo.bzl", "DEFAULT_NOGO", "NOGO_DEFAULT_EXCLUDES", "NOGO_DEFAULT_INCLUDES", "go_register_nogo")
 load("//go/private:sdk.bzl", "detect_host_platform", "go_download_sdk_rule", "go_host_sdk_rule", "go_multiple_toolchains", "go_wrap_sdk_rule")
 
@@ -109,6 +110,15 @@ _wrap_tag = tag_class(
         ),
         "goos": attr.string(),
         "goarch": attr.string(),
+    },
+)
+
+_from_file_tag = tag_class(
+    attrs = {
+        "name": attr.string(),
+        "go_mod": attr.label(
+            doc = "The go.mod file to read the SDK version from.",
+        ),
     },
 )
 
@@ -316,6 +326,30 @@ def _go_sdk_impl(ctx):
             ))
             first_host_compatible_toolchain = first_host_compatible_toolchain or "@{}//:ROOT".format(name)
 
+        for index, from_file_tag in enumerate(module.tags.from_file):
+            version = version_from_go_mod(ctx, from_file_tag.go_mod)
+            print("Got version {}".format(version))
+            name = from_file_tag.name or _default_go_sdk_name(
+                module = module,
+                multi_version = multi_version_module[module.name],
+                tag_type = "from_file",
+                index = index,
+            )
+            go_download_sdk_rule(
+                name = name,
+                version = version,
+            )
+            toolchains.append(struct(
+                goos = "",
+                goarch = "",
+                sdk_repo = name,
+                sdk_type = "remote",
+                sdk_version = version,
+            ))
+            first_host_compatible_toolchain = first_host_compatible_toolchain or "@{}//:ROOT".format(name)
+
+    print("toolchains: {}".format(toolchains))
+
     host_compatible_toolchain(name = "go_host_compatible_sdk_label", toolchain = first_host_compatible_toolchain)
     if len(toolchains) > _MAX_NUM_TOOLCHAINS:
         fail("more than {} go_sdk tags are not supported".format(_MAX_NUM_TOOLCHAINS))
@@ -383,6 +417,7 @@ go_sdk = module_extension(
         "host": _host_tag,
         "nogo": _nogo_tag,
         "wrap": _wrap_tag,
+        "from_file": _from_file_tag,
     },
     **go_sdk_extra_kwargs
 )
