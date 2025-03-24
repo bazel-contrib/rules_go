@@ -95,7 +95,8 @@ def emit_compilepkg(
     sdk = go.sdk
     inputs_direct = (sources + embedsrcs + [sdk.package_list] +
                      [archive.data.export_file for archive in archives])
-    inputs_transitive = [sdk.headers, sdk.tools, go.stdlib.libs]
+    inputs_transitive = ([sdk.headers, sdk.tools, go.stdlib.libs] +
+                         [archive.data._headers for archive in archives])
     outputs = [out_lib, out_export]
 
     shared_args = go.builder_args(go, use_path_mapping = True)

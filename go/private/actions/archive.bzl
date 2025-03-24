@@ -197,6 +197,7 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
         _validation_output = out_nogo_validation,
         _nogo_diagnostics = out_diagnostics,
         _cgo_deps = cgo_deps,
+        _headers = depset([f for f in source.srcs if f.path.split(".")[-1].lower().startswith("h")]),
     )
     x_defs = dict(source.x_defs)
     for a in direct:
