@@ -183,7 +183,7 @@ def _go_sdk_impl(ctx):
             name = _default_go_sdk_name(
                 module = module,
                 multi_version = multi_version_module[module.name],
-                tag_type = "local",
+                tag_type = "wrap",
                 index = index,
             )
             go_wrap_sdk_rule(
