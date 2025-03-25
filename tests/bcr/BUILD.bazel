@@ -7,6 +7,7 @@ load(
     "go_test",
     "nogo",
 )
+load("//:transition.bzl", "sdk_transition_test")
 
 nogo(
     name = "my_nogo",
@@ -68,4 +69,16 @@ sh_test(
     data = ["@my_rules_go//go"],
     env = {"GO_TOOL_RLOCATION": "$(rlocationpath @my_rules_go//go)"},
     deps = ["@bazel_tools//tools/bash/runfiles"],
+)
+
+go_test(
+    name = "wrap_test",
+    srcs = ["wrap_test.go"],
+    tags = ["manual"],
+)
+
+sdk_transition_test(
+    name = "wrap_sdk_test",
+    binary = ":wrap_test",
+    sdk_version = "1.23.6",
 )
