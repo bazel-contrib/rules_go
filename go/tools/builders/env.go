@@ -543,7 +543,11 @@ func passLongArgsInResponseFiles(cmd *exec.Cmd) (cleanup func()) {
 	cleanup = func() { os.Remove(tf.Name()) }
 	var buf bytes.Buffer
 	for _, arg := range cmd.Args[1:] {
-		fmt.Fprintf(&buf, "%s\n", arg)
+		// Slashes need to be doubled for escaping
+		escaped_arg := strings.ReplaceAll(arg, "\\", "\\\\")
+		// Newlines too, so that they don't get split when read
+		escaped_arg = strings.ReplaceAll(escaped_arg, "\n", "\\n")
+		fmt.Fprintf(&buf, "%s\n", escaped_arg)
 	}
 	if _, err := tf.Write(buf.Bytes()); err != nil {
 		tf.Close()

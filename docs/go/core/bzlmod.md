@@ -104,7 +104,6 @@ go_sdk.nogo(
 ### Not yet supported
 
 -   `go_local_sdk`
--   `go_wrap_sdk`
 
 ## Generating BUILD files
 
