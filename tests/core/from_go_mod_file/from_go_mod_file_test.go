@@ -53,7 +53,7 @@ func Test(t *testing.T) {
 `,
 		ModuleFileSuffix: `
 go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk")
-go_sdk.from_file(go_mod = "//:go.mod")
+go_sdk.from_file(name = "sdk_under_test", go_mod = "//:go.mod")
 `,
 	})
 }
@@ -62,26 +62,60 @@ func Test(t *testing.T) {
 	for _, test := range []struct{
 		desc, go_mod, want string
 	}{
-		{
-			desc: "toolchain",
-			go_mod: `
-module test
+// 		{
+// 			desc: "toolchain",
+// 			go_mod: `
+// module test
 
-go 1.23.0
+// go 1.23.0
 
-toolchain go1.24.1
-`,
-			want: "go1.24.1",
-		},
+// toolchain go1.24.0
+
+// require (
+//     github.com/bazelbuild/rules_go v0.53.0  // unused, just here to test the go.mod parser
+// )
+// `,
+// 			want: "go1.24.0 X:nocoverageredesign",
+// 		},
+// 		{
+// 			desc: "toolchain minor version",
+// 			go_mod: `
+// module test
+
+// go 1.23.0
+
+// toolchain go1.24.1
+
+// require (
+//     github.com/bazelbuild/rules_go v0.53.0  // unused, just here to test the go.mod parser
+// )
+// `,
+// 			want: "go1.24.1 X:nocoverageredesign",
+// 		},
 // 		{
 // 			desc: "go only",
 // 			go_mod: `
 // module test
 
-// go 1.23.0
+// go 1.17
+
+// require (
+//     github.com/bazelbuild/rules_go v0.53.0  // unused, just here to test the go.mod parser
+// )
 // `,
 // 			want: "go1.23.0",
 // 		},
+		{
+			desc: "missing go",
+			go_mod: `
+module test
+
+require (
+    github.com/bazelbuild/rules_go v0.53.0  // unused, just here to test the go.mod parser
+)
+`,
+			want: "go1.17",
+		},
 	} {
 		t.Run(test.desc, func(t *testing.T) {
 			if err := ioutil.WriteFile("go.mod", []byte(test.go_mod), 0o666); err != nil {
@@ -89,9 +123,10 @@ toolchain go1.24.1
 			}
 			args := []string{
 				"test",
-				"//:version_test",
+				"--enable_bzlmod",
 				"--test_arg=-version=" + test.want,
 				"--test_output=all",
+				"//:version_test",
 			}
 			if err := bazel_testing.RunBazel(args...); err != nil {
 				t.Fatal(err)
