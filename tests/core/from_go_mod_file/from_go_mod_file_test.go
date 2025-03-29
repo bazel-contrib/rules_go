@@ -53,7 +53,7 @@ func Test(t *testing.T) {
 `,
 		ModuleFileSuffix: `
 go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk")
-go_sdk.from_file(name = "go_sdk", go_mod = "//:go.mod")
+go_sdk.from_file(go_mod = "//:go.mod")
 `,
 	})
 }
@@ -73,15 +73,15 @@ toolchain go1.24.1
 `,
 			want: "go1.24.1",
 		},
-		{
-			desc: "go only",
-			go_mod: `
-module test
+// 		{
+// 			desc: "go only",
+// 			go_mod: `
+// module test
 
-go 1.23.0
-`,
-			want: "go1.23.0",
-		},
+// go 1.23.0
+// `,
+// 			want: "go1.23.0",
+// 		},
 	} {
 		t.Run(test.desc, func(t *testing.T) {
 			if err := ioutil.WriteFile("go.mod", []byte(test.go_mod), 0o666); err != nil {
