@@ -65,6 +65,7 @@ def version_from_go_mod(module_ctx, go_mod_label):
 
     version = state["toolchain"]
     if not version:
+        # https://go.dev/doc/toolchain: "a go.mod that says go 1.21.0 with no toolchain line is interpreted as if it had a toolchain go1.21.0 line."
         version = state["go"]
     if not version:
         # "As of the Go 1.17 release, if the go directive is missing, go 1.16 is assumed."
