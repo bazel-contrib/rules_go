@@ -218,7 +218,6 @@ def _go_sdk_impl(ctx):
         # First if the module suggests to read the toolchain version from a `go.mod` file, use that.
         for index, from_file_tag in enumerate(module.tags.from_file):
             version = version_from_go_mod(ctx, from_file_tag.go_mod)
-            print("Got version {}".format(version))
             name = from_file_tag.name or _default_go_sdk_name(
                 module = module,
                 multi_version = multi_version_module[module.name],
@@ -364,9 +363,6 @@ def _go_sdk_impl(ctx):
                 sdk_version = host_tag.version,
             ))
             first_host_compatible_toolchain = first_host_compatible_toolchain or "@{}//:ROOT".format(name)
-
-    print("toolchains: {}".format(toolchains))
-    print("first : {}".format(first_host_compatible_toolchain))
 
     host_compatible_toolchain(name = "go_host_compatible_sdk_label", toolchain = first_host_compatible_toolchain)
     if len(toolchains) > _MAX_NUM_TOOLCHAINS:
