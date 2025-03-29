@@ -62,49 +62,49 @@ func Test(t *testing.T) {
 	for _, test := range []struct{
 		desc, go_mod, want string
 	}{
-// 		{
-// 			desc: "toolchain",
-// 			go_mod: `
-// module test
+		{
+			desc: "toolchain",
+			go_mod: `
+module test
 
-// go 1.23.0
+go 1.23.0
 
-// toolchain go1.24.0
+toolchain go1.24.0
 
-// require (
-//     github.com/bazelbuild/rules_go v0.53.0  // unused, just here to test the go.mod parser
-// )
-// `,
-// 			want: "go1.24.0 X:nocoverageredesign",
-// 		},
-// 		{
-// 			desc: "toolchain minor version",
-// 			go_mod: `
-// module test
+require (
+    github.com/bazelbuild/rules_go v0.53.0  // unused, just here to test the go.mod parser
+)
+`,
+			want: "go1.24.0 X:nocoverageredesign",
+		},
+		{
+			desc: "toolchain minor version",
+			go_mod: `
+module test
 
-// go 1.23.0
+go 1.23.0
 
-// toolchain go1.24.1
+toolchain go1.24.1
 
-// require (
-//     github.com/bazelbuild/rules_go v0.53.0  // unused, just here to test the go.mod parser
-// )
-// `,
-// 			want: "go1.24.1 X:nocoverageredesign",
-// 		},
-// 		{
-// 			desc: "go only",
-// 			go_mod: `
-// module test
+require (
+    github.com/bazelbuild/rules_go v0.53.0  // unused, just here to test the go.mod parser
+)
+`,
+			want: "go1.24.1 X:nocoverageredesign",
+		},
+		{
+			desc: "go only",
+			go_mod: `
+module test
 
-// go 1.17
+go 1.17
 
-// require (
-//     github.com/bazelbuild/rules_go v0.53.0  // unused, just here to test the go.mod parser
-// )
-// `,
-// 			want: "go1.23.0",
-// 		},
+require (
+    github.com/bazelbuild/rules_go v0.53.0  // unused, just here to test the go.mod parser
+)
+`,
+			want: "go1.23.0",
+		},
 		{
 			desc: "missing go",
 			go_mod: `
@@ -114,7 +114,7 @@ require (
     github.com/bazelbuild/rules_go v0.53.0  // unused, just here to test the go.mod parser
 )
 `,
-			want: "go1.17",
+			want: "go1.16",
 		},
 	} {
 		t.Run(test.desc, func(t *testing.T) {
@@ -126,6 +126,11 @@ require (
 				"--enable_bzlmod",
 				"--test_arg=-version=" + test.want,
 				"--test_output=all",
+				"--sandbox_debug",
+				// This feels like a hack to force the test environment to
+				// choose our SDK, because `bazel_testing` uses `go_wrap_sdk`
+				// to create its own SDK.
+				"--@io_bazel_rules_go//go/toolchain:sdk_name=sdk_under_test",
 				"//:version_test",
 			}
 			if err := bazel_testing.RunBazel(args...); err != nil {
