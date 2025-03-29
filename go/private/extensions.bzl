@@ -56,7 +56,7 @@ _COMMON_TAG_ATTRS = {
 }
 
 _download_tag = tag_class(
-    doc = """Download a specific Go SDK at the optional GOOS, GOARCH, and version, from a customisable URL.  Optionally apply local customisations to the SDK though patches and experiments.""",
+    doc = """Download a specific Go SDK at the optional GOOS, GOARCH, and version, from a customisable URL.  Optionally apply local customisations to the SDK by applying patches and setting experiments.""",
     attrs = _COMMON_TAG_ATTRS | {
         "version": attr.string(),
     },
@@ -118,7 +118,7 @@ _wrap_tag = tag_class(
 )
 
 _from_file_tag = tag_class(
-    doc = """Use a specific Go SDK version described by a `go.mod` file.  Optionally supply GOOS, GOARCH, and download from a customisable URL, with any local patches or experiments applied.""",
+    doc = """Use a specific Go SDK version described by a `go.mod` file.  Optionally supply GOOS, GOARCH, and download from a customisable URL, and apply local patches or set experiments.""",
     attrs = _COMMON_TAG_ATTRS | {
         "go_mod": attr.label(
             doc = "The go.mod file to read the SDK version from.",
@@ -271,7 +271,7 @@ def _go_sdk_impl(ctx):
                 index = index,
             )
 
-            # Keep in sync with the other call to go_download_sdk_rule below.
+            # Keep in sync with the other calls to `go_download_sdk_rule` above and below.
             go_download_sdk_rule(
                 name = name,
                 goos = download_tag.goos,
@@ -315,6 +315,8 @@ def _go_sdk_impl(ctx):
                         index = index,
                         suffix = "_{}_{}".format(goos, goarch),
                     )
+
+                    # Keep in sync with the other calls to `go_download_sdk_rule` above.
                     go_download_sdk_rule(
                         name = default_name,
                         goos = goos,
