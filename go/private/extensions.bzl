@@ -13,6 +13,7 @@
 # limitations under the License.
 
 load("@io_bazel_rules_go_bazel_features//:features.bzl", "bazel_features")
+load("//go/private:go_mod.bzl", "version_from_go_mod")
 load("//go/private:nogo.bzl", "DEFAULT_NOGO", "NOGO_DEFAULT_EXCLUDES", "NOGO_DEFAULT_INCLUDES", "go_register_nogo")
 load("//go/private:sdk.bzl", "detect_host_platform", "go_download_sdk_rule", "go_host_sdk_rule", "go_multiple_toolchains", "go_wrap_sdk_rule")
 
@@ -35,25 +36,29 @@ host_compatible_toolchain = repository_rule(
     doc = "An external repository to expose the first host compatible toolchain",
 )
 
+_COMMON_TAG_ATTRS = {
+    "name": attr.string(),
+    "goos": attr.string(),
+    "goarch": attr.string(),
+    "sdks": attr.string_list_dict(),
+    "experiments": attr.string_list(
+        doc = "Go experiments to enable via GOEXPERIMENT",
+    ),
+    "urls": attr.string_list(default = ["https://dl.google.com/go/{}"]),
+    "patches": attr.label_list(
+        doc = "A list of patches to apply to the SDK after downloading it",
+    ),
+    "patch_strip": attr.int(
+        default = 0,
+        doc = "The number of leading path segments to be stripped from the file name in the patches.",
+    ),
+    "strip_prefix": attr.string(default = "go"),
+}
+
 _download_tag = tag_class(
-    attrs = {
-        "name": attr.string(),
-        "goos": attr.string(),
-        "goarch": attr.string(),
-        "sdks": attr.string_list_dict(),
-        "experiments": attr.string_list(
-            doc = "Go experiments to enable via GOEXPERIMENT",
-        ),
-        "urls": attr.string_list(default = ["https://dl.google.com/go/{}"]),
+    doc = """Download a specific Go SDK at the optional GOOS, GOARCH, and version, from a customisable URL.  Optionally apply local customisations to the SDK by applying patches and setting experiments.""",
+    attrs = _COMMON_TAG_ATTRS | {
         "version": attr.string(),
-        "patches": attr.label_list(
-            doc = "A list of patches to apply to the SDK after downloading it",
-        ),
-        "patch_strip": attr.int(
-            default = 0,
-            doc = "The number of leading path segments to be stripped from the file name in the patches.",
-        ),
-        "strip_prefix": attr.string(default = "go"),
     },
 )
 
@@ -109,6 +114,15 @@ _wrap_tag = tag_class(
         ),
         "goos": attr.string(),
         "goarch": attr.string(),
+    },
+)
+
+_from_file_tag = tag_class(
+    doc = """Use a specific Go SDK version described by a `go.mod` file.  Optionally supply GOOS, GOARCH, and download from a customisable URL, and apply local patches or set experiments.""",
+    attrs = _COMMON_TAG_ATTRS | {
+        "go_mod": attr.label(
+            doc = "The go.mod file to read the SDK version from.",
+        ),
     },
 )
 
@@ -201,6 +215,40 @@ def _go_sdk_impl(ctx):
                 sdk_version = wrap_tag.version,
             ))
 
+        # If the module suggests to read the toolchain version from a `go.mod` file, use that.
+        for index, from_file_tag in enumerate(module.tags.from_file):
+            version = version_from_go_mod(ctx, from_file_tag.go_mod)
+            name = from_file_tag.name or _default_go_sdk_name(
+                module = module,
+                multi_version = multi_version_module[module.name],
+                tag_type = "from_file",
+                index = index,
+            )
+
+            # Keep in sync with the other calls to `go_download_sdk` below.
+            go_download_sdk_rule(
+                name = name,
+                version = version,
+                goos = from_file_tag.goos,
+                goarch = from_file_tag.goarch,
+                sdks = from_file_tag.sdks,
+                experiments = from_file_tag.experiments,
+                patches = from_file_tag.patches,
+                patch_strip = from_file_tag.patch_strip,
+                urls = from_file_tag.urls,
+                strip_prefix = from_file_tag.strip_prefix,
+            )
+            if (not from_file_tag.goos or from_file_tag.goos == host_detected_goos) and (not from_file_tag.goarch or from_file_tag.goarch == host_detected_goarch):
+                first_host_compatible_toolchain = first_host_compatible_toolchain or "@{}//:ROOT".format(name)
+            toolchains.append(struct(
+                goos = from_file_tag.goos,
+                goarch = from_file_tag.goarch,
+                sdk_repo = name,
+                sdk_type = "remote",
+                sdk_version = version,
+            ))
+            first_host_compatible_toolchain = first_host_compatible_toolchain or "@{}//:ROOT".format(name)
+
         for index, download_tag in enumerate(module.tags.download):
             # SDKs without an explicit version are fetched even when not selected by toolchain
             # resolution. This is acceptable if brought in by the root module, but transitive
@@ -223,7 +271,7 @@ def _go_sdk_impl(ctx):
                 index = index,
             )
 
-            # Keep in sync with the other call to go_download_sdk_rule below.
+            # Keep in sync with the other calls to `go_download_sdk_rule` above and below.
             go_download_sdk_rule(
                 name = name,
                 goos = download_tag.goos,
@@ -267,6 +315,8 @@ def _go_sdk_impl(ctx):
                         index = index,
                         suffix = "_{}_{}".format(goos, goarch),
                     )
+
+                    # Keep in sync with the other calls to `go_download_sdk_rule` above.
                     go_download_sdk_rule(
                         name = default_name,
                         goos = goos,
@@ -383,6 +433,7 @@ go_sdk = module_extension(
         "host": _host_tag,
         "nogo": _nogo_tag,
         "wrap": _wrap_tag,
+        "from_file": _from_file_tag,
     },
     **go_sdk_extra_kwargs
 )
