@@ -32,23 +32,36 @@ def version_from_go_mod(module_ctx, go_mod_label):
         "go": None,
     }
 
+    current_directive = None
     for line_no, line in enumerate(go_mod_content.splitlines(), 1):
         tokens, _ = _tokenize_line(line, go_mod_path, line_no)
         if not tokens:
             continue
 
-        if tokens[0] not in ["module", "go", "require", "replace", "exclude", "retract", "toolchain"]:
-            fail("{}:{}: unexpected token '{}' at start of line".format(go_mod_path, line_no, tokens[0]))
-        if len(tokens) == 1:
-            fail("{}:{}: expected another token after '{}'".format(go_mod_path, line_no, tokens[0]))
+        if not current_directive:
+            if tokens[0] not in ["module", "go", "require", "replace", "exclude", "retract", "toolchain"]:
+                fail("{}:{}: unexpected token '{}' at start of line".format(go_mod_path, line_no, tokens[0]))
+            if len(tokens) == 1:
+                fail("{}:{}: expected another token after '{}'".format(go_mod_path, line_no, tokens[0]))
 
-        if tokens[0] == "go":
-            _validate_go_version(go_mod_path, state, tokens, line_no)
-            state["go"] = tokens[1]
+            if tokens[0] == "go":
+                _validate_go_version(go_mod_path, state, tokens, line_no)
+                state["go"] = tokens[1]
 
-        if tokens[0] == "toolchain":
-            _validate_toolchain_version(go_mod_path, state, tokens, line_no)
-            state["toolchain"] = tokens[1][len("go"):].strip()
+            if tokens[0] == "toolchain":
+                _validate_toolchain_version(go_mod_path, state, tokens, line_no)
+                state["toolchain"] = tokens[1][len("go"):].strip()
+
+            if tokens[1] == "(":
+                current_directive = tokens[0]
+                if len(tokens) > 2:
+                    fail("{}:{}: unexpected token '{}' after '('".format(go_mod_path, line_no, tokens[2]))
+                continue
+        elif tokens[0] == ")":
+            current_directive = None
+            if len(tokens) > 1:
+                fail("{}:{}: unexpected token '{}' after ')'".format(go_mod_path, line_no, tokens[1]))
+            continue
 
     version = state["toolchain"]
     if not version:
