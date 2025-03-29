@@ -97,13 +97,13 @@ require (
 			go_mod: `
 module test
 
-go 1.17
+go 1.16
 
 require (
     github.com/bazelbuild/rules_go v0.53.0  // unused, just here to test the go.mod parser
 )
 `,
-			want: "go1.23.0",
+			want: "go1.16",
 		},
 		{
 			desc: "missing go",
@@ -123,13 +123,10 @@ require (
 			}
 			args := []string{
 				"test",
-				"--enable_bzlmod",
 				"--test_arg=-version=" + test.want,
-				"--test_output=all",
-				"--sandbox_debug",
-				// This feels like a hack to force the test environment to
-				// choose our SDK, because `bazel_testing` uses `go_wrap_sdk`
-				// to create its own SDK.
+				// This next flag forces the test environment to choose its own
+				// module's SDK, because `bazel_testing` uses `go_wrap_sdk` to
+				// create its own SDK in the WORKSPACE file.
 				"--@io_bazel_rules_go//go/toolchain:sdk_name=sdk_under_test",
 				"//:version_test",
 			}
