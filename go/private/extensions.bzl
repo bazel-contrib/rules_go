@@ -56,6 +56,7 @@ _COMMON_TAG_ATTRS = {
 }
 
 _download_tag = tag_class(
+    doc = """Download a specific Go SDK at the optional GOOS, GOARCH, and version, from a customisable URL.  Optionally apply local customisations to the SDK though patches and experiments.""",
     attrs = _COMMON_TAG_ATTRS | {
         "version": attr.string(),
     },
@@ -117,6 +118,7 @@ _wrap_tag = tag_class(
 )
 
 _from_file_tag = tag_class(
+    doc = """Use a specific Go SDK version described by a `go.mod` file.  Optionally supply GOOS, GOARCH, and download from a customisable URL, with any local patches or experiments applied.""",
     attrs = _COMMON_TAG_ATTRS | {
         "go_mod": attr.label(
             doc = "The go.mod file to read the SDK version from.",
