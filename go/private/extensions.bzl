@@ -215,7 +215,7 @@ def _go_sdk_impl(ctx):
                 sdk_version = wrap_tag.version,
             ))
 
-        # First if the module suggests to read the toolchain version from a `go.mod` file, use that.
+        # If the module suggests to read the toolchain version from a `go.mod` file, use that.
         for index, from_file_tag in enumerate(module.tags.from_file):
             version = version_from_go_mod(ctx, from_file_tag.go_mod)
             name = from_file_tag.name or _default_go_sdk_name(
