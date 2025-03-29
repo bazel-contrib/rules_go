@@ -36,25 +36,28 @@ host_compatible_toolchain = repository_rule(
     doc = "An external repository to expose the first host compatible toolchain",
 )
 
+_COMMON_TAG_ATTRS = {
+    "name": attr.string(),
+    "goos": attr.string(),
+    "goarch": attr.string(),
+    "sdks": attr.string_list_dict(),
+    "experiments": attr.string_list(
+        doc = "Go experiments to enable via GOEXPERIMENT",
+    ),
+    "urls": attr.string_list(default = ["https://dl.google.com/go/{}"]),
+    "patches": attr.label_list(
+        doc = "A list of patches to apply to the SDK after downloading it",
+    ),
+    "patch_strip": attr.int(
+        default = 0,
+        doc = "The number of leading path segments to be stripped from the file name in the patches.",
+    ),
+    "strip_prefix": attr.string(default = "go"),
+}
+
 _download_tag = tag_class(
-    attrs = {
-        "name": attr.string(),
-        "goos": attr.string(),
-        "goarch": attr.string(),
-        "sdks": attr.string_list_dict(),
-        "experiments": attr.string_list(
-            doc = "Go experiments to enable via GOEXPERIMENT",
-        ),
-        "urls": attr.string_list(default = ["https://dl.google.com/go/{}"]),
+    attrs = _COMMON_TAG_ATTRS | {
         "version": attr.string(),
-        "patches": attr.label_list(
-            doc = "A list of patches to apply to the SDK after downloading it",
-        ),
-        "patch_strip": attr.int(
-            default = 0,
-            doc = "The number of leading path segments to be stripped from the file name in the patches.",
-        ),
-        "strip_prefix": attr.string(default = "go"),
     },
 )
 
@@ -114,8 +117,7 @@ _wrap_tag = tag_class(
 )
 
 _from_file_tag = tag_class(
-    attrs = {
-        "name": attr.string(),
+    attrs = _COMMON_TAG_ATTRS | {
         "go_mod": attr.label(
             doc = "The go.mod file to read the SDK version from.",
         ),
@@ -210,6 +212,41 @@ def _go_sdk_impl(ctx):
                 sdk_type = "remote",
                 sdk_version = wrap_tag.version,
             ))
+
+        # First if the module suggests to read the toolchain version from a `go.mod` file, use that.
+        for index, from_file_tag in enumerate(module.tags.from_file):
+            version = version_from_go_mod(ctx, from_file_tag.go_mod)
+            print("Got version {}".format(version))
+            name = from_file_tag.name or _default_go_sdk_name(
+                module = module,
+                multi_version = multi_version_module[module.name],
+                tag_type = "from_file",
+                index = index,
+            )
+
+            # Keep in sync with the other calls to `go_download_sdk` below.
+            go_download_sdk_rule(
+                name = name,
+                version = version,
+                goos = from_file_tag.goos,
+                goarch = from_file_tag.goarch,
+                sdks = from_file_tag.sdks,
+                experiments = from_file_tag.experiments,
+                patches = from_file_tag.patches,
+                patch_strip = from_file_tag.patch_strip,
+                urls = from_file_tag.urls,
+                strip_prefix = from_file_tag.strip_prefix,
+            )
+            if (not from_file_tag.goos or from_file_tag.goos == host_detected_goos) and (not from_file_tag.goarch or from_file_tag.goarch == host_detected_goarch):
+                first_host_compatible_toolchain = first_host_compatible_toolchain or "@{}//:ROOT".format(name)
+            toolchains.append(struct(
+                goos = from_file_tag.goos,
+                goarch = from_file_tag.goarch,
+                sdk_repo = name,
+                sdk_type = "remote",
+                sdk_version = version,
+            ))
+            first_host_compatible_toolchain = first_host_compatible_toolchain or "@{}//:ROOT".format(name)
 
         for index, download_tag in enumerate(module.tags.download):
             # SDKs without an explicit version are fetched even when not selected by toolchain
@@ -326,29 +363,8 @@ def _go_sdk_impl(ctx):
             ))
             first_host_compatible_toolchain = first_host_compatible_toolchain or "@{}//:ROOT".format(name)
 
-        for index, from_file_tag in enumerate(module.tags.from_file):
-            version = version_from_go_mod(ctx, from_file_tag.go_mod)
-            print("Got version {}".format(version))
-            name = from_file_tag.name or _default_go_sdk_name(
-                module = module,
-                multi_version = multi_version_module[module.name],
-                tag_type = "from_file",
-                index = index,
-            )
-            go_download_sdk_rule(
-                name = name,
-                version = version,
-            )
-            toolchains.append(struct(
-                goos = "",
-                goarch = "",
-                sdk_repo = name,
-                sdk_type = "remote",
-                sdk_version = version,
-            ))
-            first_host_compatible_toolchain = first_host_compatible_toolchain or "@{}//:ROOT".format(name)
-
     print("toolchains: {}".format(toolchains))
+    print("first : {}".format(first_host_compatible_toolchain))
 
     host_compatible_toolchain(name = "go_host_compatible_sdk_label", toolchain = first_host_compatible_toolchain)
     if len(toolchains) > _MAX_NUM_TOOLCHAINS:
