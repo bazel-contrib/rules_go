@@ -142,6 +142,7 @@ func Wrap(pkg string) error {
 	streamMerger.Start()
 	err := cmd.Run()
 	if err != nil {
+		// force jsonConverter to flush the buffer, so we get the "fail" event when a test case panics.
 		jsonConverter.Write([]byte{marker})
 		jsonConverter.Write(bigFail)
 		jsonConverter.Write([]byte("\n"))
