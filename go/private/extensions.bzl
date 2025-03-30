@@ -14,7 +14,7 @@
 
 load("@io_bazel_rules_go_bazel_features//:features.bzl", "bazel_features")
 load("//go/private:nogo.bzl", "DEFAULT_NOGO", "NOGO_DEFAULT_EXCLUDES", "NOGO_DEFAULT_INCLUDES", "go_register_nogo")
-load("//go/private:sdk.bzl", "detect_host_platform", "go_download_sdk_rule", "go_host_sdk_rule", "go_multiple_toolchains")
+load("//go/private:sdk.bzl", "detect_host_platform", "go_download_sdk_rule", "go_host_sdk_rule", "go_multiple_toolchains", "go_wrap_sdk_rule")
 
 def host_compatible_toolchain_impl(ctx):
     ctx.file("BUILD.bazel")
@@ -93,6 +93,25 @@ Uses the same format as 'visibility', i.e., every entry must be a label that end
     },
 )
 
+_wrap_tag = tag_class(
+    attrs = {
+        "root_file": attr.label(
+            mandatory = False,
+            doc = "A file in the SDK root directory. Use to determine GOROOT.",
+        ),
+        "root_files": attr.string_dict(
+            mandatory = False,
+            doc = "A set of mappings from the host platform to a file in the SDK's root directory.",
+        ),
+        "version": attr.string(),
+        "experiments": attr.string_list(
+            doc = "Go experiments to enable via GOEXPERIMENT.",
+        ),
+        "goos": attr.string(),
+        "goarch": attr.string(),
+    },
+)
+
 # A list of (goos, goarch) pairs that are commonly used for remote executors in cross-platform
 # builds (where host != exec platform). By default, we register toolchains for all of these
 # platforms in addition to the host platform.
@@ -158,6 +177,30 @@ def _go_sdk_impl(ctx):
     host_detected_goos, host_detected_goarch = detect_host_platform(ctx)
     toolchains = []
     for module in ctx.modules:
+        # Apply wrapped toolchains first to override specific platforms from the
+        # default toolchain or any downloads.
+        for index, wrap_tag in enumerate(module.tags.wrap):
+            name = _default_go_sdk_name(
+                module = module,
+                multi_version = multi_version_module[module.name],
+                tag_type = "wrap",
+                index = index,
+            )
+            go_wrap_sdk_rule(
+                name = name,
+                root_file = wrap_tag.root_file,
+                root_files = wrap_tag.root_files,
+                version = wrap_tag.version,
+                experiments = wrap_tag.experiments,
+            )
+            toolchains.append(struct(
+                goos = wrap_tag.goos,
+                goarch = wrap_tag.goarch,
+                sdk_repo = name,
+                sdk_type = "remote",
+                sdk_version = wrap_tag.version,
+            ))
+
         for index, download_tag in enumerate(module.tags.download):
             # SDKs without an explicit version are fetched even when not selected by toolchain
             # resolution. This is acceptable if brought in by the root module, but transitive
@@ -339,6 +382,7 @@ go_sdk = module_extension(
         "download": _download_tag,
         "host": _host_tag,
         "nogo": _nogo_tag,
+        "wrap": _wrap_tag,
     },
     **go_sdk_extra_kwargs
 )

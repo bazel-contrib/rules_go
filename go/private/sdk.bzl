@@ -381,7 +381,7 @@ def _go_wrap_sdk_impl(ctx):
     _sdk_build_file(ctx, platform, version, ctx.attr.experiments)
     _local_sdk(ctx, goroot)
 
-_go_wrap_sdk = repository_rule(
+go_wrap_sdk_rule = repository_rule(
     implementation = _go_wrap_sdk_impl,
     attrs = {
         "root_file": attr.label(
@@ -403,14 +403,16 @@ _go_wrap_sdk = repository_rule(
 )
 
 def go_wrap_sdk(name, register_toolchains = True, **kwargs):
-    _go_wrap_sdk(name = name, **kwargs)
+    goos = kwargs.pop("goos", None)
+    goarch = kwargs.pop("goarch", None)
+    go_wrap_sdk_rule(name = name, **kwargs)
     _go_toolchains(
         name = name + "_toolchains",
         sdk_repo = name,
         sdk_type = "remote",
         sdk_version = kwargs.get("version"),
-        goos = kwargs.get("goos"),
-        goarch = kwargs.get("goarch"),
+        goos = goos,
+        goarch = goarch,
     )
     if register_toolchains:
         _register_toolchains(name)
@@ -644,7 +646,7 @@ def go_register_toolchains(version = None, nogo = None, go_version = None, exper
     if not version:
         version = go_version  # old name
 
-    sdk_kinds = ("go_download_sdk_rule", "go_host_sdk_rule", "_go_local_sdk", "_go_wrap_sdk")
+    sdk_kinds = ("go_download_sdk_rule", "go_host_sdk_rule", "_go_local_sdk", "go_wrap_sdk_rule")
     existing_rules = native.existing_rules()
     sdk_rules = [r for r in existing_rules.values() if r["kind"] in sdk_kinds]
     if len(sdk_rules) == 0 and "go_sdk" in existing_rules:

@@ -33,6 +33,9 @@ go_sdk.download(
     ],
     version = "1.23.1",
 )
+go_sdk.wrap(
+    root_file = "@go_default_sdk//:README.md",
+)
 
 # Request an invalid SDK to verify that it isn't fetched since the first tag takes precedence.
 go_sdk.host(version = "3.0.0")
