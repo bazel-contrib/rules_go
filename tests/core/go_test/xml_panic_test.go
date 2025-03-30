@@ -46,7 +46,9 @@ type xmlTestCase struct {
 }
 type xmlTestSuite struct {
 	XMLName   xml.Name      `xml:"testsuite"`
+	Name    string     `xml:"name,attr"`
 	TestCases []xmlTestCase `xml:"testcase"`
+	Time      string         `xml:"time,attr"`
 }
 type xmlTestSuites struct {
 	XMLName xml.Name       `xml:"testsuites"`
@@ -80,6 +82,9 @@ func Test(t *testing.T) {
 	}
 
 	for _, suite := range suites.Suites {
+		if suite.Time == "" {
+			t.Errorf("empty time attribute for test suite %q", suite.Name)
+		}
 		for _, tc := range suite.TestCases {
 			if tc.Time == "" {
 				t.Errorf("empty time attribute for test case %q", tc.Name)
