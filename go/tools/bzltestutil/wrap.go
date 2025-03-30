@@ -141,6 +141,11 @@ func Wrap(pkg string) error {
 	cmd.Stdout = io.MultiWriter(os.Stdout, streamMerger.OutW)
 	streamMerger.Start()
 	err := cmd.Run()
+	if err != nil {
+		jsonConverter.Write([]byte{marker})
+		jsonConverter.Write(bigFail)
+		jsonConverter.Write([]byte("\n"))
+	}
 	streamMerger.ErrW.Close()
 	streamMerger.OutW.Close()
 	streamMerger.Wait()

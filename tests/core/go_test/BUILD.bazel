@@ -285,6 +285,11 @@ go_bazel_test(
     srcs = ["timeout_test.go"],
 )
 
+go_bazel_test(
+    name = "xml_panic_test",
+    srcs = ["xml_panic_test.go"],
+)
+
 # Tests using .syso files in go_binary both transitively and directly.
 go_test(
     name = "syso_transitive_test",
