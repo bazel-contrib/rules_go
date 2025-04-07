@@ -29,6 +29,8 @@ filegroup(
             "src/**/*_test.go",
             "src/**/testdata/**",
             "src/cmd/**",
+            # Only used by tests, cgo fails with linux before 3.17
+            "src/crypto/internal/sysrand/internal/seccomp/**",
             "src/log/slog/internal/benchmarks/**",
             "src/log/slog/internal/slogtest/**",
             "src/internal/obscuretestdata/**",
