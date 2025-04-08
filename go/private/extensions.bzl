@@ -215,41 +215,22 @@ def _go_sdk_impl(ctx):
                 sdk_version = wrap_tag.version,
             ))
 
+        additional_download_tags = []
+
         # If the module suggests to read the toolchain version from a `go.mod` file, use that.
         for index, from_file_tag in enumerate(module.tags.from_file):
             version = version_from_go_mod(ctx, from_file_tag.go_mod)
-            name = from_file_tag.name or _default_go_sdk_name(
-                module = module,
-                multi_version = multi_version_module[module.name],
-                tag_type = "from_file",
-                index = index,
-            )
 
-            # Keep in sync with the other calls to `go_download_sdk` below.
-            go_download_sdk_rule(
-                name = name,
-                version = version,
-                goos = from_file_tag.goos,
-                goarch = from_file_tag.goarch,
-                sdks = from_file_tag.sdks,
-                experiments = from_file_tag.experiments,
-                patches = from_file_tag.patches,
-                patch_strip = from_file_tag.patch_strip,
-                urls = from_file_tag.urls,
-                strip_prefix = from_file_tag.strip_prefix,
-            )
-            if (not from_file_tag.goos or from_file_tag.goos == host_detected_goos) and (not from_file_tag.goarch or from_file_tag.goarch == host_detected_goarch):
-                first_host_compatible_toolchain = first_host_compatible_toolchain or "@{}//:ROOT".format(name)
-            toolchains.append(struct(
-                goos = from_file_tag.goos,
-                goarch = from_file_tag.goarch,
-                sdk_repo = name,
-                sdk_type = "remote",
-                sdk_version = version,
-            ))
-            first_host_compatible_toolchain = first_host_compatible_toolchain or "@{}//:ROOT".format(name)
+            # Synthesize a `download` tag so we can reuse the selection logic below.
+            download_tag = {
+                key: getattr(from_file_tag, key)
+                for key in dir(from_file_tag)
+                if key not in "go_mod"
+            }
+            download_tag["version"] = version
+            additional_download_tags += [struct(**download_tag)]
 
-        for index, download_tag in enumerate(module.tags.download):
+        for index, download_tag in enumerate(module.tags.download + additional_download_tags):
             # SDKs without an explicit version are fetched even when not selected by toolchain
             # resolution. This is acceptable if brought in by the root module, but transitive
             # dependencies should not slow down the build in this way.
