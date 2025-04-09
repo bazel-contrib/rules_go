@@ -101,7 +101,6 @@ def _gomock_source_impl(ctx):
             cmd = "$(pwd)/" + ctx.file.mockgen_tool.path,
             args = " ".join(args),
             out = ctx.outputs.out.path,
-            mnemonic = "GoMockSourceGen",
         ),
         env = {
             # GOCACHE is required starting in Go 1.12
@@ -109,6 +108,7 @@ def _gomock_source_impl(ctx):
             # gomock runs in the special GOPATH environment
             "GO111MODULE": "off",
         },
+        mnemonic = "GoMockSourceGen",
     )
 
 _gomock_source = rule(
