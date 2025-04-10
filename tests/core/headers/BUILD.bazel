@@ -1,0 +1,11 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "headers",
+    srcs = [
+        "hdr.go",
+        "hdr.h",
+    ],
+    importpath = "github.com/bazelbuild/rules_go/tests/core/headers",
+    visibility = ["//visibility:public"],
+)
