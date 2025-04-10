@@ -344,11 +344,11 @@ def _go_sdk_impl(ctx):
         return None
 
 def _default_go_sdk_name(*, module, multi_version, tag_type, index, suffix = ""):
-    # Keep the version out of the repository name if possible to prevent unnecessary rebuilds when
-    # it changes.
+    # Keep the version and name of the root module out of the repository name if possible to
+    # prevent unnecessary rebuilds when it changes.
     return "{name}_{version}_{tag_type}_{index}{suffix}".format(
         # "main_" is not a valid module name and thus can't collide.
-        name = module.name or "main_",
+        name = "main_" if module.is_root else module.name,
         version = module.version if multi_version else "",
         tag_type = tag_type,
         index = index,
