@@ -1,28 +1,32 @@
 diff -urN a/cpu/BUILD.bazel b/cpu/BUILD.bazel
 --- a/cpu/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/cpu/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
-@@ -0,0 +1,68 @@
+@@ -0,0 +1,73 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 +
 +go_library(
 +    name = "cpu",
 +    srcs = [
 +        "asm_aix_ppc64.s",
++        "asm_darwin_x86_gc.s",
 +        "byteorder.go",
 +        "cpu.go",
 +        "cpu_aix.go",
 +        "cpu_arm.go",
 +        "cpu_arm64.go",
 +        "cpu_arm64.s",
++        "cpu_darwin_x86.go",
 +        "cpu_gc_arm64.go",
 +        "cpu_gc_s390x.go",
 +        "cpu_gc_x86.go",
++        "cpu_gc_x86.s",
 +        "cpu_linux.go",
 +        "cpu_linux_arm.go",
 +        "cpu_linux_arm64.go",
 +        "cpu_linux_mips64x.go",
 +        "cpu_linux_noinit.go",
 +        "cpu_linux_ppc64x.go",
++        "cpu_linux_riscv64.go",
 +        "cpu_linux_s390x.go",
 +        "cpu_mips64x.go",
 +        "cpu_mipsx.go",
@@ -31,13 +35,13 @@ diff -urN a/cpu/BUILD.bazel b/cpu/BUILD.bazel
 +        "cpu_openbsd_arm64.s",
 +        "cpu_other_arm.go",
 +        "cpu_other_arm64.go",
++        "cpu_other_x86.go",
 +        "cpu_ppc64x.go",
 +        "cpu_riscv64.go",
 +        "cpu_s390x.go",
 +        "cpu_s390x.s",
 +        "cpu_wasm.go",
 +        "cpu_x86.go",
-+        "cpu_x86.s",
 +        "cpu_zos.go",
 +        "cpu_zos_s390x.go",
 +        "endian_big.go",
@@ -48,6 +52,7 @@ diff -urN a/cpu/BUILD.bazel b/cpu/BUILD.bazel
 +        "runtime_auxv.go",
 +        "runtime_auxv_go121.go",
 +        "syscall_aix_ppc64_gc.go",
++        "syscall_darwin_x86_gc.go",
 +    ],
 +    importpath = "golang.org/x/sys/cpu",
 +    visibility = ["//visibility:public"],
@@ -150,7 +155,7 @@ diff -urN a/plan9/BUILD.bazel b/plan9/BUILD.bazel
 diff -urN a/unix/BUILD.bazel b/unix/BUILD.bazel
 --- a/unix/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/unix/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
-@@ -0,0 +1,303 @@
+@@ -0,0 +1,308 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 +
 +go_library(
@@ -173,6 +178,8 @@ diff -urN a/unix/BUILD.bazel b/unix/BUILD.bazel
 +        "asm_linux_riscv64.s",
 +        "asm_linux_s390x.s",
 +        "asm_solaris_amd64.s",
++        "auxv.go",
++        "auxv_unsupported.go",
 +        "bluetooth_linux.go",
 +        "bpxsvc_zos.s",
 +        "cap_freebsd.go",
@@ -263,6 +270,8 @@ diff -urN a/unix/BUILD.bazel b/unix/BUILD.bazel
 +        "sysvshm_unix_other.go",
 +        "timestruct.go",
 +        "unveil_openbsd.go",
++        "vgetrandom_linux.go",
++        "vgetrandom_unsupported.go",
 +        "xattr_bsd.go",
 +        "zerrors_aix_ppc64.go",
 +        "zerrors_darwin_amd64.go",
@@ -413,6 +422,7 @@ diff -urN a/unix/BUILD.bazel b/unix/BUILD.bazel
 +go_test(
 +    name = "unix_test",
 +    srcs = [
++        "auxv_linux_test.go",
 +        "creds_test.go",
 +        "darwin_amd64_test.go",
 +        "darwin_arm64_test.go",
