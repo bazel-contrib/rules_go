@@ -198,13 +198,13 @@ def go_rules_dependencies(force = False):
     wrapper(
         http_archive,
         name = "org_golang_google_grpc_cmd_protoc_gen_go_grpc",
-        sha256 = "6b0ebb2360fee569d930c1ff9e4d09de4ed982a305f81d157349e3c680765c74",
-        # cmd/protoc-gen-go-grpc/v1.5.1, from 2024-07-29
+        sha256 = "1e84df03c94d1cded8e94da7a2df162463f3be4c7a94289d85c0871f14c7b8e3",
+        # cmd/protoc-gen-go-grpc/v1.3.0, latest as of 2024-05-20
         urls = [
-            "https://mirror.bazel.build/github.com/grpc/grpc-go/archive/refs/tags/cmd/protoc-gen-go-grpc/v1.5.1.zip",
-            "https://github.com/grpc/grpc-go/archive/refs/tags/cmd/protoc-gen-go-grpc/v1.5.1.zip",
+            "https://mirror.bazel.build/github.com/grpc/grpc-go/archive/refs/tags/cmd/protoc-gen-go-grpc/v1.3.0.zip",
+            "https://github.com/grpc/grpc-go/archive/refs/tags/cmd/protoc-gen-go-grpc/v1.3.0.zip",
         ],
-        strip_prefix = "grpc-go-cmd-protoc-gen-go-grpc-v1.5.1/cmd/protoc-gen-go-grpc",
+        strip_prefix = "grpc-go-cmd-protoc-gen-go-grpc-v1.3.0/cmd/protoc-gen-go-grpc",
         patches = [
             # releaser:patch-cmd gazelle -repo_root . -go_prefix google.golang.org/grpc/cmd/protoc-gen-go-grpc -go_naming_convention import_alias -proto disable_global
             Label("//third_party:org_golang_google_grpc_cmd_protoc_gen_go_grpc.patch"),

@@ -1,8 +1,8 @@
 diff -urN a/BUILD.bazel b/BUILD.bazel
 --- a/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
-@@ -0,0 +1,32 @@
-+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+@@ -0,0 +1,23 @@
++load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 +
 +go_library(
 +    name = "protoc-gen-go-grpc_lib",
@@ -24,13 +24,4 @@ diff -urN a/BUILD.bazel b/BUILD.bazel
 +    name = "protoc-gen-go-grpc",
 +    embed = [":protoc-gen-go-grpc_lib"],
 +    visibility = ["//visibility:public"],
-+)
-+
-+go_test(
-+    name = "protoc-gen-go-grpc_test",
-+    srcs = ["unimpl_test.go"],
-+    deps = [
-+        "@org_golang_google_grpc//:go_default_library",
-+        "@org_golang_google_grpc//interop/grpc_testing:go_default_library",
-+    ],
 +)
