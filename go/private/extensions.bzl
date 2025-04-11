@@ -225,7 +225,7 @@ def _go_sdk_impl(ctx):
             download_tag = {
                 key: getattr(from_file_tag, key)
                 for key in dir(from_file_tag)
-                if key not in "go_mod"
+                if key not in ["go_mod"]
             }
             download_tag["version"] = version
             additional_download_tags += [struct(**download_tag)]

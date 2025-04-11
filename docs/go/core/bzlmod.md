@@ -30,7 +30,12 @@ To register a particular version of the Go SDK, use the `go_sdk` module extensio
 ```starlark
 go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
 
-# Download an SDK for the host OS & architecture as well as common remote execution platforms.
+# Download an SDK for the host OS & architecture as well as common remote execution
+# platforms, using the version given from the `go.mod` file.
+go_sdk.from_file(go_mod = "//:go.mod")
+
+# Download an SDK for the host OS & architecture as well as common remote execution
+# platforms, with a specific version.
 go_sdk.download(version = "1.23.1")
 
 # Alternatively, download an SDK for a fixed OS/architecture.
