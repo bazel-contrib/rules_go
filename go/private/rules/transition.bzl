@@ -418,6 +418,7 @@ def _set_ternary(settings, attr, name):
 _SDK_VERSION_BUILD_SETTING = "//go/toolchain:sdk_version"
 TRANSITIONED_GO_CROSS_SETTING_KEYS = [
     _SDK_VERSION_BUILD_SETTING,
+    "//command_line_option:compilation_mode",
     "//command_line_option:platforms",
 ]
 
@@ -425,6 +426,9 @@ def _go_cross_transition_impl(settings, attr):
     settings = dict(settings)
     if attr.sdk_version != None:
         settings[_SDK_VERSION_BUILD_SETTING] = attr.sdk_version
+
+    if attr.compilation_mode != "":
+        settings["//command_line_option:compilation_mode"] = attr.compilation_mode
 
     if attr.platform != None:
         settings["//command_line_option:platforms"] = str(attr.platform)
