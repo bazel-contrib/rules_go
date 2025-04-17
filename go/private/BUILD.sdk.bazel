@@ -117,7 +117,11 @@ filegroup(
 exports_files(
     glob([
         "lib/time/zoneinfo.zip",
-        "misc/wasm/**",
+        # wasm support files including wasm_exec.js
+        # for GOOS=js GOARCH=wasm
+        # located in misc/wasm/ (Go 1.23 and earlier)
+        # or lib/wasm/ (Go 1.24 and later)
+        "*/wasm/**",
     ]),
     visibility = ["//visibility:public"],
 )
