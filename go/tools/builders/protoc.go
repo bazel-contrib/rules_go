@@ -20,8 +20,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"go/parser"
-	"go/token"
 	"io/ioutil"
 	"log"
 	"os"
@@ -38,7 +36,7 @@ type genFileInfo struct {
 	created    bool         // Whether the file was created by protoc
 	from       *genFileInfo // The actual file protoc produced if not Path
 	unique     bool         // True if this base name is unique in expected results
-	ambiguous bool         // True if there were more than one possible outputs that matched this file
+	ambiguious bool         // True if there were more than one possible outputs that matched this file
 }
 
 func run(args []string) error {
@@ -172,8 +170,8 @@ func run(args []string) error {
 		case !copyTo.unique:
 			// not unique, no copy allowed
 		case copyTo.from != nil:
-			copyTo.ambiguous = true
-			info.ambiguous = true
+			copyTo.ambiguious = true
+			info.ambiguious = true
 		default:
 			copyTo.from = info
 			copyTo.created = true
@@ -185,9 +183,15 @@ func run(args []string) error {
 	for _, f := range files {
 		switch {
 		case f.expected && !f.created:
-			return fmt.Errorf("file %q expected from plugin %q but not created", f.path, *plugin)
-		case f.expected && f.ambiguous:
-			fmt.Fprintf(buf, "Ambiguous output %v.\n", f.path)
+			// Some plugins only create output files if the proto source files have
+			// have relevant definitions (e.g., services for grpc_gateway). Create
+			// trivial files that the compiler will ignore for missing outputs.
+			data := []byte("// +build ignore\n\npackage ignore")
+			if err := ioutil.WriteFile(abs(f.path), data, 0644); err != nil {
+				return err
+			}
+		case f.expected && f.ambiguious:
+			fmt.Fprintf(buf, "Ambiguious output %v.\n", f.path)
 		case f.from != nil:
 			data, err := ioutil.ReadFile(f.from.path)
 			if err != nil {
@@ -202,15 +206,6 @@ func run(args []string) error {
 		if buf.Len() > 0 {
 			fmt.Fprintf(buf, "Check that the go_package option is %q.", *importpath)
 			return errors.New(buf.String())
-		}
-
-		if filepath.Ext(f.path) != ".go" {
-			continue
-		}
-		// Additionally check that created files are valid, because invalid Go file causes cache poisoning.
-		_, err := parser.ParseFile(token.NewFileSet(), f.path, nil, parser.PackageClauseOnly)
-		if err != nil {
-			return fmt.Errorf("plugin %q created an invalid Go file %q: %v", *plugin, f.path, err)
 		}
 	}
 
