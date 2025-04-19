@@ -188,7 +188,10 @@ func toXML(pkgName string, testcases map[string]*testCase) *xmlTestSuites {
 		}
 		c := testcases[name]
 		if name == suiteName {
-			duration := *c.duration
+			var duration float64
+			if c.duration != nil {
+				duration = *c.duration
+			}
 			if c.start != nil && c.end != nil {
 				// the duration of a test suite may be greater than c.duration
 				// when any test case uses t.Parallel().
