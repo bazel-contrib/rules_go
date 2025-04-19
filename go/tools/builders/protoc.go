@@ -36,7 +36,7 @@ type genFileInfo struct {
 	created    bool         // Whether the file was created by protoc
 	from       *genFileInfo // The actual file protoc produced if not Path
 	unique     bool         // True if this base name is unique in expected results
-	ambiguious bool         // True if there were more than one possible outputs that matched this file
+	ambiguous bool         // True if there were more than one possible outputs that matched this file
 }
 
 func run(args []string) error {
@@ -170,8 +170,8 @@ func run(args []string) error {
 		case !copyTo.unique:
 			// not unique, no copy allowed
 		case copyTo.from != nil:
-			copyTo.ambiguious = true
-			info.ambiguious = true
+			copyTo.ambiguous = true
+			info.ambiguous = true
 		default:
 			copyTo.from = info
 			copyTo.created = true
@@ -190,8 +190,8 @@ func run(args []string) error {
 			if err := ioutil.WriteFile(abs(f.path), data, 0644); err != nil {
 				return err
 			}
-		case f.expected && f.ambiguious:
-			fmt.Fprintf(buf, "Ambiguious output %v.\n", f.path)
+		case f.expected && f.ambiguous:
+			fmt.Fprintf(buf, "ambiguous output %v.\n", f.path)
 		case f.from != nil:
 			data, err := ioutil.ReadFile(f.from.path)
 			if err != nil {
