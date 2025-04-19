@@ -183,7 +183,7 @@ func run(args []string) error {
 	for _, f := range files {
 		switch {
 		case f.expected && !f.created:
-			// Some plugins only create output files if the proto source files have
+			// Some plugins only create output files if the proto source files
 			// have relevant definitions (e.g., services for grpc_gateway). Create
 			// trivial files that the compiler will ignore for missing outputs.
 			data := []byte("// +build ignore\n\npackage ignore")
