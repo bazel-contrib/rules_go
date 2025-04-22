@@ -35,7 +35,7 @@ var (
 	// cgoEnvVars is the list of all cgo environment variable
 	cgoEnvVars = []string{"CGO_CFLAGS", "CGO_CXXFLAGS", "CGO_CPPFLAGS", "CGO_LDFLAGS"}
 	// cgoAbsEnvFlags are all the flags that need absolute path in cgoEnvVars
-	cgoAbsEnvFlags = []string{"-I", "-L", "-isysroot", "-isystem", "-iquote", "-include", "-gcc-toolchain", "--sysroot", "-resource-dir", "-fsanitize-blacklist", "-fsanitize-ignorelist"}
+	cgoAbsEnvFlags = []string{"-I", "-L", "-isysroot", "-isystem", "-iquote", "-include", "-imacros", "-gcc-toolchain", "--sysroot", "-resource-dir", "-fsanitize-blacklist", "-fsanitize-ignorelist"}
 	// cgoAbsPlaceholder is placed in front of flag values that must be absolutized
 	cgoAbsPlaceholder = "__GO_BAZEL_CC_PLACEHOLDER__"
 )
