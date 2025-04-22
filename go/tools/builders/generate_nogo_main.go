@@ -198,5 +198,4 @@ type Config struct {
 	OnlyFiles     map[string]string `json:"only_files"`
 	ExcludeFiles  map[string]string `json:"exclude_files"`
 	AnalyzerFlags map[string]string `json:"analyzer_flags"`
-	NeedsDeps bool `json:"needs_deps"`
 }
