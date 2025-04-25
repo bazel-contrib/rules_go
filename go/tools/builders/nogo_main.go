@@ -88,7 +88,6 @@ func run(args []string) (error, int) {
 		return fmt.Errorf("error parsing importcfg: %v", err), nogoError
 	}
 
-
 	diagnostics, pkg, err := checkPackage(analyzers, *packagePath, packageFile, importMap, factMap, srcs, ignores)
 	if err != nil {
 		return fmt.Errorf("error running analyzers: %v", err), nogoError
@@ -192,6 +191,21 @@ func readImportCfg(file string) (packageFile map[string]string, importMap map[st
 	return packageFile, importMap, nil
 }
 
+func setAnalyzerFlags(a *analysis.Analyzer, flags map[string]string) error {
+	for flagKey, flagVal := range flags {
+		if strings.HasPrefix(flagKey, "-") {
+			return fmt.Errorf("%s: flag should not begin with '-': %s", a.Name, flagKey)
+		}
+		if flag := a.Flags.Lookup(flagKey); flag == nil {
+			return fmt.Errorf("%s: unrecognized flag: %s", a.Name, flagKey)
+		}
+		if err := a.Flags.Set(flagKey, flagVal); err != nil {
+			return fmt.Errorf("%s: invalid value for flag: %s=%s: %w", a.Name, flagKey, flagVal, err)
+		}
+	}
+	return nil
+}
+
 // checkPackage runs all the given analyzers on the specified package and
 // returns the source code diagnostics that the must be printed in the build log.
 // It returns an empty string if no source code diagnostics need to be printed.
@@ -222,23 +236,25 @@ func checkPackage(analyzers []*analysis.Analyzer, packagePath string, packageFil
 		return act
 	}
 
-	roots := make([]*action, 0, len(analyzers))
+	// We populate flags for analyzers and their subanalyzers to depth of one. Some analyzers require to provide
+	// flags to their dependencies e.g. nilaway has specific nilaway_config subanalyzer.
 	for _, a := range analyzers {
 		if cfg, ok := configs[a.Name]; ok {
-			for flagKey, flagVal := range cfg.analyzerFlags {
-				if strings.HasPrefix(flagKey, "-") {
-					return nil, nil, fmt.Errorf(
-						"%s: flag should not begin with '-': %s", a.Name, flagKey)
-				}
-				if flag := a.Flags.Lookup(flagKey); flag == nil {
-					return nil, nil, fmt.Errorf("%s: unrecognized flag: %s", a.Name, flagKey)
-				}
-				if err := a.Flags.Set(flagKey, flagVal); err != nil {
-					return nil, nil, fmt.Errorf(
-						"%s: invalid value for flag: %s=%s: %w", a.Name, flagKey, flagVal, err)
+			if err := setAnalyzerFlags(a, cfg.analyzerFlags); err != nil {
+				return nil, nil, err
+			}
+		}
+		for _, ra := range a.Requires {
+			if cfg, ok := configs[ra.Name]; ok {
+				if err := setAnalyzerFlags(ra, cfg.analyzerFlags); err != nil {
+					return nil, nil, err
 				}
 			}
 		}
+	}
+
+	roots := make([]*action, 0, len(analyzers))
+	for _, a := range analyzers {
 		roots = append(roots, visit(a))
 	}
 
