@@ -92,7 +92,7 @@ var Analyzer = &analysis.Analyzer{
         Name: "flagger",
         Run:  run,
         Doc:  "Dummy analyzer that crashes when all its flags are set correctly. It contains subanalyzer.",
-		Requires: []*analysis.Analyzer{Subanalyzer},
+	Requires: []*analysis.Analyzer{Subanalyzer},
 }
 
 func init() {
