@@ -85,7 +85,7 @@ var (
 var Subanalyzer = &analysis.Analyzer{
         Name: "flagger_subanalyzer",
         Run:  subanalyzerRun,
-        Doc:  "Dummy subanalyzer that crashes it's flag is set'",
+        Doc:  "Dummy subanalyzer that crashes if its flag is set'",
 }
 
 var Analyzer = &analysis.Analyzer{
