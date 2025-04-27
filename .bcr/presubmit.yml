@@ -2,7 +2,6 @@ matrix:
   platform:
     - debian11
     - ubuntu2004_arm64
-    - macos
     - macos_arm64
     - windows
   bazel: [7.x, 8.x]
@@ -19,7 +18,6 @@ bcr_test_module:
     platform:
       - debian11
       - ubuntu2004_arm64
-      - macos
       - macos_arm64
       - windows
     bazel: [7.x, 8.x]
