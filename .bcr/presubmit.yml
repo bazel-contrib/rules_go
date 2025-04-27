@@ -1,28 +1,28 @@
 matrix:
   platform:
-    - debian10
-    - ubuntu2004
+    - debian11
+    - ubuntu2004_arm64
     - macos
     - macos_arm64
     - windows
-  bazel: [6.x, 7.x]
+  bazel: [7.x, 8.x]
 tasks:
   verify_targets:
     name: Verify build targets
     platform: ${{ platform }}
     bazel: ${{ bazel }}
     build_targets:
-      - '@rules_go//go/tools/bzltestutil/...'
+      - "@rules_go//go/tools/bzltestutil/..."
 bcr_test_module:
   module_path: tests/bcr
   matrix:
     platform:
-      - debian10
-      - ubuntu2004
+      - debian11
+      - ubuntu2004_arm64
       - macos
       - macos_arm64
       - windows
-    bazel: [6.x, 7.x]
+    bazel: [7.x, 8.x]
   tasks:
     run_test_module:
       name: Run test module
@@ -30,6 +30,6 @@ bcr_test_module:
       bazel: ${{ bazel }}
       build_targets:
         - //...
-        - '@go_default_sdk//...'
+        - "@go_default_sdk//..."
       test_targets:
         - //...
