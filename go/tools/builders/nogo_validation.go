@@ -21,22 +21,24 @@ func nogoValidation(args []string) error {
 	if err != nil {
 		return err
 	}
-	if len(logContent) > 0 && len(args) == 3 {
-		fixFile := args[2]
-		fixContent, err := os.ReadFile(fixFile)
-		if err != nil {
-			return err
-		}
+	if len(logContent) > 0 {
 		var fixMessage string
-		if len(fixContent) > 0 {
-			// Format the message in a clean and clear way
-			fixMessage = fmt.Sprintf(`
+		if len(args) == 3 {
+			fixFile := args[2]
+			fixContent, err := os.ReadFile(fixFile)
+			if err != nil {
+				return err
+			}
+			if len(fixContent) > 0 {
+				// Format the message in a clean and clear way
+				fixMessage = fmt.Sprintf(`
 -------------------Suggested Fix---------------------
 %s
 -----------------------------------------------------
 To apply the suggested fix, run the following command:
 $ patch -p1 < %s
 `, fixContent, fixFile)
+			}
 		}
 		// Separate nogo output from Bazel's --sandbox_debug message via an
 		// empty line.
