@@ -157,8 +157,8 @@ you can use the following commands:
     # Only run nogo, no compilation actions, and don't fail on findings.
     bazel build //... --norun_validations --output_groups nogo_fix --remote_download_regex='.*/nogo.patch$'
     # Apply all fixes.
-    bazel cquery //... --norun_validations --output_groups nogo_fix --output=files |
-      xargs -I{} sh -c '[[ ! -e {}/nogo.patch ]] || patch -p1 -N --reject-file /dev/null < {}/nogo.patch'
+    bazel cquery //... --norun_validations --output_groups nogo_fix --remote_download_regex='.*/nogo.patch$' --output=files \
+      | xargs -I{} sh -c '[[ ! -e {}/nogo.patch ]] || patch -p1 -N --reject-file /dev/null < {}/nogo.patch'
 
 Relationship with other linters
 ~~~~~~~~~~~~~~~~~~~~~
