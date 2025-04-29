@@ -6,6 +6,10 @@ common --enable_platform_specific_config
 common --noexperimental_enable_bzlmod
 test --test_output=errors
 
+# Workaround for https://github.com/bazelbuild/continuous-integration/issues/2269.
+build:macos --copt=-Dfdopen=fdopen
+build:macos --host_copt=-Dfdopen=fdopen
+
 # Go requires a C toolchain that accepts options and emits errors like
 # gcc or clang. The Go SDK does not support MSVC.
 build:windows --cpu=x64_windows
