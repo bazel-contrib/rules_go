@@ -147,6 +147,12 @@ go_library = rule(
             Map of defines to add to the go link command. See [Defines and stamping] for examples of how to use these.
             """,
         ),
+        "stampsrcs": attr.label_list(
+            allow_files = True,
+            doc = """Additional files containing variables which can be referenced in `x_defs`.
+            The format of these files should be the same as the workspace status.
+            """,
+        ),
         "cgo": attr.bool(
             doc = """
             If `True`, the package may contain [cgo] code, and `srcs` may contain C, C++, Objective-C, and Objective-C++ files

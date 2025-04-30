@@ -93,6 +93,7 @@ def _go_test_impl(ctx):
             embedsrcs = [struct(files = internal_go_info.embedsrcs)],
             deps = internal_archive.direct + [internal_archive],
             x_defs = ctx.attr.x_defs,
+            stampsrcs = ctx.attr.stampsrcs,
         ),
         name = internal_go_info.name + "_test",
         importpath = internal_go_info.importpath + "_test",
@@ -324,6 +325,12 @@ _go_test_kwargs = {
         "x_defs": attr.string_dict(
             doc = """Map of defines to add to the go link command.
             See [Defines and stamping] for examples of how to use these.
+            """,
+        ),
+        "stampsrcs": attr.label_list(
+            allow_files = True,
+            doc = """Additional files containing variables which can be referenced in `x_defs`.
+            The format of these files should be the same as the workspace status.
             """,
         ),
         "linkmode": attr.string(
@@ -661,6 +668,7 @@ def _recompile_external_deps(go, external_go_info, internal_archive, library_lab
     attrs = structs.to_dict(internal_go_info)
     attrs["deps"] = internal_deps
     attrs["x_defs"] = x_defs
+    attrs["stampsrcs"] = internal_go_info.stampsrcs + internal_archive.stampsrcs
     internal_go_info = GoInfo(**attrs)
     internal_archive = go.archive(go, internal_go_info, _recompile_suffix = ".recompileinternal", recompile_internal_deps = need_recompile_deps)
 
@@ -698,6 +706,7 @@ def _recompile_external_deps(go, external_go_info, internal_archive, library_lab
             cover = arc_data._cover,
             embedsrcs = as_list(arc_data._embedsrcs),
             x_defs = dict(arc_data._x_defs),
+            stampsrcs = as_list(arc_data._stampsrcs),
             deps = deps,
             gc_goopts = as_list(arc_data._gc_goopts),
             runfiles = arc_data.runfiles,
@@ -722,6 +731,7 @@ def _recompile_external_deps(go, external_go_info, internal_archive, library_lab
                 libs = depset(direct = [arc_data.file], transitive = [a.libs for a in deps]),
                 transitive = depset(direct = [arc_data], transitive = [a.transitive for a in deps]),
                 x_defs = go_info.x_defs,
+                stampsrcs = go_info.stampsrcs,
                 cgo_deps = depset(transitive = [arc_data._cgo_deps] + [a.cgo_deps for a in deps]),
                 cgo_exports = depset(transitive = [a.cgo_exports for a in deps]),
                 runfiles = go_info.runfiles,
