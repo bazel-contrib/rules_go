@@ -68,7 +68,7 @@ def emit_compilepkg(
         out_lib = None,
         out_export = None,
         out_facts = None,
-        out_nogo = None,
+        out_diagnostics = None,
         out_nogo_validation = None,
         nogo = None,
         out_cgo_export_h = None,
@@ -85,8 +85,8 @@ def emit_compilepkg(
     have_nogo = nogo != None and nogo.executable != None
     if have_nogo != (out_facts != None):
         fail("nogo must be specified if and only if out_facts is specified", nogo)
-    if have_nogo != (out_nogo != None):
-        fail("nogo must be specified if and only if out_nogo is specified", nogo)
+    if have_nogo != (out_diagnostics != None):
+        fail("nogo must be specified if and only if out_diagnostics is specified", nogo)
 
     if cover and go.coverdata:
         archives = archives + [go.coverdata]
@@ -215,7 +215,7 @@ def emit_compilepkg(
             sources = sources,
             cgo_go_srcs = cgo_go_srcs_for_nogo,
             archives = archives,
-            out = out_nogo,
+            out_diagnostics = out_diagnostics,
             out_facts = out_facts,
             out_validation = out_nogo_validation,
             nogo = nogo,
@@ -228,7 +228,7 @@ def _run_nogo(
         sources,
         cgo_go_srcs,
         archives,
-        out,
+        out_diagnostics,
         out_facts,
         out_validation,
         nogo):
@@ -239,7 +239,7 @@ def _run_nogo(
                      [archive.data.facts_file for archive in archives if archive.data.facts_file] +
                      [archive.data.export_file for archive in archives])
     inputs_transitive = [sdk.tools, sdk.headers, go.stdlib.libs]
-    outputs = [out, out_facts]
+    outputs = [out_diagnostics, out_facts]
 
     nogo_args = go.tool_args(go)
     if cgo_go_srcs:
@@ -248,7 +248,7 @@ def _run_nogo(
 
     nogo_args.add_all(archives, before_each = "-facts", map_each = _facts)
     nogo_args.add("-out_facts", out_facts)
-    nogo_args.add_all("-out", [out], expand_directories = False)
+    nogo_args.add_all("-out", [out_diagnostics], expand_directories = False)
     nogo_args.add("-nogo", nogo.executable)
 
     # This action runs nogo and produces the facts files for downstream nogo actions.
@@ -278,10 +278,10 @@ def _run_nogo(
         validation_args = go.actions.args()
         validation_args.add("nogovalidation")
         validation_args.add(out_validation)
-        validation_args.add_all([out], expand_directories = False)
+        validation_args.add_all([out_diagnostics], expand_directories = False)
 
         go.actions.run(
-            inputs = [out],
+            inputs = [out_diagnostics],
             outputs = [out_validation],
             mnemonic = "ValidateNogo",
             executable = go.toolchain._builder,

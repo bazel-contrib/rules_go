@@ -152,14 +152,14 @@ def _go_binary_impl(ctx):
         executable = executable,
     )
     validation_output = archive.data._validation_output
-    nogo_fix_output = archive.data._nogo_fix_output
+    nogo_diagnostics = archive.data._nogo_diagnostics
 
     providers = [
         archive,
         OutputGroupInfo(
             cgo_exports = archive.cgo_exports,
             compilation_outputs = [archive.data.file],
-            nogo_fix = [nogo_fix_output] if nogo_fix_output else [],
+            nogo_fix = [nogo_diagnostics] if nogo_diagnostics else [],
             _validation = [validation_output] if validation_output else [],
         ),
     ]

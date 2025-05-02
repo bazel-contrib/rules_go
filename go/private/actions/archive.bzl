@@ -64,14 +64,14 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
     # nogo is a FilesToRunProvider and some targets don't have it, some have it but no executable.
     if nogo != None and nogo.executable != None:
         out_facts = go.declare_file(go, name = source.name, ext = pre_ext + ".facts")
-        out_nogo = go.declare_directory(go, name = source.name, ext = pre_ext + "_nogo")
+        out_diagnostics = go.declare_directory(go, name = source.name, ext = pre_ext + "_nogo")
         if validate_nogo(go):
             out_nogo_validation = go.declare_file(go, name = source.name, ext = pre_ext + ".nogo")
         else:
             out_nogo_validation = None
     else:
         out_facts = None
-        out_nogo = None
+        out_diagnostics = None
         out_nogo_validation = None
 
     direct = source.deps
@@ -116,7 +116,7 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
             out_lib = out_lib,
             out_export = out_export,
             out_facts = out_facts,
-            out_nogo = out_nogo,
+            out_diagnostics = out_diagnostics,
             out_nogo_validation = out_nogo_validation,
             nogo = nogo,
             out_cgo_export_h = out_cgo_export_h,
@@ -145,7 +145,7 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
             out_lib = out_lib,
             out_export = out_export,
             out_facts = out_facts,
-            out_nogo = out_nogo,
+            out_diagnostics = out_diagnostics,
             out_nogo_validation = out_nogo_validation,
             nogo = nogo,
             gc_goopts = source.gc_goopts,
@@ -190,7 +190,7 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
         facts_file = out_facts,
         runfiles = source.runfiles,
         _validation_output = out_nogo_validation,
-        _nogo_fix_output = out_nogo,
+        _nogo_diagnostics = out_diagnostics,
         _cgo_deps = cgo_deps,
     )
     x_defs = dict(source.x_defs)
