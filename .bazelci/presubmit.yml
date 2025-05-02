@@ -23,6 +23,11 @@ tasks:
       - "-//tests/runfiles:runfiles_test"
       # TODO: Investigate why this fails.
       - "-//tests/core/starlark/cgo:missing_cc_toolchain_explicit_pure_off_test"
+      # TODO: Bzlmod setup requires at least Bazel 7.
+      - "-//tests/core/cross:proto_test"
+      - "-//tests/core/from_go_mod_file:from_go_mod_file_test"
+      - "-//tests/core/transition:hermeticity_test"
+      - "-//tests/integration/gazelle:gazelle_test"
     test_flags:
       - "--per_file_copt=external/.*@-w"
       - "--host_per_file_copt=external/.*@-w"
@@ -92,13 +97,18 @@ tasks:
     test_targets:
       - "//..."
   rbe_ubuntu2404:
+    build_flags:
+      - "--per_file_copt=external/.*@-w"
+      - "--host_per_file_copt=external/.*@-w"
     build_targets:
       - "//..."
     test_flags:
+      - "--per_file_copt=external/.*@-w"
+      - "--host_per_file_copt=external/.*@-w"
       # Some tests depend on this feature being disabled. However, because it's
       # enabled by default in the rbe_ubuntu2004 platform, we cannot simply remove
       # this flag here, we have to explicitly override it with 0.
-      - "--action_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=0"
+      - "--repo_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=0"
       # go_bazel_test rules are marked local, since the executors don't have bazel
       # installed. It appears bazel is no longer in PATH on the host machines
       # in this configuration either.
@@ -203,8 +213,6 @@ tasks:
     platform: windows
     working_directory: examples/hello
     build_flags:
-      - "--override_repository=io_bazel_rules_go=../.."
-      - "--config=incompatible"
       # Go requires a C toolchain that accepts options and emits errors like
       # gcc or clang. The Go SDK does not support MSVC.
       - '--action_env=PATH=C:\tools\msys64\usr\bin;C:\tools\msys64\bin;C:\tools\msys64\mingw64\bin;C:\python3\Scripts\;C:\python3;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0;C:\Windows\System32\OpenSSH;C:\ProgramData\GooGet;C:\Program Files\Google\Compute Engine\metadata_scripts;C:\Program Files (x86)\Google\Cloud SDK\google-cloud-sdk\bin;C:\Program Files\Google\Compute Engine\sysprep;C:\ProgramData\chocolatey\bin;C:\Program Files\Git\cmd;C:\tools\msys64\usr\bin;c:\openjdk\bin;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit\;C:\Program Files\CMake\bin;c:\ninja;c:\bazel;c:\buildkite'
@@ -215,8 +223,6 @@ tasks:
     test_targets:
       - "//..."
     test_flags:
-      - "--override_repository=io_bazel_rules_go=../.."
-      - "--config=incompatible"
       - '--action_env=PATH=C:\tools\msys64\usr\bin;C:\tools\msys64\bin;C:\tools\msys64\mingw64\bin;C:\python3\Scripts\;C:\python3;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0;C:\Windows\System32\OpenSSH;C:\ProgramData\GooGet;C:\Program Files\Google\Compute Engine\metadata_scripts;C:\Program Files (x86)\Google\Cloud SDK\google-cloud-sdk\bin;C:\Program Files\Google\Compute Engine\sysprep;C:\ProgramData\chocolatey\bin;C:\Program Files\Git\cmd;C:\tools\msys64\usr\bin;c:\openjdk\bin;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit\;C:\Program Files\CMake\bin;c:\ninja;c:\bazel;c:\buildkite'
       # On Windows CI, bazel (bazelisk) needs %LocalAppData% to find the cache directory.
       # We invoke bazel in tests, so the tests need this, too.
@@ -236,12 +242,6 @@ tasks:
     name: Basic Gazelle example on macOS
     platform: macos_arm64
     working_directory: examples/basic-gazelle
-    build_flags:
-      - "--override_repository=io_bazel_rules_go=../.."
-      - "--config=incompatible"
-    test_flags:
-      - "--override_repository=io_bazel_rules_go=../.."
-      - "--config=incompatible"
     build_targets:
       - "//..."
     test_targets:
@@ -251,8 +251,6 @@ tasks:
     platform: windows
     working_directory: examples/basic_gazelle
     build_flags:
-      - "--override_repository=io_bazel_rules_go=../.."
-      - "--config=incompatible"
       # Go requires a C toolchain that accepts options and emits errors like
       # gcc or clang. The Go SDK does not support MSVC.
       - '--action_env=PATH=C:\tools\msys64\usr\bin;C:\tools\msys64\bin;C:\tools\msys64\mingw64\bin;C:\python3\Scripts\;C:\python3;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0;C:\Windows\System32\OpenSSH;C:\ProgramData\GooGet;C:\Program Files\Google\Compute Engine\metadata_scripts;C:\Program Files (x86)\Google\Cloud SDK\google-cloud-sdk\bin;C:\Program Files\Google\Compute Engine\sysprep;C:\ProgramData\chocolatey\bin;C:\Program Files\Git\cmd;C:\tools\msys64\usr\bin;c:\openjdk\bin;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit\;C:\Program Files\CMake\bin;c:\ninja;c:\bazel;c:\buildkite'
@@ -263,8 +261,6 @@ tasks:
     test_targets:
       - "//..."
     test_flags:
-      - "--override_repository=io_bazel_rules_go=../.."
-      - "--config=incompatible"
       - '--action_env=PATH=C:\tools\msys64\usr\bin;C:\tools\msys64\bin;C:\tools\msys64\mingw64\bin;C:\python3\Scripts\;C:\python3;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0;C:\Windows\System32\OpenSSH;C:\ProgramData\GooGet;C:\Program Files\Google\Compute Engine\metadata_scripts;C:\Program Files (x86)\Google\Cloud SDK\google-cloud-sdk\bin;C:\Program Files\Google\Compute Engine\sysprep;C:\ProgramData\chocolatey\bin;C:\Program Files\Git\cmd;C:\tools\msys64\usr\bin;c:\openjdk\bin;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit\;C:\Program Files\CMake\bin;c:\ninja;c:\bazel;c:\buildkite'
       # On Windows CI, bazel (bazelisk) needs %LocalAppData% to find the cache directory.
       # We invoke bazel in tests, so the tests need this, too.
