@@ -19,7 +19,7 @@ func nogoValidation(args []string) error {
 
 	logFile := filepath.Join(args[1], nogoLogBasename)
 	logContent, err := os.ReadFile(logFile)
-	if err == os.ErrNotExist {
+	if os.IsNotExist(err) {
 		// No nogo findings, this is the only case in which we exit without
 		// an error.
 		return nil
@@ -30,7 +30,7 @@ func nogoValidation(args []string) error {
 	var fixMessage string
 	fixFile := filepath.Join(args[2], nogoFixBasename)
 	fixContent, err := os.ReadFile(fixFile)
-	if err != nil && err != os.ErrNotExist {
+	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
 	if len(fixContent) > 0 {
