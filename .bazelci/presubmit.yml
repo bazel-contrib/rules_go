@@ -106,7 +106,7 @@ tasks:
       - "--per_file_copt=external/.*@-w"
       - "--host_per_file_copt=external/.*@-w"
       # Some tests depend on this feature being disabled. However, because it's
-      # enabled by default in the rbe_ubuntu2004 platform, we cannot simply remove
+      # enabled by default in the rbe_ubuntu2404 platform, we cannot simply remove
       # this flag here, we have to explicitly override it with 0.
       - "--repo_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=0"
       # go_bazel_test rules are marked local, since the executors don't have bazel
@@ -241,7 +241,7 @@ tasks:
   macos_basic_gazelle_example:
     name: Basic Gazelle example on macOS
     platform: macos_arm64
-    working_directory: examples/basic-gazelle
+    working_directory: examples/basic_gazelle
     build_targets:
       - "//..."
     test_targets:
