@@ -28,7 +28,7 @@ func nogoValidation(args []string) error {
 	}
 
 	var fixMessage string
-	fixFile := filepath.Join(args[2], nogoFixBasename)
+	fixFile := filepath.Join(args[1], nogoFixBasename)
 	fixContent, err := os.ReadFile(fixFile)
 	if err != nil && !os.IsNotExist(err) {
 		return err
