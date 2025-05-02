@@ -77,7 +77,7 @@ func run(args []string) (error, int) {
 	importcfg := flags.String("importcfg", "", "The import configuration file")
 	packagePath := flags.String("p", "", "The package path (importmap) of the package being compiled")
 	xPath := flags.String("x", "", "The archive file where serialized facts should be written")
-	nogoFixDir := flags.String("fix", "", "The path of the directory to store the nogo fixes in")
+	nogoFixDir := flags.String("fix_dir", "", "The path of the directory to store the nogo fixes in")
 	var ignores multiFlag
 	flags.Var(&ignores, "ignore", "Names of files to ignore")
 	flags.Parse(args)
@@ -138,7 +138,7 @@ func saveSuggestedFixes(nogoFixDir string, diagnostics []diagnosticEntry, pkg *g
 	if len(fixes) == 0 {
 		return errs
 	}
-	patchFilePath := filepath.Join(nogoFixDir, "nogo.patch")
+	patchFilePath := filepath.Join(nogoFixDir, nogoFixBasename)
 	patchFile, err := os.Create(patchFilePath)
 	if err != nil {
 		errs = append(errs, fmt.Errorf("creating %q: %w", patchFilePath, err))

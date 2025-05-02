@@ -18,9 +18,12 @@
 // a circular dependency.
 package main
 
-// The exit codes for nogo binaries.
 const (
+	// The exit codes for nogo binaries.
 	nogoSuccess int = iota
 	nogoError
 	nogoViolation
+
+	nogoLogBasename = "nogo.log"
+	nogoFixBasename = "nogo.patch"
 )
