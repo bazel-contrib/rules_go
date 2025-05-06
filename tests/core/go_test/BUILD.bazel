@@ -106,6 +106,12 @@ go_test(
 )
 
 go_test(
+    name = "testmain_pwd_test",
+    size = "small",
+    srcs = ["testmain_pwd_test.go"],
+)
+
+go_test(
     name = "data_test",
     size = "small",
     embed = [":data_test_lib"],

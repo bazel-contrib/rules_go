@@ -120,6 +120,12 @@ wrapper_test
 Checks that a ``go_test`` can be executed by another test in a subdirectory.
 Verifies `#2749`_.
 
+testmain_pwd_test
+-----------------
+
+Checks that a test which spawns a subprocess of the test binary
+is run inside the correct directory.
+
 fuzz_test
 ---------
 
