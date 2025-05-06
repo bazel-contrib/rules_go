@@ -165,6 +165,15 @@ func testsInShard() []testing.InternalTest {
 }
 
 func main() {
+	// When the test process is originally spawned by Bazel,
+	// it should run in a test directory.
+	// However, if the test process is re-spawned by the test,
+	// it should run wherever that process is set to run.
+	//
+	// Clearing this environment variable will opt the child process
+	// out of the Chdir behavior.
+	_ = os.Unsetenv("GO_TEST_RUN_FROM_BAZEL")
+
 	if bzltestutil.ShouldWrap() {
 		err := bzltestutil.Wrap("{{.Pkgname}}")
 		exitCode := 0

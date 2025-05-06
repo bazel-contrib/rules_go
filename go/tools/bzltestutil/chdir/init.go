@@ -75,6 +75,10 @@ var (
 const isWindows = os.PathSeparator == '\\'
 
 func init() {
+	if os.Getenv("GO_TEST_RUN_FROM_BAZEL") == "" {
+		return
+	}
+
 	var err error
 	TestExecDir, err = os.Getwd()
 	if err != nil {

@@ -192,7 +192,13 @@ def _go_test_impl(ctx):
         info_file = ctx.info_file,
     )
 
-    env = {}
+    env = {
+        # The test binary uses this to decide
+        # whether it was invoked by Bazel or directly.
+        # If invoked directly, it will not change its working directory
+        # to run_dir configured above.
+        "GO_TEST_RUN_FROM_BAZEL": "1",
+    }
     for k, v in ctx.attr.env.items():
         env[k] = ctx.expand_location(v, ctx.attr.data)
 
