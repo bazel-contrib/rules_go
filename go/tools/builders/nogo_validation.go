@@ -3,46 +3,51 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 )
 
 func nogoValidation(args []string) error {
-	if len(args) != 3 {
-		return fmt.Errorf("usage: nogovalidation <validation_output> <log_file> <fix_file>\n\tgot: %v+", args)
+	if len(args) != 2 {
+		return fmt.Errorf("usage: nogovalidation <validation_output> <out_dir>\n\tgot: %v+", args)
 	}
-	validationOutput := args[0]
-	logFile := args[1]
-	fixFile := args[2]
-	// Always create the output file and only fail if the log file is non-empty to
-	// avoid an "action failed to create outputs" error.
+	// Always create the output file to avoid an unhelpful "action failed to create outputs" error.
+	out, err := os.Create(args[0])
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	logFile := filepath.Join(args[1], nogoLogBasename)
 	logContent, err := os.ReadFile(logFile)
-	if err != nil {
+	if os.IsNotExist(err) {
+		// No nogo findings, this is the only case in which we exit without
+		// an error.
+		return nil
+	} else if err != nil {
+		return fmt.Errorf("error reading nogo log file: %w", err)
+	}
+
+	var fixMessage string
+	fixFile := filepath.Join(args[1], nogoFixBasename)
+	fixContent, err := os.ReadFile(fixFile)
+	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
-	err = os.WriteFile(validationOutput, logContent, 0755)
-	if err != nil {
-		return err
-	}
-	if len(logContent) > 0 {
-		fixContent, err := os.ReadFile(fixFile)
-		if err != nil {
-			return err
-		}
-		var fixMessage string
-		if len(fixContent) > 0 {
-			// Format the message in a clean and clear way
-			fixMessage = fmt.Sprintf(`
+	if len(fixContent) > 0 {
+		// Format the message in a clean and clear way
+		fixMessage = fmt.Sprintf(`
 -------------------Suggested Fix---------------------
 %s
 -----------------------------------------------------
 To apply the suggested fix, run the following command:
 $ patch -p1 < %s
 `, fixContent, fixFile)
-		}
-		// Separate nogo output from Bazel's --sandbox_debug message via an
-		// empty line.
-		// Don't return to avoid printing the "nogovalidation:" prefix.
-		_, _ = fmt.Fprintf(os.Stderr, "\n%s%s\n", logContent, fixMessage)
-		os.Exit(1)
 	}
+	// Separate nogo output from Bazel's --sandbox_debug message via an
+	// empty line.
+	// Don't return to avoid printing the "nogovalidation:" prefix.
+	_, _ = fmt.Fprintf(os.Stderr, "\n%s%s\n", logContent, fixMessage)
+	os.Exit(1)
+	// Not reached
 	return nil
 }

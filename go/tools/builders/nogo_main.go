@@ -77,7 +77,7 @@ func run(args []string) (error, int) {
 	importcfg := flags.String("importcfg", "", "The import configuration file")
 	packagePath := flags.String("p", "", "The package path (importmap) of the package being compiled")
 	xPath := flags.String("x", "", "The archive file where serialized facts should be written")
-	nogoFixPath := flags.String("fix", "", "The path of the file to store the nogo fixes")
+	nogoFixDir := flags.String("fix_dir", "", "The path of the directory to store the nogo fixes in")
 	var ignores multiFlag
 	flags.Var(&ignores, "ignore", "Names of files to ignore")
 	flags.Parse(args)
@@ -113,7 +113,7 @@ func run(args []string) (error, int) {
 		}
 	}
 
-	if errs := saveSuggestedFixes(*nogoFixPath, diagnostics, pkg); len(errs) > 0 {
+	if errs := saveSuggestedFixes(*nogoFixDir, diagnostics, pkg); len(errs) > 0 {
 		errMsg.WriteString("\nsaving suggested fixes:")
 		for _, err := range errs {
 			fmt.Fprintf(&errMsg, "\n%v", err)
@@ -126,22 +126,25 @@ func run(args []string) (error, int) {
 	return nil, exitCode
 }
 
-func saveSuggestedFixes(nogoFixPath string, diagnostics []diagnosticEntry, pkg *goPackage) []error {
-	if nogoFixPath == "" {
+func saveSuggestedFixes(nogoFixDir string, diagnostics []diagnosticEntry, pkg *goPackage) []error {
+	if nogoFixDir == "" {
 		return nil
 	}
 	var errs []error
-	// the patch file has to be created even if there is no fix.
-	patchFile, err := os.Create(nogoFixPath)
-	if err != nil {
-		errs = append(errs, fmt.Errorf("creating %q: %w", nogoFixPath, err))
-		return errs
-	}
-	defer patchFile.Close()
 	fixes, err := getFixes(diagnostics, pkg.fset)
 	if err != nil {
 		errs = append(errs, err)
 	}
+	if len(fixes) == 0 {
+		return errs
+	}
+	patchFilePath := filepath.Join(nogoFixDir, nogoFixBasename)
+	patchFile, err := os.Create(patchFilePath)
+	if err != nil {
+		errs = append(errs, fmt.Errorf("creating %q: %w", patchFilePath, err))
+		return errs
+	}
+	defer patchFile.Close()
 	if err := writePatch(patchFile, fixes); err != nil {
 		errs = append(errs, err)
 	}

@@ -145,6 +145,21 @@ by default. You could exclude the external repositories from ``nogo`` by using t
 not validated with ``nogo`` by default. See the Bzlmod_ guide for more information
 on how to configure the ``nogo`` scope in this case.
 
+Fixes
+--------------------------------
+
+Some analyzers generate fixes for the issues they detect. ``nogo`` prints these fixes and
+a command to apply them by default. If you want to collect and apply all the fixes at once,
+you can use the following commands:
+
+.. code:: shell
+
+    # Only run nogo, no compilation actions, and don't fail on findings.
+    bazel build //... --norun_validations --output_groups nogo_fix --remote_download_regex='.*/nogo.patch$'
+    # Apply all fixes.
+    bazel cquery //... --norun_validations --output_groups nogo_fix --remote_download_regex='.*/nogo.patch$' --output=files \
+      | xargs -I{} sh -c '[[ ! -e {}/nogo.patch ]] || patch -p1 -N --reject-file /dev/null < {}/nogo.patch'
+
 Relationship with other linters
 ~~~~~~~~~~~~~~~~~~~~~
 
