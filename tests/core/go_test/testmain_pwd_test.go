@@ -20,14 +20,22 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
 
-var testExecutable string // set in TestMain if we're running tests
+var (
+	exeSuffix      string // set in TestMain only on Windows
+	testExecutable string // set in TestMain if we're running tests
+)
 
 func TestMain(m *testing.M) {
-	if filepath.Base(os.Args[0]) == "pwd" {
+	if runtime.GOOS == "windows" {
+		exeSuffix = ".exe"
+	}
+
+	if filepath.Base(os.Args[0]) == "pwd"+exeSuffix {
 		cwd, err := os.Getwd()
 		if err != nil {
 			log.Fatalf("failed to get current working directory: %v", err)
@@ -50,7 +58,7 @@ func TestMain(m *testing.M) {
 func TestSymlinkToBinary(t *testing.T) {
 	workDir := t.TempDir()
 
-	pwdExe := filepath.Join(workDir, "pwd")
+	pwdExe := filepath.Join(workDir, "pwd"+exeSuffix)
 	if err := os.Symlink(testExecutable, pwdExe); err != nil {
 		t.Fatalf("failed to create symlink: %v", err)
 	}
@@ -73,7 +81,7 @@ func TestChangeOSArgs0(t *testing.T) {
 	workDir := t.TempDir()
 
 	cmd := exec.Command(testExecutable)
-	cmd.Args[0] = "pwd"
+	cmd.Args[0] = "pwd" + exeSuffix
 	cmd.Dir = workDir
 	bs, err := cmd.Output()
 	if err != nil {
