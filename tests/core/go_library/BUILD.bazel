@@ -28,8 +28,10 @@ go_library(
     srcs = [
         "inc.go",
         "inc_asmhdr.s",
+        "inc_relative.s",
     ],
     importpath = "asm_header",
+    deps = ["//tests/core/headers"],
 )
 
 go_library(
