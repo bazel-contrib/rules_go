@@ -59,6 +59,7 @@ def emit_compilepkg(
         archives = [],
         cgo = False,
         cgo_inputs = depset(),
+        cgo_out_dir = None,
         cppopts = [],
         copts = [],
         cxxopts = [],
@@ -171,12 +172,12 @@ def emit_compilepkg(
     else:
         env = go.env_for_path_mapping
         execution_requirements = SUPPORTS_PATH_MAPPING_REQUIREMENT
-    cgo_go_srcs_for_nogo = None
+    cgo_go_srcs = None
     if cgo:
-        if nogo:
-            cgo_go_srcs_for_nogo = go.declare_directory(go, path = out_lib.basename + ".cgo")
-            outputs.append(cgo_go_srcs_for_nogo)
-            compile_args.add("-cgo_go_srcs", cgo_go_srcs_for_nogo.path)
+        if cgo_out_dir:
+            cgo_go_srcs = cgo_out_dir
+            outputs.append(cgo_go_srcs)
+            compile_args.add("-cgo_go_srcs", cgo_go_srcs.path)
         inputs_transitive.append(cgo_inputs)
         inputs_transitive.append(go.cc_toolchain_files)
         env["CC"] = go.cgo_tools.c_compiler_path
@@ -213,7 +214,7 @@ def emit_compilepkg(
             go,
             shared_args = shared_args,
             sources = sources,
-            cgo_go_srcs = cgo_go_srcs_for_nogo,
+            cgo_go_srcs = cgo_go_srcs,
             archives = archives,
             out_diagnostics = out_diagnostics,
             out_facts = out_facts,
