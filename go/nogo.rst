@@ -355,6 +355,8 @@ Setting ``vet = True`` is equivalent to adding the ``atomic``, ``bools``,
 ``@org_golang_x_tools//go/analysis/passes`` to the ``deps`` list of your
 ``nogo`` rule.
 
+**NOTE**: When using vet you must ensure that the package ``golang.org/x/tools`` is in the go.mod file.
+
 
 See the full list of available nogo checks:
 
