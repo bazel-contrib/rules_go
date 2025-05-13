@@ -159,8 +159,7 @@ func runPrepare(ctx context.Context, stderr io.Writer, args []string) error {
 	if err != nil {
 		return err
 	}
-	boilerplate := genBoilerplate(version, arcSum, goVersion)
-	rnotesStr := string(rnotesData) + "\n\n## `WORKSPACE` code\n\n```\n" + boilerplate + "\n```\n"
+	rnotesStr := genBoilerplate(version, arcSum, goVersion, string(rnotesData))
 
 	// Push the release branch.
 	fmt.Fprintf(stderr, "pushing branch %s to origin...\n", branchName)
