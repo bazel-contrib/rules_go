@@ -284,5 +284,3 @@ def go_proto_compiler(name, **kwargs):
         plugin = reset_plugin_name,
         **kwargs
     )
-
-
