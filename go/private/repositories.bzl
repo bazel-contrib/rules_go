@@ -165,7 +165,8 @@ def go_rules_dependencies(force = False):
     # reasons for this:
     #
     # * com_google_protobuf has its own dependency macro. We can't load
-    #   the macro here.
+    #   the macro here, but we still instantiate the repo itself because
+    #   rules_cc depends on it being present through rules_java.
     # * rules_proto also has a dependency macro. It's only needed by tests and
     #   by gogo_special_proto. Users will need to declare it anyway.
     # * org_golang_google_grpc has too many dependencies for us to maintain.
@@ -338,6 +339,17 @@ def go_rules_dependencies(force = False):
         sha256 = "abc605dd850f813bb37004b77db20106a19311a96b2da1c92b789da529d28fe1",
         strip_prefix = "rules_cc-0.0.17",
         urls = ["https://github.com/bazelbuild/rules_cc/releases/download/0.0.17/rules_cc-0.0.17.tar.gz"],
+    )
+
+    wrapper(
+        http_archive,
+        name = "com_google_protobuf",
+        integrity = "sha256-zl0At4RQoMpAC/NgrADA1ZnMIl8EnZhqJ+mk45bFqEo=",
+        strip_prefix = "protobuf-29.0-rc2",
+        urls = [
+            "https://github.com/protocolbuffers/protobuf/archive/v29.0-rc2.tar.gz",
+            "https://mirror.bazel.build/github.com/protocolbuffers/protobuf/archive/v29.0-rc2.tar.gz",
+        ],
     )
 
 def _go_host_compatible_sdk_label_impl(ctx):
