@@ -84,6 +84,7 @@ bzl_library(
         "//go/private/actions:link",
         "//go/private/actions:stdlib",
         "@bazel_skylib//lib:selects",
+        "@rules_cc//cc/common",
     ],
 )
 

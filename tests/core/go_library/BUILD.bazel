@@ -1,3 +1,4 @@
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("//go:def.bzl", "go_binary", "go_library", "go_source", "go_test")
 load("//go/tools/bazel_testing:def.bzl", "go_bazel_test")
 load(":def.bzl", "embedsrcs_files")

@@ -18,5 +18,6 @@ bzl_library(
         "//go/private/rules:source",
         "//go/private/rules:test",
         "//go/private/tools:path",
+        "@rules_cc//cc/common",
     ],
 )
