@@ -327,6 +327,10 @@ func defaultCFlags(workDir string) []string {
 	flags := []string{
 		"-fdebug-prefix-map=" + abs(".") + "=.",
 		"-fdebug-prefix-map=" + workDir + "=.",
+		"-fcoverage-prefix-map=" + abs(".") + "=.",
+		"-fcoverage-prefix-map=" + workDir + "=.",
+		"-fmacro-prefix-map=" + abs(".") + "=.",
+		"-fmacro-prefix-map=" + workDir + "=.",
 	}
 	goos, goarch := os.Getenv("GOOS"), os.Getenv("GOARCH")
 	switch {
