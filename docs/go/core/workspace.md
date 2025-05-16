@@ -248,7 +248,7 @@ protobuf_deps()
 You'll need a C/C++ toolchain registered for the execution platform (the
 platform where Bazel runs actions) to build protoc.
 
-The `proto_library` rule is provided by the `rules_proto` repository.
+The `proto_library` rule is provided by the `com_google_protobuf` repository.
 `protoc-gen-go`, the Go proto compiler plugin, is provided by the
 `com_github_golang_protobuf` repository. Both are declared by
 `go_rules_dependencies`. You won't need to declare an explicit dependency
@@ -267,7 +267,7 @@ and `go_proto_library` rules to generate and compile Go code from .proto
 files.
 
 ```starlark
-load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@com_google_protobuf//bazel:proto_library.bzl", "proto_library")
 load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
 
 proto_library(

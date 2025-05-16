@@ -16,9 +16,10 @@ load(
     "@bazel_skylib//lib:paths.bzl",
     "paths",
 )
+load("@com_google_protobuf//bazel/common:proto_common.bzl", "proto_common")
 load(
-    "@rules_proto//proto:proto_common.bzl",
-    proto_toolchains = "toolchains",
+    "@com_google_protobuf//bazel/common:proto_lang_toolchain_info.bzl",
+    "ProtoLangToolchainInfo",
 )
 load(
     "//go:def.bzl",
@@ -47,6 +48,30 @@ load(
 # TODO: Revisit this after --incompatible_enable_proto_toolchain_resolution has been enabled by
 #  default.
 _PROTO_TOOLCHAIN_TYPE = "@rules_proto//proto:toolchain_type"
+
+def _incompatible_toolchains_enabled():
+    return getattr(proto_common, "INCOMPATIBLE_ENABLE_PROTO_TOOLCHAIN_RESOLUTION", False)
+
+def _find_toolchain(ctx, legacy_attr, toolchain_type):
+    if _incompatible_toolchains_enabled():
+        toolchain = ctx.toolchains[toolchain_type]
+        if not toolchain:
+            fail("No toolchains registered for '%s'." % toolchain_type)
+        return toolchain.proto
+    else:
+        return getattr(ctx.attr, legacy_attr)[ProtoLangToolchainInfo]
+
+def _use_toolchain(toolchain_type):
+    if _incompatible_toolchains_enabled():
+        return [config_common.toolchain_type(toolchain_type, mandatory = False)]
+    else:
+        return []
+
+def _if_legacy_toolchain(legacy_attr_dict):
+    if _incompatible_toolchains_enabled():
+        return {}
+    else:
+        return legacy_attr_dict
 
 GoProtoCompiler = provider(
     doc = "Information and dependencies needed to generate Go code from protos",
@@ -188,7 +213,7 @@ def proto_path(src, proto):
 def _go_proto_compiler_impl(ctx):
     go = go_context(ctx, include_deprecated_properties = False)
     go_info = new_go_info(go, ctx.attr)
-    proto_toolchain = proto_toolchains.find_toolchain(
+    proto_toolchain = _find_toolchain(
         ctx,
         legacy_attr = "_legacy_proto_toolchain",
         toolchain_type = _PROTO_TOOLCHAIN_TYPE,
@@ -233,7 +258,7 @@ _go_proto_compiler = rule(
         "_go_context_data": attr.label(
             default = "//:go_context_data",
         ),
-    }, **proto_toolchains.if_legacy_toolchain({
+    }, **_if_legacy_toolchain({
         "_legacy_proto_toolchain": attr.label(
             # Setting cfg = "exec" here as the legacy_proto_toolchain target
             # already needs to apply the non_go_tool_transition. Flipping the
@@ -243,7 +268,7 @@ _go_proto_compiler = rule(
             default = "//proto/private:legacy_proto_toolchain",
         ),
     })),
-    toolchains = [GO_TOOLCHAIN] + proto_toolchains.use_toolchain(_PROTO_TOOLCHAIN_TYPE),
+    toolchains = [GO_TOOLCHAIN] + _use_toolchain(_PROTO_TOOLCHAIN_TYPE),
 )
 
 def go_proto_compiler(name, **kwargs):
