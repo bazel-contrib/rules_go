@@ -24,11 +24,19 @@ func filterSourceFilesForTags(files []string) []string {
 
 		match, _ := buildContext.MatchFile(dir, filename)
 		// MatchFile filters out anything without a file extension. In the
-		// case of CompiledGoFiles (in particular gco processed files from
-		// the cache), we want them.
-		if match || ext == "" {
+		// case of CompiledGoFiles (in particular cgo processed files from
+		// the cache), we want them. We also want to keep cgo processed files
+		// with known naming conventions.
+		if match || ext == "" || isCgoProcessed(filename) {
 			ret = append(ret, f)
 		}
 	}
 	return ret
+}
+
+// isCgoProcessed returns true if the file is a cgo processed file.
+func isCgoProcessed(fileName string) bool {
+	// go/tools/builders/cgo2.go generates cgo processed code that are
+	// named *.cgo1.go, _cgo_gotypes.go, and _cgo_imports.go.
+	return fileName == "_cgo_gotypes.go" || fileName == "_cgo_imports.go" || strings.HasSuffix(fileName, ".cgo1.go")
 }

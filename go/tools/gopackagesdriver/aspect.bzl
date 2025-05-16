@@ -13,13 +13,15 @@
 # limitations under the License.
 
 load(
-    "@bazel_skylib//lib:paths.bzl",
-    "paths",
-)
-load(
     "//go/private:providers.bzl",
     "GoArchive",
     "GoStdLib",
+)
+load(
+    "//go/tools/gopackagesdriver/pkgjson:pkg_json.bzl",
+    "write_pkg_json",
+    file_path_lib = "file_path",
+    is_file_external_lib = "is_file_external",
 )
 
 GoPkgInfo = provider()
@@ -39,42 +41,14 @@ def bazel_supports_canonical_label_literals():
     return str(Label("//:bogus")).startswith("@@")
 
 def is_file_external(f):
-    return f.owner.workspace_root != ""
+    return is_file_external_lib(f)
 
 def file_path(f):
-    prefix = "__BAZEL_WORKSPACE__"
-    if not f.is_source:
-        prefix = "__BAZEL_EXECROOT__"
-    elif is_file_external(f):
-        prefix = "__BAZEL_OUTPUT_BASE__"
-    return paths.join(prefix, f.path)
+    return file_path_lib(f)
 
-def _go_archive_to_pkg(archive):
-    go_files = [
-        file_path(src)
-        for src in archive.data.srcs
-        if src.path.endswith(".go")
-    ]
-    return struct(
-        ID = str(archive.data.label),
-        PkgPath = archive.data.importpath,
-        ExportFile = file_path(archive.data.export_file),
-        GoFiles = go_files,
-        CompiledGoFiles = go_files,
-        OtherFiles = [
-            file_path(src)
-            for src in archive.data.srcs
-            if not src.path.endswith(".go")
-        ],
-        Imports = {
-            pkg.data.importpath: str(pkg.data.label)
-            for pkg in archive.direct
-        },
-    )
-
-def make_pkg_json(ctx, name, pkg_info):
+def make_pkg_json(ctx, pkg_json_tool, name, archive):
     pkg_json_file = ctx.actions.declare_file(name + ".pkg.json")
-    ctx.actions.write(pkg_json_file, content = json.encode(pkg_info))
+    write_pkg_json(ctx, pkg_json_tool, archive, pkg_json_file)
     return pkg_json_file
 
 def _go_pkg_info_aspect_impl(target, ctx):
@@ -110,16 +84,16 @@ def _go_pkg_info_aspect_impl(target, ctx):
     if GoArchive in target:
         archive = target[GoArchive]
         compiled_go_files.extend(archive.source.srcs)
+        if archive.data.cgo_out_dir:
+            compiled_go_files.append(archive.data.cgo_out_dir)
         export_files.append(archive.data.export_file)
-        pkg = _go_archive_to_pkg(archive)
-        pkg_json_files.append(make_pkg_json(ctx, archive.data.name, pkg))
+        pkg_json_files.append(make_pkg_json(ctx, ctx.executable._pkgjson, archive.data.name, archive))
 
         if ctx.rule.kind == "go_test":
             for dep_archive in archive.direct:
                 # find the archive containing the test sources
                 if archive.data.label == dep_archive.data.label:
-                    pkg = _go_archive_to_pkg(dep_archive)
-                    pkg_json_files.append(make_pkg_json(ctx, dep_archive.data.name, pkg))
+                    pkg_json_files.append(make_pkg_json(ctx, ctx.executable._pkgjson, dep_archive.data.name, dep_archive))
                     compiled_go_files.extend(dep_archive.source.srcs)
                     export_files.append(dep_archive.data.export_file)
                     break
@@ -161,6 +135,11 @@ go_pkg_info_aspect = aspect(
     attrs = {
         "_go_stdlib": attr.label(
             default = "//:stdlib",
+        ),
+        "_pkgjson": attr.label(
+            executable = True,
+            cfg = "exec",
+            default = Label("//go/tools/gopackagesdriver/pkgjson:reset_pkgjson"),
         ),
     },
 )

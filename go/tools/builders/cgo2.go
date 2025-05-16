@@ -159,6 +159,9 @@ func cgo2(goenv *env, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSr
 			return "", nil, nil, err
 		}
 	}
+	// Note: The tools/gopackagesdriver will break if the naming convention
+	// changes for genGoSrcs files. Changes here should be reflected
+	// there.
 	genGoSrcs := make([]string, 1+len(cgoSrcs))
 	genGoSrcs[0] = filepath.Join(workDir, "_cgo_gotypes.go")
 	genCSrcs := make([]string, 1+len(cgoSrcs))
