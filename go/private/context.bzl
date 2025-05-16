@@ -202,6 +202,7 @@ def _merge_embed(source, embed):
     source["cover"] = depset(transitive = [source["cover"], s.cover])
     source["deps"] = source["deps"] + s.deps
     source["x_defs"].update(s.x_defs)
+    source["stampsrcs"] = source["stampsrcs"] + s.stampsrcs
     source["gc_goopts"] = source["gc_goopts"] + s.gc_goopts
     source["runfiles"] = source["runfiles"].merge(s.runfiles)
 
@@ -319,6 +320,7 @@ def new_go_info(
         "embedsrcs": embedsrcs,
         "cover": depset(attr_srcs) if coverage_instrumented else depset(),
         "x_defs": {},
+        "stampsrcs": [],
         "deps": deps,
         "gc_goopts": _expand_opts(go, "gc_goopts", getattr(attr, "gc_goopts", [])),
         "runfiles": _collect_runfiles(go, getattr(attr, "data", []), deps),
@@ -344,6 +346,8 @@ def new_go_info(
             k = "{}.{}".format(importmap, k)
         x_defs[k] = v
     go_info["x_defs"] = x_defs
+    for t in getattr(attr, "stampsrcs", []):
+        go_info["stampsrcs"] = go_info["stampsrcs"] + t[DefaultInfo].files.to_list()
     if not go_info["cgo"]:
         for k in ("cdeps", "cppopts", "copts", "cxxopts", "clinkopts"):
             if getattr(attr, k, None):

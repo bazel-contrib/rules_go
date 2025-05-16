@@ -161,6 +161,7 @@ def emit_link(
         stamp_inputs.append(info_file)
     if stamp_x_defs_volatile:
         stamp_inputs.append(version_file)
+    stamp_inputs = stamp_inputs + archive.stampsrcs
     if stamp_inputs:
         builder_args.add_all(stamp_inputs, before_each = "-stamp")
 

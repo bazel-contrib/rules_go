@@ -302,6 +302,12 @@ def _go_binary_kwargs(go_cc_aspects = []):
                 See [Defines and stamping] for examples of how to use these.
                 """,
             ),
+            "stampsrcs": attr.label_list(
+                allow_files = True,
+                doc = """Additional files containing variables which can be referenced in `x_defs`.
+                The format of these files should be the same as the workspace status.
+                """,
+            ),
             "basename": attr.string(
                 doc = """The basename of this binary. The binary
                 basename may also be platform-dependent: on Windows, we add an .exe extension.
