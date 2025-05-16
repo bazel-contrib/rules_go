@@ -101,7 +101,8 @@ _TOOLS_NOGO = [
     "@org_golang_x_tools//go/analysis/passes/lostcancel:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/nilfunc:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/nilness:go_default_library",
-    "@org_golang_x_tools//go/analysis/passes/pkgfact:go_default_library",
+    # demo only
+    # "@org_golang_x_tools//go/analysis/passes/pkgfact:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/printf:go_default_library",
     # shadow analyzer is too noisy, see #4340
     # "@org_golang_x_tools//go/analysis/passes/shadow:go_default_library",
