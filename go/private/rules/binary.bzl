@@ -115,6 +115,9 @@ _go_cc_aspect = aspect(
 
 def _go_binary_impl(ctx):
     """go_binary_impl emits actions for compiling and linking a go executable."""
+    if ctx.attr.out and ctx.attr.out_auto:
+        fail("Only one of out and out_auto must be set.")
+
     go = go_context(
         ctx,
         include_deprecated_properties = False,
@@ -148,11 +151,14 @@ def _go_binary_impl(ctx):
     validation_output = archive.data._validation_output
     nogo_diagnostics = archive.data._nogo_diagnostics
 
-    if ctx.attr.out:
-        # Use declare_file instead of attr.output(). When users set output files
-        # directly, Bazel warns them not to use the same name as the rule, which is
-        # the common case with go_binary.
-        executable = ctx.actions.declare_file(ctx.attr.out)
+    if ctx.attr.out or ctx.attr.out_auto:
+        if ctx.attr.out:
+            # Use declare_file instead of attr.output(). When users set output files
+            # directly, Bazel warns them not to use the same name as the rule, which is
+            # the common case with go_binary.
+            executable = ctx.actions.declare_file(ctx.attr.out)
+        else:
+            executable = ctx.actions.declare_file(name)
         ctx.actions.symlink(
             output = executable,
             target_file = executable_binary,
@@ -316,7 +322,11 @@ def _go_binary_kwargs(go_cc_aspects = []):
                 """,
             ),
             "out": attr.string(
-                doc = """Sets the output symlink filename for the generated executable.
+                doc = """Create a symlink with this name for the generated executable.
+                """,
+            ),
+            "out_auto": attr.bool(
+                doc = """Create a symlink with a name inferred from basename for the generated executable.
                 """,
             ),
             "cgo": attr.bool(
