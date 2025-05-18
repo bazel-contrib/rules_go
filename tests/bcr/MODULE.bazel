@@ -45,10 +45,12 @@ go_sdk.nogo(
     nogo = "//:my_nogo",
 )
 
-# Bring the default SDK into scope to verify that it exists.
+# Don't depend on this repo by name, use toolchains instead.
+# See https://github.com/bazel-contrib/rules_go/blob/master/go/toolchains.rst.
 use_repo(go_sdk, "go_default_sdk")
 
-# Bring the selected host compatible SDK into scope to verify that it exists.
+# Don't depend on this repo by name, use toolchains instead.
+# See https://github.com/bazel-contrib/rules_go/blob/master/go/toolchains.rst
 use_repo(go_sdk, "go_host_compatible_sdk_label")
 
 go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
