@@ -16,6 +16,8 @@ bazel_dep(name = "protobuf", version = "29.0-rc2.bcr.1", repo_name = "com_google
 bazel_dep(name = "rules_shell", version = "0.3.0")
 
 go_sdk = use_extension("//go:extensions.bzl", "go_sdk")
+# Don't depend on this repo by name, use toolchains instead.
+# See https://github.com/bazel-contrib/rules_go/blob/master/go/toolchains.rst
 go_sdk.from_file(
     name = "go_default_sdk",
     go_mod = "//:go.mod",
