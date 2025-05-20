@@ -11,6 +11,7 @@ load("//:transition.bzl", "sdk_transition_test")
 
 nogo(
     name = "my_nogo",
+    config = ":nogo.json",
     visibility = ["//visibility:public"],
     deps = TOOLS_NOGO,
 )
