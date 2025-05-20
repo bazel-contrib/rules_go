@@ -38,7 +38,6 @@ load("@io_bazel_rules_go_bazel_features//:features.bzl", "bazel_features")
 load(
     "@io_bazel_rules_nogo//:scope.bzl",
     NOGO_EXCLUDES = "EXCLUDES",
-    NOGO_INCLUDES = "INCLUDES",
 )
 load(
     "//go/platform:apple.bzl",
