@@ -13,7 +13,7 @@
 # limitations under the License.
 
 DEFAULT_NOGO = "@io_bazel_rules_go//:default_nogo"
-NOGO_DEFAULT_INCLUDES = ["@@//:__subpackages__"]
+NOGO_DEFAULT_INCLUDES = ["all"]
 NOGO_DEFAULT_EXCLUDES = []
 
 # repr(Label(...)) does not emit a canonical label literal.
@@ -34,7 +34,7 @@ def _go_register_nogo_impl(ctx):
         },
         executable = False,
     )
-    if ctx.attr.includes:
+    if ctx.attr.includes != NOGO_DEFAULT_INCLUDES:
         print("go_register_nogo's include attribute is no-op. Nogo now collect facts from all targets by default. To include files in nogo validation, please use only_files in the JSON: https://github.com/bazel-contrib/rules_go/blob/master/go/nogo.rst#example")
 
     ctx.file(
@@ -56,12 +56,12 @@ go_register_nogo = repository_rule(
     _go_register_nogo_impl,
     attrs = {
         "nogo": attr.string(mandatory = True),
-        "includes": attr.string_list(default = None),
+        "includes": attr.string_list(default = ["all"]),
         "excludes": attr.string_list(),
     },
 )
 
-def go_register_nogo_wrapper(nogo, includes = None, excludes = NOGO_DEFAULT_EXCLUDES):
+def go_register_nogo_wrapper(nogo, includes = NOGO_DEFAULT_INCLUDES, excludes = NOGO_DEFAULT_EXCLUDES):
     """See go/nogo.rst"""
     go_register_nogo(
         name = "io_bazel_rules_nogo",
