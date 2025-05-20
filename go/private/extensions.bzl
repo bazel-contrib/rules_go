@@ -83,17 +83,17 @@ _nogo_tag = tag_class(
             # dependency to a Go module can cause a build failure if the new dependency has lint
             # issues.
             doc = """
-A Go target is checked with nogo if its package matches at least one of the entries in 'includes'
-and none of the entries in 'excludes'. By default, nogo is applied to all targets in the main
-repository.
-
-Uses the same format as 'visibility', i.e., every entry must be a label that ends with ':__pkg__' or
-':__subpackages__'.
+Deprecated. Use the JSON config file to specify the include list.
 """,
         ),
         "excludes": attr.label_list(
             default = NOGO_DEFAULT_EXCLUDES,
-            doc = "See 'includes'.",
+            doc = """
+Nogo will generate facts from all Go targets, unless excluded here. 
+
+Uses the same format as 'visibility', i.e., every entry must be a label that ends with ':__pkg__' or
+':__subpackages__'.
+            """,
         ),
     },
 )
@@ -159,7 +159,7 @@ def _go_sdk_impl(ctx):
                 *[t for p in zip(module.tags.nogo, len(module.tags.nogo) * ["\n"]) for t in p]
             )
         nogo_tag = module.tags.nogo[0]
-        for scope in nogo_tag.includes + nogo_tag.excludes:
+        for scope in nogo_tag.excludes:
             # Validate that the scope references a valid, visible repository.
             # buildifier: disable=no-effect
             scope.repo_name
@@ -168,6 +168,7 @@ def _go_sdk_impl(ctx):
                     "go_sdk.nogo: all entries in includes and excludes must end with ':__pkg__' or ':__subpackages__', got '{}' in".format(scope.name),
                     nogo_tag,
                 )
+
     go_register_nogo(
         name = "io_bazel_rules_nogo",
         nogo = str(nogo_tag.nogo),

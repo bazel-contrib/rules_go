@@ -1,0 +1,8 @@
+{
+  "_base": {
+    "exclude_files": {
+      "^external/": "external repositories",
+      "^third_party/": "This directory contains a file that would trigger a nogo error if not excluded."
+    }
+  }
+}
