@@ -96,9 +96,3 @@ bool_flag(
     build_setting_default = False,
     visibility = ["//visibility:public"],
 )
-
-bool_flag(
-    name = "unsafe_not_generate_nogo_facts_for_excludes",
-    build_setting_default = False,
-    visibility = ["//visibility:public"],
-)

@@ -34,13 +34,14 @@ def _go_register_nogo_impl(ctx):
         },
         executable = False,
     )
+    if ctx.attr.includes:
+        print("go_register_nogo's include attribute is no-op. Nogo now collect facts from all targets by default. To include files in nogo validation, please use only_files in the JSON: https://github.com/bazel-contrib/rules_go/blob/master/go/nogo.rst#example")
+
     ctx.file(
         "scope.bzl",
         """
-INCLUDES = {includes}
 EXCLUDES = {excludes}
 """.format(
-            includes = _scope_list_repr(ctx.attr.includes),
             excludes = _scope_list_repr(ctx.attr.excludes),
         ),
         executable = False,
@@ -55,14 +56,12 @@ go_register_nogo = repository_rule(
     _go_register_nogo_impl,
     attrs = {
         "nogo": attr.string(mandatory = True),
-        # Special sentinel value used to let nogo run on all targets when using
-        # WORKSPACE, for backwards compatibility.
-        "includes": attr.string_list(default = ["all"]),
+        "includes": attr.string_list(default = None),
         "excludes": attr.string_list(),
     },
 )
 
-def go_register_nogo_wrapper(nogo, includes = NOGO_DEFAULT_INCLUDES, excludes = NOGO_DEFAULT_EXCLUDES):
+def go_register_nogo_wrapper(nogo, includes = None, excludes = NOGO_DEFAULT_EXCLUDES):
     """See go/nogo.rst"""
     go_register_nogo(
         name = "io_bazel_rules_nogo",
