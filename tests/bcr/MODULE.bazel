@@ -40,7 +40,7 @@ go_sdk.wrap(
 # Request an invalid SDK to verify that it isn't fetched since the first tag takes precedence.
 go_sdk.host(version = "3.0.0")
 go_sdk.nogo(
-    This directory contains a file that would trigger a nogo error if not excluded.
+    # This directory contains a file that would trigger a nogo error if not excluded.
     excludes = ["//third_party:__subpackages__"],
     nogo = "//:my_nogo",
 )
