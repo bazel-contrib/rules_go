@@ -87,6 +87,11 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
     importpath, _ = effective_importpath_pkgpath(source)
 
     cgo_out_dir = None
+    headers = depset(
+        direct = [f for f in source.srcs if f.path.split(".")[-1].lower().startswith("h")],
+        transitive = [a.data._headers for a in direct],
+    )
+
     if source.cgo and not go.mode.pure:
         cgo_out_dir = go.declare_directory(go, path = out_lib.basename + ".cgo")
 
@@ -116,6 +121,7 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
             importpath = importpath,
             importmap = importmap,
             archives = direct,
+            headers = headers,
             out_lib = out_lib,
             out_export = out_export,
             out_facts = out_facts,
@@ -146,6 +152,7 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
             importpath = importpath,
             importmap = importmap,
             archives = direct,
+            headers = headers,
             out_lib = out_lib,
             out_export = out_export,
             out_facts = out_facts,
@@ -197,7 +204,7 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
         _validation_output = out_nogo_validation,
         _nogo_diagnostics = out_diagnostics,
         _cgo_deps = cgo_deps,
-        _headers = tuple([f for f in source.srcs if f.path.split(".")[-1].lower().startswith("h")]),
+        _headers = headers,
     )
     x_defs = dict(source.x_defs)
     for a in direct:

@@ -57,6 +57,7 @@ def emit_compilepkg(
         importpath = "",
         importmap = "",
         archives = [],
+        headers = depset(),
         cgo = False,
         cgo_inputs = depset(),
         cgo_out_dir = None,
@@ -93,11 +94,9 @@ def emit_compilepkg(
         archives = archives + [go.coverdata]
 
     sdk = go.sdk
-    inputs_direct = sources + embedsrcs + [sdk.package_list]
-    for archive in archives:
-        inputs_direct.append(archive.data.export_file)
-        inputs_direct.extend(archive.data._headers)
-    inputs_transitive = [sdk.headers, sdk.tools, go.stdlib.libs]
+    inputs_direct = (sources + embedsrcs + [sdk.package_list] +
+                     [archive.data.export_file for archive in archives])
+    inputs_transitive = [sdk.headers, sdk.tools, go.stdlib.libs, headers]
     outputs = [out_lib, out_export]
 
     shared_args = go.builder_args(go, use_path_mapping = True)

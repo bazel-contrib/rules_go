@@ -1,0 +1,11 @@
+load("//go:def.bzl", "go_library")
+
+go_library(
+    name = "c",
+    srcs = [
+        "c.go",
+        "c.h",
+    ],
+    importpath = "github.com/bazelbuild/rules_go/tests/core/transitive_headers/c",
+    visibility = ["//visibility:public"],
+)
