@@ -1,7 +1,0 @@
-{
-  "_base": {
-    "exclude_files": {
-      "^external/": "external repositories"
-    }
-  }
-}
