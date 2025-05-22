@@ -2,7 +2,6 @@ load("//go:def.bzl", "TOOLS_NOGO", "nogo")
 
 nogo(
     name = "nogo",
-    config = ":nogo.json",
     visibility = ["//visibility:public"],
     deps = [
         a
