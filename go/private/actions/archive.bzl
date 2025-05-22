@@ -89,7 +89,7 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
     cgo_out_dir = None
     headers = depset(
         direct = [f for f in source.srcs if f.path.split(".")[-1].lower().startswith("h")],
-        transitive = [a.headers for a in direct],
+        transitive = [a._headers for a in direct],
     )
 
     if source.cgo and not go.mode.pure:
@@ -224,5 +224,5 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
         cgo_deps = depset(transitive = [cgo_deps] + [a.cgo_deps for a in direct]),
         cgo_exports = cgo_exports,
         runfiles = runfiles,
-        headers = headers,
+        _headers = headers,
     )
