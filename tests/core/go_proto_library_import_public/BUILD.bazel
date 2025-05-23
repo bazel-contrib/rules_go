@@ -1,0 +1,15 @@
+load("@com_google_protobuf//bazel:proto_library.bzl", "proto_library")
+load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
+
+proto_library(
+    name = "dog_proto",
+    srcs = ["dog.proto"],
+    deps = ["//tests/core/go_proto_library_import_public/old_dir:dog_collar_proto"],
+)
+
+go_proto_library(
+    name = "dog_go_proto",
+    importpath = "github.com/bazelbuild/rules_go/tests/core/go_proto_library_import_public/dog_go_proto",
+    proto = ":dog_proto",
+    deps = ["//tests/core/go_proto_library_import_public/old_dir:dog_collar_go_proto"],
+)
