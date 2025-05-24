@@ -228,7 +228,7 @@ def _go_sdk_impl(ctx):
                 if key not in ["go_mod"]
             }
             download_tag["version"] = version
-            additional_download_tags += [struct(**download_tag)]
+            additional_download_tags.append(struct(**download_tag))
 
         for index, download_tag in enumerate(module.tags.download + additional_download_tags):
             # SDKs without an explicit version are fetched even when not selected by toolchain
