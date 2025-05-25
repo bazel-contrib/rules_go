@@ -124,6 +124,7 @@ def _go_binary_impl(ctx):
         go_context_data = ctx.attr._go_context_data[0],
         goos = ctx.attr.goos,
         goarch = ctx.attr.goarch,
+        impure_env = ctx.attr.impure_env,
     )
 
     is_main = go.mode.linkmode not in (LINKMODE_SHARED, LINKMODE_PLUGIN)
@@ -168,6 +169,10 @@ def _go_binary_impl(ctx):
         env = {}
         for k, v in ctx.attr.env.items():
             env[k] = ctx.expand_location(v, ctx.attr.data)
+
+        if hasattr(ctx.attr, "impure_env"):
+            env.update(ctx.attr.impure_env)
+
         providers.append(RunEnvironmentInfo(environment = env))
 
         # The executable is automatically added to the runfiles.
@@ -279,6 +284,20 @@ def _go_binary_kwargs(go_cc_aspects = []):
                 The values (but not keys) are subject to
                 [location expansion](https://docs.bazel.build/versions/main/skylark/macros.html) but not full
                 [make variable expansion](https://docs.bazel.build/versions/main/be/make-variables.html).
+                """,
+            ),
+            "impure_env": attr.string_dict(
+                doc = """
+                A dictionary of environment variables to set during the build.
+                These variables will override any existing environment variables.
+                This is useful for setting variables like LD_LIBRARY_PATH that are needed
+                during the build process but should not be inherited from the host environment.
+
+                WARNING: This attribute should be used with caution. Setting environment variables
+                can make builds non-hermetic and potentially non-reproducible. Only use this if you
+                understand the implications and have a specific need that cannot be solved through
+                other means. This is particularly important for shared libraries and other external
+                dependencies that might affect build reproducibility.
                 """,
             ),
             "importpath": attr.string(

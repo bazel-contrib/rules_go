@@ -44,6 +44,7 @@ def _go_library_impl(ctx):
         importpath_aliases = ctx.attr.importpath_aliases,
         embed = ctx.attr.embed,
         go_context_data = ctx.attr._go_context_data,
+        impure_env = ctx.attr.impure_env,
     )
 
     go_info = new_go_info(go, ctx.attr)
@@ -185,6 +186,31 @@ go_library = rule(
             doc = """
             List of flags to add to the C link command.
             Subject to ["Make variable"] substitution and [Bourne shell tokenization]. Only valid if `cgo = True`.
+            """,
+        ),
+        "env_inherit": attr.string_list(
+            doc = """Environment variables to inherit from the external environment.
+            """,
+        ),
+        "env": attr.string_dict(
+            doc = """Environment variables to set for the binary execution.
+            The values (but not keys) are subject to
+            [location expansion](https://docs.bazel.build/versions/main/skylark/macros.html) but not full
+            [make variable expansion](https://docs.bazel.build/versions/main/be/make-variables.html).
+            """,
+        ),
+        "impure_env": attr.string_dict(
+            doc = """
+            A dictionary of environment variables to set during the build.
+            These variables will override any existing environment variables.
+            This is useful for setting variables like LD_LIBRARY_PATH that are needed
+            during the build process but should not be inherited from the host environment.
+
+            WARNING: This attribute should be used with caution. Setting environment variables
+            can make builds non-hermetic and potentially non-reproducible. Only use this if you
+            understand the implications and have a specific need that cannot be solved through
+            other means. This is particularly important for shared libraries and other external
+            dependencies that might affect build reproducibility.
             """,
         ),
         "_go_context_data": attr.label(default = "//:go_context_data"),
