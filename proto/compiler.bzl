@@ -94,7 +94,7 @@ compiler. Typically, these are Well Known Types and proto runtime libraries.""",
         "valid_archive": """A Boolean indicating whether the .go files produced
 by this compiler are buildable on their own. Compilers that just add methods
 to structs produced by other compilers will set this to False.""",
-        "always_generate": """A Boolean indicating whether this compiler 
+        "always_generates": """A Boolean indicating whether this compiler 
         always generate files, regardless of whether the proto files have 
         relevant definitions (e.g., services for grpc_gateway). This allows
         more strict check of compiler output.""",
@@ -154,7 +154,7 @@ def go_proto_compile(go, compiler, protos, imports, importpath):
     args.add("-importpath", importpath)
     args.add("-out_path", outpath)
     args.add("-plugin", compiler.internal.plugin)
-    if compiler.always_generate:
+    if compiler.always_generates:
         args.add("-strict")
 
     # TODO(jayconrod): can we just use go.env instead?
@@ -229,7 +229,7 @@ def _go_proto_compiler_impl(ctx):
             deps = ctx.attr.deps,
             compile = go_proto_compile,
             valid_archive = ctx.attr.valid_archive,
-            always_generate = ctx.attr.always_generate,
+            always_generates = ctx.attr.always_generates,
             internal = struct(
                 options = ctx.attr.options,
                 suffix = ctx.attr.suffix,
@@ -251,7 +251,7 @@ _go_proto_compiler = rule(
         "suffix": attr.string(default = ".pb.go"),
         "suffixes": attr.string_list(),
         "valid_archive": attr.bool(default = True),
-        "always_generate": attr.bool(
+        "always_generates": attr.bool(
             default = False,
             doc = "indicates whether this proto compiler always generate files, regardless of whether the proto files have relevant definitions (e.g., services for grpc_gateway).",
         ),
