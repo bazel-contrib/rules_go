@@ -495,6 +495,8 @@ set GOCACHE=%cd%\\{gotmp}\\gocache
 set GOPATH=%cd%"\\{gotmp}\\gopath
 set GOTOOLCHAIN=local
 set GO111MODULE=off
+set GOTELEMETRY=off
+set GOENV=off
 {go} build -o {out} -trimpath -ldflags \"-buildid='' {ldflags}\" {srcs}
 set GO_EXIT_CODE=%ERRORLEVEL%
 RMDIR /S /Q "{gotmp}"
@@ -523,26 +525,40 @@ exit /b %GO_EXIT_CODE%
             mnemonic = "GoToolchainBinaryBuild",
         )
     else:
-        # Note: GOPATH is needed for Go 1.16.
-        cmd = """
-GOTMP=$(mktemp -d)
-trap "rm -rf \"$GOTMP\"" EXIT
-GOMAXPROCS=1 \
-GOCACHE="$GOTMP"/gocache \
-GOPATH="$GOTMP"/gopath \
-GOTOOLCHAIN=local \
-GO111MODULE=off \
-{go} build -o {out} -trimpath -ldflags '-buildid="" {ldflags}' {srcs}
-""".format(
-            go = sdk.go.path,
-            out = out.path,
-            srcs = " ".join([f.path for f in ctx.files.srcs]),
-            ldflags = ctx.attr.ldflags,
-        )
+        # -a flag instructs the compiler to not read from GOCACHE and force a rebuild.
+        # This provides extra safety in cases of unsandboxed execution.
+        args = ctx.actions.args()
+        args.add("build")
+        args.add("-a")
+        args.add("-o", out)
+        args.add("-trimpath")
+        args.add("-ldflags", ctx.attr.ldflags, format = '-buildid="" %s')
+        args.add_all(ctx.files.srcs)
+
         ctx.actions.run_shell(
-            command = cmd,
-            tools = depset(
-                ctx.files.srcs + [sdk.go],
+            command = """
+trap "HOME={HOME} GOROOT={GOROOT} {go} clean -cache" EXIT;
+HOME={HOME} {go} "$@" """.format(
+                go = sdk.go.path,
+                GOROOT = sdk.root_file.dirname,
+                # The value of GOCACHE/GOPATH are determined from HOME.
+                # We place them in the execroot to avoid dependency on `mktemp` and because we don't know
+                # a safe scratch space on all systems. Note that HOME must be an absolute path, otherwise the
+                # Go toolchain will write some outputs to the wrong place and the result will be uncacheable.
+                # We use a hardcoded UUID to prevent collisions with anything else under unsandboxed strategy.
+                HOME = "$(pwd)/_go_tool_binary-fake-home-85e96dea-541b-4188-8d13-5c2c42bdbd06",
+            ),
+            arguments = [args],
+            tools = [sdk.go],
+            env = {
+                "GOMAXPROCS": "1",
+                "GOTOOLCHAIN": "local",
+                "GO111MODULE": "off",
+                "GOTELEMETRY": "off",
+                "GOENV": "off",
+            },
+            inputs = depset(
+                ctx.files.srcs,
                 transitive = [sdk.headers, sdk.srcs, sdk.libs, sdk.tools],
             ),
             toolchain = None,
