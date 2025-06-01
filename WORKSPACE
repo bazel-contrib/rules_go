@@ -24,9 +24,9 @@ http_archive(
 # Required by protobuf.
 http_archive(
     name = "rules_cc",
-    sha256 = "bbf1ae2f83305b7053b11e4467d317a7ba3517a12cef608543c1b1c5bf48a4df",
-    strip_prefix = "rules_cc-0.0.16",
-    urls = ["https://github.com/bazelbuild/rules_cc/releases/download/0.0.16/rules_cc-0.0.16.tar.gz"],
+    sha256 = "abc605dd850f813bb37004b77db20106a19311a96b2da1c92b789da529d28fe1",
+    strip_prefix = "rules_cc-0.0.17",
+    urls = ["https://github.com/bazelbuild/rules_cc/releases/download/0.0.17/rules_cc-0.0.17.tar.gz"],
 )
 
 # An up-to-date version is transitively required by Stardoc to fix
@@ -106,16 +106,6 @@ http_archive(
 load("@rules_python//python:repositories.bzl", "py_repositories")
 
 py_repositories()
-
-http_archive(
-    name = "com_google_protobuf",
-    integrity = "sha256-zl0At4RQoMpAC/NgrADA1ZnMIl8EnZhqJ+mk45bFqEo=",
-    strip_prefix = "protobuf-29.0-rc2",
-    urls = [
-        "https://github.com/protocolbuffers/protobuf/archive/v29.0-rc2.tar.gz",
-        "https://mirror.bazel.build/github.com/protocolbuffers/protobuf/archive/v29.0-rc2.tar.gz",
-    ],
-)
 
 load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
 
