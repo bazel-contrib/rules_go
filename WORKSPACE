@@ -53,6 +53,15 @@ go_rules_dependencies()
 
 go_register_toolchains(version = "1.24.0")
 
+# Create the host platform repository transitively required by rules_go.
+load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
+load("@platforms//host:extension.bzl", "host_platform_repo")
+
+maybe(
+	host_platform_repo,
+	name = "host_platform",
+)
+
 # Required since nogo depends on golang.org/x/tools, which needs to be at
 # least version 0.30.0 to be compatible with Go 1.24, but references
 # types.Info.FileVersions, which was only added to Go 1.22.
