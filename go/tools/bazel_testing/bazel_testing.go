@@ -522,6 +522,15 @@ go_wrap_sdk(
 
 go_register_toolchains()
 
+# Create the host platform repository transitively required by rules_go.
+load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
+load("@platforms//host:extension.bzl", "host_platform_repo")
+
+maybe(
+	host_platform_repo,
+	name = "host_platform",
+)
+
 {{if .Nogo}}
 go_register_nogo(
 	nogo = "{{.Nogo}}",
