@@ -6,6 +6,11 @@ matrix:
     - windows
 
 tasks:
+  annotate:
+    platform: ubuntu2404
+    shell_commands:
+      - >
+        echo "Build for PR: [#${BUILDKITE_PULL_REQUEST}](https://github.com/bazel-contrib/rules_go/pull/${BUILDKITE_PULL_REQUEST})" | buildkite-agent annotate  --style "success" --context "junit"
   debian11_bazel6:
     platform: debian11
     bazel: 6.5.0 # test minimum supported version of bazel
