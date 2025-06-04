@@ -512,6 +512,8 @@ func (g *goPackage) String() string {
 	return g.types.Path()
 }
 
+var _externalFilePattern = regexp.MustCompile("^external/")
+
 // checkAnalysisResults checks the analysis diagnostics in the given actions
 // and returns a string containing all the diagnostics that should be printed
 // to the build log.
@@ -541,6 +543,10 @@ func checkAnalysisResults(actions []*action, pkg *goPackage) ([]diagnosticEntry,
 		// Use the base config if it exists.
 		if baseConfig, ok := configs[nogoBaseConfigName]; ok {
 			currentConfig = baseConfig
+		}
+		if currentConfig.excludeFiles == nil {
+			// TODO(linzhp): add a test to verify the case of [].
+			currentConfig.excludeFiles = []*regexp.Regexp{_externalFilePattern}
 		}
 		// Overwrite the config with the desired config. Any unset fields
 		// in the config will default to the base config.

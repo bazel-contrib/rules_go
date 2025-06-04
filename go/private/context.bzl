@@ -38,7 +38,6 @@ load("@io_bazel_rules_go_bazel_features//:features.bzl", "bazel_features")
 load(
     "@io_bazel_rules_nogo//:scope.bzl",
     NOGO_EXCLUDES = "EXCLUDES",
-    NOGO_INCLUDES = "INCLUDES",
 )
 load(
     "//go/platform:apple.bzl",
@@ -429,11 +428,13 @@ def _matches_scopes(label, scopes):
             return True
     return False
 
-def validate_nogo(go):
-    """Whether nogo should be run as a validation action rather than just to generate fact files for the current
-    target."""
+def get_nogo(go):
+    """Returns the nogo file for this target, if enabled and in scope."""
     label = go.label
-    return _matches_scopes(label, NOGO_INCLUDES) and not _matches_scopes(label, NOGO_EXCLUDES)
+    if not _matches_scopes(label, NOGO_EXCLUDES):
+        return go.nogo
+    else:
+        return None
 
 default_go_config_info = GoConfigInfo(
     static = False,
