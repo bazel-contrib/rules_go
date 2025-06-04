@@ -60,6 +60,12 @@ bzl_library(
     ],
 )
 
+starlark_doc_extract(
+    name = "def.extract",
+    src = "def.bzl",
+    deps = ["def"],
+)
+
 bzl_library(
     name = "deps",
     srcs = ["deps.bzl"],

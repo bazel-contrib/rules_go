@@ -1,9 +1,6 @@
 startup --host_jvm_args=-DBAZEL_TRACK_SOURCE_DIRECTORIES=1
 
 common --enable_platform_specific_config
-# TODO: Temporarily disable while rules_go migrates to Bzlmod for its dev build.
-# https://github.com/bazelbuild/bazel/issues/18958
-common --noexperimental_enable_bzlmod
 test --test_output=errors
 
 # Workaround for https://github.com/bazelbuild/continuous-integration/issues/2269.
