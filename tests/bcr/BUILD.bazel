@@ -7,6 +7,7 @@ load(
     "go_test",
     "nogo",
 )
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//:transition.bzl", "sdk_transition_test")
 
 nogo(

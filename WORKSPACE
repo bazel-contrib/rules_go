@@ -71,8 +71,8 @@ load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 load("@platforms//host:extension.bzl", "host_platform_repo")
 
 maybe(
-	host_platform_repo,
-	name = "host_platform",
+    host_platform_repo,
+    name = "host_platform",
 )
 
 http_archive(
