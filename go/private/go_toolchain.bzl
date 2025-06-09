@@ -27,28 +27,31 @@ load("//go/private/actions:stdlib.bzl", "emit_stdlib")
 def _go_toolchain_impl(ctx):
     sdk = ctx.attr.sdk[GoSDK]
     cross_compile = ctx.attr.goos != sdk.goos or ctx.attr.goarch != sdk.goarch
-    return [platform_common.ToolchainInfo(
-        # Public fields
-        name = ctx.label.name,
-        cross_compile = cross_compile,
-        default_goos = ctx.attr.goos,
-        default_goarch = ctx.attr.goarch,
-        actions = struct(
-            archive = emit_archive,
-            binary = emit_binary,
-            link = emit_link,
-            stdlib = emit_stdlib,
-        ),
-        flags = struct(
-            compile = (),
-            link = ctx.attr.link_flags,
-            link_cgo = ctx.attr.cgo_link_flags,
-        ),
-        sdk = sdk,
+    return [
+        ctx.attr.sdk[DefaultInfo],
+        platform_common.ToolchainInfo(
+            # Public fields
+            name = ctx.label.name,
+            cross_compile = cross_compile,
+            default_goos = ctx.attr.goos,
+            default_goarch = ctx.attr.goarch,
+            actions = struct(
+                archive = emit_archive,
+                binary = emit_binary,
+                link = emit_link,
+                stdlib = emit_stdlib,
+            ),
+            flags = struct(
+                compile = (),
+                link = ctx.attr.link_flags,
+                link_cgo = ctx.attr.cgo_link_flags,
+            ),
+            sdk = sdk,
 
-        # Internal fields -- may be read by emit functions.
-        _builder = ctx.executable.builder,
-    )]
+            # Internal fields -- may be read by emit functions.
+            _builder = ctx.executable.builder,
+        ),
+    ]
 
 go_toolchain = rule(
     _go_toolchain_impl,
