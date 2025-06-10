@@ -40,6 +40,7 @@ nogo(
         ":importfmt",
         ":visibility",
         ":cgogen",
+        ":panicalyzer",
     ],
     # config = "",
     visibility = ["//visibility:public"],
@@ -76,6 +77,14 @@ go_library(
     name = "cgogen",
     srcs = ["cgogen.go"],
     importpath = "cgogenanalyzer",
+    deps = ["@org_golang_x_tools//go/analysis"],
+    visibility = ["//visibility:public"],
+)
+
+go_library(
+    name = "panicalyzer",
+    srcs = ["panicalyzer.go"],
+    importpath = "panicalyzer",
     deps = ["@org_golang_x_tools//go/analysis"],
     visibility = ["//visibility:public"],
 )
@@ -128,6 +137,12 @@ go_binary(
 	name = "type_check_fail",
 	srcs = ["type_check_fail.go"],
 	pure = "on",
+)
+
+go_library(
+    name = "panics",
+    srcs = ["panics.go"],
+	importpath = "panics",
 )
 
 -- foofuncname.go --
@@ -336,6 +351,40 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	return nil, nil
 }
 
+-- panicalyzer.go --
+// panicalyzer panics on functions named "ShouldPanic".
+package panicalyzer
+
+import (
+	"go/ast"
+
+	"golang.org/x/tools/go/analysis"
+)
+
+const doc = "panic on functions named \"ShouldPanic\""
+
+var Analyzer = &analysis.Analyzer{
+	Name: "panicalyzer",
+	Run:  run,
+	Doc:  doc,
+}
+
+func run(pass *analysis.Pass) (interface{}, error) {
+	for _, f := range pass.Files {
+		ast.Inspect(f, func(n ast.Node) bool {
+			switch n := n.(type) {
+			case *ast.FuncDecl:
+				if n.Name.Name == "ShouldPanic" {
+					panic("function must not be named ShouldPanic")
+				}
+				return true
+			}
+			return true
+		})
+	}
+	return nil, nil
+}
+
 -- config.json --
 {
   "importfmt": {
@@ -368,6 +417,10 @@ func run(pass *analysis.Pass) (interface{}, error) {
   "foofuncname": {
     "description": "no exemptions since we know this check is 100% accurate, so override base config",
     "exclude_files": {}
+  },
+  "panicalyzer": {
+	"description": "no exemptions",
+	"exclude_files": {}
   }
 }
 
@@ -400,6 +453,12 @@ func Foo() bool { // This should fail foofuncname
 //line linedirective_visibility.go:10
 	dep.D() // This should fail visibility
 	return true
+}
+
+-- panics.go --
+package panics
+
+func ShouldPanic() {
 }
 
 -- no_errors.go --
@@ -459,7 +518,7 @@ func Test(t *testing.T) {
 		desc, config, target string
 		wantSuccess          bool
 		includes, excludes   []string
-		bazelArgs []string
+		bazelArgs            []string
 	}{
 		{
 			desc:        "default_config",
@@ -530,7 +589,7 @@ func Test(t *testing.T) {
 			target:      "//:type_check_fail",
 			wantSuccess: false,
 			includes: []string{
-				"4 analyzers skipped due to type-checking error: type_check_fail.go:8:10:",
+				"\\d analyzers skipped due to type-checking error: type_check_fail.go:8:10:",
 			},
 			// Ensure that nogo runs even though compilation fails
 			bazelArgs: []string{"--keep_going"},
@@ -543,6 +602,13 @@ func Test(t *testing.T) {
 			desc:        "uses_cgo_clean",
 			target:      "//:uses_cgo_clean",
 			wantSuccess: true,
+		}, {
+			desc:        "panics",
+			target:      "//:panics",
+			wantSuccess: false,
+			includes: []string{
+				"panic: function must not be named ShouldPanic",
+			},
 		},
 	} {
 		t.Run(test.desc, func(t *testing.T) {
