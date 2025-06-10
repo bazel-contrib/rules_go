@@ -27,15 +27,8 @@ func main() {
 }
 
 type params struct {
-	id string
-	pkgPath string
-	exportFile string
-	goFiles []string
-	compiledGoFiles []string
-	otherFiles []string
-	imports map[string]string
+	pkgJSONPath string
 	cgoOutDir string
-	// path to write the pkgjson
 	output string
 }
 
@@ -53,30 +46,14 @@ func parseArgs(args []string) (*params, error) {
 	var params params
 
 	fs := flag.NewFlagSet("pkgjson", flag.ContinueOnError)
-	fs.StringVar(&params.id, "id", "", "id")
-	fs.StringVar(&params.pkgPath, "pkg_path", "", "package path")
-	fs.StringVar(&params.exportFile, "export_file", "", "export file")
+
+	fs.StringVar(&params.pkgJSONPath, "pkg_json", "", "pkg json file")
 	fs.StringVar(&params.cgoOutDir, "cgo_out_dir", "", "cgo out dir")
-	rawGoFiles := fs.String("go_files", "", "a comma separated list of go files")
-	rawCompiledGoFiles := fs.String("compiled_go_files", "", "a comma separated list of compiled go files")
-	rawOtherFiles := fs.String("other_files", "", "a comma separated list of other files")
-	rawImports := fs.String("imports", "", "comma separate pairs of importpath=label")
-	fs.StringVar(&params.output, "output", "", "path to write the pkgjson")
+	fs.StringVar(&params.output, "output", "", "output file")
 
 	err := fs.Parse(args)
 	if err != nil {
 		return nil, err
-	}
-
-	params.goFiles = strings.Split(*rawGoFiles, ",")
-	params.compiledGoFiles = strings.Split(*rawCompiledGoFiles, ",")
-	params.otherFiles = strings.Split(*rawOtherFiles, ",")
-	params.imports = make(map[string]string)
-	if len(*rawImports) > 0 {
-		for _, rawImport := range strings.Split(*rawImports, ",") {
-			parts := strings.Split(rawImport, "=")
-			params.imports[parts[0]] = parts[1]
-		}
 	}
 
 	return &params, nil
@@ -87,14 +64,23 @@ func run(args []string) error {
 	if err != nil {
 		return err
 	}
+
+	b, err := os.ReadFile(params.pkgJSONPath)
+	if err != nil {
+		return err
+	}
+
+	var pjson pkgJson
+	json.Unmarshal(b, &pjson)
+
 	data := pkgJson{
-		ID: params.id,
-		PkgPath: params.pkgPath,
-		ExportFile: params.exportFile,
-		GoFiles: params.goFiles,
-		CompiledGoFiles: params.compiledGoFiles,
-		OtherFiles: params.otherFiles,
-		Imports: params.imports,
+		ID: pjson.ID,
+		PkgPath: pjson.PkgPath,
+		ExportFile: pjson.ExportFile,
+		GoFiles: pjson.GoFiles,
+		CompiledGoFiles: pjson.CompiledGoFiles,
+		OtherFiles: pjson.OtherFiles,
+		Imports: pjson.Imports,
 	}
 	if err = processCgoFiles(params.cgoOutDir, &data, resolvePath); err != nil {
 		return err
