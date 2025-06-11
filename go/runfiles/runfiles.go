@@ -55,6 +55,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -83,7 +84,7 @@ type Runfiles struct {
 	// immutable once created.
 	impl        runfiles
 	env         []string
-	repoMapping map[repoMappingKey]string
+	repoMapping *repoMapping
 	sourceRepo  string
 }
 
@@ -171,7 +172,7 @@ func (r *Runfiles) Rlocation(path string) (string, error) {
 	split := strings.SplitN(path, "/", 2)
 	if len(split) == 2 {
 		key := repoMappingKey{r.sourceRepo, split[0]}
-		if targetRepoDirectory, exists := r.repoMapping[key]; exists {
+		if targetRepoDirectory, exists := r.repoMapping.Get(key); exists {
 			mappedPath = targetRepoDirectory + "/" + split[1]
 		}
 	}
@@ -200,9 +201,12 @@ func isNormalizedPath(s string) error {
 // This mutates the Runfiles object, but is idempotent.
 func (r *Runfiles) loadRepoMapping() error {
 	repoMappingPath, err := r.impl.path(repoMappingRlocation)
-	// If Bzlmod is disabled, the repository mapping manifest isn't created, so
-	// it is not an error if it is missing.
+	// The repo mapping manifest only exists with Bzlmod, so it's not an
+	// error if it's missing. Since any repository name not contained in the
+	// mapping is assumed to be already canonical, an empty map is
+	// equivalent to not applying any mapping.
 	if err != nil {
+		r.repoMapping = &repoMapping{}
 		return nil
 	}
 	r.repoMapping, err = parseRepoMapping(repoMappingPath)
@@ -290,15 +294,58 @@ type runfiles interface {
 // https://cs.opensource.google/bazel/bazel/+/1b073ac0a719a09c9b2d1a52680517ab22dc971e:src/main/java/com/google/devtools/build/lib/analysis/Runfiles.java;l=424
 const repoMappingRlocation = "_repo_mapping"
 
+type prefixMapping struct {
+	prefix  string
+	mapping map[string]string
+}
+
+// The zero value of repoMapping is an empty mapping.
+type repoMapping struct {
+	exactMappings  map[repoMappingKey]string
+	prefixMappings []prefixMapping
+}
+
+func (rm *repoMapping) Get(key repoMappingKey) (string, bool) {
+	if mapping, ok := rm.exactMappings[key]; ok {
+		return mapping, true
+	}
+	i, _ := slices.BinarySearchFunc(rm.prefixMappings, key.sourceRepo, func(prefixMapping prefixMapping, s string) int {
+		return strings.Compare(prefixMapping.prefix, s)
+	})
+	if i > 0 && strings.HasPrefix(key.sourceRepo, rm.prefixMappings[i-1].prefix) {
+		mapping, ok := rm.prefixMappings[i-1].mapping[key.targetRepoApparentName]
+		return mapping, ok
+	}
+	return "", false
+}
+
+// ForEachVisible iterates over all target repositories that are visible to the
+// given source repo in an unspecified order.
+func (rm *repoMapping) ForEachVisible(sourceRepo string, f func(targetRepoApparentName, targetRepoDirectory string)) {
+	for key, targetRepoDirectory := range rm.exactMappings {
+		if key.sourceRepo == sourceRepo {
+			f(key.targetRepoApparentName, targetRepoDirectory)
+		}
+	}
+	i, _ := slices.BinarySearchFunc(rm.prefixMappings, sourceRepo, func(prefixMapping prefixMapping, s string) int {
+		return strings.Compare(prefixMapping.prefix, s)
+	})
+	if i > 0 && strings.HasPrefix(sourceRepo, rm.prefixMappings[i-1].prefix) {
+		for targetRepoApparentName, targetRepoDirectory := range rm.prefixMappings[i-1].mapping {
+			f(targetRepoApparentName, targetRepoDirectory)
+		}
+	}
+}
+
 // Parses a repository mapping manifest file emitted with Bzlmod enabled.
-func parseRepoMapping(path string) (map[repoMappingKey]string, error) {
+func parseRepoMapping(path string) (*repoMapping, error) {
 	r, err := os.Open(path)
 	if err != nil {
 		// The repo mapping manifest only exists with Bzlmod, so it's not an
 		// error if it's missing. Since any repository name not contained in the
 		// mapping is assumed to be already canonical, an empty map is
 		// equivalent to not applying any mapping.
-		return nil, nil
+		return &repoMapping{}, nil
 	}
 	defer r.Close()
 
@@ -306,18 +353,41 @@ func parseRepoMapping(path string) (map[repoMappingKey]string, error) {
 	// canonical name of source repo,apparent name of target repo,target repo runfiles directory
 	// https://cs.opensource.google/bazel/bazel/+/1b073ac0a719a09c9b2d1a52680517ab22dc971e:src/main/java/com/google/devtools/build/lib/analysis/RepoMappingManifestAction.java;l=117
 	s := bufio.NewScanner(r)
-	repoMapping := make(map[repoMappingKey]string)
+	exactMappings := make(map[repoMappingKey]string)
+	prefixMappingsMap := make(map[string]map[string]string)
 	for s.Scan() {
 		fields := strings.SplitN(s.Text(), ",", 3)
 		if len(fields) != 3 {
 			return nil, fmt.Errorf("runfiles: bad repo mapping line %q in file %s", s.Text(), path)
 		}
-		repoMapping[repoMappingKey{fields[0], fields[1]}] = fields[2]
+		if strings.HasSuffix(fields[0], "*") {
+			prefix := strings.TrimSuffix(fields[0], "*")
+			if _, ok := prefixMappingsMap[prefix]; !ok {
+				prefixMappingsMap[prefix] = make(map[string]string)
+			}
+			prefixMappingsMap[prefix][fields[1]] = fields[2]
+		} else {
+			exactMappings[repoMappingKey{fields[0], fields[1]}] = fields[2]
+		}
 	}
 
 	if err = s.Err(); err != nil {
 		return nil, fmt.Errorf("runfiles: error parsing repo mapping file %s: %w", path, err)
 	}
 
-	return repoMapping, nil
+	// No prefix can be a prefix of another prefix, so we can use binary search
+	// on a sorted slice to find the unique prefix that may match a given source
+	// repo.
+	var prefixMappings []prefixMapping
+	for prefix, mapping := range prefixMappingsMap {
+		prefixMappings = append(prefixMappings, prefixMapping{
+			prefix:  prefix,
+			mapping: mapping,
+		})
+	}
+	slices.SortFunc(prefixMappings, func(a, b prefixMapping) int {
+		return strings.Compare(a.prefix, b.prefix)
+	})
+
+	return &repoMapping{exactMappings, prefixMappings}, nil
 }
