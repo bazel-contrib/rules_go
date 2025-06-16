@@ -46,9 +46,20 @@ def is_file_external(f):
 def file_path(f):
     return file_path_lib(f)
 
-def make_pkg_json(ctx, pkg_json_tool, name, archive):
+# make_pkg_json_with_archive generates a pkg.json file from an archive
+# and supports cgo generated code.
+#
+# This function was created to avoid breaking the signature of make_pkg_json
+# and avoid adding an explicit field for cgo output files in the pkg.json.
+def make_pkg_json_with_archive(ctx, name, archive):
     pkg_json_file = ctx.actions.declare_file(name + ".pkg.json")
-    write_pkg_json(ctx, pkg_json_tool, archive, pkg_json_file)
+    write_pkg_json(ctx, ctx.executable._pkgjson, archive, pkg_json_file)
+    return pkg_json_file
+
+# deprecated: use make_pkg_json_with_archive instead
+def make_pkg_json(ctx, name, pkg_info):
+    pkg_json_file = ctx.actions.declare_file(name + ".pkg.json")
+    ctx.actions.write(pkg_json_file, content = json.encode(pkg_info))
     return pkg_json_file
 
 def _go_pkg_info_aspect_impl(target, ctx):
@@ -87,13 +98,13 @@ def _go_pkg_info_aspect_impl(target, ctx):
         if archive.data.cgo_out_dir:
             compiled_go_files.append(archive.data.cgo_out_dir)
         export_files.append(archive.data.export_file)
-        pkg_json_files.append(make_pkg_json(ctx, ctx.executable._pkgjson, archive.data.name, archive))
+        pkg_json_files.append(make_pkg_json_with_archive(ctx, archive.data.name, archive))
 
         if ctx.rule.kind == "go_test":
             for dep_archive in archive.direct:
                 # find the archive containing the test sources
                 if archive.data.label == dep_archive.data.label:
-                    pkg_json_files.append(make_pkg_json(ctx, ctx.executable._pkgjson, dep_archive.data.name, dep_archive))
+                    pkg_json_files.append(make_pkg_json_with_archive(ctx, dep_archive.data.name, dep_archive))
                     compiled_go_files.extend(dep_archive.source.srcs)
                     export_files.append(dep_archive.data.export_file)
                     break

@@ -20,6 +20,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"go/parser"
+	"go/token"
 	"io/ioutil"
 	"log"
 	"os"
@@ -36,7 +38,7 @@ type genFileInfo struct {
 	created    bool         // Whether the file was created by protoc
 	from       *genFileInfo // The actual file protoc produced if not Path
 	unique     bool         // True if this base name is unique in expected results
-	ambiguous bool         // True if there were more than one possible outputs that matched this file
+	ambiguous  bool         // True if there were more than one possible outputs that matched this file
 }
 
 func run(args []string) error {
@@ -54,6 +56,7 @@ func run(args []string) error {
 	outPath := flags.String("out_path", "", "The base output path to write to.")
 	plugin := flags.String("plugin", "", "The go plugin to use.")
 	importpath := flags.String("importpath", "", "The importpath for the generated sources.")
+	strict := flags.Bool("strict", false, "whether to fail if any expected output file is not generated")
 	flags.Var(&options, "option", "The plugin options.")
 	flags.Var(&descriptors, "descriptor_set", "The descriptor set to read.")
 	flags.Var(&expected, "expected", "The expected output files.")
@@ -183,6 +186,9 @@ func run(args []string) error {
 	for _, f := range files {
 		switch {
 		case f.expected && !f.created:
+			if *strict {
+				return fmt.Errorf("file %q expected from plugin %q but not created", f.path, *plugin)
+			}
 			// Some plugins only create output files if the proto source files
 			// have relevant definitions (e.g., services for grpc_gateway). Create
 			// trivial files that the compiler will ignore for missing outputs.
@@ -206,6 +212,15 @@ func run(args []string) error {
 		if buf.Len() > 0 {
 			fmt.Fprintf(buf, "Check that the go_package option is %q.", *importpath)
 			return errors.New(buf.String())
+		}
+
+		if filepath.Ext(f.path) != ".go" {
+			continue
+		}
+		// Additionally check that created files are valid, because invalid Go file causes cache poisoning.
+		_, err := parser.ParseFile(token.NewFileSet(), f.path, nil, parser.PackageClauseOnly)
+		if err != nil {
+			return fmt.Errorf("plugin %q created an invalid Go file %q: %v", *plugin, f.path, err)
 		}
 	}
 

@@ -429,6 +429,12 @@ func (act *action) execOnce() {
 	act.pass = pass
 
 	var err error
+	defer func() {
+		if r := recover(); r != nil {
+			// If the analyzer panics, we catch it here and return an error.
+			act.err = fmt.Errorf("panic: %v", r)
+		}
+	}()
 	if !act.pkg.illTyped || pass.Analyzer.RunDespiteErrors {
 		act.result, err = pass.Analyzer.Run(pass)
 		if err == nil {

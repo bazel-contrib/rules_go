@@ -3,38 +3,26 @@ load(
     "paths",
 )
 
-def write_pkg_json(ctx, pkg_json_tool, archive, output_json):
+def write_pkg_json(ctx, pkg_json_tool, archive, pkg_json):
+    args = ctx.actions.args()
     inputs = [src for src in archive.data.srcs if src.path.endswith(".go")]
-    input_paths = [file_path(src) for src in inputs]
-    cgo_out_dir = ""
+
+    tmp_json = ctx.actions.declare_file(pkg_json.path + ".tmp")
+    pkg_info = _go_archive_to_pkg(archive)
+    ctx.actions.write(tmp_json, content = json.encode(pkg_info))
+    inputs.append(tmp_json)
+    args.add("--pkg_json", tmp_json.path)
+
     if archive.data.cgo_out_dir:
         inputs.append(archive.data.cgo_out_dir)
-        cgo_out_dir = file_path(archive.data.cgo_out_dir)
+        args.add("--cgo_out_dir", file_path(archive.data.cgo_out_dir))
 
+    args.add("--output", pkg_json.path)
     ctx.actions.run(
         inputs = inputs,
-        outputs = [output_json],
-        executable = pkg_json_tool,
-        arguments = [
-            "--id",
-            str(archive.data.label),
-            "--pkg_path",
-            archive.data.importpath,
-            "--export_file",
-            file_path(archive.data.export_file),
-            "--go_files",
-            ",".join(input_paths),
-            "--compiled_go_files",
-            ",".join(input_paths),
-            "--cgo_out_dir",
-            cgo_out_dir,
-            "--other_files",
-            ",".join([file_path(src) for src in archive.data.srcs if not src.path.endswith(".go")]),
-            "--imports",
-            ",".join([pkg.data.importpath + "=" + str(pkg.data.label) for pkg in archive.direct]),
-            "--output",
-            output_json.path,
-        ],
+        outputs = [pkg_json],
+        executable = pkg_json_tool.path,
+        arguments = [args],
         tools = [pkg_json_tool],
     )
 
@@ -48,3 +36,26 @@ def file_path(f):
 
 def is_file_external(f):
     return f.owner.workspace_root != ""
+
+def _go_archive_to_pkg(archive):
+    go_files = [
+        file_path(src)
+        for src in archive.data.srcs
+        if src.path.endswith(".go")
+    ]
+    return struct(
+        ID = str(archive.data.label),
+        PkgPath = archive.data.importpath,
+        ExportFile = file_path(archive.data.export_file),
+        GoFiles = go_files,
+        CompiledGoFiles = go_files,
+        OtherFiles = [
+            file_path(src)
+            for src in archive.data.srcs
+            if not src.path.endswith(".go")
+        ],
+        Imports = {
+            pkg.data.importpath: str(pkg.data.label)
+            for pkg in archive.direct
+        },
+    )

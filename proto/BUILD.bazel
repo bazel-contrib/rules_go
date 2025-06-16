@@ -71,6 +71,7 @@ GOGO_VARIANTS = [
 
 [go_proto_compiler(
     name = variant + "_proto",
+    always_generates = True,
     options = GOGO_WELL_KNOWN_TYPE_REMAPS,
     plugin = "@com_github_gogo_protobuf//protoc-gen-" + variant,
     visibility = ["//visibility:public"],
@@ -85,6 +86,7 @@ GOGO_VARIANTS = [
 
 go_proto_compiler(
     name = "gofast_proto",
+    always_generates = True,
     plugin = "@com_github_gogo_protobuf//protoc-gen-gofast",
     visibility = ["//visibility:public"],
     deps = [
@@ -94,6 +96,7 @@ go_proto_compiler(
 
 [go_proto_compiler(
     name = variant + "_grpc",
+    always_generates = True,
     options = ["plugins=grpc"] + GOGO_WELL_KNOWN_TYPE_REMAPS,
     plugin = "@com_github_gogo_protobuf//protoc-gen-" + variant,
     visibility = ["//visibility:public"],
@@ -112,6 +115,7 @@ go_proto_compiler(
 
 go_proto_compiler(
     name = "gofast_grpc",
+    always_generates = True,
     options = ["plugins=grpc"],
     plugin = "@com_github_gogo_protobuf//protoc-gen-gofast",
     visibility = ["//visibility:public"],
