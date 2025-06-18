@@ -211,6 +211,11 @@ _stdlib_keep_keys = sorted([
     "//go/config:pgoprofile",
 ])
 
+_go_reset_transition_dict = dict(_common_reset_transition_dict)
+_go_reset_transition_dict.pop("//go/config:static")
+_go_reset_transition_dict.pop("//go/config:pure")
+_go_reset_transition_keys = sorted(_go_reset_transition_dict.keys())
+
 def _go_tool_transition_impl(settings, _attr):
     """Sets most Go settings to default values (use for external Go tools).
 
@@ -223,12 +228,12 @@ def _go_tool_transition_impl(settings, _attr):
     have `cfg = "exec"` so tool binaries should be built for the execution
     platform.
     """
-    return dict(settings, **_reset_transition_dict)
+    return dict(settings, **_go_reset_transition_dict)
 
 go_tool_transition = transition(
     implementation = _go_tool_transition_impl,
-    inputs = _reset_transition_keys,
-    outputs = _reset_transition_keys,
+    inputs = _go_reset_transition_keys,
+    outputs = _go_reset_transition_keys,
 )
 
 def _non_go_tool_transition_impl(settings, _attr):
