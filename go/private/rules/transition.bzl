@@ -211,7 +211,7 @@ _stdlib_keep_keys = sorted([
     "//go/config:pgoprofile",
 ])
 
-_go_reset_transition_dict = dict(_common_reset_transition_dict)
+_go_reset_transition_dict = dict(_reset_transition_dict)
 _go_reset_transition_dict.pop("//go/config:static")
 _go_reset_transition_dict.pop("//go/config:pure")
 _go_reset_transition_keys = sorted(_go_reset_transition_dict.keys())
