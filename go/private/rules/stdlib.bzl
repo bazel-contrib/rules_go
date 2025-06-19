@@ -18,6 +18,7 @@ load(
 )
 load(
     "//go/private:context.bzl",
+    "MAYBE_OPTIONAL_CPP_TOOLCHAIN",
     "go_context",
 )
 load(
@@ -48,5 +49,5 @@ stdlib = rule(
     },
     doc = """stdlib builds the standard library for the target configuration
 or uses the precompiled standard library from the SDK if it is suitable.""",
-    toolchains = [GO_TOOLCHAIN],
+    toolchains = [GO_TOOLCHAIN] + MAYBE_OPTIONAL_CPP_TOOLCHAIN,
 )
