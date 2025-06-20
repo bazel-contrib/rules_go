@@ -1,7 +1,5 @@
 module(
     name = "rules_go",
-    # Updated by the Publish to BCR app.
-    version = "0.0.0",
     compatibility_level = 0,
     repo_name = "io_bazel_rules_go",
 )
