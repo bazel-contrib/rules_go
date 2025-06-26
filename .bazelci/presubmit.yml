@@ -156,6 +156,7 @@ tasks:
       - "-//tests/core/cgo:generated_versioned_dylib_test"
       - "-//tests/core/coverage:coverage_test"
       - "-//tests/core/coverage:issue3017_test"
+      - "-//tests/core/coverage:reassign_flag_commandline_test"
       - "-//tests/core/go_binary:go_default_test"
       - "-//tests/core/go_path:go_path_test"
       - "-//tests/core/go_test:data_test"
