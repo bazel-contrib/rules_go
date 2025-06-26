@@ -32,3 +32,8 @@ go_bazel_test(
     name = "issue3017_test",
     srcs = ["issue3017_test.go"],
 )
+
+go_bazel_test(
+    name = "reassign_flag_commandline_test",
+    srcs = ["reassign_flag_commandline_test.go"],
+)

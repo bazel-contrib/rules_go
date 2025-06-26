@@ -31,12 +31,15 @@ import (
 // Lock in the COVERAGE_DIR during test setup in case the test uses e.g. os.Clearenv.
 var coverageDir = os.Getenv("COVERAGE_DIR")
 
+// Also lock in the test flag set in case test overwrites it.
+var testFlags = flag.CommandLine
+
 // ConvertCoverToLcov converts the go coverprofile file coverage.dat.cover to
 // the expectedLcov format and stores it in coverage.dat, where it is picked up by
 // Bazel.
 // The conversion emits line and branch coverage, but not function coverage.
 func ConvertCoverToLcov() error {
-	inPath := flag.Lookup("test.coverprofile").Value.String()
+	inPath := testFlags.Lookup("test.coverprofile").Value.String()
 	in, err := os.Open(inPath)
 	if err != nil {
 		// This can happen if there are no tests and should not be an error.
