@@ -96,14 +96,14 @@ func cgo2(goenv *env, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSr
 	}
 	combinedLdFlags = append(combinedLdFlags, defaultLdFlags()...)
 
-    // Write linker flags to a temporary file instead of pasing via env variable.
-    // This avoids "argument list too long" error with extremely large CGO_LDFLAGS
-    // that can exceed system limits.
-    ldflagsFile, err := os.Create(filepath.Join(workDir, "cgo-ldflags.txt"))
-    if err != nil {
+	// Write linker flags to a temporary file instead of pasing via env variable.
+	// This avoids "argument list too long" error with extremely large CGO_LDFLAGS
+	// that can exceed system limits.
+	ldflagsFile, err := os.Create(filepath.Join(workDir, "cgo-ldflags.txt"))
+	if err != nil {
 		return "", nil, nil, fmt.Errorf("failed to create temporary file for ldflags: %w", err)
 	}
-    if _, err := ldflagsFile.WriteString(strings.Join(combinedLdFlags, " ")); err != nil {
+	if _, err := ldflagsFile.WriteString(strings.Join(combinedLdFlags, " ")); err != nil {
 		ldflagsFile.Close()
 		return "", nil, nil, fmt.Errorf("failed to write ldflags to temporary file: %w", err)
 	}
@@ -157,7 +157,7 @@ func cgo2(goenv *env, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSr
 	// Trim the execroot from the //line comments emitted by cgo.
 	// The "@" prefix tells cgo to read arguments from the file.
 	args := goenv.goTool("cgo", "-srcdir", srcDir, "-objdir", workDir, "-trimpath", execRoot, "-ldflags", "@"+ldflagsFile.Name())
-    if packagePath != "" {
+	if packagePath != "" {
 		args = append(args, "-importpath", packagePath)
 	}
 	args = append(args, "--")
