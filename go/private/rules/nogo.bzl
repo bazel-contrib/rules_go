@@ -45,7 +45,6 @@ def _nogo_impl(ctx):
     analyzer_archives = [dep[GoArchive] for dep in ctx.attr.deps]
     go = go_context(
         ctx,
-        include_deprecated_properties = False,
         maybe_needs_cc_toolchain = maybe_needs_cc_toolchain(ctx.attr, go_infos = ctx.attr.deps),
     )
     nogo_main = go.declare_file(go, path = "nogo_main.go")

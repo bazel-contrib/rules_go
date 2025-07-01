@@ -87,7 +87,6 @@ declares the \"{attr_name}\" attribute.""".format(
     go = go_context(
         ctx,
         attr,
-        include_deprecated_properties = False,
         importpath = attr.importpath,
         go_context_data = attr._go_context_data,
         maybe_needs_cc_toolchain = False,
@@ -120,7 +119,6 @@ def _go_proto_library_maybe_needs_cc_toolchain(ctx):
 def _go_proto_library_impl(ctx):
     go = go_context(
         ctx,
-        include_deprecated_properties = False,
         importpath = ctx.attr.importpath,
         importmap = ctx.attr.importmap,
         importpath_aliases = ctx.attr.importpath_aliases,

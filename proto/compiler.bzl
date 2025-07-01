@@ -218,7 +218,6 @@ def proto_path(src, proto):
 def _go_proto_compiler_impl(ctx):
     go = go_context(
         ctx,
-        include_deprecated_properties = False,
         maybe_needs_cc_toolchain = False,
     )
     go_info = new_go_info(go, ctx.attr)

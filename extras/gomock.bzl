@@ -34,7 +34,6 @@ _MOCKGEN_MODEL_LIB = Label("//extras/gomock:mockgen_model")
 def _gomock_source_impl(ctx):
     go = go_context(
         ctx,
-        include_deprecated_properties = False,
         maybe_needs_cc_toolchain = False,
     )
 
@@ -319,7 +318,6 @@ _gomock_prog_gen = rule(
 def _gomock_prog_exec_impl(ctx):
     go = go_context(
         ctx,
-        include_deprecated_properties = False,
         maybe_needs_cc_toolchain = False,
     )
 

@@ -30,7 +30,6 @@ def _go_source_impl(ctx):
     """Implements the go_source() rule."""
     go = go_context(
         ctx,
-        include_deprecated_properties = False,
         maybe_needs_cc_toolchain = False,
     )
     go_info = new_go_info(go, ctx.attr)

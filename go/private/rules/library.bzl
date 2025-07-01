@@ -42,7 +42,6 @@ def _go_library_impl(ctx):
     """Implements the go_library() rule."""
     go = go_context(
         ctx,
-        include_deprecated_properties = False,
         importpath = ctx.attr.importpath,
         importmap = ctx.attr.importmap,
         importpath_aliases = ctx.attr.importpath_aliases,
@@ -218,7 +217,6 @@ def _go_tool_library_impl(ctx):
     """Implements the go_tool_library() rule."""
     go = go_context(
         ctx,
-        include_deprecated_properties = False,
         maybe_needs_cc_toolchain = maybe_needs_cc_toolchain(ctx.attr),
     )
 
