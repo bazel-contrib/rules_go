@@ -28,7 +28,7 @@ load(
 
 def _go_source_impl(ctx):
     """Implements the go_source() rule."""
-    go = go_context(ctx, include_deprecated_properties = False)
+    go = go_context(ctx)
     go_info = new_go_info(go, ctx.attr)
     return [
         go_info,

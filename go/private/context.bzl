@@ -457,7 +457,7 @@ default_go_config_info = GoConfigInfo(
 def go_context(
         ctx,
         attr = None,
-        include_deprecated_properties = True,
+        include_deprecated_properties = False,
         importpath = None,
         importmap = None,
         embed = None,
