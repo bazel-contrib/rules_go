@@ -49,3 +49,13 @@ filegroup(
     srcs = glob(["**"]),
     visibility = ["//visibility:public"],
 )
+
+go_test(
+    name = "runfiles_test",
+    srcs = [
+        "caller_repository_example_test.go",
+        "example_test.go",
+        "rlocationpath_xdefs_example_test.go",
+    ],
+    deps = [":runfiles"],
+)
