@@ -112,7 +112,7 @@ func cgo2(goenv *env, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSr
 		// that can exceed system limits.
 		// Future versions of `go` may remove support for CGO_LDFLAGS entirely, so
 		// use file even for small ldflags.
-		// https://go-review.googlesource.com/c/go/+/584655
+		// https://go-review.googlesource.com/c/go/+/596615
 		ldflagsFile, err = os.CreateTemp("", "cgo-ldflags-*.txt")
 		if err != nil {
 			return "", nil, nil, fmt.Errorf("failed to create temporary file for ldflags: %w", err)
