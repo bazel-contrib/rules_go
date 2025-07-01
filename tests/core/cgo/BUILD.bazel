@@ -1,5 +1,6 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
 load("@io_bazel_rules_go//go/tools/bazel_testing:def.bzl", "go_bazel_test")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 package(
     # go_* rules do not emit module maps.
@@ -329,6 +330,38 @@ go_binary(
     ],
     out = "cc_srcs_bin",
     cgo = True,
+)
+
+MANY_EXT_LDFLAGS = [
+    flag
+    for i in range(5)
+    for flag in [
+        "-extldflags",
+        "-Wl,-rpath,$$ORIGIN/path/to/lib/{}".format(i),
+    ]
+]
+
+go_binary(
+    name = "binary_with_rpath",
+    srcs = [
+        "bar.cc",
+        "bar.go",
+    ],
+    out = "binary_with_rpath",
+    cgo = True,
+    gc_linkopts = MANY_EXT_LDFLAGS,
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+sh_test(
+    name = "check_rpath_test",
+    srcs = ["check_rpath.sh"],
+    args = [
+        "$(location :binary_with_rpath)",
+        "$$ORIGIN/path/to/lib/1",
+    ],
+    data = [":binary_with_rpath"],
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 go_binary(

@@ -28,11 +28,9 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 )
-
-// Conservative max for passing flags via env variable without exceeding system limits.
-const maxEnvVarSize int = 32000
 
 // cgo2 processes a set of mixed source files with cgo.
 func cgo2(goenv *env, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSrcs, hSrcs []string, packagePath, packageName string, cc string, cppFlags, cFlags, cxxFlags, objcFlags, objcxxFlags, ldFlags []string, cgoExportHPath string, cgoGoSrcsPath string) (srcDir string, allGoSrcs, cObjs []string, err error) {
@@ -99,18 +97,27 @@ func cgo2(goenv *env, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSr
 	}
 	combinedLdFlags = append(combinedLdFlags, defaultLdFlags()...)
 
+	// go 1.23+ supports ldflags file.
+	// https://go-review.googlesource.com/c/go/+/584655
+	canUseLdflagsFile, err := onVersionOrHigher(23)
+	if err != nil {
+		return "", nil, nil, err
+	}
+
 	var ldflagsFile *os.File
 	combinedLdFlagsStr := strings.Join(combinedLdFlags, " ")
-	if len(combinedLdFlagsStr) < maxEnvVarSize {
-		os.Setenv("CGO_LDFLAGS", combinedLdFlagsStr)
-	} else {
+	if canUseLdflagsFile {
 		// Write linker flags to a temporary file instead of pasing via env variable.
 		// This avoids "argument list too long" error with extremely large CGO_LDFLAGS
 		// that can exceed system limits.
-		ldflagsFile, err = os.Create(filepath.Join(workDir, "cgo-ldflags.txt"))
+		// Future versions of `go` may remove support for CGO_LDFLAGS entirely, so
+		// use file even for small ldflags.
+		// https://go-review.googlesource.com/c/go/+/584655
+		ldflagsFile, err = os.CreateTemp("", "cgo-ldflags-*.txt")
 		if err != nil {
 			return "", nil, nil, fmt.Errorf("failed to create temporary file for ldflags: %w", err)
 		}
+		defer os.Remove(ldflagsFile.Name())
 		if _, err := ldflagsFile.WriteString(combinedLdFlagsStr); err != nil {
 			ldflagsFile.Close()
 			return "", nil, nil, fmt.Errorf("failed to write ldflags to temporary file: %w", err)
@@ -118,6 +125,9 @@ func cgo2(goenv *env, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSr
 		if err := ldflagsFile.Close(); err != nil {
 			return "", nil, nil, fmt.Errorf("failed to close temporary ldflags file: %w", err)
 		}
+	} else {
+		// Fallback to env variable for backwards compatibility with older `go` versions.
+		os.Setenv("CGO_LDFLAGS", combinedLdFlagsStr)
 	}
 
 	// If cgo sources are in different directories, gather them into a temporary
@@ -464,4 +474,19 @@ func copyOrLinkFile(inPath, outPath string) error {
 	} else {
 		return linkFile(inPath, outPath)
 	}
+}
+
+func onVersionOrHigher(version int) (bool, error) {
+	v := runtime.Version()
+	m := versionExp.FindStringSubmatch(v)
+	if len(m) != 2 {
+		return false, fmt.Errorf("failed to match against Go version %q", v)
+	}
+	mvStr := m[1]
+	mv, err := strconv.Atoi(mvStr)
+	if err != nil {
+		return false, fmt.Errorf("convert minor version %q to int: %w", mvStr, err)
+	}
+
+	return mv >= version, nil
 }
