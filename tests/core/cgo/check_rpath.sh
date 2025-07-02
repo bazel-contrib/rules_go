@@ -19,9 +19,9 @@ fi
 RPATH_OUTPUT=$(readelf -d "$BINARY_PATH" | grep -E 'RPATH|RUNPATH' || true)
 
 if echo "${RPATH_OUTPUT}" | grep -q "$EXPECTED_RPATH"; then
-  echo "SUCCESS: Found expected RPATH on Linux."
+  echo "SUCCESS: Found expected RPATH."
   exit 0
 else
-  echo "FAILURE: Did not find expected RPATH on Linux."
+  echo "FAILURE: Did not find expected RPATH."
   exit 1
 fi

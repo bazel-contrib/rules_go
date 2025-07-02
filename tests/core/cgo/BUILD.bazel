@@ -332,9 +332,9 @@ go_binary(
     cgo = True,
 )
 
-MANY_EXT_LDFLAGS = [
+LARGE_EXT_LDFLAGS = [
     flag
-    for i in range(5)
+    for i in range(10000)
     for flag in [
         "-extldflags",
         "-Wl,-rpath,$$ORIGIN/path/to/lib/{}".format(i),
@@ -349,7 +349,7 @@ go_binary(
     ],
     out = "binary_with_rpath",
     cgo = True,
-    gc_linkopts = MANY_EXT_LDFLAGS,
+    gc_linkopts = LARGE_EXT_LDFLAGS,
     target_compatible_with = ["@platforms//os:linux"],
 )
 
@@ -362,6 +362,16 @@ sh_test(
     ],
     data = [":binary_with_rpath"],
     target_compatible_with = ["@platforms//os:linux"],
+)
+
+go_test(
+    name = "cgo_ldflags_test",
+    srcs = [
+        "bar.cc",
+        "cgo_ldflags_test.go",
+    ],
+    cgo = True,
+    x_defs = {"value1": "314"},
 )
 
 go_binary(
