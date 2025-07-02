@@ -18,7 +18,7 @@ load(
 )
 
 # TODO: Replace with the function from `bazel-skylib` when it's available.
-# https://github.com/bazelbuild/bazel-skylib/issues/303
+# https://github.com/bazelbuild/bazel/issues/14307
 def _rlocation_path(ctx, file):
     """Returns the path relative to the runfiles directory."""
     if file.short_path.startswith("../"):
@@ -40,12 +40,11 @@ def _rpath(go, library, executable = None):
     #  This is the case for generated libraries as well as remote builds.
     #   a) go back to the runfiles root from the executable file in .runfiles
     executable_rloc = _rlocation_path(go._ctx, executable)
-    library_rloc = _rlocation_path(go._ctx, library)
-
     depth = executable_rloc.count("/")
     back_to_root = paths.join(*([".."] * depth))
 
-    #   b) then walk back to the library's short path
+    #   b) then walk back to the library's dir within runfiles dir.
+    library_rloc = _rlocation_path(go._ctx, library)
     rpaths.append(paths.join(origin, back_to_root, paths.dirname(library_rloc)))
 
     # 2. Where the executable is outside the .runfiles directory:
