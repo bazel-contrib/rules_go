@@ -39,13 +39,11 @@ def _rpath(go, library, executable = None):
     # 1. Where the executable is inside its own .runfiles directory.
     #  This is the case for generated libraries as well as remote builds.
     #   a) go back to the runfiles root from the executable file in .runfiles
-    executable_rloc = _rlocation_path(go._ctx, executable)
-    depth = executable_rloc.count("/")
+    depth = _rlocation_path(go._ctx, executable).count("/")
     back_to_root = paths.join(*([".."] * depth))
 
     #   b) then walk back to the library's dir within runfiles dir.
-    library_rloc = _rlocation_path(go._ctx, library)
-    rpaths.append(paths.join(origin, back_to_root, paths.dirname(library_rloc)))
+    rpaths.append(paths.join(origin, back_to_root, paths.dirname(_rlocation_path(go._ctx, library))))
 
     # 2. Where the executable is outside the .runfiles directory:
     #  This is the case for local pre-built libraries, as well as local
