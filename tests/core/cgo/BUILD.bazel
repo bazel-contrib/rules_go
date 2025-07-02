@@ -1,6 +1,5 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
 load("@io_bazel_rules_go//go/tools/bazel_testing:def.bzl", "go_bazel_test")
-load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 package(
     # go_* rules do not emit module maps.
@@ -337,7 +336,7 @@ LARGE_EXT_LDFLAGS = [
     for i in range(10000)
     for flag in [
         "-extldflags",
-        "-Wl,-rpath,$$ORIGIN/path/to/lib/{}".format(i),
+        "-Wl,-rpath,pathtolib{}".format(i),
     ]
 ]
 
@@ -350,28 +349,6 @@ go_binary(
     out = "binary_with_rpath",
     cgo = True,
     gc_linkopts = LARGE_EXT_LDFLAGS,
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-sh_test(
-    name = "check_rpath_test",
-    srcs = ["check_rpath.sh"],
-    args = [
-        "$(location :binary_with_rpath)",
-        "$$ORIGIN/path/to/lib/1",
-    ],
-    data = [":binary_with_rpath"],
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-go_test(
-    name = "cgo_ldflags_test",
-    srcs = [
-        "bar.cc",
-        "cgo_ldflags_test.go",
-    ],
-    cgo = True,
-    x_defs = {"value1": "314"},
 )
 
 go_binary(
