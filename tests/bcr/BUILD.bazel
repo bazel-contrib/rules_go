@@ -83,3 +83,20 @@ sdk_transition_test(
     binary = ":wrap_test",
     sdk_version = "1.23.6",
 )
+
+go_library(
+    name = "cgonested",
+    srcs = ["cgo_nestedmod.go"],
+    cdeps = [
+        "@other_module//:bar_shared",
+    ],
+    cgo = True,
+)
+
+go_test(
+    name = "cgonested_test",
+    srcs = ["cgo_nestedmod_test.go"],
+    embed = [":cgonested"],
+    # TODO: temporarily enabled only for linux.
+    target_compatible_with = ["@platforms//os:linux"],
+)
