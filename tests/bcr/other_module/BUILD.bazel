@@ -1,1 +1,14 @@
+package(default_visibility = ["//visibility:public"])
+
 exports_files(["bar.txt"])
+
+cc_binary(
+    name = "libbar_shared",
+    srcs = ["bar.c"],
+    linkshared = True,
+)
+
+cc_import(
+    name = "bar_shared",
+    shared_library = ":libbar_shared",
+)

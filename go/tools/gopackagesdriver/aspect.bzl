@@ -65,6 +65,7 @@ def make_pkg_json(ctx, name, pkg_info):
 def _go_pkg_info_aspect_impl(target, ctx):
     # Fetch the stdlib JSON file from the inner most target
     stdlib_json_file = None
+    stdlib_cache_dir = None
 
     transitive_json_files = []
     transitive_export_files = []
@@ -87,6 +88,7 @@ def _go_pkg_info_aspect_impl(target, ctx):
                 # Fetch the stdlib json from the first dependency
                 if not stdlib_json_file:
                     stdlib_json_file = pkg_info.stdlib_json_file
+                    stdlib_cache_dir = pkg_info.stdlib_cache_dir
 
     pkg_json_files = []
     compiled_go_files = []
@@ -113,9 +115,11 @@ def _go_pkg_info_aspect_impl(target, ctx):
     # current go_ node.
     if not stdlib_json_file:
         stdlib_json_file = ctx.attr._go_stdlib[GoStdLib]._list_json
+        stdlib_cache_dir = ctx.attr._go_stdlib[GoStdLib].cache_dir
 
     pkg_info = GoPkgInfo(
         stdlib_json_file = stdlib_json_file,
+        stdlib_cache_dir = stdlib_cache_dir,
         pkg_json_files = depset(
             direct = pkg_json_files,
             transitive = transitive_json_files,
@@ -137,6 +141,7 @@ def _go_pkg_info_aspect_impl(target, ctx):
             go_pkg_driver_srcs = pkg_info.compiled_go_files,
             go_pkg_driver_export_file = pkg_info.export_files,
             go_pkg_driver_stdlib_json_file = depset([pkg_info.stdlib_json_file] if pkg_info.stdlib_json_file else []),
+            go_pkg_driver_stdlib_cache_dir = pkg_info.stdlib_cache_dir or depset([]),
         ),
     ]
 

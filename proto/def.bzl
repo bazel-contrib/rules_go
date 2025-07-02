@@ -69,6 +69,17 @@ def get_imports(attr, importpath):
 
 def _go_proto_aspect_impl(_target, ctx):
     attr = ctx.rule.attr
+    for attr_name in ["importpath", "_go_context_data"]:
+        if not hasattr(attr, attr_name):
+            fail("""While processing go_proto_library deps: {label}, which is a {kind} is missing the '{attr_name}' \
+attribute. go_proto_library deps are usually other go_proto_library targets. We recommend double-checking the deps \
+to make sure they're the right type. If this is intentional (for example you're developing a new rule) make sure it \
+declares the \"{attr_name}\" attribute.""".format(
+                label = _target.label,
+                kind = ctx.rule.kind,
+                attr_name = attr_name,
+            ))
+
     go = go_context(
         ctx,
         attr,

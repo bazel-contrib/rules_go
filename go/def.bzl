@@ -49,6 +49,7 @@ load(
 )
 load(
     "//go/private/rules:library.bzl",
+    _go_library = "go_library",
     _go_tool_library = "go_tool_library",
 )
 load(
@@ -64,14 +65,16 @@ load(
     _go_source = "go_source",
 )
 load(
+    "//go/private/rules:test.bzl",
+    _go_test = "go_test",
+)
+load(
     "//go/private/rules:transition.bzl",
     _go_reset_target = "go_reset_target",
 )
 load(
     "//go/private/rules:wrappers.bzl",
     _go_binary_macro = "go_binary_macro",
-    _go_library_macro = "go_library_macro",
-    _go_test_macro = "go_test_macro",
 )
 load(
     "//go/private/tools:path.bzl",
@@ -164,13 +167,13 @@ GoArchiveData = _GoArchiveData
 GoSDK = _GoSDK
 
 # See docs/go/core/rules.md#go_library for full documentation.
-go_library = _go_library_macro
+go_library = _go_library
 
 # See docs/go/core/rules.md#go_binary for full documentation.
 go_binary = _go_binary_macro
 
 # See docs/go/core/rules.md#go_test for full documentation.
-go_test = _go_test_macro
+go_test = _go_test
 
 # See docs/go/core/rules.md#go_test for full documentation.
 go_source = _go_source

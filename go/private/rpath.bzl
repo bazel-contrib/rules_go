@@ -17,6 +17,15 @@ load(
     "paths",
 )
 
+# TODO: Replace with a Bazel-provided function when it's available.
+# https://github.com/bazelbuild/bazel/issues/14307
+def _rlocation_path(ctx, file):
+    """Returns the path relative to the runfiles directory."""
+    if file.short_path.startswith("../"):
+        return file.short_path[3:]
+    else:
+        return ctx.workspace_name + "/" + file.short_path
+
 def _rpath(go, library, executable = None):
     """Returns the potential rpaths of a library, possibly relative to another file."""
     if not executable:
@@ -29,12 +38,12 @@ def _rpath(go, library, executable = None):
 
     # 1. Where the executable is inside its own .runfiles directory.
     #  This is the case for generated libraries as well as remote builds.
-    #   a) go back to the workspace root from the executable file in .runfiles
-    depth = executable.short_path.count("/")
+    #   a) go back to the runfiles root from the executable file in .runfiles
+    depth = _rlocation_path(go._ctx, executable).count("/")
     back_to_root = paths.join(*([".."] * depth))
 
-    #   b) then walk back to the library's short path
-    rpaths.append(paths.join(origin, back_to_root, paths.dirname(library.short_path)))
+    #   b) then walk back to the library's dir within runfiles dir.
+    rpaths.append(paths.join(origin, back_to_root, paths.dirname(_rlocation_path(go._ctx, library))))
 
     # 2. Where the executable is outside the .runfiles directory:
     #  This is the case for local pre-built libraries, as well as local
