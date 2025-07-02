@@ -17,7 +17,7 @@ load(
     "paths",
 )
 
-# TODO: Replace with the function from `bazel-skylib` when it's available.
+# TODO: Replace with a Bazel-provided function when it's available.
 # https://github.com/bazelbuild/bazel/issues/14307
 def _rlocation_path(ctx, file):
     """Returns the path relative to the runfiles directory."""
