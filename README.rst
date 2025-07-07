@@ -48,7 +48,7 @@ Go rules for Bazel_
 .. _go_proto_compiler: proto/core.rst#go_proto_compiler
 .. _go_proto_library: proto/core.rst#go_proto_library
 .. _go_register_toolchains: go/toolchains.rst#go_register_toolchains
-.. _go_repository: https://github.com/bazelbuild/bazel-gazelle/blob/master/repository.md#go_repository
+.. _go_repository: https://github.com/bazelbuild/bazel-gazelle/blob/master/reference.md#go_repository
 .. _go_rules_dependencies: go/dependencies.rst#go_rules_dependencies
 .. _go_source: docs/go/core/rules.md#go_source
 .. _go_test: docs/go/core/rules.md#go_test
