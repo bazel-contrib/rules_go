@@ -32,7 +32,7 @@ _MOCKGEN_TOOL = Label("//extras/gomock:mockgen")
 _MOCKGEN_MODEL_LIB = Label("//extras/gomock:mockgen_model")
 
 def _gomock_source_impl(ctx):
-    go = go_context(ctx, include_deprecated_properties = False)
+    go = go_context(ctx)
 
     # In Source mode, it's not necessary to pass through a library, as the only thing we use it for is setting up
     # the relative file locations. Forcing users to pass a library makes it difficult in the case where a mock should
@@ -313,7 +313,7 @@ _gomock_prog_gen = rule(
 )
 
 def _gomock_prog_exec_impl(ctx):
-    go = go_context(ctx, include_deprecated_properties = False)
+    go = go_context(ctx)
 
     args = ["-exec_only", ctx.file.prog_bin.path]
     args, needed_files = _handle_shared_args(ctx, args)
