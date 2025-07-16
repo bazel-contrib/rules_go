@@ -199,8 +199,12 @@ def _go_test_impl(ctx):
         # to run_dir configured above.
         "GO_TEST_RUN_FROM_BAZEL": "1",
     }
+
     for k, v in ctx.attr.env.items():
         env[k] = ctx.expand_location(v, ctx.attr.data)
+
+    if hasattr(ctx.attr, "impure_env"):
+        env.update(ctx.attr.impure_env)
 
     run_environment_info = RunEnvironmentInfo(env, ctx.attr.env_inherit)
 
@@ -289,6 +293,14 @@ _go_test_kwargs = {
         ),
         "env_inherit": attr.string_list(
             doc = """Environment variables to inherit from the external environment.
+            """,
+        ),
+        "impure_env": attr.string_dict(
+            doc = """
+            A dictionary of environment variables to set during the build and test execution.
+            These variables will override any existing environment variables.
+            WARNING: This attribute is impure and may cause non-hermetic builds.
+            Use with caution and only when absolutely necessary.
             """,
         ),
         "importpath": attr.string(

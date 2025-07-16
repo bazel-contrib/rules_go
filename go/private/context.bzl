@@ -464,7 +464,8 @@ def go_context(
         importpath_aliases = None,
         go_context_data = None,
         goos = "auto",
-        goarch = "auto"):
+        goarch = "auto",
+        impure_env = None):
     """Returns an API used to build Go code.
 
     See /go/toolchains.rst#go-context
@@ -548,9 +549,14 @@ def go_context(
         # reparse points (junctions) as symbolic links. Bazel uses junctions
         # when constructing exec roots, and we use filepath.EvalSymlinks in
         # GoStdlib, so this broke us. Setting GODEBUG=winsymlink=0 restores
-        # the old behavior.
+        # the old behavior. (Ideally this would only be set on Windows)
         "GODEBUG": "winsymlink=0",
     }
+
+    if impure_env:
+        env.update(impure_env)
+    elif hasattr(attr, "impure_env"):
+        env.update(attr.impure_env)
 
     # The level of support is determined by the platform constraints in
     # //go/constraints/amd64.
