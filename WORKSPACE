@@ -169,7 +169,7 @@ load("@bazelci_rules//:rbe_repo.bzl", "rbe_preconfig")
 # otherwise refer to RBE docs.
 rbe_preconfig(
     name = "buildkite_config",
-    toolchain = "ubuntu1804-bazel-java11",
+    toolchain = "ubuntu2204",
 )
 
 # Needed for tests and tools
