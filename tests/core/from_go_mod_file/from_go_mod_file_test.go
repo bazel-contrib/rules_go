@@ -75,7 +75,7 @@ require (
     github.com/bazelbuild/rules_go v0.53.0  // unused, just here to test the go.mod parser
 )
 `,
-			want: "go1.24.0 X:nocoverageredesign",
+			want: "go1.24.0",
 		},
 		{
 			desc: "toolchain minor version",
@@ -90,7 +90,7 @@ require (
     github.com/bazelbuild/rules_go v0.53.0  // unused, just here to test the go.mod parser
 )
 `,
-			want: "go1.24.1 X:nocoverageredesign",
+			want: "go1.24.1",
 		},
 		{
 			desc: "go only",
@@ -136,6 +136,3 @@ require (
 		})
 	}
 }
-
-
-

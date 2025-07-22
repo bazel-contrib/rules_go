@@ -21,10 +21,7 @@ var tests = []test{
 		out: `package main; import "github.com/bazelbuild/rules_go/go/tools/coverdata"
 
 func init() {
-	coverdata.RegisterFile("srcName",
-		varName.Count[:],
-		varName.Pos[:],
-		varName.NumStmt[:])
+	coverdata.RegisterSrcPathMapping("some.importh/path/file.go", "src/path/file.go")
 }
 `,
 	},
@@ -43,10 +40,7 @@ import (
 )
 
 func init() {
-	coverdata.RegisterFile("srcName",
-		varName.Count[:],
-		varName.Pos[:],
-		varName.NumStmt[:])
+	coverdata.RegisterSrcPathMapping("some.importh/path/file.go", "src/path/file.go")
 }
 `,
 	},
@@ -61,10 +55,7 @@ import "github.com/bazelbuild/rules_go/go/tools/coverdata"
 import "github.com/bazelbuild/rules_go/go/tools/coverdata"
 
 func init() {
-	coverdata.RegisterFile("srcName",
-		varName.Count[:],
-		varName.Pos[:],
-		varName.NumStmt[:])
+	coverdata.RegisterSrcPathMapping("some.importh/path/file.go", "src/path/file.go")
 }
 `,
 	},
@@ -79,10 +70,7 @@ import _ "github.com/bazelbuild/rules_go/go/tools/coverdata"
 import coverdata "github.com/bazelbuild/rules_go/go/tools/coverdata"
 
 func init() {
-	coverdata.RegisterFile("srcName",
-		varName.Count[:],
-		varName.Pos[:],
-		varName.NumStmt[:])
+	coverdata.RegisterSrcPathMapping("some.importh/path/file.go", "src/path/file.go")
 }
 `,
 	},
@@ -97,10 +85,7 @@ import cover0 "github.com/bazelbuild/rules_go/go/tools/coverdata"
 import cover0 "github.com/bazelbuild/rules_go/go/tools/coverdata"
 
 func init() {
-	cover0.RegisterFile("srcName",
-		varName.Count[:],
-		varName.Pos[:],
-		varName.NumStmt[:])
+	cover0.RegisterSrcPathMapping("some.importh/path/file.go", "src/path/file.go")
 }
 `,
 	},
@@ -113,7 +98,7 @@ func TestRegisterCoverage(t *testing.T) {
 			t.Errorf("writing input file: %v", err)
 			return
 		}
-		err := registerCoverage(filename, "varName", "srcName")
+		err := registerCoverage(filename, "some.importh/path/file.go", "src/path/file.go")
 		if err != nil {
 			t.Errorf("%q: %+v", test.name, err)
 			continue
