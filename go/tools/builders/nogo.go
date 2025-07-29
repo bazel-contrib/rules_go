@@ -26,10 +26,12 @@ func nogo(args []string) error {
 	var testFilter string
 	var outFactsPath, outPath string
 	var coverMode string
+	var factsOnly bool
 	fs.Var(&unfilteredSrcs, "src", ".go, .c, .cc, .m, .mm, .s, or .S file to be filtered and checked")
 	fs.Var(&ignoreSrcs, "ignore_src", ".go, .c, .cc, .m, .mm, .s, or .S file to be filtered and checked, but with its diagnostics ignored")
 	fs.Var(&deps, "arc", "Import path, package path, and file name of a direct dependency, separated by '='")
 	fs.Var(&facts, "facts", "Import path, package path, and file name of a direct dependency's nogo facts file, separated by '='")
+	fs.BoolVar(&factsOnly, "facts_only", false, "If true, only nogo facts are emitted, no nogo checks are run")
 	fs.StringVar(&importPath, "importpath", "", "The import path of the package being compiled. Not passed to the compiler, but may be displayed in debug data.")
 	fs.StringVar(&packagePath, "p", "", "The package path (importmap) of the package being compiled")
 	fs.StringVar(&packageListPath, "package_list", "", "The file containing the list of standard library packages")
@@ -83,10 +85,10 @@ func nogo(args []string) error {
 		return err
 	}
 
-	return runNogo(workDir, nogoPath, goSrcs, ignoreSrcs, facts, importPath, importcfgPath, outFactsPath, outPath)
+	return runNogo(workDir, nogoPath, goSrcs, ignoreSrcs, facts, factsOnly, importPath, importcfgPath, outFactsPath, outPath)
 }
 
-func runNogo(workDir string, nogoPath string, srcs, ignores []string, facts []archive, packagePath, importcfgPath, outFactsPath, outDirPath string) error {
+func runNogo(workDir string, nogoPath string, srcs, ignores []string, facts []archive, factsOnly bool, packagePath, importcfgPath, outFactsPath, outDirPath string) error {
 	if len(srcs) == 0 {
 		// emit_compilepkg expects a nogo facts file, even if it's empty.
 		err := os.WriteFile(outFactsPath, nil, 0o666)
@@ -102,6 +104,9 @@ func runNogo(workDir string, nogoPath string, srcs, ignores []string, facts []ar
 	args = append(args, "-importcfg", importcfgPath)
 	for _, fact := range facts {
 		args = append(args, "-fact", fmt.Sprintf("%s=%s", fact.importPath, fact.file))
+	}
+	if factsOnly {
+		args = append(args, "-facts_only")
 	}
 	args = append(args, "-x", outFactsPath)
 	for _, ignore := range ignores {

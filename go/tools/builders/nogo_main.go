@@ -74,6 +74,7 @@ func run(args []string) (error, int) {
 	factMap := factMultiFlag{}
 	flags := flag.NewFlagSet("nogo", flag.ExitOnError)
 	flags.Var(&factMap, "fact", "Import path and file containing facts for that library, separated by '=' (may be repeated)'")
+	factsOnly := flags.Bool("facts_only", false, "If true, only facts are emitted, no analyzers are run")
 	importcfg := flags.String("importcfg", "", "The import configuration file")
 	packagePath := flags.String("p", "", "The package path (importmap) of the package being compiled")
 	xPath := flags.String("x", "", "The archive file where serialized facts should be written")
@@ -88,7 +89,7 @@ func run(args []string) (error, int) {
 		return fmt.Errorf("error parsing importcfg: %v", err), nogoError
 	}
 
-	diagnostics, pkg, err := checkPackage(analyzers, *packagePath, packageFile, importMap, factMap, srcs, ignores)
+	diagnostics, pkg, err := checkPackage(analyzers, *packagePath, packageFile, importMap, factMap, *factsOnly, srcs, ignores)
 	if err != nil {
 		return fmt.Errorf("error running analyzers: %v", err), nogoError
 	}
@@ -214,7 +215,7 @@ func setAnalyzerFlags(a *analysis.Analyzer, flags map[string]string) error {
 // It returns an empty string if no source code diagnostics need to be printed.
 //
 // This implementation was adapted from that of golang.org/x/tools/go/checker/internal/checker.
-func checkPackage(analyzers []*analysis.Analyzer, packagePath string, packageFile, importMap, factMap map[string]string, filenames, ignoreFiles []string) ([]diagnosticEntry, *goPackage, error) {
+func checkPackage(analyzers []*analysis.Analyzer, packagePath string, packageFile, importMap, factMap map[string]string, factsOnly bool, filenames, ignoreFiles []string) ([]diagnosticEntry, *goPackage, error) {
 	// Register fact types and establish dependencies between analyzers.
 	actions := make(map[*analysis.Analyzer]*action)
 	var visit func(a *analysis.Analyzer) *action
@@ -258,7 +259,13 @@ func checkPackage(analyzers []*analysis.Analyzer, packagePath string, packageFil
 
 	roots := make([]*action, 0, len(analyzers))
 	for _, a := range analyzers {
-		roots = append(roots, visit(a))
+		if !factsOnly || len(a.FactTypes) > 0 {
+			roots = append(roots, visit(a))
+		}
+	}
+	if len(roots) == 0 {
+		// No analyzers to run, return early.
+		return nil, nil, nil
 	}
 
 	// Load the package, including AST, types, and facts.
