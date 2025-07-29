@@ -26,6 +26,8 @@ import (
 	"strconv"
 )
 
+const writeFileMode = 0o666
+
 // instrumentForCoverage runs "go tool cover" on a source file to produce
 // a coverage-instrumented version of the file. It also registers the file
 // with the coverdata package.
@@ -61,14 +63,14 @@ func instrumentForCoverage(
 		return nil, err
 	}
 	data = append(data, '\n')
-	if err := writeFile(pkgcfg, data); err != nil {
+	if err := os.WriteFile(pkgcfg, data, writeFileMode); err != nil {
 		return nil, err
 	}
 	var sb strings.Builder
 	for i := range outputFiles {
 		fmt.Fprintf(&sb, "%s\n", outputFiles[i])
 	}
-	if err := writeFile(covoutputs, []byte(sb.String())); err != nil {
+	if err := os.WriteFile(covoutputs, []byte(sb.String()), writeFileMode); err != nil {
 		return nil, err
 	}
 
@@ -89,10 +91,6 @@ func instrumentForCoverage(
 		}
 	}
 	return outputFiles, nil
-}
-
-func writeFile(path string, data []byte) error {
-	return os.WriteFile(path, data, 0o666)
 }
 
 // coverPkgConfig matches https://cs.opensource.google/go/go/+/refs/tags/go1.24.4:src/cmd/internal/cov/covcmd/cmddefs.go;l=18
@@ -191,7 +189,7 @@ func init() {
 	%s.RegisterSrcPathMapping(%q, %q)
 }
 `, coverdataName, importPathFile, srcName)
-	if err := writeFile(coverSrcFilename, buf.Bytes()); err != nil {
+	if err := os.WriteFile(coverSrcFilename, buf.Bytes(), writeFileMode); err != nil {
 		return fmt.Errorf("registerCoverage: %v", err)
 	}
 	return nil

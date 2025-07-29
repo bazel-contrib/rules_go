@@ -120,10 +120,9 @@ def _go_test_impl(ctx):
     arguments = go.builder_args(go, "gentestmain", use_path_mapping = True)
     arguments.add("-output", main_go)
     if go.coverage_enabled:
-        if go.mode.race:
-            arguments.add("-cover_mode", "atomic")
-        else:
-            arguments.add("-cover_mode", "set")
+        # Always use atomic mode as the "runtime/coverage" APIs require it
+        # and test behavior should follow non-test behavior.
+        arguments.add("-cover_mode", "atomic")
         arguments.add("-cover_format", go.mode.cover_format)
     arguments.add(
         # the l is the alias for the package under test, the l_test must be the

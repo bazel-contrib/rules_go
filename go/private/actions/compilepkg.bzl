@@ -120,10 +120,8 @@ def emit_compilepkg(
     )
 
     if cover and go.coverdata:
-        if go.mode.race:
-            cover_mode = "atomic"
-        else:
-            cover_mode = "set"
+        # Always use atomic mode as the "runtime/coverage" APIs require it.
+        cover_mode = "atomic"
         shared_args.add("-cover_mode", cover_mode)
         compile_args.add("-cover_format", go.mode.cover_format)
         compile_args.add_all(cover, before_each = "-cover")

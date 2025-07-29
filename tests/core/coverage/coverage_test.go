@@ -173,7 +173,7 @@ func TestPanic(t *testing.T) {
 
 func TestCoverage(t *testing.T) {
 	t.Run("without-race", func(t *testing.T) {
-		testCoverage(t, "set")
+		testCoverage(t, "atomic")
 	})
 
 	t.Run("with-race", func(t *testing.T) {
