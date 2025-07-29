@@ -4,6 +4,11 @@ common --enable_platform_specific_config
 # TODO: Temporarily disable while rules_go migrates to Bzlmod for its dev build.
 # https://github.com/bazelbuild/bazel/issues/18958
 common --noexperimental_enable_bzlmod
+# Improve caching, but allow integration tests to find `bazel` in PATH.
+# Doesn't work on Windows as protoc requires DLLs outside the default PATH.
+common:macos --incompatible_strict_action_env
+common:linux --incompatible_strict_action_env
+common --test_env=PATH
 test --test_output=errors
 
 # Workaround for https://github.com/bazelbuild/continuous-integration/issues/2269.
