@@ -145,6 +145,13 @@ go_library(
 	importpath = "panics",
 )
 
+go_library(
+    name = "panics_no_nogo",
+    srcs = ["panics.go"],
+	importpath = "panics_no_nogo",
+    tags = ["no-nogo"],
+)
+
 -- foofuncname.go --
 // foofuncname checks for functions named "Foo".
 // It has the same package name as another check to test the checks with
@@ -609,6 +616,10 @@ func Test(t *testing.T) {
 			includes: []string{
 				"panic: function must not be named ShouldPanic",
 			},
+		}, {
+			desc:        "panics_no_nogo",
+			target:      "//:panics_no_nogo",
+			wantSuccess: true,
 		},
 	} {
 		t.Run(test.desc, func(t *testing.T) {

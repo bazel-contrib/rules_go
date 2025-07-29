@@ -62,7 +62,7 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
     nogo = go.nogo
 
     # nogo is a FilesToRunProvider and some targets don't have it, some have it but no executable.
-    if nogo != None and nogo.executable != None:
+    if nogo != None and nogo.executable != None and not "no-nogo" in go._ctx.attr.tags:
         out_facts = go.declare_file(go, name = source.name, ext = pre_ext + ".facts")
         out_diagnostics = go.declare_directory(go, name = source.name, ext = pre_ext + "_nogo")
         if validate_nogo(go):
@@ -70,6 +70,7 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
         else:
             out_nogo_validation = None
     else:
+        nogo = None
         out_facts = None
         out_diagnostics = None
         out_nogo_validation = None
