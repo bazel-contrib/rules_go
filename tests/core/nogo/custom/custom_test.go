@@ -134,21 +134,21 @@ go_library(
 )
 
 go_binary(
-	name = "type_check_fail",
-	srcs = ["type_check_fail.go"],
-	pure = "on",
+    name = "type_check_fail",
+    srcs = ["type_check_fail.go"],
+    pure = "on",
 )
 
 go_library(
     name = "panics",
     srcs = ["panics.go"],
-	importpath = "panics",
+    importpath = "panics",
 )
 
 go_library(
     name = "panics_no_nogo",
     srcs = ["panics.go"],
-	importpath = "panics_no_nogo",
+    importpath = "panics_no_nogo",
     tags = ["no-nogo"],
 )
 
