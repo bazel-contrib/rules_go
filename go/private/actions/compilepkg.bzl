@@ -249,6 +249,9 @@ def _run_nogo(
         nogo_args.add_all([cgo_go_srcs], before_each = "-ignore_src")
 
     nogo_args.add_all(archives, before_each = "-facts", map_each = _facts)
+    if not out_validation:
+        # Since diagnostics are ignored, all analyzers that don't generated facts can be skipped.
+        nogo_args.add("-facts_only")
     nogo_args.add("-out_facts", out_facts)
     nogo_args.add_all("-out", [out_diagnostics], expand_directories = False)
     nogo_args.add("-nogo", nogo.executable)

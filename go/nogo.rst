@@ -145,6 +145,10 @@ by default. You could exclude the external repositories from ``nogo`` by using t
 not validated with ``nogo`` by default. See the Bzlmod_ guide for more information
 on how to configure the ``nogo`` scope in this case.
 
+You can prevent ``nogo`` from running for a particular target by adding ``"no-nogo"`` to
+``tags``. This can be useful for generated code, which is often large but not interesting
+for static analysis.
+
 Fixes
 --------------------------------
 
