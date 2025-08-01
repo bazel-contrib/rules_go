@@ -119,7 +119,7 @@ func copySymlinkRecursively(src, dst string, writeFile func(src, dst string) err
 		return err
 	}
 	if !filepath.IsAbs(target) {
-		target = filepath.Join(src, target)
+		target = filepath.Join(filepath.Dir(src), target)
 	}
 
 	return copyRecursively(target, dst, writeFile, createDir)
