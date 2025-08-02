@@ -218,6 +218,8 @@ def _go_sdk_impl(ctx):
                 sdk_type = "remote",
                 sdk_version = wrap_tag.version,
             ))
+            if (not wrap_tag.goos or wrap_tag.goos == host_detected_goos) and (not wrap_tag.goarch or wrap_tag.goarch == host_detected_goarch):
+                first_host_compatible_toolchain = first_host_compatible_toolchain or "@{}//:ROOT".format(name)
 
         additional_download_tags = []
 
