@@ -34,7 +34,6 @@ load(
     "@bazel_tools//tools/cpp:toolchain_utils.bzl",
     "find_cpp_toolchain",
 )
-load("@io_bazel_rules_go_bazel_features//:features.bzl", "bazel_features")
 load(
     "@io_bazel_rules_nogo//:scope.bzl",
     NOGO_EXCLUDES = "EXCLUDES",
@@ -707,10 +706,7 @@ def _cgo_context_data_impl(ctx):
     # toolchain (to be inputs into actions that need it).
     # ctx.files._cc_toolchain won't work when cc toolchain resolution
     # is switched on.
-    if bazel_features.cc.find_cpp_toolchain_has_mandatory_param:
-        cc_toolchain = find_cpp_toolchain(ctx, mandatory = False)
-    else:
-        cc_toolchain = find_cpp_toolchain(ctx)
+    cc_toolchain = find_cpp_toolchain(ctx, mandatory = False)
     if not cc_toolchain or cc_toolchain.compiler in _UNSUPPORTED_C_COMPILERS:
         return []
 
@@ -924,7 +920,7 @@ def _cgo_context_data_impl(ctx):
 cgo_context_data = rule(
     implementation = _cgo_context_data_impl,
     attrs = {
-        "_cc_toolchain": attr.label(default = "@bazel_tools//tools/cpp:optional_current_cc_toolchain" if bazel_features.cc.find_cpp_toolchain_has_mandatory_param else "@bazel_tools//tools/cpp:current_cc_toolchain"),
+        "_cc_toolchain": attr.label(default = "@bazel_tools//tools/cpp:optional_current_cc_toolchain"),
         "_xcode_config": attr.label(
             default = "@bazel_tools//tools/osx:current_xcode_config",
         ),
@@ -933,8 +929,7 @@ cgo_context_data = rule(
         # In pure mode, a C++ toolchain isn't needed when transitioning.
         # But if we declare a mandatory toolchain dependency here, a cross-compiling C++ toolchain is required at toolchain resolution time.
         # So we make this toolchain dependency optional, so that it's only attempted to be looked up if it's actually needed.
-        # Optional toolchain support was added in bazel 6.0.0.
-        config_common.toolchain_type("@bazel_tools//tools/cpp:toolchain_type", mandatory = False) if hasattr(config_common, "toolchain_type") else "@bazel_tools//tools/cpp:toolchain_type",
+        config_common.toolchain_type("@bazel_tools//tools/cpp:toolchain_type", mandatory = False),
     ],
     fragments = ["apple", "cpp"],
     doc = """Collects information about the C/C++ toolchain. The C/C++ toolchain
