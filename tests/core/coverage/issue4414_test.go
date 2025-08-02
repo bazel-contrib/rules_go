@@ -26,6 +26,10 @@ func TestMain(m *testing.M) {
 -- issue.go --
 package internal
 
+func OK() {
+	// This is a no-op function
+}
+
 -- issue_test.go --
 package internal
 
@@ -34,7 +38,7 @@ import (
 )
 
 func TestOK(t *testing.T) {
-
+	OK()
 }
 
 -- BUILD.bazel --
@@ -55,7 +59,7 @@ go_test(
 }
 
 func TestIssue4414(t *testing.T) {
-	if err := bazel_testing.RunBazel("coverage", "--instrument_test_targets", "--combined_report=lcov", "//:issue_test"); err != nil {
+	if err := bazel_testing.RunBazel("coverage", "--instrument_test_targets", "//:issue_test"); err != nil {
 		t.Fatal(err)
 	}
 }
