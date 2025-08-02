@@ -43,6 +43,9 @@ func instrumentForCoverage(
 		relCoverPath map[string]string,
 		srcPathMapping map[string]string,
 	) ([]string, error) {
+	if len(outfiles) == 0 {
+		return nil, nil
+	}
 	// This implementation follows the go toolchain's setup of the pkgcfg file
 	// https://github.com/golang/go/blob/go1.24.5/src/cmd/go/internal/work/exec.go#L1954
 	pkgcfg := workDir + "pkgcfg.txt"
