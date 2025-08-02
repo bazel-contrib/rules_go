@@ -34,7 +34,6 @@ load(
     "@bazel_tools//tools/cpp:toolchain_utils.bzl",
     "find_cpp_toolchain",
 )
-load("@io_bazel_rules_go_bazel_features//:features.bzl", "bazel_features")
 load(
     "@io_bazel_rules_nogo//:scope.bzl",
     NOGO_EXCLUDES = "EXCLUDES",
@@ -75,6 +74,19 @@ load(
     "get_archive",
     "get_source",
 )
+
+CPP_TOOLCHAIN_TYPE = Label("@bazel_tools//tools/cpp:toolchain_type")
+CGO_ATTRS = {
+    "_cc_toolchain": attr.label(default = "@bazel_tools//tools/cpp:optional_current_cc_toolchain"),
+    "_xcode_config": attr.label(default = "@bazel_tools//tools/osx:current_xcode_config"),
+}
+CGO_TOOLCHAINS = [
+    # In pure mode, a C++ toolchain isn't needed when transitioning.
+    # But if we declare a mandatory toolchain dependency here, a cross-compiling C++ toolchain is required at toolchain resolution time.
+    # So we make this toolchain dependency optional, so that it's only attempted to be looked up if it's actually needed.
+    config_common.toolchain_type(CPP_TOOLCHAIN_TYPE, mandatory = False),
+]
+CGO_FRAGMENTS = ["apple", "cpp"]
 
 # cgo requires a gcc/clang style compiler.
 # We use a denylist instead of an allowlist:
@@ -480,27 +492,28 @@ def go_context(
     if go_context_data == None:
         if hasattr(attr, "_go_context_data"):
             go_context_data = _flatten_possibly_transitioned_attr(attr._go_context_data)
-            if CgoContextInfo in go_context_data:
-                cgo_context_info = go_context_data[CgoContextInfo]
             go_config_info = go_context_data[GoConfigInfo]
             stdlib = go_context_data[GoStdLib]
             go_context_info = go_context_data[GoContextInfo]
-        if getattr(attr, "_cgo_context_data", None) and CgoContextInfo in attr._cgo_context_data:
-            cgo_context_info = attr._cgo_context_data[CgoContextInfo]
-        if getattr(attr, "cgo_context_data", None) and CgoContextInfo in attr.cgo_context_data:
-            cgo_context_info = attr.cgo_context_data[CgoContextInfo]
         if hasattr(attr, "_go_config"):
             go_config_info = attr._go_config[GoConfigInfo]
         if hasattr(attr, "_stdlib"):
             stdlib = attr._stdlib[GoStdLib]
     else:
-        if CgoContextInfo in go_context_data:
-            cgo_context_info = go_context_data[CgoContextInfo]
         go_config_info = go_context_data[GoConfigInfo]
         stdlib = go_context_data[GoStdLib]
         go_context_info = go_context_data[GoContextInfo]
 
-    if goos == "auto" and goarch == "auto" and cgo_context_info:
+    if getattr(attr, "_cc_toolchain", None) and CPP_TOOLCHAIN_TYPE in ctx.toolchains:
+        cgo_context_info = cgo_context_data_impl(ctx)
+    elif go_context_data and CgoContextInfo in go_context_data:
+        cgo_context_info = go_context_data[CgoContextInfo]
+    elif getattr(attr, "_cgo_context_data", None) and CgoContextInfo in attr._cgo_context_data:
+        cgo_context_info = attr._cgo_context_data[CgoContextInfo]
+    elif getattr(attr, "cgo_context_data", None) and CgoContextInfo in attr.cgo_context_data:
+        cgo_context_info = attr.cgo_context_data[CgoContextInfo]
+
+    if goos == "auto" and goarch == "auto" and cgo_context_info and (go_config_info == None or not go_config_info.pure):
         # Fast-path to reuse the GoConfigInfo as-is
         mode = go_config_info or default_go_config_info
     else:
@@ -702,17 +715,14 @@ go_context_data = rule(
     cfg = request_nogo_transition,
 )
 
-def _cgo_context_data_impl(ctx):
+def cgo_context_data_impl(ctx):
     # TODO(jayconrod): find a way to get a list of files that comprise the
     # toolchain (to be inputs into actions that need it).
     # ctx.files._cc_toolchain won't work when cc toolchain resolution
     # is switched on.
-    if bazel_features.cc.find_cpp_toolchain_has_mandatory_param:
-        cc_toolchain = find_cpp_toolchain(ctx, mandatory = False)
-    else:
-        cc_toolchain = find_cpp_toolchain(ctx)
+    cc_toolchain = find_cpp_toolchain(ctx, mandatory = False)
     if not cc_toolchain or cc_toolchain.compiler in _UNSUPPORTED_C_COMPILERS:
-        return []
+        return None
 
     feature_configuration = cc_common.configure_features(
         ctx = ctx,
@@ -901,7 +911,7 @@ def _cgo_context_data_impl(ctx):
             paths.append("/usr/bin")
     env["PATH"] = ctx.configuration.host_path_separator.join(paths)
 
-    return [CgoContextInfo(
+    return CgoContextInfo(
         cc_toolchain_files = cc_toolchain.all_files,
         env = env,
         cgo_tools = struct(
@@ -919,24 +929,13 @@ def _cgo_context_data_impl(ctx):
             ld_dynamic_lib_options = ld_dynamic_lib_options,
             ar_path = cc_toolchain.ar_executable,
         ),
-    )]
+    )
 
 cgo_context_data = rule(
-    implementation = _cgo_context_data_impl,
-    attrs = {
-        "_cc_toolchain": attr.label(default = "@bazel_tools//tools/cpp:optional_current_cc_toolchain" if bazel_features.cc.find_cpp_toolchain_has_mandatory_param else "@bazel_tools//tools/cpp:current_cc_toolchain"),
-        "_xcode_config": attr.label(
-            default = "@bazel_tools//tools/osx:current_xcode_config",
-        ),
-    },
-    toolchains = [
-        # In pure mode, a C++ toolchain isn't needed when transitioning.
-        # But if we declare a mandatory toolchain dependency here, a cross-compiling C++ toolchain is required at toolchain resolution time.
-        # So we make this toolchain dependency optional, so that it's only attempted to be looked up if it's actually needed.
-        # Optional toolchain support was added in bazel 6.0.0.
-        config_common.toolchain_type("@bazel_tools//tools/cpp:toolchain_type", mandatory = False) if hasattr(config_common, "toolchain_type") else "@bazel_tools//tools/cpp:toolchain_type",
-    ],
-    fragments = ["apple", "cpp"],
+    implementation = cgo_context_data_impl,
+    attrs = CGO_ATTRS,
+    toolchains = CGO_TOOLCHAINS,
+    fragments = CGO_FRAGMENTS,
     doc = """Collects information about the C/C++ toolchain. The C/C++ toolchain
     is needed to build cgo code, but is generally optional. Rules can't have
     optional toolchains, so instead, we have an optional dependency on this
