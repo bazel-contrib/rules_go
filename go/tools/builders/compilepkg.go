@@ -258,8 +258,8 @@ func compileArchive(
 		}
 
 		var (
-			coverIn []string
-			coverOut []string
+			coverIn        []string
+			coverOut       []string
 			srcPathMapping = make(map[string]string)
 		)
 		for i, origSrc := range combined {
@@ -312,12 +312,14 @@ func compileArchive(
 		// https://github.com/golang/go/blob/go1.24.5/src/cmd/go/internal/work/exec.go#L1932
 		sum := sha256.Sum256([]byte(importPath))
 		coverVar := fmt.Sprintf("goCover_%x_", sum[:6])
-		coverageCfg = workDir + "pkgcfg.txt"
-		coverOut, err := instrumentForCoverage(goenv, importPath, packageName, coverIn, coverVar, coverMode, coverOut, workDir, relCoverPath, srcPathMapping)
-		if err != nil {
-			return err
+		if len(coverOut) > 0 {
+			coverageCfg = workDir + "pkgcfg.txt"
+			coverOut, err := instrumentForCoverage(goenv, importPath, packageName, coverIn, coverVar, coverMode, coverOut, workDir, relCoverPath, srcPathMapping)
+			if err != nil {
+				return err
+			}
+			goSrcs = append(goSrcs, coverOut[0])
 		}
-		goSrcs = append(goSrcs, coverOut[0])
 	}
 
 	// If we have cgo, generate separate C and go files, and compile the
