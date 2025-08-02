@@ -37,14 +37,6 @@ func TestOK(t *testing.T) {
 
 }
 
-func TestRead_MultipleMessages(t *testing.T) {
-
-}
-
-func TestError(t *testing.T) {
-
-}
-
 -- BUILD.bazel --
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
@@ -63,7 +55,7 @@ go_test(
 }
 
 func TestIssue4414(t *testing.T) {
-	if err := bazel_testing.RunBazel("coverage", "--instrument_test_targets", "//:issue_test"); err != nil {
+	if err := bazel_testing.RunBazel("coverage", "--instrument_test_targets", "--combined_report=lcov", "//:issue_test"); err != nil {
 		t.Fatal(err)
 	}
 }
