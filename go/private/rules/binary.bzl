@@ -23,6 +23,9 @@ load(
 )
 load(
     "//go/private:context.bzl",
+    "CGO_ATTRS",
+    "CGO_FRAGMENTS",
+    "CGO_TOOLCHAINS",
     "go_context",
     "new_go_info",
 )
@@ -453,8 +456,9 @@ def _go_binary_kwargs(go_cc_aspects = []):
             "_allowlist_function_transition": attr.label(
                 default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
             ),
-        },
-        "toolchains": [GO_TOOLCHAIN],
+        } | CGO_ATTRS,
+        "fragments": CGO_FRAGMENTS,
+        "toolchains": [GO_TOOLCHAIN] + CGO_TOOLCHAINS,
         "doc": """This builds an executable from a set of source files,
         which must all be in the `main` package. You can run the binary with
         `bazel run`, or you can build it with `bazel build` and run it directly.<br><br>

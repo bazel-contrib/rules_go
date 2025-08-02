@@ -75,6 +75,19 @@ load(
     "get_source",
 )
 
+CPP_TOOLCHAIN_TYPE = Label("@bazel_tools//tools/cpp:toolchain_type")
+CGO_ATTRS = {
+    "_cc_toolchain": attr.label(default = "@bazel_tools//tools/cpp:optional_current_cc_toolchain"),
+    "_xcode_config": attr.label(default = "@bazel_tools//tools/osx:current_xcode_config"),
+}
+CGO_TOOLCHAINS = [
+    # In pure mode, a C++ toolchain isn't needed when transitioning.
+    # But if we declare a mandatory toolchain dependency here, a cross-compiling C++ toolchain is required at toolchain resolution time.
+    # So we make this toolchain dependency optional, so that it's only attempted to be looked up if it's actually needed.
+    config_common.toolchain_type(CPP_TOOLCHAIN_TYPE, mandatory = False),
+]
+CGO_FRAGMENTS = ["apple", "cpp"]
+
 # cgo requires a gcc/clang style compiler.
 # We use a denylist instead of an allowlist:
 # - Bazel's auto-detected toolchains used to set the compiler name to "compiler"
@@ -476,10 +489,13 @@ def go_context(
     go_config_info = None
     stdlib = None
 
+    if getattr(attr, "_cc_toolchain", None) and CPP_TOOLCHAIN_TYPE in ctx.toolchains:
+        cgo_context_info = cgo_context_data_impl(ctx)
+
     if go_context_data == None:
         if hasattr(attr, "_go_context_data"):
             go_context_data = attr._go_context_data
-            if CgoContextInfo in go_context_data:
+            if CgoContextInfo in go_context_data and not cgo_context_info:
                 cgo_context_info = go_context_data[CgoContextInfo]
             go_config_info = go_context_data[GoConfigInfo]
             stdlib = go_context_data[GoStdLib]
@@ -493,7 +509,7 @@ def go_context(
         if hasattr(attr, "_stdlib"):
             stdlib = attr._stdlib[GoStdLib]
     else:
-        if CgoContextInfo in go_context_data:
+        if CgoContextInfo in go_context_data and not cgo_context_info:
             cgo_context_info = go_context_data[CgoContextInfo]
         go_config_info = go_context_data[GoConfigInfo]
         stdlib = go_context_data[GoStdLib]
@@ -701,14 +717,14 @@ go_context_data = rule(
     cfg = request_nogo_transition,
 )
 
-def _cgo_context_data_impl(ctx):
+def cgo_context_data_impl(ctx):
     # TODO(jayconrod): find a way to get a list of files that comprise the
     # toolchain (to be inputs into actions that need it).
     # ctx.files._cc_toolchain won't work when cc toolchain resolution
     # is switched on.
     cc_toolchain = find_cpp_toolchain(ctx, mandatory = False)
     if not cc_toolchain or cc_toolchain.compiler in _UNSUPPORTED_C_COMPILERS:
-        return []
+        return None
 
     feature_configuration = cc_common.configure_features(
         ctx = ctx,
@@ -897,7 +913,7 @@ def _cgo_context_data_impl(ctx):
             paths.append("/usr/bin")
     env["PATH"] = ctx.configuration.host_path_separator.join(paths)
 
-    return [CgoContextInfo(
+    return CgoContextInfo(
         cc_toolchain_files = cc_toolchain.all_files,
         env = env,
         cgo_tools = struct(
@@ -915,10 +931,10 @@ def _cgo_context_data_impl(ctx):
             ld_dynamic_lib_options = ld_dynamic_lib_options,
             ar_path = cc_toolchain.ar_executable,
         ),
-    )]
+    )
 
 cgo_context_data = rule(
-    implementation = _cgo_context_data_impl,
+    implementation = cgo_context_data_impl,
     attrs = {
         "_cc_toolchain": attr.label(default = "@bazel_tools//tools/cpp:optional_current_cc_toolchain"),
         "_xcode_config": attr.label(

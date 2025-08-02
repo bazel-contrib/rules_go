@@ -29,6 +29,9 @@ load(
 )
 load(
     "//go/private:context.bzl",
+    "CGO_ATTRS",
+    "CGO_FRAGMENTS",
+    "CGO_TOOLCHAINS",
     "go_context",
     "new_go_info",
 )
@@ -482,10 +485,11 @@ _go_test_kwargs = {
         "_allowlist_function_transition": attr.label(
             default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
         ),
-    },
+    } | CGO_ATTRS,
     "executable": True,
     "test": True,
-    "toolchains": [GO_TOOLCHAIN],
+    "fragments": CGO_FRAGMENTS,
+    "toolchains": [GO_TOOLCHAIN] + CGO_TOOLCHAINS,
     "doc": """This builds a set of tests that can be run with `bazel test`.<br><br>
     To run all tests in the workspace, and print output on failure (the
     equivalent of `go test ./...`), run<br>
