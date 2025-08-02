@@ -489,33 +489,31 @@ def go_context(
     go_config_info = None
     stdlib = None
 
-    if getattr(attr, "_cc_toolchain", None) and CPP_TOOLCHAIN_TYPE in ctx.toolchains:
-        cgo_context_info = cgo_context_data_impl(ctx)
-
     if go_context_data == None:
         if hasattr(attr, "_go_context_data"):
             go_context_data = attr._go_context_data
-            if CgoContextInfo in go_context_data and not cgo_context_info:
-                cgo_context_info = go_context_data[CgoContextInfo]
             go_config_info = go_context_data[GoConfigInfo]
             stdlib = go_context_data[GoStdLib]
             go_context_info = go_context_data[GoContextInfo]
-        if getattr(attr, "_cgo_context_data", None) and CgoContextInfo in attr._cgo_context_data:
-            cgo_context_info = attr._cgo_context_data[CgoContextInfo]
-        if getattr(attr, "cgo_context_data", None) and CgoContextInfo in attr.cgo_context_data:
-            cgo_context_info = attr.cgo_context_data[CgoContextInfo]
         if hasattr(attr, "_go_config"):
             go_config_info = attr._go_config[GoConfigInfo]
         if hasattr(attr, "_stdlib"):
             stdlib = attr._stdlib[GoStdLib]
     else:
-        if CgoContextInfo in go_context_data and not cgo_context_info:
-            cgo_context_info = go_context_data[CgoContextInfo]
         go_config_info = go_context_data[GoConfigInfo]
         stdlib = go_context_data[GoStdLib]
         go_context_info = go_context_data[GoContextInfo]
 
-    if goos == "auto" and goarch == "auto" and cgo_context_info:
+    if getattr(attr, "_cc_toolchain", None) and CPP_TOOLCHAIN_TYPE in ctx.toolchains:
+        cgo_context_info = cgo_context_data_impl(ctx)
+    elif go_context_data and CgoContextInfo in go_context_data:
+        cgo_context_info = go_context_data[CgoContextInfo]
+    elif getattr(attr, "_cgo_context_data", None) and CgoContextInfo in attr._cgo_context_data:
+        cgo_context_info = attr._cgo_context_data[CgoContextInfo]
+    elif getattr(attr, "cgo_context_data", None) and CgoContextInfo in attr.cgo_context_data:
+        cgo_context_info = attr.cgo_context_data[CgoContextInfo]
+
+    if goos == "auto" and goarch == "auto" and cgo_context_info and (go_config_info == None or not go_config_info.pure):
         # Fast-path to reuse the GoConfigInfo as-is
         mode = go_config_info or default_go_config_info
     else:
@@ -935,19 +933,9 @@ def cgo_context_data_impl(ctx):
 
 cgo_context_data = rule(
     implementation = cgo_context_data_impl,
-    attrs = {
-        "_cc_toolchain": attr.label(default = "@bazel_tools//tools/cpp:optional_current_cc_toolchain"),
-        "_xcode_config": attr.label(
-            default = "@bazel_tools//tools/osx:current_xcode_config",
-        ),
-    },
-    toolchains = [
-        # In pure mode, a C++ toolchain isn't needed when transitioning.
-        # But if we declare a mandatory toolchain dependency here, a cross-compiling C++ toolchain is required at toolchain resolution time.
-        # So we make this toolchain dependency optional, so that it's only attempted to be looked up if it's actually needed.
-        config_common.toolchain_type("@bazel_tools//tools/cpp:toolchain_type", mandatory = False),
-    ],
-    fragments = ["apple", "cpp"],
+    attrs = CGO_ATTRS,
+    toolchains = CGO_TOOLCHAINS,
+    fragments = CGO_FRAGMENTS,
     doc = """Collects information about the C/C++ toolchain. The C/C++ toolchain
     is needed to build cgo code, but is generally optional. Rules can't have
     optional toolchains, so instead, we have an optional dependency on this
