@@ -200,6 +200,7 @@ def emit_compilepkg(
     go.actions.run(
         inputs = depset(inputs_direct, transitive = inputs_transitive),
         outputs = outputs,
+        tools = [go.toolchain.sdk.go],
         mnemonic = "GoCompilePkgExternal" if is_external_pkg else "GoCompilePkg",
         executable = go.toolchain._builder,
         arguments = ["compilepkg", shared_args, compile_args],
