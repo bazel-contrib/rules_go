@@ -42,6 +42,7 @@ load(
 load(
     "//go/private/rules:transition.bzl",
     "go_transition",
+    "non_go_transition",
 )
 
 _EMPTY_DEPSET = depset([])
@@ -120,8 +121,7 @@ def _go_binary_impl(ctx):
         include_deprecated_properties = False,
         importpath = ctx.attr.importpath,
         embed = ctx.attr.embed,
-        # It's a list because it is transitioned.
-        go_context_data = ctx.attr._go_context_data[0],
+        go_context_data = ctx.attr._go_context_data,
         goos = ctx.attr.goos,
         goarch = ctx.attr.goarch,
     )
@@ -222,10 +222,12 @@ def _go_binary_impl(ctx):
 
 def _go_binary_kwargs(go_cc_aspects = []):
     return {
+        "cfg": go_transition,
         "implementation": _go_binary_impl,
         "attrs": {
             "srcs": attr.label_list(
                 allow_files = go_exts + asm_exts + cgo_exts + syso_exts,
+                cfg = non_go_transition,
                 doc = """The list of Go source files that are compiled to create the package.
                 Only `.go`, `.s`, and `.syso` files are permitted, unless the `cgo`
                 attribute is set, in which case,
@@ -236,6 +238,7 @@ def _go_binary_kwargs(go_cc_aspects = []):
             ),
             "data": attr.label_list(
                 allow_files = True,
+                cfg = non_go_transition,
                 doc = """List of files needed by this rule at run-time. This may include data files
                 needed or other programs that may be executed. The [bazel] package may be
                 used to locate run files; they may appear in different places depending on the
@@ -249,7 +252,6 @@ def _go_binary_kwargs(go_cc_aspects = []):
                 doc = """List of Go libraries this package imports directly.
                 These may be `go_library` rules or compatible rules with the [GoInfo] provider.
                 """,
-                cfg = go_transition,
             ),
             "embed": attr.label_list(
                 providers = [GoInfo],
@@ -263,10 +265,10 @@ def _go_binary_kwargs(go_cc_aspects = []):
                 embedding binary may not also have `cgo = True`. See [Embedding] for
                 more information.
                 """,
-                cfg = go_transition,
             ),
             "embedsrcs": attr.label_list(
                 allow_files = True,
+                cfg = non_go_transition,
                 doc = """The list of files that may be embedded into the compiled package using
                 `//go:embed` directives. All files must be in the same logical directory
                 or a subdirectory as source files. All source files containing `//go:embed`
@@ -326,6 +328,7 @@ def _go_binary_kwargs(go_cc_aspects = []):
                 """,
             ),
             "cdeps": attr.label_list(
+                cfg = non_go_transition,
                 doc = """The list of other libraries that the c code depends on.
                 This can be anything that would be allowed in [cc_library deps]
                 Only valid if `cgo` = `True`.
@@ -445,7 +448,7 @@ def _go_binary_kwargs(go_cc_aspects = []):
                 """,
                 default = "//go/config:empty",
             ),
-            "_go_context_data": attr.label(default = "//:go_context_data", cfg = go_transition),
+            "_go_context_data": attr.label(default = "//:go_context_data"),
             "_allowlist_function_transition": attr.label(
                 default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
             ),

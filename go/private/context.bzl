@@ -478,7 +478,7 @@ def go_context(
 
     if go_context_data == None:
         if hasattr(attr, "_go_context_data"):
-            go_context_data = _flatten_possibly_transitioned_attr(attr._go_context_data)
+            go_context_data = attr._go_context_data
             if CgoContextInfo in go_context_data:
                 cgo_context_info = go_context_data[CgoContextInfo]
             go_config_info = go_context_data[GoConfigInfo]
@@ -1069,17 +1069,3 @@ def _expand_opts(go, attribute_name, opts):
 
 def _expand_location(go, attr, s):
     return go._ctx.expand_location(s, getattr(attr, "data", []))
-
-_LIST_TYPE = type([])
-
-# Used to get attribute values which may have been transitioned.
-# Transitioned attributes end up as lists.
-# We never use split-transitions, so we always expect exactly one element in those lists.
-# But if the attribute wasn't transitioned, it won't be a list.
-def _flatten_possibly_transitioned_attr(maybe_list):
-    if type(maybe_list) == _LIST_TYPE:
-        if len(maybe_list) == 1:
-            return maybe_list[0]
-        else:
-            fail("Expected exactly one element in list but got {}".format(maybe_list))
-    return maybe_list
