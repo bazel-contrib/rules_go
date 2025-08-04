@@ -28,6 +28,8 @@ tasks:
       - "-//tests/core/from_go_mod_file:from_go_mod_file_test"
       - "-//tests/core/transition:hermeticity_test"
       - "-//tests/integration/gazelle:gazelle_test"
+      # Requires https://github.com/bazelbuild/bazel/commit/ceddfb1ece1f8ed7ff81558fa1751e6526df031b.
+      - "-//tests/core/go_binary:configurable_attribute_good_test"
     test_flags:
       - "--per_file_copt=external/.*@-w"
       - "--host_per_file_copt=external/.*@-w"
