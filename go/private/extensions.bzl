@@ -59,6 +59,7 @@ _download_tag = tag_class(
     doc = """Download a specific Go SDK at the optional GOOS, GOARCH, and version, from a customisable URL.  Optionally apply local customisations to the SDK by applying patches and setting experiments.""",
     attrs = _COMMON_TAG_ATTRS | {
         "version": attr.string(),
+        "host_compatible": attr.bool(default = True),
     },
 )
 
@@ -114,6 +115,7 @@ _wrap_tag = tag_class(
         ),
         "goos": attr.string(),
         "goarch": attr.string(),
+        "host_compatible": attr.bool(default = True),
     },
 )
 
@@ -123,6 +125,7 @@ _from_file_tag = tag_class(
         "go_mod": attr.label(
             doc = "The go.mod file to read the SDK version from.",
         ),
+        "host_compatible": attr.bool(default = True),
     },
 )
 
@@ -218,7 +221,9 @@ def _go_sdk_impl(ctx):
                 sdk_type = "remote",
                 sdk_version = wrap_tag.version,
             ))
-            if (not wrap_tag.goos or wrap_tag.goos == host_detected_goos) and (not wrap_tag.goarch or wrap_tag.goarch == host_detected_goarch):
+            if (wrap_tag.host_compatible and
+                (not wrap_tag.goos or wrap_tag.goos == host_detected_goos) and
+                (not wrap_tag.goarch or wrap_tag.goarch == host_detected_goarch)):
                 first_host_compatible_toolchain = first_host_compatible_toolchain or "@{}//:ROOT".format(name)
 
         additional_download_tags = []
@@ -234,7 +239,8 @@ def _go_sdk_impl(ctx):
                 if key not in ["go_mod"]
             }
             download_tag["version"] = version
-            additional_download_tags += [struct(**download_tag)]
+            download_tag["host_compatible"] = from_file_tag.host_compatible
+            additional_download_tags.append(struct(**download_tag))
 
         for index, download_tag in enumerate(module.tags.download + additional_download_tags):
             # SDKs without an explicit version are fetched even when not selected by toolchain
@@ -268,7 +274,9 @@ def _go_sdk_impl(ctx):
                 download_tag = download_tag,
             )
 
-            if (not download_tag.goos or download_tag.goos == host_detected_goos) and (not download_tag.goarch or download_tag.goarch == host_detected_goarch):
+            if (download_tag.host_compatible and
+                (not download_tag.goos or download_tag.goos == host_detected_goos) and
+                (not download_tag.goarch or download_tag.goarch == host_detected_goarch)):
                 first_host_compatible_toolchain = first_host_compatible_toolchain or "@{}//:ROOT".format(name)
 
             toolchains.append(struct(
