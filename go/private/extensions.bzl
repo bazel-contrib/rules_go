@@ -104,7 +104,7 @@ _wrap_tag = tag_class(
             mandatory = False,
             doc = "A file in the SDK root directory. Use to determine GOROOT.",
         ),
-        "root_files": attr.string_dict(
+        "root_files": attr.string_keyed_label_dict(
             mandatory = False,
             doc = "A set of mappings from the host platform to a file in the SDK's root directory.",
         ),
