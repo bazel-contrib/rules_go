@@ -98,13 +98,20 @@ Uses the same format as 'visibility', i.e., every entry must be a label that end
     },
 )
 
+# string_keyed_label_dict was added in 8.0.0
+_maybe_string_keyed_label_dict = getattr(
+    attr,
+    "string_keyed_label_dict",
+    attr.string_dict,
+)
+
 _wrap_tag = tag_class(
     attrs = {
         "root_file": attr.label(
             mandatory = False,
             doc = "A file in the SDK root directory. Use to determine GOROOT.",
         ),
-        "root_files": attr.string_dict(
+        "root_files": _maybe_string_keyed_label_dict(
             mandatory = False,
             doc = "A set of mappings from the host platform to a file in the SDK's root directory.",
         ),
@@ -234,7 +241,7 @@ def _go_sdk_impl(ctx):
                 if key not in ["go_mod"]
             }
             download_tag["version"] = version
-            additional_download_tags += [struct(**download_tag)]
+            additional_download_tags.append(struct(**download_tag))
 
         for index, download_tag in enumerate(module.tags.download + additional_download_tags):
             # SDKs without an explicit version are fetched even when not selected by toolchain

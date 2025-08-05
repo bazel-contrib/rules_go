@@ -371,6 +371,12 @@ def _go_wrap_sdk_impl(ctx):
     _sdk_build_file(ctx, platform, version, ctx.attr.experiments)
     _local_sdk(ctx, goroot)
 
+# string_keyed_label_dict was added in 8.0.0
+_maybe_string_keyed_label_dict = getattr(
+    attr,
+    "string_keyed_label_dict",
+    attr.string_dict,
+)
 go_wrap_sdk_rule = repository_rule(
     implementation = _go_wrap_sdk_impl,
     attrs = {
@@ -378,7 +384,7 @@ go_wrap_sdk_rule = repository_rule(
             mandatory = False,
             doc = "A file in the SDK root direcotry. Used to determine GOROOT.",
         ),
-        "root_files": attr.string_dict(
+        "root_files": _maybe_string_keyed_label_dict(
             mandatory = False,
             doc = "A set of mappings from the host platform to a file in the SDK's root directory",
         ),
