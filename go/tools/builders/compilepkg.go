@@ -533,7 +533,7 @@ func compileGo(goenv *env, srcs []string, packagePath, importcfgPath, embedcfgPa
 
 func appendToArchive(goenv *env, outPath string, objFiles []string) error {
 	// Use abs to work around long path issues on Windows.
-	args := goenv.goTool("pack", "r", abs(outPath))
+	args := goenv.goCmd("tool", "pack", "r", abs(outPath))
 	args = append(args, objFiles...)
 	return goenv.runCommand(args)
 }

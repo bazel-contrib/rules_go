@@ -18,6 +18,7 @@ import (
 	"flag"
 	"fmt"
 	"go/build"
+	"runtime"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -169,6 +170,22 @@ You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 	installArgs = append(installArgs, packages...)
 	if err := goenv.runCommand(installArgs); err != nil {
 		return err
+	}
+
+	// Install the "cmd/pack" command from source if it's missing as it's no longer shipped with Go distributions
+	// after go1.25 https://github.com/golang/go/issues/74080
+	if _, err := os.Stat(filepath.Join(output, "pkg/tool", runtime.GOOS + "_" + runtime.GOARCH, "pack")); err != nil && os.IsNotExist(err) {
+		originalOS, originalARCH := os.Getenv("GOOS"), os.Getenv("GOARCH")
+		os.Setenv("GOOS", runtime.GOOS)
+		os.Setenv("GOARCH", runtime.GOARCH)
+		defer func() {
+			os.Setenv("GOOS", originalOS)
+			os.Setenv("GOARCH", originalARCH)
+		}()
+		toolArgs := goenv.goCmd("install", "-toolexec", abs(os.Args[0])+" filterbuildid", "cmd/pack")
+		if err := goenv.runCommand(toolArgs); err != nil {
+			return err
+		}
 	}
 	return nil
 }
