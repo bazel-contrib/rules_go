@@ -94,8 +94,8 @@ compiler. Typically, these are Well Known Types and proto runtime libraries.""",
         "valid_archive": """A Boolean indicating whether the .go files produced
 by this compiler are buildable on their own. Compilers that just add methods
 to structs produced by other compilers will set this to False.""",
-        "always_generates": """A Boolean indicating whether this compiler 
-        always generates files, regardless of whether the proto files have 
+        "always_generates": """A Boolean indicating whether this compiler
+        always generates files, regardless of whether the proto files have
         relevant definitions (e.g., services for grpc_gateway). This allows
         more strict check of compiler output.""",
         "internal": "Opaque value containing data used by compile.",
@@ -217,7 +217,7 @@ def proto_path(src, proto):
     return src.path[len(prefix):]
 
 def _go_proto_compiler_impl(ctx):
-    go = go_context(ctx, include_deprecated_properties = False)
+    go = go_context(ctx)
     go_info = new_go_info(go, ctx.attr)
     proto_toolchain = _find_toolchain(
         ctx,
