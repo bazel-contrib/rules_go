@@ -146,6 +146,7 @@ def _go_transition_impl(settings, attr):
             # should never be nested, Bazel applies it twice to check for
             # idempotency and in Bazel 8.3.1 cquery and aquery don't handle
             # targets with non-idempotent rule transitions correctly.
+            # https://github.com/bazelbuild/bazel/pull/26738
             settings[original_key] = original_settings.get(original_key, "")
 
     return settings
