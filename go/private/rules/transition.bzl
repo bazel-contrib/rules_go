@@ -147,6 +147,8 @@ def _go_transition_impl(settings, attr):
             # targets with non-idempotent rule transitions correctly.
             settings[original_key] = original_settings.get(original_key, "")
 
+    if "//go/config:pgoprofile" in settings:
+        print(settings, original_settings)
     return settings
 
 def _request_nogo_transition(settings, _attr):
