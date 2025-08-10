@@ -147,9 +147,17 @@ def _go_transition_impl(settings, attr):
             # targets with non-idempotent rule transitions correctly.
             settings[original_key] = original_settings.get(original_key, "")
 
-    if "//go/config:pgoprofile" in settings:
-        print(settings, original_settings)
     return settings
+
+go_transition = transition(
+    implementation = _go_transition_impl,
+    inputs = [
+        "//command_line_option:platforms",
+    ] + TRANSITIONED_GO_SETTING_KEYS + _SETTING_KEY_TO_ORIGINAL_SETTING_KEY.values(),
+    outputs = [
+        "//command_line_option:platforms",
+    ] + TRANSITIONED_GO_SETTING_KEYS + _SETTING_KEY_TO_ORIGINAL_SETTING_KEY.values(),
+)
 
 def _request_nogo_transition(settings, _attr):
     """Indicates that we want the project configured nogo instead of a noop.
@@ -180,16 +188,6 @@ non_request_nogo_transition = transition(
     implementation = _non_request_nogo_transition,
     inputs = [],
     outputs = ["//go/private:request_nogo"],
-)
-
-go_transition = transition(
-    implementation = _go_transition_impl,
-    inputs = [
-        "//command_line_option:platforms",
-    ] + TRANSITIONED_GO_SETTING_KEYS,
-    outputs = [
-        "//command_line_option:platforms",
-    ] + TRANSITIONED_GO_SETTING_KEYS + _SETTING_KEY_TO_ORIGINAL_SETTING_KEY.values(),
 )
 
 _common_reset_transition_dict = dict({
