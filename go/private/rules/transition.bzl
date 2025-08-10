@@ -130,6 +130,7 @@ def _go_transition_impl(settings, attr):
         if value != old_value:
             if original_settings.get(original_key):
                 fail("go_transition can't be nested")
+
             # Encoding as JSON makes it possible to embed settings of arbitrary
             # types (currently bool, string and string_list) into a single type
             # of setting (string) with the information preserved whether the
