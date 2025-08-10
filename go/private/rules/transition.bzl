@@ -128,7 +128,7 @@ def _go_transition_impl(settings, attr):
         # real setting can be reset to this value before the new configuration
         # would cross a non-deps dependency edge.
         if value != old_value:
-            if old_settings.get(original_key):
+            if original_settings.get(original_key):
                 fail("go_transition can't be nested")
             # Encoding as JSON makes it possible to embed settings of arbitrary
             # types (currently bool, string and string_list) into a single type
@@ -145,7 +145,7 @@ def _go_transition_impl(settings, attr):
             # should never be nested, Bazel applies it twice to check for
             # idempotency and in Bazel 8.3.1 cquery and aquery don't handle
             # targets with non-idempotent rule transitions correctly.
-            settings[original_key] = old_settings.get(original_key, "")
+            settings[original_key] = original_settings.get(original_key, "")
 
     return settings
 
