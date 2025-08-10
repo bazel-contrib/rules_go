@@ -75,12 +75,13 @@ func TestGoBinaryOutputWithPgoProfileDiffersFromGoBinaryWithoutPgoProfile(t *tes
 
 	// Get the paths to the two binaries.
 	var out []byte
-	if out, err = bazel_testing.BazelOutput("cquery", "--output=files", "//src:all"); err != nil {
+	var stderr []byte
+	if out, stderr, err = bazel_testing.BazelOutputWithInput(nil, "cquery", "--output=files", "//src:all"); err != nil {
 		t.Fatal(err)
 	}
 	files := strings.Split(strings.TrimSpace(string(out)), "\n")
 	if len(files) != 2 {
-		t.Fatalf("expected 2 files, got %+v", files)
+		t.Fatalf("expected 2 files, got %+v:\n%s", files, string(stderr))
 	}
 
 	// Verify that the binaries differs.
