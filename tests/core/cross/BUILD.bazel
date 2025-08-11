@@ -13,9 +13,8 @@ go_binary(
     goarch = "amd64",
     goos = "darwin",
     pure = "off",
-    target_compatible_with = ["@platforms//os:macos"],
     deps = [":platform_lib"],
-) if "@platforms//os:osx" in HOST_CONSTRAINTS and "@platforms//cpu:x86_64" in HOST_CONSTRAINTS else None
+) if "@platforms//os:osx" in HOST_CONSTRAINTS else None
 
 go_binary(
     name = "windows_cross",
