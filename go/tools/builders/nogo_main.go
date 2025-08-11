@@ -93,12 +93,26 @@ func run(args []string) (error, int) {
 	if err != nil {
 		return fmt.Errorf("error running analyzers: %v", err), nogoError
 	}
+
 	// Write the facts file for downstream consumers before failing due to diagnostics.
 	if *xPath != "" {
-		if err := os.WriteFile(abs(*xPath), pkg.facts.Encode(), 0o666); err != nil {
+		var factsContent []byte
+		if pkg != nil {
+			factsContent = pkg.facts.Encode()
+		}
+
+		if err := os.WriteFile(abs(*xPath), factsContent, 0o666); err != nil {
 			return fmt.Errorf("error writing facts: %v", err), nogoError
 		}
 	}
+
+	var fset *token.FileSet
+	if pkg != nil {
+		fset = pkg.fset
+	} else if len(diagnostics) > 0 {
+		return fmt.Errorf("pkg should not be nil with diagnostics"), nogoError
+	}
+
 	exitCode := nogoSuccess
 	var errMsg bytes.Buffer
 	if len(diagnostics) > 0 {
@@ -110,11 +124,11 @@ func run(args []string) (error, int) {
 		}
 		errMsg.WriteString("errors found by nogo during build-time code analysis:")
 		for _, d := range diagnostics {
-			fmt.Fprintf(&errMsg, "\n%s: %s (%s)", pkg.fset.Position(d.Pos), d.Message, d.analyzerName)
+			fmt.Fprintf(&errMsg, "\n%s: %s (%s)", fset.Position(d.Pos), d.Message, d.analyzerName)
 		}
 	}
 
-	if errs := saveSuggestedFixes(*nogoFixDir, diagnostics, pkg); len(errs) > 0 {
+	if errs := saveSuggestedFixes(*nogoFixDir, diagnostics, fset); len(errs) > 0 {
 		errMsg.WriteString("\nsaving suggested fixes:")
 		for _, err := range errs {
 			fmt.Fprintf(&errMsg, "\n%v", err)
@@ -127,12 +141,12 @@ func run(args []string) (error, int) {
 	return nil, exitCode
 }
 
-func saveSuggestedFixes(nogoFixDir string, diagnostics []diagnosticEntry, pkg *goPackage) []error {
+func saveSuggestedFixes(nogoFixDir string, diagnostics []diagnosticEntry, fset *token.FileSet) []error {
 	if nogoFixDir == "" {
 		return nil
 	}
 	var errs []error
-	fixes, err := getFixes(diagnostics, pkg.fset)
+	fixes, err := getFixes(diagnostics, fset)
 	if err != nil {
 		errs = append(errs, err)
 	}
