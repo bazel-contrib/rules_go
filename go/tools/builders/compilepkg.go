@@ -286,7 +286,10 @@ func compileArchive(
 				// to write the lcov file with the expected exec root relative source
 				// path.
 				srcName = relCoverPath[origSrc]
-				srcPathMapping[srcName] = path.Join(importPath, filepath.Base(srcName))
+				srcPathMapping[srcName], err = coveragePath(srcName, importPath)
+				if err != nil {
+					return err
+				}
 			default:
 				return fmt.Errorf("invalid value for -cover_format: %q", coverFormat)
 			}
