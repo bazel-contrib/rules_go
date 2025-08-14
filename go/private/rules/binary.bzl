@@ -15,6 +15,7 @@
 load(
     "//go/private:common.bzl",
     "GO_TOOLCHAIN",
+    "SUPPORTS_PATH_MAPPING_REQUIREMENT",
     "asm_exts",
     "cgo_exts",
     "go_exts",
@@ -529,17 +530,24 @@ exit /b %GO_EXIT_CODE%
             mnemonic = "GoToolchainBinaryBuild",
         )
     else:
-        # We do not use -a here as the cache drastically reduces the time spent
-        # on the second go build.
+        # Pass (potentially) generated files in via args to support path mapping.
         args = ctx.actions.args()
         args.add(ctx.outputs.out_pack)
         args.add(out)
         args.add_all(ctx.files.srcs)
 
+        # We do not use -a here as the cache drastically reduces the time spent
+        # on the second go build invocation (roughly 50% faster).
         ctx.actions.run_shell(
+            # The value of GOCACHE/GOPATH are determined from HOME.
+            # We place them in the execroot to avoid dependency on `mktemp` and because we don't know
+            # a safe scratch space on all systems. Note that HOME must be an absolute path, otherwise the
+            # Go toolchain will write some outputs to the wrong place and the result will be uncacheable.
+            # We include an output path of this action to prevent collisions with anything else,
+            # including differently configured versions of the same target, under an unsandboxed strategy.
             command = """
 set -eu
-export HOME={HOME}
+export HOME="$PWD/_go_tool_binary-fake-home-${{1//\\//_}}"
 trap "{go} clean -cache" EXIT;
 {go} build -trimpath -ldflags='-buildid="" {ldflags}' -o "$1" cmd/pack
 shift
@@ -547,13 +555,6 @@ shift
 """.format(
                 go = sdk.go.path,
                 ldflags = ctx.attr.ldflags,
-                # The value of GOCACHE/GOPATH are determined from HOME.
-                # We place them in the execroot to avoid dependency on `mktemp` and because we don't know
-                # a safe scratch space on all systems. Note that HOME must be an absolute path, otherwise the
-                # Go toolchain will write some outputs to the wrong place and the result will be uncacheable.
-                # We include the output path of this action to prevent collisions with anything else,
-                # including differently configured versions of the same target, under an unsandboxed strategy.
-                HOME = "$(pwd)/_go_tool_binary-fake-home-" + out.path.replace("/", "_"),
             ),
             arguments = [args],
             tools = [sdk.go],
@@ -570,6 +571,7 @@ shift
             ),
             toolchain = None,
             outputs = [out, ctx.outputs.out_pack],
+            execution_requirements = SUPPORTS_PATH_MAPPING_REQUIREMENT,
             mnemonic = "GoToolchainBinaryBuild",
         )
 
