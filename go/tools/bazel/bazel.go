@@ -24,10 +24,16 @@ import (
 	"os"
 )
 
+// The name of the environment variable to access test data files.
+//
 // Deprecated: Use github.com/bazelbuild/rules_go/go/runfiles instead to access
 // runfiles.
 const TEST_SRCDIR = "TEST_SRCDIR"
+
 const TEST_TMPDIR = "TEST_TMPDIR"
+
+// The name of the environment variable to access the test workspace name.
+//
 // Deprecated: Use github.com/bazelbuild/rules_go/go/runfiles instead to access
 // runfiles. With Bzlmod enabled, the corresponding environment variable has the
 // constant value "_main".
@@ -52,6 +58,7 @@ func TestTmpDir() string {
 // "-begin_files" and "-end_files" are used). Entries between these delimiters
 // are spliced out of from os.Args and returned to the caller.  If the ordering
 // of -begin_files or -end_files is malformed, error is returned.
+//
 // Deprecated: This method is meant for internal use by bazel_testing only.
 func SpliceDelimitedOSArgs(begin, end string) ([]string, error) {
 	var files []string
