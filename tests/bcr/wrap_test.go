@@ -7,7 +7,7 @@ import (
 )
 
 func TestSdkVersion(t *testing.T) {
-	if !strings.Contains(runtime.Version(), "1.23.6") {
+	if !strings.Contains(runtime.Version(), "1.25.0") {
 		t.Fatal("Incorrect toolchain version", runtime.Version())
 	}
 }

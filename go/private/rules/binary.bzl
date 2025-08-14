@@ -497,7 +497,10 @@ set GOTOOLCHAIN=local
 set GO111MODULE=off
 set GOTELEMETRY=off
 set GOENV=off
-{go} build -o {out} -trimpath -ldflags \"-buildid='' {ldflags}\" {srcs}
+{go} build -trimpath -ldflags \"-buildid='' {ldflags}\" -o {out_pack} cmd/pack
+if %ERRORLEVEL% EQU 0 (
+  {go} build -trimpath -ldflags \"-buildid='' {ldflags}\" -o {out} {srcs}
+)
 set GO_EXIT_CODE=%ERRORLEVEL%
 RMDIR /S /Q "{gotmp}"
 MKDIR "{gotmp}"
@@ -506,6 +509,7 @@ exit /b %GO_EXIT_CODE%
             gotmp = gotmp.path.replace("/", "\\"),
             go = sdk.go.path.replace("/", "\\"),
             out = out.path,
+            out_pack = ctx.outputs.out_pack.path,
             srcs = " ".join([f.path for f in ctx.files.srcs]),
             ldflags = ctx.attr.ldflags,
         )
@@ -521,32 +525,35 @@ exit /b %GO_EXIT_CODE%
                 transitive = [sdk.headers, sdk.srcs, sdk.tools],
             ),
             toolchain = None,
-            outputs = [out, gotmp],
+            outputs = [out, ctx.outputs.out_pack, gotmp],
             mnemonic = "GoToolchainBinaryBuild",
         )
     else:
-        # -a flag instructs the compiler to not read from GOCACHE and force a rebuild.
-        # This provides extra safety in cases of unsandboxed execution.
+        # We do not use -a here as the cache drastically reduces the time spent
+        # on the second go build (roughly 50% faster).
         args = ctx.actions.args()
-        args.add("build")
-        args.add("-a")
-        args.add("-o", out)
-        args.add("-trimpath")
-        args.add("-ldflags", ctx.attr.ldflags, format = '-buildid="" %s')
+        args.add(ctx.outputs.out_pack)
+        args.add(out)
         args.add_all(ctx.files.srcs)
 
         ctx.actions.run_shell(
             command = """
-trap "HOME={HOME} GOROOT={GOROOT} {go} clean -cache" EXIT;
-HOME={HOME} {go} "$@" """.format(
+set -eu
+export HOME={HOME}
+trap "{go} clean -cache" EXIT;
+{go} build -trimpath -ldflags='-buildid="" {ldflags}' -o "$1" cmd/pack
+shift
+{go} build -trimpath -ldflags='-buildid="" {ldflags}' -o "$@"
+""".format(
                 go = sdk.go.path,
-                GOROOT = sdk.root_file.dirname,
+                ldflags = ctx.attr.ldflags,
                 # The value of GOCACHE/GOPATH are determined from HOME.
                 # We place them in the execroot to avoid dependency on `mktemp` and because we don't know
                 # a safe scratch space on all systems. Note that HOME must be an absolute path, otherwise the
                 # Go toolchain will write some outputs to the wrong place and the result will be uncacheable.
-                # We use a hardcoded UUID to prevent collisions with anything else under unsandboxed strategy.
-                HOME = "$(pwd)/_go_tool_binary-fake-home-85e96dea-541b-4188-8d13-5c2c42bdbd06",
+                # We include the output path of this action to prevent collisions with anything else,
+                # including differently configured versions of the same target, under an unsandboxed strategy.
+                HOME = "$(pwd)/_go_tool_binary-fake-home-" + out.path.replace("/", "_"),
             ),
             arguments = [args],
             tools = [sdk.go],
@@ -562,7 +569,7 @@ HOME={HOME} {go} "$@" """.format(
                 transitive = [sdk.headers, sdk.srcs, sdk.libs, sdk.tools],
             ),
             toolchain = None,
-            outputs = [out],
+            outputs = [out, ctx.outputs.out_pack],
             mnemonic = "GoToolchainBinaryBuild",
         )
 
@@ -586,6 +593,7 @@ go_tool_binary = rule(
         "ldflags": attr.string(
             doc = "Raw value to pass to go build via -ldflags without tokenization",
         ),
+        "out_pack": attr.output(),
     },
     executable = True,
     doc = """Used instead of go_binary for executables used in the toolchain.
@@ -594,6 +602,11 @@ go_tool_binary depends on tools and libraries that are part of the Go SDK.
 It does not depend on other toolchains. It can only compile binaries that
 just have a main package and only depend on the standard library and don't
 require build constraints.
+
+It is currently only used to build the `builder` tool maintained as part of
+rules_go as well as the `pack` tool provided by the Go SDK in source form
+only as of Go 1.25. Combining both builds into a single action drastically
+reduces the overall build time due to Go's own caching mechanism.
 """,
 )
 

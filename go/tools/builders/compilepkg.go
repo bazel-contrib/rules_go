@@ -37,6 +37,7 @@ func compilePkg(args []string) error {
 
 	fs := flag.NewFlagSet("GoCompilePkg", flag.ExitOnError)
 	goenv := envFlags(fs)
+	var pack string
 	var unfilteredSrcs, coverSrcs, embedSrcs, embedLookupDirs, embedRoots, recompileInternalDeps multiFlag
 	var deps archiveMultiFlag
 	var importPath, packagePath, packageListPath, coverMode string
@@ -45,6 +46,7 @@ func compilePkg(args []string) error {
 	var gcFlags, asmFlags, cppFlags, cFlags, cxxFlags, objcFlags, objcxxFlags, ldFlags quoteMultiFlag
 	var coverFormat string
 	var pgoprofile string
+	fs.StringVar(&pack, "pack", "", "Path of the pack tool.")
 	fs.Var(&unfilteredSrcs, "src", ".go, .c, .cc, .m, .mm, .s, or .S file to be filtered and compiled")
 	fs.Var(&coverSrcs, "cover", ".go file that should be instrumented for coverage (must also be a -src)")
 	fs.Var(&embedSrcs, "embedsrc", "file that may be compiled into the package with a //go:embed directive")
@@ -106,6 +108,7 @@ func compilePkg(args []string) error {
 
 	return compileArchive(
 		goenv,
+		pack,
 		importPath,
 		packagePath,
 		srcs,
@@ -137,6 +140,7 @@ func compilePkg(args []string) error {
 
 func compileArchive(
 	goenv *env,
+	pack string,
 	importPath string,
 	packagePath string,
 	srcs archiveSrcs,
@@ -456,7 +460,7 @@ func compileArchive(
 	// Pack .o and .syso files into the archive. These may come from cgo generated code,
 	// cgo dependencies (cdeps), windows resource file generation, or assembly.
 	if len(objFiles) > 0 {
-		if err := appendToArchive(goenv, outLinkObj, objFiles); err != nil {
+		if err := appendToArchive(goenv, pack, outLinkObj, objFiles); err != nil {
 			return err
 		}
 	}
@@ -531,9 +535,9 @@ func compileGo(goenv *env, srcs []string, packagePath, importcfgPath, embedcfgPa
 	return goenv.runCommand(args)
 }
 
-func appendToArchive(goenv *env, outPath string, objFiles []string) error {
+func appendToArchive(goenv *env, pack, outPath string, objFiles []string) error {
 	// Use abs to work around long path issues on Windows.
-	args := goenv.goCmd("tool", "pack", "r", abs(outPath))
+	args := []string{pack, "r", abs(outPath)}
 	args = append(args, objFiles...)
 	return goenv.runCommand(args)
 }

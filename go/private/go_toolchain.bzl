@@ -50,6 +50,7 @@ def _go_toolchain_impl(ctx):
 
             # Internal fields -- may be read by emit functions.
             _builder = ctx.executable.builder,
+            _pack = ctx.executable.pack,
         ),
     ]
 
@@ -62,6 +63,12 @@ go_toolchain = rule(
             cfg = "exec",
             executable = True,
             doc = "Tool used to execute most Go actions",
+        ),
+        "pack": attr.label(
+            mandatory = True,
+            cfg = "exec",
+            executable = True,
+            doc = "Tool used to pack object files into archives",
         ),
         "goos": attr.string(
             mandatory = True,
@@ -89,7 +96,7 @@ go_toolchain = rule(
     provides = [platform_common.ToolchainInfo],
 )
 
-def declare_go_toolchains(host_goos, sdk, builder):
+def declare_go_toolchains(host_goos, sdk, builder, pack):
     """Declares go_toolchain targets for each platform."""
     for p in PLATFORMS:
         if p.cgo:
@@ -111,6 +118,7 @@ def declare_go_toolchains(host_goos, sdk, builder):
             goarch = p.goarch,
             sdk = sdk,
             builder = builder,
+            pack = pack,
             link_flags = link_flags,
             cgo_link_flags = cgo_link_flags,
             tags = ["manual"],

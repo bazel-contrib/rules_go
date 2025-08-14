@@ -344,6 +344,7 @@ non_go_reset_target = rule(
         "dep": attr.label(
             mandatory = True,
             cfg = non_go_tool_transition,
+            allow_files = True,
         ),
         "_allowlist_function_transition": attr.label(
             default = "@bazel_tools//tools/allowlists/function_transition_allowlist",

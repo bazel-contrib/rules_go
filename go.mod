@@ -1,6 +1,6 @@
 module github.com/bazelbuild/rules_go
 
-toolchain go1.23.6
+toolchain go1.25.0
 
 go 1.22.0
 

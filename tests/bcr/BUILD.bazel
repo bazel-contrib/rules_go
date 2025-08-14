@@ -81,7 +81,7 @@ go_test(
 sdk_transition_test(
     name = "wrap_sdk_test",
     binary = ":wrap_test",
-    sdk_version = "1.23.6",
+    sdk_version = "1.25.0",
 )
 
 go_library(

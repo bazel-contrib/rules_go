@@ -211,15 +211,11 @@ COVERAGE_OPTIONS_DENYLIST = {
     "-fcoverage-mapping": None,
 }
 
-_RULES_GO_RAW_REPO_NAME = str(Label("//:unused"))[:-len("//:unused")]
-
-# When rules_go is the main repository and Bazel < 6 is used, the repo name does
-# not start with a "@", so we need to add it.
-RULES_GO_REPO_NAME = _RULES_GO_RAW_REPO_NAME if _RULES_GO_RAW_REPO_NAME.startswith("@") else "@" + _RULES_GO_RAW_REPO_NAME
+RULES_GO_REPO_NAME = str(Label("//:unused"))[:-len("//:unused")]
 RULES_GO_STDLIB_PREFIX = RULES_GO_REPO_NAME + "//stdlib:"
 
 # TODO: Remove the "and" once the rules_go repo itself uses Bzlmod.
-RULES_GO_IS_BZLMOD_REPO = _RULES_GO_RAW_REPO_NAME.lstrip("@") != "io_bazel_rules_go" and _RULES_GO_RAW_REPO_NAME.lstrip("@")
+RULES_GO_IS_BZLMOD_REPO = RULES_GO_REPO_NAME.lstrip("@") != "io_bazel_rules_go" and RULES_GO_REPO_NAME.lstrip("@")
 
 # Marks an action as supporting path mapping (--experimental_output_paths=strip).
 # See https://www.youtube.com/watch?v=Et1rjb7ixUU for more details.
