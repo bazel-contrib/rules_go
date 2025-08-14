@@ -59,7 +59,6 @@ def _go_test_impl(ctx):
 
     go = go_context(
         ctx,
-        include_deprecated_properties = False,
         importpath = ctx.attr.importpath,
         embed = ctx.attr.embed,
         # It's a list because it is transitioned.
