@@ -92,6 +92,7 @@ def _build_stdlib_list_json(go):
 
 def _build_env(go):
     env = go.env
+    env["GOROOT"] = go.sdk.root_file.dirname
 
     if go.mode.pure:
         env.update({"CGO_ENABLED": "0"})
