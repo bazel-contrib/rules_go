@@ -530,7 +530,7 @@ exit /b %GO_EXIT_CODE%
         )
     else:
         # We do not use -a here as the cache drastically reduces the time spent
-        # on the second go build (roughly 50% faster).
+        # on the second go build.
         args = ctx.actions.args()
         args.add(ctx.outputs.out_pack)
         args.add(out)
