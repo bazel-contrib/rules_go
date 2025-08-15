@@ -128,14 +128,14 @@ func New(opts ...Option) (*Runfiles, error) {
 		// not the actual executable.
 		// If the binary is invoked from PATH, then os.Args[0] is just the
 		// basename of the executable and isn't useful for locating runfiles.
-		if strings.IndexRune(os.Args[0], filepath.Separator) >= 0 {
+		if filepath.Base(os.Args[0]) != os.Args[0] {
 			o.program = ProgramName(os.Args[0])
 		} else {
 			exe, err := os.Executable()
 			if err != nil {
 				return nil, fmt.Errorf("runfiles: could not determine executable name: %w", err)
 			}
-			o.program = ProgramName(os.Args[0])
+			o.program = ProgramName(exe)
 		}
 	}
 	manifest := ManifestFile(o.program + ".runfiles_manifest")
