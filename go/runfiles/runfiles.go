@@ -122,7 +122,21 @@ func New(opts ...Option) (*Runfiles, error) {
 	}
 
 	if o.program == "" {
-		o.program = ProgramName(os.Args[0])
+		// If the binary is invoked via a relative path, it's important to use
+		// os.Args[0] since that may point to a symlink wrapping the actual
+		// executable and Bazel materializes the runfiles next to the symlink,
+		// not the actual executable.
+		// If the binary is invoked from PATH, then os.Args[0] is just the
+		// basename of the executable and isn't useful for locating runfiles.
+		if filepath.Base(os.Args[0]) != os.Args[0] {
+			o.program = ProgramName(os.Args[0])
+		} else {
+			exe, err := os.Executable()
+			if err != nil {
+				return nil, fmt.Errorf("runfiles: could not determine executable name: %w", err)
+			}
+			o.program = ProgramName(exe)
+		}
 	}
 	manifest := ManifestFile(o.program + ".runfiles_manifest")
 	if stat, err := os.Stat(string(manifest)); err == nil && stat.Mode().IsRegular() {
