@@ -94,9 +94,7 @@ func TestPath_FromPathRunfilesLookup(t *testing.T) {
 		os.Setenv("PATH", origPath)
 	})
 	cmd := exec.Command(filepath.Base(prog))
-	// We add r.Env() after os.Environ() so that runfile environment
-	// variables override anything set in the process environment.
-	cmd.Env = append(os.Environ(), r.Env()...)
+	cmd.Env = []string{}
 	out, err := cmd.Output()
 	if err != nil {
 		t.Fatal(err)
