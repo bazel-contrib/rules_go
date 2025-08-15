@@ -131,10 +131,10 @@ func New(opts ...Option) (*Runfiles, error) {
 		if strings.IndexRune(os.Args[0], filepath.Separator) >= 0 {
 			o.program = ProgramName(os.Args[0])
 		} else {
-			//exe, err := os.Executable()
-			//if err != nil {
-			//	return nil, fmt.Errorf("runfiles: could not determine executable name: %w", err)
-			//}
+			exe, err := os.Executable()
+			if err != nil {
+				return nil, fmt.Errorf("runfiles: could not determine executable name: %w", err)
+			}
 			o.program = ProgramName(os.Args[0])
 		}
 	}
