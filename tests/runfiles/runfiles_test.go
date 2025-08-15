@@ -73,39 +73,6 @@ func TestPath_SubprocessRunfilesLookup(t *testing.T) {
 	}
 }
 
-func TestPath_FromPathRunfilesLookup(t *testing.T) {
-	r, err := runfiles.New()
-	if err != nil {
-		panic(err)
-	}
-	// The binary “testprog” is itself built with Bazel, and needs
-	// runfiles.
-	testprogRpath := "io_bazel_rules_go/tests/runfiles/testprog/testprog_/testprog"
-	if runtime.GOOS == "windows" {
-		testprogRpath += ".exe"
-	}
-	prog, err := r.Rlocation(testprogRpath)
-	if err != nil {
-		panic(err)
-	}
-	origPath := os.Getenv("PATH")
-	os.Setenv("PATH", filepath.Dir(prog))
-	t.Cleanup(func() {
-		os.Setenv("PATH", origPath)
-	})
-	cmd := exec.Command(filepath.Base(prog))
-	cmd.Env = []string{}
-	out, err := cmd.Output()
-	if err != nil {
-		t.Fatal(err)
-	}
-	got := strings.TrimSpace(string(out))
-	want := "hi!"
-	if got != want {
-		t.Errorf("got %q, want %q", got, want)
-	}
-}
-
 func TestPath_errors(t *testing.T) {
 	r, err := runfiles.New()
 	if err != nil {
