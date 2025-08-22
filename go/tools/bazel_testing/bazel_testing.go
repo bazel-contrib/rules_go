@@ -154,7 +154,7 @@ func TestMain(m *testing.M, args Args) {
 
 	if debug {
 		fmt.Fprintf(os.Stderr, "test setup in %s\n", workspaceDir)
-		interrupted := make(chan os.Signal)
+		interrupted := make(chan os.Signal, 1)
 		signal.Notify(interrupted, os.Interrupt)
 		<-interrupted
 		return
