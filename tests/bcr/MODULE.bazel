@@ -19,7 +19,6 @@ local_path_override(
 )
 
 bazel_dep(name = "gazelle", version = "0.33.0")
-bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "protobuf", version = "3.19.6")
 bazel_dep(name = "rules_shell", version = "0.4.1")
 

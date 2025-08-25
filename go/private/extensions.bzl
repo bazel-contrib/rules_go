@@ -15,7 +15,7 @@
 load("@io_bazel_rules_go_bazel_features//:features.bzl", "bazel_features")
 load("//go/private:go_mod.bzl", "version_from_go_mod")
 load("//go/private:nogo.bzl", "DEFAULT_NOGO", "NOGO_DEFAULT_EXCLUDES", "NOGO_DEFAULT_INCLUDES", "go_register_nogo")
-load("//go/private:sdk.bzl", "detect_host_platform", "fetch_sdks_by_version", "go_download_sdk_rule", "go_host_sdk_rule", "go_multiple_toolchains", "go_wrap_sdk_rule")
+load("//go/private:sdk.bzl", "detect_host_platform", "go_download_sdk_rule", "go_host_sdk_rule", "go_multiple_toolchains", "go_wrap_sdk_rule")
 
 def host_compatible_toolchain_impl(ctx):
     ctx.file("BUILD.bazel")
@@ -197,10 +197,6 @@ def _go_sdk_impl(ctx):
     first_host_compatible_toolchain = None
     host_detected_goos, host_detected_goarch = detect_host_platform(ctx)
     toolchains = []
-
-    sdks_by_version = getattr(ctx, "facts", None) or {}
-    used_versions = {}
-
     for module in ctx.modules:
         # Apply wrapped toolchains first to override specific platforms from the
         # default toolchain or any downloads.
@@ -265,14 +261,18 @@ def _go_sdk_impl(ctx):
                 index = index,
             )
 
-            _download_sdk(
-                module_ctx = ctx,
-                sdks_by_version = sdks_by_version,
-                used_versions = used_versions,
+            # Keep in sync with the other calls to `go_download_sdk_rule` above and below.
+            go_download_sdk_rule(
                 name = name,
                 goos = download_tag.goos,
                 goarch = download_tag.goarch,
-                download_tag = download_tag,
+                sdks = download_tag.sdks,
+                experiments = download_tag.experiments,
+                patches = download_tag.patches,
+                patch_strip = download_tag.patch_strip,
+                urls = download_tag.urls,
+                version = download_tag.version,
+                strip_prefix = download_tag.strip_prefix,
             )
 
             if (not download_tag.goos or download_tag.goos == host_detected_goos) and (not download_tag.goarch or download_tag.goarch == host_detected_goarch):
@@ -306,14 +306,18 @@ def _go_sdk_impl(ctx):
                         suffix = "_{}_{}".format(goos, goarch),
                     )
 
-                    _download_sdk(
-                        module_ctx = ctx,
-                        sdks_by_version = sdks_by_version,
-                        used_versions = used_versions,
+                    # Keep in sync with the other calls to `go_download_sdk_rule` above.
+                    go_download_sdk_rule(
                         name = default_name,
                         goos = goos,
                         goarch = goarch,
-                        download_tag = download_tag,
+                        sdks = download_tag.sdks,
+                        experiments = download_tag.experiments,
+                        patches = download_tag.patches,
+                        patch_strip = download_tag.patch_strip,
+                        urls = download_tag.urls,
+                        version = download_tag.version,
+                        strip_prefix = download_tag.strip_prefix,
                     )
 
                     toolchains.append(struct(
@@ -375,18 +379,7 @@ def _go_sdk_impl(ctx):
     )
 
     if bazel_features.external_deps.extension_metadata_has_reproducible:
-        kwargs = {
-            "reproducible": True,
-        }
-
-        # See _download_sdk below for details on these facts.
-        if hasattr(ctx, "facts"):
-            kwargs["facts"] = {
-                version: sdk_info
-                for version, sdk_info in sdks_by_version.items()
-                if version in used_versions
-            }
-        return ctx.extension_metadata(**kwargs)
+        return ctx.extension_metadata(reproducible = True)
     else:
         return None
 
@@ -415,37 +408,6 @@ def _left_pad_zero(index, length):
     if index < 0:
         fail("index must be non-negative")
     return ("0" * length + str(index))[-length:]
-
-def _download_sdk(*, module_ctx, sdks_by_version, used_versions, name, goos, goarch, download_tag):
-    version = download_tag.version
-    sdks = download_tag.sdks
-    if version and not sdks:
-        # Avoid a download without a known digest in the SDK repo rule by fetching the SDKs filename
-        # and digest here. When using a version of Bazel that supports module extension facts, this
-        # info will be persisted in the lockfile, allowing for truly airgapped builds with an
-        # up-to-date lockfile and download (formerly repository) cache.
-        if version not in sdks_by_version:
-            # Lazily fetch the information about all SDKs so that we avoid the download if the facts
-            # already contain all the versions we care about.
-            sdks_by_version.clear()
-            sdks_by_version.update(fetch_sdks_by_version(module_ctx))
-        if version not in sdks_by_version:
-            fail("go_sdk: no SDKs found for version {} requested by".format(version), download_tag)
-        used_versions[version] = True
-        sdks = sdks_by_version[version]
-
-    go_download_sdk_rule(
-        name = name,
-        goos = goos,
-        goarch = goarch,
-        sdks = sdks,
-        experiments = download_tag.experiments,
-        patches = download_tag.patches,
-        patch_strip = download_tag.patch_strip,
-        urls = download_tag.urls,
-        version = download_tag.version,
-        strip_prefix = download_tag.strip_prefix,
-    )
 
 go_sdk_extra_kwargs = {
     # The choice of a host-compatible SDK is expressed in repository rule attribute values and

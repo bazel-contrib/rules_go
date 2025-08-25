@@ -81,7 +81,17 @@ def _go_download_sdk_impl(ctx):
             ctx.report_progress("Finding latest Go version")
         else:
             ctx.report_progress("Finding Go SHA-256 sums")
-        sdks_by_version = fetch_sdks_by_version(ctx)
+        ctx.download(
+            url = [
+                "https://go.dev/dl/?mode=json&include=all",
+                "https://golang.google.cn/dl/?mode=json&include=all",
+            ],
+            output = "versions.json",
+        )
+
+        data = ctx.read("versions.json")
+        ctx.delete("versions.json")
+        sdks_by_version = _parse_versions_json(data)
 
         if not version:
             highest_version = None
@@ -569,21 +579,6 @@ def _parse_versions_json(data):
         }
         for sdk in sdks
     }
-
-def fetch_sdks_by_version(ctx):
-    ctx.download(
-        url = [
-            "https://go.dev/dl/?mode=json&include=all",
-            "https://golang.google.cn/dl/?mode=json&include=all",
-        ],
-        output = "versions.json",
-    )
-    data = ctx.read("versions.json")
-
-    # module_ctx doesn't have delete, but its files are temporary anyway.
-    if hasattr(ctx, "delete"):
-        ctx.delete("versions.json")
-    return _parse_versions_json(data)
 
 def parse_version(version):
     """Parses a version string like "1.15.5" and returns a tuple of numbers or None"""
