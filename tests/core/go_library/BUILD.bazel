@@ -208,3 +208,8 @@ go_library(
         "//tests/core/go_test:__pkg__",
     ],
 )
+
+go_bazel_test(
+    name = "trimpath_test",
+    srcs = ["trimpath_test.go"],
+)

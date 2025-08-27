@@ -169,12 +169,12 @@ func cgo2(goenv *env, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSr
 	}
 	hdrIncludes = append(hdrIncludes, "-iquote", workDir) // for _cgo_export.h
 
-	execRoot, err := bazelExecRoot()
+	// Trim the path in //line comments emitted by cgo.
+	trimPath, err := createTrimPath()
 	if err != nil {
 		return "", nil, nil, err
 	}
-	// Trim the execroot from the //line comments emitted by cgo.
-	args := goenv.goTool("cgo", "-srcdir", srcDir, "-objdir", workDir, "-trimpath", execRoot)
+	args := goenv.goTool("cgo", "-srcdir", srcDir, "-objdir", workDir, "-trimpath", trimPath)
 	if ldflagsFile != nil {
 		// The "@" prefix tells cgo to read arguments from the file.
 		args = append(args, "-ldflags", "@"+ldflagsFile.Name())
@@ -419,18 +419,6 @@ func gatherSrcs(dir string, srcs []string) ([]string, error) {
 		copiedBases[i] = base
 	}
 	return copiedBases, nil
-}
-
-func bazelExecRoot() (string, error) {
-	// Bazel executes the builder with a working directory of the form
-	// .../execroot/<workspace name>. By stripping the last segment, we obtain a
-	// prefix of all possible source files, even when contained in external
-	// repositories.
-	cwd, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Dir(cwd), nil
 }
 
 type cgoError []string

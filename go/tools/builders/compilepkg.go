@@ -353,14 +353,35 @@ func compileArchive(
 				return err
 			}
 		}
-		gcFlags = append(gcFlags, createTrimPath(gcFlags, srcDir))
+		gcFlags = append(gcFlags, "-trimpath="+srcDir)
 	} else {
 		if cgoExportHPath != "" {
 			if err := os.WriteFile(cgoExportHPath, nil, 0o666); err != nil {
 				return err
 			}
 		}
-		gcFlags = append(gcFlags, createTrimPath(gcFlags, "."))
+		trimPath, err := createTrimPath()
+		if err != nil {
+			return err
+		}
+		// Preserve an existing -trimpath argument, applying abs() to each prefix.
+		for i, flag := range gcFlags {
+			if strings.HasPrefix(flag, "-trimpath=") {
+				gcFlags = append(gcFlags[:i], gcFlags[i+1:]...)
+				rewrites := strings.Split(flag[len("-trimpath="):], ";")
+				for j, rewrite := range rewrites {
+					prefix, replace := rewrite, ""
+					if p := strings.LastIndex(rewrite, "=>"); p >= 0 {
+						prefix, replace = rewrite[:p], rewrite[p:]
+					}
+					rewrites[j] = abs(prefix) + replace
+				}
+				rewrites = append(rewrites, trimPath)
+				trimPath = strings.Join(rewrites, ";")
+				break
+			}
+		}
+		gcFlags = append(gcFlags, "-trimpath="+trimPath)
 	}
 
 	importcfgPath, err := checkImportsAndBuildCfg(goenv, importPath, srcs, deps, packageListPath, recompileInternalDeps, compilingWithCgo, coverMode, workDir)
@@ -531,7 +552,7 @@ func compileGo(goenv *env, srcs []string, packagePath, importcfgPath, embedcfgPa
 	args = append(args, "-linkobj", outLinkobjPath)
 	args = append(args, "--")
 	args = append(args, srcs...)
-	absArgs(args, []string{"-I", "-o", "-trimpath", "-importcfg"})
+	absArgs(args, []string{"-I", "-o", "-importcfg"})
 	return goenv.runCommand(args)
 }
 
@@ -542,14 +563,16 @@ func appendToArchive(goenv *env, pack, outPath string, objFiles []string) error 
 	return goenv.runCommand(args)
 }
 
-func createTrimPath(gcFlags []string, path string) string {
-	for _, flag := range gcFlags {
-		if strings.HasPrefix(flag, "-trimpath=") {
-			return flag + ":" + path
-		}
+func createTrimPath() (string, error) {
+	trimPath, err := os.Getwd()
+	if err != nil {
+		return "", err
 	}
-
-	return "-trimpath=" + path
+	// Create a trim path to make paths relative to the working directory.
+	// First, attempt to trim the working directory, and if this fails, replace
+	// the parent of the working directory with "..".
+	trimPath = fmt.Sprintf("%s;%s=>..", trimPath, filepath.Dir(trimPath))
+	return trimPath, nil
 }
 
 func sanitizePathForIdentifier(path string) string {

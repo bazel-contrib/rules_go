@@ -25,7 +25,7 @@ proto_library(
 
 go_proto_library(
     name = "validate",
-    gc_goopts = ["-trimpath=$(BINDIR)=>."],
+    gc_goopts = ["-trimpath=$(BINDIR)"],
     importpath = "go_plugin_with_proto_library/validate",
     proto = ":validate_proto",
 )
