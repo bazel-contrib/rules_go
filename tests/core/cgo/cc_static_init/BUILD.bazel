@@ -1,0 +1,42 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_test")
+
+cc_library(
+    name = "lib",
+    srcs = ["lib.cpp"],
+    hdrs = ["lib.h"],
+)
+
+cc_library(
+    name = "side_effect",
+    srcs = ["side_effect.cpp"],
+    deps = [":lib"],
+    alwayslink = True,
+)
+
+# used to check that the side effect is performed exactly once,
+# even if imported several times through different targets
+cc_library(
+    name = "side_effect_wrapper",
+    deps = [":side_effect"],
+)
+
+cc_test(
+    name = "test_side_effect_cc",
+    srcs = ["test_side_effect.cpp"],
+    deps = [
+        ":lib",
+        ":side_effect",
+        ":side_effect_wrapper",
+    ],
+)
+
+go_test(
+    name = "test_side_effect_go",
+    srcs = ["test_side_effect.go"],
+    cdeps = [
+        ":lib",
+        ":side_effect",
+        ":side_effect_wrapper",
+    ],
+    cgo = True,
+)
