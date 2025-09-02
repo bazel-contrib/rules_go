@@ -216,7 +216,10 @@ def _go_test_impl(ctx):
             executable = executable,
         ),
         OutputGroupInfo(
-            compilation_outputs = [internal_archive.data.file],
+            compilation_outputs = [
+                internal_archive.data.file,
+                external_archive.data.file,
+            ],
             nogo_fix = nogo_diagnosticss,
             _validation = validation_outputs,
         ),
