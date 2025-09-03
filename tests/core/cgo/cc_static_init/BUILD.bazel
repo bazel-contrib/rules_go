@@ -24,7 +24,6 @@ cc_test(
     name = "test_side_effect_cc",
     srcs = ["test_side_effect.cpp"],
     deps = [
-        ":lib",
         ":side_effect",
         ":side_effect_wrapper",
     ],
@@ -34,7 +33,6 @@ go_test(
     name = "test_side_effect_go",
     srcs = ["test_side_effect.go"],
     cdeps = [
-        ":lib",
         ":side_effect",
         ":side_effect_wrapper",
     ],

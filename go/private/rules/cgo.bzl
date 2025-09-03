@@ -212,8 +212,6 @@ def _cc_libs_and_flags(target):
     return libs, flags
 
 def _alwayslink_lib_opts(go, lib_path):
-    if go.mode.goos == "windows":
-        return ["/WHOLEARCHIVE:{}".format(lib_path)]
     if go.mode.goos == "darwin":
         return ["-Wl,-force_load,{}".format(lib_path)]
     return ["-Wl,-whole-archive", lib_path, "-Wl,-no-whole-archive"]
