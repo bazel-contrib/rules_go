@@ -146,10 +146,7 @@ def cgo_configure(go, srcs, cdeps, cppopts, copts, cxxopts, clinkopts):
                         # so it can be treated as a simple shared library too.
                         continue
 
-                if (
-                    (lib.basename.endswith(".lo") or lib.basename.endswith(".lo.lib")) and
-                    lib.path not in seen_alwayslink_libs
-                ):
+                if lib.basename.endswith(".lo") and lib.path not in seen_alwayslink_libs:
                     seen_alwayslink_libs[lib.path] = True
                     lib_opts.extend(_alwayslink_lib_opts(go, lib.path))
                 else:
