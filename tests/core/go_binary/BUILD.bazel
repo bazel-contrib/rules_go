@@ -48,7 +48,6 @@ go_binary(
     ],
     goarch = "amd64",
     goos = "plan9",
-    pure = "on",
 )
 
 many_deps(name = "many_deps")
