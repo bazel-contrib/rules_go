@@ -178,7 +178,7 @@ def _declare_directory(go, path = "", ext = "", name = ""):
 def _dirname(file):
     return file.dirname
 
-def _builder_args(go, command = None, use_path_mapping = False):
+def _builder_args(go, command = None):
     args = go.actions.args()
     args.use_param_file("-param=%s")
     if command:
@@ -188,15 +188,15 @@ def _builder_args(go, command = None, use_path_mapping = False):
 
     # Path mapping can't map the values of environment variables, so we need to pass GOROOT to the
     # action via an argument instead.
-    if use_path_mapping:
-        if go.stdlib:
-            goroot_file = go.stdlib.root_file
-        else:
-            goroot_file = sdk_root_file
+    if go.stdlib:
+        goroot_file = go.stdlib.root_file
+    else:
+        goroot_file = sdk_root_file
 
-        # Use a file rather than goroot as the latter is just a string and thus
-        # not subject to path mapping.
-        args.add_all("-goroot", [goroot_file], map_each = _dirname, expand_directories = False)
+    # Use a file rather than goroot as the latter is just a string and thus
+    # not subject to path mapping.
+    args.add_all("-goroot", [goroot_file], map_each = _dirname, expand_directories = False)
+
     mode = go.mode
     args.add("-installsuffix", installsuffix(mode))
     args.add_joined("-tags", mode.tags, join_with = ",")

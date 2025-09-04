@@ -99,7 +99,7 @@ def emit_compilepkg(
     inputs_transitive = [sdk.headers, sdk.tools, go.stdlib.libs, headers]
     outputs = [out_lib, out_export]
 
-    shared_args = go.builder_args(go, use_path_mapping = True)
+    shared_args = go.builder_args(go)
     shared_args.add_all(sources, before_each = "-src")
 
     compile_args = go.tool_args(go)
