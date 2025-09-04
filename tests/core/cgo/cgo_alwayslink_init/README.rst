@@ -9,8 +9,8 @@ test_side_effect_go
 This test verifies that the dynamic initialization of C++ variables with static storage duration in
 `cc_library` targets with `alwayslink = True` is performed when linked into a `go_test` or
 `go_binary` with `cgo = True`. This is a regression test for issue `#1486`_. The test also
-includes a `lib_wrapper` library to ensure that there are no linker errors and that the side effect
-is performed exactly once, even if imported multiple times through different targets.
+includes a `lib_wrapper` library to ensure that the side effect is performed exactly once, even
+if imported multiple times through different targets.
 
 test_side_effect_cc
 -------------------

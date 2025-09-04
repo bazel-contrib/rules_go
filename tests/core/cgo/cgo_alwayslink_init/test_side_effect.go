@@ -1,6 +1,6 @@
 package ccstaticinit
 
-// #include "tests/core/cgo/cc_static_init/lib.h"
+// #include "tests/core/cgo/cgo_alwayslink_init/lib.h"
 import "C"
 import "testing"
 
