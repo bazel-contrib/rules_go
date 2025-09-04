@@ -2,30 +2,29 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
 cc_library(
     name = "lib",
-    srcs = ["lib.cpp"],
-    hdrs = ["lib.h"],
-)
-
-cc_library(
-    name = "side_effect",
-    srcs = ["side_effect.cpp"],
-    deps = [":lib"],
+    srcs = [
+        "lib.cpp",
+        "side_effect.cpp",
+    ],
+    hdrs = [
+        "lib.h",
+    ],
     alwayslink = True,
 )
 
-# used to check that the side effect is performed exactly once,
-# even if imported several times through different targets
+# used to check that we don't get a "multiple definition" linker errors, and that the side effect
+# is performed exactly once, even if imported several times through different targets
 cc_library(
-    name = "side_effect_wrapper",
-    deps = [":side_effect"],
+    name = "lib_wrapper",
+    deps = [":lib"],
 )
 
 cc_test(
     name = "test_side_effect_cc",
     srcs = ["test_side_effect.cpp"],
     deps = [
-        ":side_effect",
-        ":side_effect_wrapper",
+        ":lib",
+        ":lib_wrapper",
     ],
 )
 
@@ -33,8 +32,8 @@ go_test(
     name = "test_side_effect_go",
     srcs = ["test_side_effect.go"],
     cdeps = [
-        ":side_effect",
-        ":side_effect_wrapper",
+        ":lib",
+        ":lib_wrapper",
     ],
     cgo = True,
 )
