@@ -66,7 +66,7 @@ def emit_link(
 
     # use ar tool from cc toolchain if cc toolchain provides it
     if go.cgo_tools and go.cgo_tools.ar_path and go.cgo_tools.ar_path.endswith("ar"):
-        tool_args.add_all(["-extar", go.cgo_tools.ar_path])
+        tool_args.add("-extar", go.cgo_tools.ar_path)
 
     # Add in any mode specific behaviours
     if go.mode.race:

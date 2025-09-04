@@ -68,9 +68,8 @@ def _build_stdlib_list_json(go):
     out = go.declare_file(go, "stdlib.pkg.json")
     cache_dir = go.declare_directory(go, "gocache")
     args = go.builder_args(go, "stdliblist")
-    args.add("-sdk", sdk.root_file.dirname)
     args.add("-out", out)
-    args.add("-cache", cache_dir.path)
+    args.add_all("-cache", [cache_dir], expand_directories = False)
     if go.export_stdlib:
         args.add("-export", go.export_stdlib)
 
@@ -87,6 +86,7 @@ def _build_stdlib_list_json(go):
         arguments = [args],
         env = _build_env(go),
         toolchain = GO_TOOLCHAIN_LABEL,
+        execution_requirements = SUPPORTS_PATH_MAPPING_REQUIREMENT,
     )
     return out, cache_dir
 
@@ -130,7 +130,7 @@ def _dirname(file):
 
 def _build_stdlib(go):
     pkg = go.declare_directory(go, path = "pkg")
-    args = go.builder_args(go, "stdlib", use_path_mapping = True)
+    args = go.builder_args(go, "stdlib")
 
     # Use a file rather than pkg.dirname as the latter is just a string and thus
     # not subject to path mapping.

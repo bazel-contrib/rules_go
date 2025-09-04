@@ -60,7 +60,6 @@ def _go_test_impl(ctx):
 
     go = go_context(
         ctx,
-        include_deprecated_properties = False,
         importpath = ctx.attr.importpath,
         embed = ctx.attr.embed,
         go_context_data = ctx.attr._go_context_data,
@@ -117,7 +116,7 @@ def _go_test_impl(ctx):
         run_dir = repo_relative_rundir
 
     main_go = go.declare_file(go, path = "testmain.go")
-    arguments = go.builder_args(go, "gentestmain", use_path_mapping = True)
+    arguments = go.builder_args(go, "gentestmain")
     arguments.add("-output", main_go)
     if go.coverage_enabled:
         # Always use atomic mode as the "runtime/coverage" APIs require it
