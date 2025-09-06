@@ -28,6 +28,7 @@ func TestCompilationOutputs(t *testing.T) {
 		"lib.a":                    false, // :lib archive
 		"lib_test.internal.a":      false, // :lib_test internal archive
 		"lib_test_test.external.a": false, // :lib_test external archive
+		"lib_test~testmain.a":      false, // :lib_test main archive
 		"bin.a":                    false, // :bin archive
 	}
 	for _, rf := range runfiles {
