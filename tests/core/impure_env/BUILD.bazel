@@ -1,0 +1,51 @@
+# To run the tests:
+# bazelisk test //tests/core/impure_env/...
+
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load(
+    "@bazel_skylib//lib:structs.bzl",
+    "structs",
+)
+load(
+    "//go/private:common.bzl",
+    "GO_TOOLCHAIN",
+    "GO_TOOLCHAIN_LABEL",
+    "SUPPORTS_PATH_MAPPING_REQUIREMENT",
+    "as_list",
+    "asm_exts",
+    "cgo_exts",
+    "go_exts",
+    "syso_exts",
+)
+
+go_library(
+    name = "impure_env_lib",
+    srcs = ["lib.go"],
+    importpath = "github.com/bazelbuild/rules_go/tests/core/impure_env",
+)
+
+go_test(
+    name = "impure_env_test",
+    srcs = ["test.go"],
+    deps = [":impure_env_lib"],
+    impure_env = {
+        "TEST_VAR": "test_value",
+    },
+)
+
+go_test(
+    name = "impure_env_test_no_env",
+    srcs = ["test_no_env.go"],
+    deps = [":impure_env_lib"],
+)
+
+go_test(
+    name = "impure_env_test_multiple",
+    srcs = ["test_multiple_env.go"],
+    deps = [":impure_env_lib"],
+    impure_env = {
+        "TEST_VAR1": "value1",
+        "TEST_VAR2": "value2",
+        "TEST_VAR3": "value3",
+    },
+)
