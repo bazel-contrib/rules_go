@@ -24,9 +24,9 @@ http_archive(
 # Required by protobuf.
 http_archive(
     name = "rules_cc",
-    sha256 = "c0a0cee0e94c7242b6904c2ad23e19a90c8127946d19a11d61a20f50a01cca20",
-    strip_prefix = "rules_cc-0.2.5",
-    urls = ["https://github.com/bazelbuild/rules_cc/releases/download/0.2.5/rules_cc-0.2.5.tar.gz"],
+    sha256 = "b8b918a85f9144c01f6cfe0f45e4f2838c7413961a8ff23bc0c6cdf8bb07a3b6",
+    strip_prefix = "rules_cc-0.1.5",
+    urls = ["https://github.com/bazelbuild/rules_cc/releases/download/0.1.5/rules_cc-0.1.5.tar.gz"],
 )
 
 # An up-to-date version is transitively required by Stardoc to fix
