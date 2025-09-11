@@ -332,6 +332,14 @@ def go_rules_dependencies(force = False):
         url = "https://github.com/bazelbuild/rules_shell/releases/download/v0.3.0/rules_shell-v0.3.0.tar.gz",
     )
 
+    wrapper(
+        http_archive,
+        name = "rules_cc",
+        sha256 = "c0a0cee0e94c7242b6904c2ad23e19a90c8127946d19a11d61a20f50a01cca20",
+        strip_prefix = "rules_cc-0.2.5",
+        url = "https://github.com/bazelbuild/rules_cc/releases/download/0.2.5/rules_cc-0.2.5.tar.gz",
+    )
+
 def _go_host_compatible_sdk_label_impl(ctx):
     ctx.file("BUILD.bazel")
     ctx.file("defs.bzl", """HOST_COMPATIBLE_SDK = Label("@go_sdk//:ROOT")""")
