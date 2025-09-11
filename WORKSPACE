@@ -21,7 +21,7 @@ http_archive(
     url = "https://github.com/bazel-contrib/bazel_features/releases/download/v1.9.1/bazel_features-v1.9.1.tar.gz",
 )
 
-# Required by protobuf.
+# Required by protobuf and for //go/private:context.
 http_archive(
     name = "rules_cc",
     sha256 = "b8b918a85f9144c01f6cfe0f45e4f2838c7413961a8ff23bc0c6cdf8bb07a3b6",

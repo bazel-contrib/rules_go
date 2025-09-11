@@ -332,6 +332,7 @@ def go_rules_dependencies(force = False):
         url = "https://github.com/bazelbuild/rules_shell/releases/download/v0.3.0/rules_shell-v0.3.0.tar.gz",
     )
 
+    # Required by protobuf and for //go/private:context.
     wrapper(
         http_archive,
         name = "rules_cc",
