@@ -66,13 +66,12 @@ func main() {
 package main
 
 import (
+	"crypto/fips140"
 	"fmt"
-	"os"
 )
 
 func main() {
-	gofips140 := os.Getenv("GOFIPS140")
-	fmt.Printf("GOFIPS140=%s", gofips140)
+	fmt.Printf("%t", fips140.Enabled())
 }
 `,
 	})
@@ -110,7 +109,7 @@ func TestGOFIPS140(t *testing.T) {
 		t.Fatalf("running //:gofips140_test without flag: %v", err)
 	}
 	got := string(bytes.TrimSpace(out))
-	if want := "GOFIPS140=off"; got != want {
+	if want := "false"; got != want {
 		t.Fatalf("got %q; want %q", got, want)
 	}
 
@@ -120,7 +119,7 @@ func TestGOFIPS140(t *testing.T) {
 		t.Fatalf("running //:gofips140_test with gofips140=latest: %v", err)
 	}
 	got = string(bytes.TrimSpace(out))
-	if want := "GOFIPS140=latest"; got != want {
+	if want := "true"; got != want {
 		t.Fatalf("got %q; want %q", got, want)
 	}
 
@@ -130,7 +129,7 @@ func TestGOFIPS140(t *testing.T) {
 		t.Fatalf("running //:gofips140_test with gofips140=v1.0.0: %v", err)
 	}
 	got = string(bytes.TrimSpace(out))
-	if want := "GOFIPS140=v1.0.0"; got != want {
+	if want := "true"; got != want {
 		t.Fatalf("got %q; want %q", got, want)
 	}
 }
