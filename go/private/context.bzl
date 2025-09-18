@@ -452,6 +452,7 @@ default_go_config_info = GoConfigInfo(
     race = False,
     msan = False,
     pure = False,
+    gofips140 = "off",
     strip = False,
     debug = False,
     linkmode = LINKMODE_NORMAL,
@@ -541,6 +542,7 @@ def go_context(
         "GOROOT": goroot,
         "GOROOT_FINAL": "GOROOT",
         "CGO_ENABLED": "0" if mode.pure else "1",
+        "GOFIPS140": mode.gofips140,
 
         # If we use --action_env=GOPATH, or in other cases where environment
         # variables are passed through to this builder, the SDK build will try
@@ -988,6 +990,7 @@ def _go_config_impl(ctx):
         race = race,
         msan = msan,
         pure = ctx.attr.pure[BuildSettingInfo].value,
+        gofips140 = ctx.attr.gofips140[BuildSettingInfo].value,
         strip = ctx.attr.strip,
         debug = ctx.attr.debug[BuildSettingInfo].value,
         linkmode = ctx.attr.linkmode[BuildSettingInfo].value,
@@ -1021,6 +1024,10 @@ go_config = rule(
             providers = [BuildSettingInfo],
         ),
         "pure": attr.label(
+            mandatory = True,
+            providers = [BuildSettingInfo],
+        ),
+        "gofips140": attr.label(
             mandatory = True,
             providers = [BuildSettingInfo],
         ),

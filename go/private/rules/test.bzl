@@ -407,6 +407,13 @@ _go_test_kwargs = {
             [pure].
             """,
         ),
+        "gofips140": attr.string(
+            default = "auto",
+            doc = """Controls the GOFIPS140 environment variable. May be any string value.
+            Common values include `"off"` (default), `"latest"`, and specific versions like `"v1.0.0"`.
+            See [mode attributes], specifically [gofips140].
+            """,
+        ),
         "static": attr.string(
             default = "auto",
             doc = """Controls whether a binary is statically linked. May be one of `on`,

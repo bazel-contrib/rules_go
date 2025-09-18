@@ -48,6 +48,8 @@ def mode_string(mode):
         result.append("msan")
     if mode.pure:
         result.append("pure")
+    if mode.gofips140:
+        result.append("gofips140")
     if mode.debug:
         result.append("debug")
     if mode.strip:
