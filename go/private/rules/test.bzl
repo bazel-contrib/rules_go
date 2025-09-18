@@ -408,7 +408,7 @@ _go_test_kwargs = {
             """,
         ),
         "gofips140": attr.string(
-            default = "auto",
+            default = "off",
             doc = """Controls the GOFIPS140 environment variable. May be any string value.
             Common values include `"off"` (default), `"latest"`, and specific versions like `"v1.0.0"`.
             See [mode attributes], specifically [gofips140].
