@@ -16,36 +16,36 @@
 //
 // # Usage
 //
-// This package has two main entry points, the global functions Rlocation, Env
-// and New, as well as the Runfiles type.
+// This package has two main entry points, the global functions [Rlocation],
+// [Env] and [New], as well as the [Runfiles] type.
 //
 // # Global functions
 //
-// Most users should use the Rlocation and Env functions directly to access
-// individual runfiles. Use Rlocation to find the filesystem location of a
-// runfile, and use Env to obtain environmental variables to pass on to
+// Most users should use the [Rlocation] and [Env] functions directly to access
+// individual runfiles.  Use [Rlocation] to find the filesystem location of a
+// runfile, and use [Env] to obtain environmental variables to pass on to
 // subprocesses that themselves may need to access runfiles.
 //
-// The New function returns a Runfiles object that implements fs.FS. This allows
-// more complex operations on runfiles, such as iterating over all runfiles in a
-// certain directory or evaluating glob patterns, consistently across all
-// platforms.
+// The [New] function returns a [Runfiles] object that implements [fs.FS].
+// This allows more complex operations on runfiles, such as iterating over all
+// runfiles in a certain directory or evaluating glob patterns, consistently
+// across all platforms.
 //
 // All of these functions follow the standard runfiles discovery process, which
-// works uniformly across Bazel build actions, `bazel test`, and `bazel run`. It
-// does rely on cooperation between processes (see Env for details).
+// works uniformly across Bazel build actions, bazel test, and bazel run.  It
+// does rely on cooperation between processes (see [Env] for details).
 //
 // # Custom runfiles discovery and lookup
 //
 // If you need to look up runfiles in a custom way (e.g., you use them for a
-// packaged application or one that is available on PATH), you can pass Option
-// values to New to force a specific runfiles location.
+// packaged application or one that is available on PATH), you can pass
+// [Option] values to [New] to force a specific runfiles location.
 //
 // ## Restrictions
 //
 // Functions in this package may not observe changes to the environment or
-// os.Args after the first call to any of them. Pass Option values to New to
-// customize runfiles discovery instead.
+// [os.Args] after the first call to any of them.  Pass [Option] values to
+// [New] to customize runfiles discovery instead.
 package runfiles
 
 import (
@@ -70,15 +70,15 @@ type repoMappingKey struct {
 	targetRepoApparentName string
 }
 
-// Runfiles allows access to Bazel runfiles.  Use New to create Runfiles
+// Runfiles allows access to Bazel runfiles.  Use [New] to create Runfiles
 // objects; the zero Runfiles object always returns errors.  See
 // https://bazel.build/extending/rules#runfiles for some information on
 // Bazel runfiles.
 //
-// Runfiles implements fs.FS regardless of the type of runfiles that backs it.
-// This is the preferred way to interact with runfiles in a platform-agnostic
-// way. For example, to find all runfiles beneath a directory, use fs.Glob or
-// fs.WalkDir.
+// Runfiles implements [fs.FS] regardless of the type of runfiles that backs
+// it.  This is the preferred way to interact with runfiles in a
+// platform-agnostic way.  For example, to find all runfiles beneath a
+// directory, use [fs.Glob] or [fs.WalkDir].
 type Runfiles struct {
 	// We don’t need concurrency control since Runfiles objects are
 	// immutable once created.
@@ -90,9 +90,9 @@ type Runfiles struct {
 
 const noSourceRepoSentinel = "_not_a_valid_repository_name"
 
-// New creates a given Runfiles object.  By default, it uses os.Args and the
-// RUNFILES_MANIFEST_FILE and RUNFILES_DIR environmental variables to find the
-// runfiles location.  This can be overwritten by passing some options.
+// New creates a given [Runfiles] object.  By default, it uses [os.Args] and
+// the RUNFILES_MANIFEST_FILE and RUNFILES_DIR environmental variables to find
+// the runfiles location.  This can be overwritten by passing some options.
 //
 // See section “Runfiles discovery” in
 // https://docs.google.com/document/d/e/2PACX-1vSDIrFnFvEYhKsCMdGdD40wZRBX3m3aZ5HhVj4CtHPmiXKDCxioTUbYsDydjKtFDAzER5eg7OjJWs3V/pub.
@@ -156,9 +156,10 @@ func New(opts ...Option) (*Runfiles, error) {
 // backslash) as directory separator. It is typically of the form
 // "repo/path/to/pkg/file".
 //
-// If r is the zero Runfiles object, Rlocation always returns an error. If the
-// runfiles manifest maps s to an empty name (indicating an empty runfile not
-// present in the filesystem), Rlocation returns an error that wraps ErrEmpty.
+// If r is the zero [Runfiles] object, Rlocation always returns an error.  If
+// the runfiles manifest maps s to an empty name (indicating an empty runfile
+// not present in the filesystem), Rlocation returns an error that wraps
+// [ErrEmpty].
 //
 // See section “Library interface” in
 // https://docs.google.com/document/d/e/2PACX-1vSDIrFnFvEYhKsCMdGdD40wZRBX3m3aZ5HhVj4CtHPmiXKDCxioTUbYsDydjKtFDAzER5eg7OjJWs3V/pub.
@@ -231,15 +232,15 @@ func (r *Runfiles) loadRepoMapping() error {
 // Env returns additional environmental variables to pass to subprocesses.
 // Each element is of the form “key=value”.  Pass these variables to
 // Bazel-built binaries so they can find their runfiles as well.  See the
-// Runfiles example for an illustration of this.
+// [Runfiles] example for an illustration of this.
 //
 // The return value is a newly-allocated slice; you can modify it at will.  If
-// r is the zero Runfiles object, the return value is nil.
+// r is the zero [Runfiles] object, the return value is nil.
 func (r *Runfiles) Env() []string {
 	return r.env
 }
 
-// WithSourceRepo returns a Runfiles instance identical to the current one,
+// WithSourceRepo returns a [Runfiles] instance identical to the current one,
 // except that it uses the given repository's repository mapping when resolving
 // runfiles paths.
 func (r *Runfiles) WithSourceRepo(sourceRepo string) *Runfiles {
@@ -251,19 +252,20 @@ func (r *Runfiles) WithSourceRepo(sourceRepo string) *Runfiles {
 	return &clone
 }
 
-// Option is an option for the New function to override runfiles discovery.
+// Option is an option for the [New] function to override runfiles discovery.
 type Option interface {
 	apply(*options)
 }
 
-// ProgramName is an Option that sets the program name. If not set, New uses
-// os.Args[0].
+// ProgramName is an [Option] that sets the program name.  If not set, [New]
+// uses os.Args[0].
 type ProgramName string
 
-// SourceRepo is an Option that sets the canonical name of the repository whose
-// repository mapping should be used to resolve runfiles paths. If not set, New
-// uses the repository containing the source file from which New is called.
-// Use CurrentRepository to get the name of the current repository.
+// SourceRepo is an [Option] that sets the canonical name of the repository
+// whose repository mapping should be used to resolve runfiles paths.  If not
+// set, [New] uses the repository containing the source file from which [New]
+// is called.  Use [CurrentRepository] to get the name of the current
+// repository.
 type SourceRepo string
 
 // Error represents a failure to look up a runfile.
@@ -275,12 +277,12 @@ type Error struct {
 	Err error
 }
 
-// Error implements error.Error.
+// Error implements [error.Error].
 func (e Error) Error() string {
 	return fmt.Sprintf("runfile %s: %s", e.Name, e.Err.Error())
 }
 
-// Unwrap returns the underlying error, for errors.Unwrap.
+// Unwrap returns the underlying error, for [errors.Unwrap].
 func (e Error) Unwrap() error { return e.Err }
 
 // ErrEmpty indicates that a runfile isn’t present in the filesystem, but

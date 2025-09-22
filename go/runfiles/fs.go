@@ -23,7 +23,7 @@ import (
 	"time"
 )
 
-// Open implements fs.FS for a Runfiles instance.
+// Open implements [fs.FS] for a [Runfiles] instance.
 //
 // Rlocation-style paths are supported with both apparent and canonical repo
 // names. The root directory of the filesystem (".") additionally lists the

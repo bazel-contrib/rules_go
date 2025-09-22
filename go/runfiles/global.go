@@ -20,10 +20,11 @@ import (
 	"sync"
 )
 
-// Rlocation returns the absolute path name of a runfile.  The runfile name must be
-// a relative path, using the slash (not backslash) as directory separator.  If
-// the runfiles manifest maps s to an empty name (indicating an empty runfile
-// not present in the filesystem), Rlocation returns an error that wraps ErrEmpty.
+// Rlocation returns the absolute path name of a runfile.  The runfile name
+// must be a relative path, using the slash (not backslash) as directory
+// separator.  If the runfiles manifest maps s to an empty name (indicating an
+// empty runfile not present in the filesystem), Rlocation returns an error
+// that wraps [ErrEmpty].
 func Rlocation(path string) (string, error) {
 	return RlocationFrom(path, CallerRepository())
 }
@@ -39,7 +40,7 @@ func RlocationFrom(path string, sourceRepo string) (string, error) {
 // Env returns additional environmental variables to pass to subprocesses.
 // Each element is of the form “key=value”.  Pass these variables to
 // Bazel-built binaries so they can find their runfiles as well.  See the
-// Runfiles example for an illustration of this.
+// [Runfiles] example for an illustration of this.
 //
 // The return value is a newly-allocated slice; you can modify it at will.
 func Env() ([]string, error) {

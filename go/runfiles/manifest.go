@@ -29,7 +29,7 @@ import (
 )
 
 // ManifestFile specifies the location of the runfile manifest file.  You can
-// pass this as an option to New.  If unset or empty, use the value of the
+// pass this as an option to [New].  If unset or empty, use the value of the
 // environmental variable RUNFILES_MANIFEST_FILE.
 type ManifestFile string
 
