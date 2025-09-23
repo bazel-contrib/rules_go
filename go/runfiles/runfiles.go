@@ -41,7 +41,7 @@
 // packaged application or one that is available on PATH), you can pass
 // [Option] values to [New] to force a specific runfiles location.
 //
-// ## Restrictions
+// # Restrictions
 //
 // Functions in this package may not observe changes to the environment or
 // [os.Args] after the first call to any of them.  Pass [Option] values to
