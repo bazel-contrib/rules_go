@@ -19,7 +19,6 @@ Go workspace rules
 .. _nogo: nogo.rst#nogo
 .. _normal go logic: https://golang.org/cmd/go/#hdr-Remote_import_paths
 .. _repositories.bzl: https://github.com/bazelbuild/rules_go/blob/master/go/private/repositories.bzl
-.. _rules_proto: https://github.com/bazelbuild/rules_proto
 .. _third_party: https://github.com/bazelbuild/rules_go/tree/master/third_party
 .. _toolchains: toolchains.rst
 
@@ -32,7 +31,6 @@ Go workspace rules
 
 .. Other rules
 .. _git_repository: https://github.com/bazelbuild/bazel/blob/master/tools/build_defs/repo/git.bzl
-.. _proto_library: https://github.com/bazelbuild/rules_proto
 
 .. Issues
 .. _#1986: https://github.com/bazelbuild/rules_go/issues/1986
@@ -129,7 +127,6 @@ to build ``protoc``.
 
     protobuf_deps()
 
-The `proto_library`_ rule is provided by the `rules_proto`_
 repository. ``protoc-gen-go``, the Go proto compiler plugin, is provided by the
 repository ``com_github_golang_protobuf``. Both are declared by
 `go_rules_dependencies`_  by default. You won't need to declare an

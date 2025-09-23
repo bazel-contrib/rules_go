@@ -76,21 +76,6 @@ maybe(
 )
 
 http_archive(
-    name = "rules_proto",
-    sha256 = "0e5c64a2599a6e26c6a03d6162242d231ecc0de219534c38cb4402171def21e8",
-    strip_prefix = "rules_proto-7.0.2",
-    url = "https://github.com/bazelbuild/rules_proto/releases/download/7.0.2/rules_proto-7.0.2.tar.gz",
-)
-
-load("@rules_proto//proto:repositories.bzl", "rules_proto_dependencies")
-
-rules_proto_dependencies()
-
-load("@rules_proto//proto:toolchains.bzl", "rules_proto_toolchains")
-
-rules_proto_toolchains()
-
-http_archive(
     name = "toolchains_protoc",
     sha256 = "f7302cce01d00c52f7ed8a033a3f133bd2c95f9608f3e4ad7d69f9e1ac2b0cc0",
     strip_prefix = "toolchains_protoc-0.3.4",
