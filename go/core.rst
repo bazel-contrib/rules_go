@@ -13,6 +13,7 @@ Core Go rules
 .. _config_setting: https://docs.bazel.build/versions/master/be/general.html#config_setting
 .. _data dependencies: https://bazel.build/concepts/dependencies#data-dependencies
 .. _goarch: modes.rst#goarch
+.. _gofips140: modes.rst#gofips140
 .. _goos: modes.rst#goos
 .. _mode attributes: modes.rst#mode-attributes
 .. _nogo: nogo.rst#nogo
