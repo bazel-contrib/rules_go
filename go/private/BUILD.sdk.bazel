@@ -25,6 +25,7 @@ filegroup(
     name = "srcs",
     srcs = glob(
         ["src/**/*"],
+        allow_empty = True,
         exclude = [
             "src/**/*_test.go",
             "src/**/testdata/**",
