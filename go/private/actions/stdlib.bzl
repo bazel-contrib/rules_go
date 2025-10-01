@@ -143,6 +143,10 @@ def _build_stdlib(go):
     if not go.mode.pure:
         args.add("-package", "runtime/cgo")
 
+    # For bzltestutil's coverage support.
+    args.add("-package", "cmd/internal/cov")
+    args.add("-package", "cmd/internal/bio")
+
     link_mode_flag = link_mode_arg(go.mode)
     if link_mode_flag:
         args.add(link_mode_flag)

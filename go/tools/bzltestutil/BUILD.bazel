@@ -3,6 +3,7 @@ load("//go:def.bzl", "go_test", "go_tool_library")
 go_tool_library(
     name = "bzltestutil",
     srcs = [
+        "coverage_visitor.go",
         "lcov.go",
         "test2json.go",
         "timeout.go",

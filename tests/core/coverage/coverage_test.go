@@ -28,7 +28,7 @@ func TestMain(m *testing.M) {
 	bazel_testing.TestMain(m, bazel_testing.Args{
 		Main: `
 -- BUILD.bazel --
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
 
 go_test(
     name = "a_test",
@@ -50,6 +50,14 @@ go_library(
     name = "a",
     srcs = ["a.go"],
     importpath = "example.com/coverage/a",
+    deps = [":b"],
+	data = [":a_binary"],
+)
+
+go_binary(
+    name = "a_binary",
+	out = "a_binary",
+	srcs = ["main.go"],
     deps = [":b"],
 )
 
@@ -88,13 +96,34 @@ go_test(
     srcs = ["panicking_test.go"],
     embed = [":panicking"],
 )
+-- main.go --
+package main
+
+import "example.com/coverage/b"
+
+func main() {
+	b.BLiveBinary()
+}
 -- a_test.go --
 package a
 
-import "testing"
+import (
+    "path/filepath"
+	"os"
+	"os/exec"
+	"testing"
+)
 
 func TestA(t *testing.T) {
 	ALive()
+}
+
+func TestBinary(t *testing.T) {
+	cmd := exec.Command(filepath.Join(os.Getenv("RUNFILES_DIR"), "bazel_testing", "a_binary"))
+	err := cmd.Run()
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 -- a.go --
 package a
@@ -115,6 +144,10 @@ package b
 import "example.com/coverage/c"
 
 func BLive() int {
+	return c.CLive()
+}
+
+func BLiveBinary() int {
 	return c.CLive()
 }
 
