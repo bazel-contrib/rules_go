@@ -40,6 +40,7 @@ load(
 )
 load(
     "//go/private:providers.bzl",
+    "GoArchive",
     "GoInfo",
     "GoSDK",
 )
@@ -120,6 +121,7 @@ _go_cc_aspect = aspect(
 
 def _go_binary_impl(ctx):
     """go_binary_impl emits actions for compiling and linking a go executable."""
+
     go = go_context(
         ctx,
         include_deprecated_properties = False,
@@ -130,10 +132,24 @@ def _go_binary_impl(ctx):
         goarch = ctx.attr.goarch,
     )
 
+    generated_srcs = []
+    deps = ctx.attr.deps
+
+    if go.coverage_enabled and go.coverage_instrumented:
+        coverage_shim = ctx.actions.declare_file(ctx.attr.name + "_coverage_shim.go")
+        ctx.actions.symlink(
+            output = coverage_shim,
+            target_file = ctx.file._coverage_shim,
+        )
+        generated_srcs.append(coverage_shim)
+        deps = list(deps) + [ctx.attr._bzltestutil]
+
     is_main = go.mode.linkmode not in (LINKMODE_SHARED, LINKMODE_PLUGIN)
     go_info = new_go_info(
         go,
         ctx.attr,
+        generated_srcs = generated_srcs,
+        deps = [dep[GoArchive] for dep in deps],
         importable = False,
         is_main = is_main,
     )
@@ -221,6 +237,15 @@ def _go_binary_impl(ctx):
 
         ccinfo = cc_common.merge_cc_infos(cc_infos = cc_infos)
         providers.append(ccinfo)
+
+    providers.append(
+        coverage_common.instrumented_files_info(
+            ctx,
+            source_attributes = ["srcs"],
+            dependency_attributes = ["data", "deps", "embed", "embedsrcs"],
+            extensions = ["go"],
+        ),
+    )
 
     return providers
 
@@ -455,6 +480,13 @@ def _go_binary_kwargs(go_cc_aspects = []):
             "_go_context_data": attr.label(default = "//:go_context_data"),
             "_allowlist_function_transition": attr.label(
                 default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
+            ),
+            "_coverage_shim": attr.label(
+                default = "//go/private:coverage_shim",
+                allow_single_file = True,
+            ),
+            "_bzltestutil": attr.label(
+                default = "//go/tools/bzltestutil",
             ),
         } | CGO_ATTRS,
         "fragments": CGO_FRAGMENTS,

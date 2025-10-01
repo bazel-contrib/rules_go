@@ -297,6 +297,7 @@ def new_go_info(
         coverage_instrumented = None,
         generated_srcs = [],
         pathtype = None,
+        deps = None,
         verify_resolver_deps = False):
     if not importpath:
         importpath = go.importpath
@@ -315,8 +316,10 @@ def new_go_info(
     attr_srcs = [f for t in getattr(attr, "srcs", []) for f in as_iterable(t.files)]
     srcs = attr_srcs + generated_srcs
     embedsrcs = [f for t in getattr(attr, "embedsrcs", []) for f in as_iterable(t.files)]
-    deps = [get_archive(dep) for dep in getattr(attr, "deps", [])]
     data = getattr(attr, "data", [])
+
+    if deps == None:
+        deps = [get_archive(dep) for dep in getattr(attr, "deps", [])]
 
     go_info = {
         "name": go.label.name if not name else name,
