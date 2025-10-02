@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load(
     "//go/private:common.bzl",
     "GO_TOOLCHAIN",
@@ -543,26 +544,28 @@ exit /b %GO_EXIT_CODE%
         args.add(out)
         args.add_all(ctx.files.srcs)
 
-        # We do not use -a here as the cache drastically reduces the time spent
-        # on the second go build invocation (roughly 50% faster).
-        ctx.actions.run_shell(
-            # The value of GOCACHE/GOPATH are determined from HOME.
-            # We place them in the execroot to avoid dependency on `mktemp` and because we don't know
-            # a safe scratch space on all systems. Note that HOME must be an absolute path, otherwise the
-            # Go toolchain will write some outputs to the wrong place and the result will be uncacheable.
-            # We include an output path of this action to prevent collisions with anything else,
-            # including differently configured versions of the same target, under an unsandboxed strategy.
-            command = """
-set -eu
-export HOME="$PWD/_go_tool_binary-fake-home-${{1//\\//_}}"
-trap "{go} clean -cache" EXIT;
-{go} build -trimpath -ldflags='-buildid="" {ldflags}' -o "$1" cmd/pack
-shift
-{go} build -trimpath -ldflags='-buildid="" {ldflags}' -o "$@"
-""".format(
-                go = sdk.go.path,
-                ldflags = ctx.attr.ldflags,
-            ),
+        shell_script = ctx.actions.declare_file(name + "_build.sh")
+
+        setting = ctx.attr._use_sh_toolchain_for_bootstrap_process_wrapper[BuildSettingInfo].value
+        sh_toolchain = ctx.toolchains["@bazel_tools//tools/sh:toolchain_type"]
+        if setting and sh_toolchain:
+            ctx.actions.expand_template(
+                template = ctx.file._shell_tpl,
+                output = shell_script,
+                is_executable = True,
+                substitutions = {
+                    "#!/usr/bin/env bash": "#!{}".format(sh_toolchain.path),
+                },
+            )
+        else:
+            ctx.actions.symlink(
+                output = shell_script,
+                target_file = ctx.file._shell_tpl,
+                is_executable = True,
+            )
+
+        ctx.actions.run(
+            executable = shell_script,
             arguments = [args],
             tools = [sdk.go],
             env = {
@@ -571,6 +574,8 @@ shift
                 "GO111MODULE": "off",
                 "GOTELEMETRY": "off",
                 "GOENV": "off",
+                "GO_BINARY": sdk.go.path,
+                "LD_FLAGS": ctx.attr.ldflags,
             },
             inputs = depset(
                 ctx.files.srcs,
@@ -603,6 +608,13 @@ go_tool_binary = rule(
             doc = "Raw value to pass to go build via -ldflags without tokenization",
         ),
         "out_pack": attr.output(),
+        "_shell_tpl": attr.label(
+            allow_single_file = True,
+            default = "//go/private/rules:binary.tpl.sh",
+        ),
+        "_use_sh_toolchain_for_bootstrap_process_wrapper": attr.label(
+            default = Label("//go/config:experimental_use_sh_toolchain"),
+        ),
     },
     executable = True,
     doc = """Used instead of go_binary for executables used in the toolchain.
@@ -617,6 +629,7 @@ rules_go as well as the `pack` tool provided by the Go SDK in source form
 only as of Go 1.25. Combining both builds into a single action drastically
 reduces the overall build time due to Go's own caching mechanism.
 """,
+    toolchains = [config_common.toolchain_type("@bazel_tools//tools/sh:toolchain_type", mandatory = False)],
 )
 
 def gc_linkopts(ctx):

@@ -39,6 +39,12 @@ bool_flag(
     visibility = ["//visibility:public"],
 )
 
+bool_flag(
+    name = "experimental_use_sh_toolchain",
+    build_setting_default = False,
+    visibility = ["//visibility:public"],
+)
+
 string_flag(
     name = "linkmode",
     build_setting_default = LINKMODE_NORMAL,
