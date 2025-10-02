@@ -577,20 +577,23 @@ exit /b %GO_EXIT_CODE%
 
         shell_script = ctx.actions.declare_file(name + "_build.sh")
 
-        substitutions = {
-            "%GO_BINARY%": sdk.go.path,
-            "%LD_FLAGS%": ctx.attr.ldflags,
-        }
         setting = ctx.attr._use_sh_toolchain_for_bootstrap_process_wrapper[BuildSettingInfo].value
         sh_toolchain = ctx.toolchains["@bazel_tools//tools/sh:toolchain_type"]
         if setting and sh_toolchain:
-            substitutions["#!/usr/bin/env bash"] = "#!{}".format(sh_toolchain.path)
-
-        ctx.actions.expand_template(
-            template = ctx.file._shell_tpl,
-            output = shell_script,
-            substitutions = substitutions,
-        )
+            ctx.actions.expand_template(
+                template = ctx.file._shell_tpl,
+                output = shell_script,
+                is_executable = True,
+                substitutions = {
+                    "#!/usr/bin/env bash": "#!{}".format(sh_toolchain.path),
+                },
+            )
+        else:
+            ctx.actions.symlink(
+                output = shell_script,
+                target_file = ctx.file._shell_tpl,
+                is_executable = True,
+            )
 
         ctx.actions.run(
             executable = shell_script,
@@ -602,6 +605,8 @@ exit /b %GO_EXIT_CODE%
                 "GO111MODULE": "off",
                 "GOTELEMETRY": "off",
                 "GOENV": "off",
+                "GO_BINARY": sdk.go.path,
+                "LD_FLAGS": ctx.attr.ldflags,
             },
             inputs = depset(
                 ctx.files.srcs,

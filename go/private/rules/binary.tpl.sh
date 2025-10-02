@@ -9,9 +9,6 @@ set -eu
 # We include an output path of this action to prevent collisions with anything else,
 # including differently configured versions of the same target, under an unsandboxed strategy.
 
-GO_BINARY="%GO_BINARY%"
-LD_FLAGS="%LD_FLAGS%"
-
 export HOME="${PWD}/_go_tool_binary-fake-home-${1//\\//_}"
 trap "${GO_BINARY} clean -cache" EXIT
 
