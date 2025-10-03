@@ -233,6 +233,11 @@ go_bazel_test(
     embedsrcs = ["pgo.pprof"],
 )
 
+go_bazel_test(
+    name = "gofips140_test",
+    srcs = ["gofips140_test.go"],
+)
+
 # Tests using .syso files in go_binary both transitively and directly.
 go_binary(
     name = "meaning",
