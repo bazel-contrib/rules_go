@@ -135,7 +135,7 @@ def _go_binary_impl(ctx):
     generated_srcs = []
     deps = ctx.attr.deps
 
-    if go.coverage_enabled and go.coverage_instrumented:
+    if go.coverage_enabled:
         coverage_shim = ctx.actions.declare_file(ctx.attr.name + "_coverage_shim.go")
         ctx.actions.symlink(
             output = coverage_shim,
@@ -482,7 +482,7 @@ def _go_binary_kwargs(go_cc_aspects = []):
                 default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
             ),
             "_coverage_shim": attr.label(
-                default = "//go/private:coverage_shim",
+                default = "//go/private:coverage_shim.go",
                 allow_single_file = True,
             ),
             "_bzltestutil": attr.label(
