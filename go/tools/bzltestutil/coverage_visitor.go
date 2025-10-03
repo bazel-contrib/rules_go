@@ -2,6 +2,7 @@ package bzltestutil
 
 // This is a stripped-down version of https://github.com/golang/go/blob/633dd1d475e7346b43d87abc987a8c7f256e827d/src/cmd/covdata/dump.go
 // which supports only the `textfmt` sub-command.
+// TODO(zbarsky): We should emit lcov format directly instead of going through the textual format.
 
 import (
 	"cmd/internal/cov"
