@@ -49,8 +49,6 @@ load(
     "non_go_transition",
 )
 
-_EMPTY_DEPSET = depset([])
-
 def _include_path(hdr):
     if not hdr.root.path:
         fail("Expected hdr to be a generated file, got source file: " + hdr.path)
@@ -66,9 +64,10 @@ def _include_path(hdr):
 
 def new_cc_import(
         go,
-        hdrs = _EMPTY_DEPSET,
-        defines = _EMPTY_DEPSET,
-        local_defines = _EMPTY_DEPSET,
+        headers = None,
+        includes = None,
+        defines = None,
+        local_defines = None,
         dynamic_library = None,
         static_library = None,
         alwayslink = False,
@@ -77,8 +76,8 @@ def new_cc_import(
         compilation_context = cc_common.create_compilation_context(
             defines = defines,
             local_defines = local_defines,
-            headers = hdrs,
-            includes = depset([_include_path(hdr) for hdr in hdrs.to_list()]),
+            headers = headers,
+            includes = includes,
         ),
         linking_context = cc_common.create_linking_context(
             linker_inputs = depset([
@@ -137,9 +136,7 @@ def _go_binary_impl(ctx):
         importable = False,
         is_main = is_main,
     )
-    name = ctx.attr.basename
-    if not name:
-        name = ctx.label.name
+    name = ctx.attr.basename or ctx.label.name
     executable = None
     if ctx.attr.out:
         # Use declare_file instead of attr.output(). When users set output files
@@ -161,7 +158,7 @@ def _go_binary_impl(ctx):
     providers = [
         archive,
         OutputGroupInfo(
-            cgo_exports = archive.cgo_exports,
+            cgo_exports = [archive.cgo_export] if archive.cgo_export else [],
             compilation_outputs = [archive.data.file],
             nogo_fix = [nogo_diagnostics] if nogo_diagnostics else [],
             _validation = [validation_output] if validation_output else [],
@@ -202,14 +199,14 @@ def _go_binary_impl(ctx):
                 "windows": ["-mthreads"],
             }.get(go.mode.goos, ["-pthread"]),
         }
-        cgo_exports = archive.cgo_exports.to_list()
-        if cgo_exports:
+        if archive.cgo_export:
             header = ctx.actions.declare_file("{}.h".format(name))
             ctx.actions.symlink(
                 output = header,
-                target_file = cgo_exports[0],
+                target_file = archive.cgo_export,
             )
-            cc_import_kwargs["hdrs"] = depset([header])
+            cc_import_kwargs["headers"] = depset([header])
+            cc_import_kwargs["includes"] = depset([_include_path(header)])
         if go.mode.linkmode == LINKMODE_C_SHARED:
             cc_import_kwargs["dynamic_library"] = executable
         elif go.mode.linkmode == LINKMODE_C_ARCHIVE:
