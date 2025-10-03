@@ -1,6 +1,8 @@
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 load("@bazel_skylib//rules:common_settings.bzl", "bool_setting")
 
+exports_files(["coverage_shim.go"])
+
 filegroup(
     name = "all_rules",
     srcs = [

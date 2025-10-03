@@ -16,8 +16,7 @@ package coverage_test
 
 import (
 	"bytes"
-	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -28,7 +27,7 @@ func TestMain(m *testing.M) {
 	bazel_testing.TestMain(m, bazel_testing.Args{
 		Main: `
 -- BUILD.bazel --
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
 
 go_test(
     name = "a_test",
@@ -50,6 +49,19 @@ go_library(
     name = "a",
     srcs = ["a.go"],
     importpath = "example.com/coverage/a",
+    deps = [
+        ":b",
+        "@io_bazel_rules_go//go/runfiles",
+    ],
+	data = [":a_binary"],
+    x_defs = {
+        "aBinaryRlocationPath": "$(rlocationpath :a_binary)",
+    },
+)
+
+go_binary(
+    name = "a_binary",
+	srcs = ["main.go"],
     deps = [":b"],
 )
 
@@ -88,6 +100,14 @@ go_test(
     srcs = ["panicking_test.go"],
     embed = [":panicking"],
 )
+-- main.go --
+package main
+
+import "example.com/coverage/b"
+
+func main() {
+	b.BLiveBinary()
+}
 -- a_test.go --
 package a
 
@@ -96,13 +116,38 @@ import "testing"
 func TestA(t *testing.T) {
 	ALive()
 }
+
+func TestBinary(t *testing.T) {
+	RunBinary()
+}
 -- a.go --
 package a
 
-import "example.com/coverage/b"
+import (
+	"os"
+	"os/exec"
+    "example.com/coverage/b"
+    "github.com/bazelbuild/rules_go/go/runfiles"
+)
+
+var aBinaryRlocationPath string
 
 func ALive() int {
 	return b.BLive()
+}
+
+func RunBinary() {
+	p, err := runfiles.Rlocation(aBinaryRlocationPath)
+	if err != nil {
+		panic(err)
+	}
+	cmd := exec.Command(p)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
+	if err != nil {
+		panic(err)
+	}
 }
 
 func ADead() int {
@@ -115,6 +160,10 @@ package b
 import "example.com/coverage/c"
 
 func BLive() int {
+	return c.CLive()
+}
+
+func BLiveBinary() int {
 	return c.CLive()
 }
 
@@ -173,19 +222,18 @@ func TestPanic(t *testing.T) {
 
 func TestCoverage(t *testing.T) {
 	t.Run("without-race", func(t *testing.T) {
-		testCoverage(t, "atomic")
+		testCoverage(t)
 	})
 
 	t.Run("with-race", func(t *testing.T) {
-		testCoverage(t, "atomic", "--@io_bazel_rules_go//go/config:race")
+		testCoverage(t, "--@io_bazel_rules_go//go/config:race")
 	})
 }
 
-func testCoverage(t *testing.T, expectedCoverMode string, extraArgs ...string) {
+func testCoverage(t *testing.T, extraArgs ...string) {
 	args := append([]string{"coverage"}, append(
 		extraArgs,
 		"--instrumentation_filter=-//:b",
-		"--@io_bazel_rules_go//go/config:cover_format=go_cover",
 		":a_test",
 	)...)
 
@@ -194,21 +242,21 @@ func testCoverage(t *testing.T, expectedCoverMode string, extraArgs ...string) {
 	}
 
 	coveragePath := filepath.FromSlash("bazel-testlogs/a_test/coverage.dat")
-	coverageData, err := ioutil.ReadFile(coveragePath)
+	coverageData, err := os.ReadFile(coveragePath)
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, include := range []string{
-		fmt.Sprintf("mode: %s", expectedCoverMode),
-		"example.com/coverage/a/a.go:",
-		"example.com/coverage/c/c.go:",
+		"SF:a.go",
+		"SF:main.go",
+		"SF:c.go",
 	} {
 		if !bytes.Contains(coverageData, []byte(include)) {
 			t.Errorf("%s: does not contain %q\n", coveragePath, include)
 		}
 	}
 	for _, exclude := range []string{
-		"example.com/coverage/b/b.go:",
+		"SF:b.go",
 	} {
 		if bytes.Contains(coverageData, []byte(exclude)) {
 			t.Errorf("%s: contains %q\n", coveragePath, exclude)

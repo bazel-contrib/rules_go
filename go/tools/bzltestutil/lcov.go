@@ -25,6 +25,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
 	"github.com/bazelbuild/rules_go/go/tools/coverdata"
 )
 
@@ -48,6 +49,10 @@ func ConvertCoverToLcov() error {
 	}
 	defer in.Close()
 
+	return ConvertCoverFromReaderToLcov(in)
+}
+
+func ConvertCoverFromReaderToLcov(in io.Reader) error {
 	if coverageDir == "" {
 		log.Printf("Not collecting coverage: COVERAGE_DIR is not set")
 		return nil

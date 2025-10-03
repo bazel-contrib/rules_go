@@ -35,7 +35,10 @@ go_test(
 filegroup(
     name = "all_files",
     testonly = True,
-    srcs = ["//go/tools/bzltestutil/chdir:all_files"] + glob(
+    srcs = [
+        "//go/tools/bzltestutil/bincov:all_files",
+        "//go/tools/bzltestutil/chdir:all_files",
+    ] + glob(
         ["**"],
         exclude = ["testdata/*"],
     ),

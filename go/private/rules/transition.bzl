@@ -275,12 +275,13 @@ def _go_stdlib_transition_impl(settings, _attr):
             settings[label] = value
     settings["//go/config:tags"] = [t for t in settings["//go/config:tags"] if t in _TAG_AFFECTS_STDLIB]
     settings["//go/private:bootstrap_nogo"] = False
+    settings["//command_line_option:collect_code_coverage"] = False
     return settings
 
 go_stdlib_transition = transition(
     implementation = _go_stdlib_transition_impl,
     inputs = _reset_transition_keys,
-    outputs = _reset_transition_keys,
+    outputs = _reset_transition_keys + ["//command_line_option:collect_code_coverage"],
 )
 
 def _go_reset_target_impl(ctx):
