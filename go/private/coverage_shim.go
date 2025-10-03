@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/bazelbuild/rules_go/go/tools/bzltestutil"
+	"github.com/bazelbuild/rules_go/go/tools/bzltestutil/bincov"
 )
 
 func init() {
-	bzltestutil.AddCoverageExitHook()
+	bincov.AddExitHook()
 }

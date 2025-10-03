@@ -3,7 +3,6 @@ load("//go:def.bzl", "go_test", "go_tool_library")
 go_tool_library(
     name = "bzltestutil",
     srcs = [
-        "coverage_visitor.go",
         "lcov.go",
         "test2json.go",
         "timeout.go",
@@ -36,7 +35,10 @@ go_test(
 filegroup(
     name = "all_files",
     testonly = True,
-    srcs = ["//go/tools/bzltestutil/chdir:all_files"] + glob(
+    srcs = [
+        "//go/tools/bzltestutil/bincov:all_files",
+        "//go/tools/bzltestutil/chdir:all_files",
+    ] + glob(
         ["**"],
         exclude = ["testdata/*"],
     ),

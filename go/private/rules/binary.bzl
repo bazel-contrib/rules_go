@@ -121,7 +121,6 @@ _go_cc_aspect = aspect(
 
 def _go_binary_impl(ctx):
     """go_binary_impl emits actions for compiling and linking a go executable."""
-
     go = go_context(
         ctx,
         include_deprecated_properties = False,
@@ -142,7 +141,7 @@ def _go_binary_impl(ctx):
             target_file = ctx.file._coverage_shim,
         )
         generated_srcs.append(coverage_shim)
-        deps = list(deps) + [ctx.attr._bzltestutil]
+        deps = list(deps) + [ctx.attr._bincov]
 
     is_main = go.mode.linkmode not in (LINKMODE_SHARED, LINKMODE_PLUGIN)
     go_info = new_go_info(
@@ -485,8 +484,8 @@ def _go_binary_kwargs(go_cc_aspects = []):
                 default = "//go/private:coverage_shim.go",
                 allow_single_file = True,
             ),
-            "_bzltestutil": attr.label(
-                default = "//go/tools/bzltestutil",
+            "_bincov": attr.label(
+                default = "//go/tools/bzltestutil/bincov",
             ),
         } | CGO_ATTRS,
         "fragments": CGO_FRAGMENTS,

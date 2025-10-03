@@ -1,4 +1,4 @@
-package bzltestutil
+package bincov
 
 // This is a stripped-down version of https://github.com/golang/go/blob/633dd1d475e7346b43d87abc987a8c7f256e827d/src/cmd/covdata/dump.go
 // which supports only the `textfmt` sub-command.
@@ -173,7 +173,7 @@ func (d *dstate) VisitFunc(pkgIdx uint32, fnIdx uint32, fd *coverage.FuncDesc) {
 func (d *dstate) Finish() {
 	// d.format maybe nil here if the specified input dir was empty.
 	if d.format != nil {
-		if err := d.format.EmitTextual(nil, d.w); err != nil {
+		if err := emitTextual(d); err != nil {
 			fatal("writing textual output: %v", err)
 		}
 	}

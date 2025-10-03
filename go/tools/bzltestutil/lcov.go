@@ -16,16 +16,12 @@ package bzltestutil
 
 import (
 	"bufio"
-	"bytes"
-	"cmd/internal/cov"
 	"flag"
 	"fmt"
-	"internal/runtime/exithook"
 	"io"
 	"log"
 	"os"
 	"regexp"
-	"runtime/coverage"
 	"sort"
 	"strconv"
 	"strings"
@@ -53,47 +49,10 @@ func ConvertCoverToLcov() error {
 	}
 	defer in.Close()
 
-	return convertCoverFromReaderToLcov(in)
+	return ConvertCoverFromReaderToLcov(in)
 }
 
-func AddCoverageExitHook() {
-	if coverageDir == "" {
-		log.Printf("Not collecting coverage: COVERAGE_DIR is not set")
-		return
-	}
-
-	exithook.Add(exithook.Hook{
-		F: func() {
-			if err := coverage.WriteMetaDir(coverageDir); err != nil {
-				fmt.Fprintf(os.Stderr, "write meta: %v\n", err)
-				return
-			}
-			if err := coverage.WriteCountersDir(coverageDir); err != nil {
-				fmt.Fprintf(os.Stderr, "write counters: %v\n", err)
-				return
-			}
-
-			var buf bytes.Buffer
-			visitor := makeVisitor(&buf)
-
-			verbosityLevel := 0
-			var flags cov.CovDataReaderFlags
-			reader := cov.MakeCovDataReader(visitor, []string{coverageDir}, verbosityLevel, flags, nil)
-			if err := reader.Visit(); err != nil {
-				fmt.Fprintf(os.Stderr, "error: %v\n", err)
-				return
-			}
-
-			if err := convertCoverFromReaderToLcov(&buf); err != nil {
-				fmt.Fprintf(os.Stderr, "converting to lcov: %v\n", err)
-				return
-			}
-		},
-		RunOnFailure: true,
-	})
-}
-
-func convertCoverFromReaderToLcov(in io.Reader) error {
+func ConvertCoverFromReaderToLcov(in io.Reader) error {
 	if coverageDir == "" {
 		log.Printf("Not collecting coverage: COVERAGE_DIR is not set")
 		return nil
