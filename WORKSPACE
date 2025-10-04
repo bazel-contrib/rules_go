@@ -3,7 +3,6 @@ workspace(name = "io_bazel_rules_go")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk", "go_register_nogo", "go_register_toolchains", "go_rules_dependencies")
 
-# Required by toolchains_protoc.
 http_archive(
     name = "platforms",
     sha256 = "218efe8ee736d26a3572663b374a253c012b716d8af0c07e842e82f238a0a7ee",
@@ -13,7 +12,7 @@ http_archive(
     ],
 )
 
-# The non-polyfill version of this is needed by rules_proto below.
+# The non-polyfill version of this is needed by protobuf below.
 http_archive(
     name = "bazel_features",
     sha256 = "d7787da289a7fb497352211ad200ec9f698822a9e0757a4976fd9f713ff372b3",
@@ -73,20 +72,6 @@ load("@platforms//host:extension.bzl", "host_platform_repo")
 maybe(
     host_platform_repo,
     name = "host_platform",
-)
-
-http_archive(
-    name = "toolchains_protoc",
-    sha256 = "f7302cce01d00c52f7ed8a033a3f133bd2c95f9608f3e4ad7d69f9e1ac2b0cc0",
-    strip_prefix = "toolchains_protoc-0.3.4",
-    url = "https://github.com/aspect-build/toolchains_protoc/releases/download/v0.3.4/toolchains_protoc-v0.3.4.tar.gz",
-)
-
-load("@toolchains_protoc//protoc:toolchain.bzl", "protoc_toolchains")
-
-protoc_toolchains(
-    name = "protoc_toolchains",
-    version = "v25.3",
 )
 
 # An up-to-date version is required by com_google_protobuf below.
