@@ -47,7 +47,7 @@ load(
 # changes.
 # TODO: Revisit this after --incompatible_enable_proto_toolchain_resolution has been enabled by
 #  default.
-_PROTO_TOOLCHAIN_TYPE = "@rules_proto//proto:toolchain_type"
+_PROTO_TOOLCHAIN_TYPE = "@com_google_protobuf//bazel/private:proto_toolchain_type"
 
 def _incompatible_toolchains_enabled():
     return getattr(proto_common, "INCOMPATIBLE_ENABLE_PROTO_TOOLCHAIN_RESOLUTION", False)
@@ -94,8 +94,8 @@ compiler. Typically, these are Well Known Types and proto runtime libraries.""",
         "valid_archive": """A Boolean indicating whether the .go files produced
 by this compiler are buildable on their own. Compilers that just add methods
 to structs produced by other compilers will set this to False.""",
-        "always_generates": """A Boolean indicating whether this compiler 
-        always generates files, regardless of whether the proto files have 
+        "always_generates": """A Boolean indicating whether this compiler
+        always generates files, regardless of whether the proto files have
         relevant definitions (e.g., services for grpc_gateway). This allows
         more strict check of compiler output.""",
         "internal": "Opaque value containing data used by compile.",

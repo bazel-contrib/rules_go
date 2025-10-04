@@ -166,8 +166,6 @@ def go_rules_dependencies(force = False):
     #
     # * com_google_protobuf has its own dependency macro. We can't load
     #   the macro here.
-    # * rules_proto also has a dependency macro. It's only needed by tests and
-    #   by gogo_special_proto. Users will need to declare it anyway.
     # * org_golang_google_grpc has too many dependencies for us to maintain.
     # * In general, declaring dependencies here confuses users when they
     #   declare their own dependencies later. Bazel ignores these.

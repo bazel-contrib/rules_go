@@ -170,7 +170,7 @@ bzl_library(
     name = "def",
     srcs = ["def.bzl"],
     visibility = ["//visibility:public"],
-    # Don't list dependency on @rules_proto//proto:defs
+    # ProtoInfo and proto_library come from @com_google_protobuf, not rules_proto
     deps = [
         "//go:def",
         "//go/private:providers",
