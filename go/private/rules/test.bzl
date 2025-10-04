@@ -21,7 +21,6 @@ load(
     "GO_TOOLCHAIN",
     "GO_TOOLCHAIN_LABEL",
     "SUPPORTS_PATH_MAPPING_REQUIREMENT",
-    "as_list",
     "asm_exts",
     "cgo_exts",
     "go_exts",
@@ -202,7 +201,7 @@ def _go_test_impl(ctx):
         "GO_TEST_RUN_FROM_BAZEL": "1",
     }
     for k, v in ctx.attr.env.items():
-        env[k] = ctx.expand_location(v, ctx.attr.data)
+        env[k] = ctx.expand_location(v, ctx.attr.data) if "$" in v else v
 
     run_environment_info = RunEnvironmentInfo(env, ctx.attr.env_inherit)
 
@@ -708,19 +707,19 @@ def _recompile_external_deps(go, external_go_info, internal_archive, library_lab
             testfilter = None,
             is_main = False,
             mode = go.mode,
-            srcs = as_list(arc_data.srcs),
+            srcs = list(arc_data.srcs),
             cover = arc_data._cover,
-            embedsrcs = as_list(arc_data._embedsrcs),
+            embedsrcs = list(arc_data._embedsrcs),
             x_defs = dict(arc_data._x_defs),
             deps = deps,
-            gc_goopts = as_list(arc_data._gc_goopts),
+            gc_goopts = list(arc_data._gc_goopts),
             runfiles = arc_data.runfiles,
             cgo = arc_data._cgo,
-            cdeps = as_list(arc_data._cdeps),
-            cppopts = as_list(arc_data._cppopts),
-            copts = as_list(arc_data._copts),
-            cxxopts = as_list(arc_data._cxxopts),
-            clinkopts = as_list(arc_data._clinkopts),
+            cdeps = list(arc_data._cdeps),
+            cppopts = list(arc_data._cppopts),
+            copts = list(arc_data._copts),
+            cxxopts = list(arc_data._cxxopts),
+            clinkopts = list(arc_data._clinkopts),
         )
 
         # If this archive needs to be recompiled, use go.archive.

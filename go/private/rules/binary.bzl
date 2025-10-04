@@ -171,7 +171,7 @@ def _go_binary_impl(ctx):
     if go.mode.linkmode in LINKMODES_EXECUTABLE:
         env = {}
         for k, v in ctx.attr.env.items():
-            env[k] = ctx.expand_location(v, ctx.attr.data)
+            env[k] = ctx.expand_location(v, ctx.attr.data) if "$" in v else v
         providers.append(RunEnvironmentInfo(environment = env))
 
         # The executable is automatically added to the runfiles.

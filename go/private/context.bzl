@@ -316,6 +316,7 @@ def new_go_info(
     srcs = attr_srcs + generated_srcs
     embedsrcs = [f for t in getattr(attr, "embedsrcs", []) for f in as_iterable(t.files)]
     deps = [get_archive(dep) for dep in getattr(attr, "deps", [])]
+    data = getattr(attr, "data", [])
 
     go_info = {
         "name": go.label.name if not name else name,
@@ -333,7 +334,7 @@ def new_go_info(
         "x_defs": {},
         "deps": deps,
         "gc_goopts": _expand_opts(go, "gc_goopts", getattr(attr, "gc_goopts", [])),
-        "runfiles": _collect_runfiles(go, getattr(attr, "data", []), deps),
+        "runfiles": _collect_runfiles(go, data, deps),
         "cgo": getattr(attr, "cgo", False),
         "cdeps": getattr(attr, "cdeps", []),
         "cppopts": _expand_opts(go, "cppopts", getattr(attr, "cppopts", [])),
@@ -351,11 +352,13 @@ def new_go_info(
     x_defs = go_info["x_defs"]
 
     for k, v in getattr(attr, "x_defs", {}).items():
-        v = _expand_location(go, attr, v)
+        if "$" in v:
+            v = go._ctx.expand_location(v, data)
         if "." not in k:
-            k = "{}.{}".format(importmap, k)
+            k = "%s.%s" % (importmap, k)
         x_defs[k] = v
     go_info["x_defs"] = x_defs
+
     if not go_info["cgo"]:
         for k in ("cdeps", "cppopts", "copts", "cxxopts", "clinkopts"):
             if getattr(attr, k, None):
@@ -1070,6 +1073,3 @@ go_config = rule(
 
 def _expand_opts(go, attribute_name, opts):
     return [go._ctx.expand_make_variables(attribute_name, opt, {}) for opt in opts]
-
-def _expand_location(go, attr, s):
-    return go._ctx.expand_location(s, getattr(attr, "data", []))
