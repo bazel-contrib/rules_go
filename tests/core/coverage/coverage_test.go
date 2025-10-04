@@ -16,6 +16,7 @@ package coverage_test
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -222,18 +223,19 @@ func TestPanic(t *testing.T) {
 
 func TestCoverage(t *testing.T) {
 	t.Run("without-race", func(t *testing.T) {
-		testCoverage(t)
+		testCoverage(t, "atomic")
 	})
 
 	t.Run("with-race", func(t *testing.T) {
-		testCoverage(t, "--@io_bazel_rules_go//go/config:race")
+		testCoverage(t, "atomic", "--@io_bazel_rules_go//go/config:race")
 	})
 }
 
-func testCoverage(t *testing.T, extraArgs ...string) {
+func testCoverage(t *testing.T, expectedCoverMode string, extraArgs ...string) {
 	args := append([]string{"coverage"}, append(
 		extraArgs,
 		"--instrumentation_filter=-//:b",
+		"--@io_bazel_rules_go//go/config:cover_format=go_cover",
 		":a_test",
 	)...)
 
@@ -247,20 +249,50 @@ func testCoverage(t *testing.T, extraArgs ...string) {
 		t.Fatal(err)
 	}
 	for _, include := range []string{
-		"SF:a.go",
-		"SF:main.go",
-		"SF:c.go",
+		fmt.Sprintf("mode: %s", expectedCoverMode),
+		"example.com/coverage/a/a.go:",
+		"example.com/coverage/c/c.go:",
 	} {
 		if !bytes.Contains(coverageData, []byte(include)) {
 			t.Errorf("%s: does not contain %q\n", coveragePath, include)
 		}
 	}
 	for _, exclude := range []string{
-		"SF:b.go",
+		"example.com/coverage/b/b.go:",
 	} {
 		if bytes.Contains(coverageData, []byte(exclude)) {
 			t.Errorf("%s: contains %q\n", coveragePath, exclude)
 		}
+	}
+}
+
+func TestCoverageOfChildBinaries(t *testing.T) {
+	t.Run("without-race", func(t *testing.T) {
+		testCoverageOfChildBinaries(t)
+	})
+
+	t.Run("with-race", func(t *testing.T) {
+		testCoverageOfChildBinaries(t, "--@io_bazel_rules_go//go/config:race")
+	})
+}
+
+func testCoverageOfChildBinaries(t *testing.T, extraArgs ...string) {
+	args := append([]string{"coverage"}, append(
+		extraArgs,
+		":a_test",
+	)...)
+
+	if err := bazel_testing.RunBazel(args...); err != nil {
+		t.Fatal(err)
+	}
+
+	coveragePath := filepath.FromSlash("bazel-testlogs/a_test/coverage.dat")
+	coverageData, err := os.ReadFile(coveragePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(coverageData, []byte("SF:main.go")) {
+		t.Errorf("%s: does not contain main.go\n", coveragePath)
 	}
 }
 
