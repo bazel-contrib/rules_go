@@ -52,7 +52,6 @@ load(
     ":common.bzl",
     "COVERAGE_OPTIONS_DENYLIST",
     "GO_TOOLCHAIN",
-    "as_iterable",
 )
 load(
     ":mode.bzl",
@@ -311,10 +310,9 @@ def new_go_info(
     if coverage_instrumented == None:
         coverage_instrumented = go.coverage_instrumented
 
-    #TODO: stop collapsing a depset in this line...
-    attr_srcs = [f for t in getattr(attr, "srcs", []) for f in as_iterable(t.files)]
+    attr_srcs = [f for t in getattr(attr, "srcs", []) for f in t.files]
     srcs = attr_srcs + generated_srcs
-    embedsrcs = [f for t in getattr(attr, "embedsrcs", []) for f in as_iterable(t.files)]
+    embedsrcs = [f for t in getattr(attr, "embedsrcs", []) for f in t.files]
     deps = [get_archive(dep) for dep in getattr(attr, "deps", [])]
     data = getattr(attr, "data", [])
 

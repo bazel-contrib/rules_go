@@ -155,16 +155,6 @@ def get_versioned_shared_lib_extension(path):
 
 MINIMUM_BAZEL_VERSION = "6.5.0"
 
-def as_iterable(v):
-    """Returns a list, tuple, or depset as something iterable."""
-    if type(v) == "list":
-        return v
-    if type(v) == "tuple":
-        return v
-    if type(v) == "depset":
-        return v.to_list()
-    fail("as_iterator failed on {}".format(v))
-
 def count_group_matches(v, prefix, suffix):
     """Counts reluctant substring matches between prefix and suffix.
 
