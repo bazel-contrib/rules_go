@@ -22,7 +22,7 @@ def _rpath(go, library, executable = None):
     if not executable:
         return [paths.dirname(library.short_path)]
 
-    origin = go.mode.goos == "darwin" and "@loader_path" or "$ORIGIN"
+    origin = "@loader_path" if go.mode.goos == "darwin" else "$ORIGIN"
 
     # Accommodate for three kinds of executable paths.
     rpaths = []
