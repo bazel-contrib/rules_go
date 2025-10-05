@@ -9,6 +9,9 @@ tasks:
   debian11_bazel6:
     platform: debian11
     bazel: 6.5.0 # test minimum supported version of bazel
+    shell_commands:
+      - sudo apt-get update
+      - sudo apt-get install gcc-multilib libc6-dev-i386
     build_targets:
       - "//..."
       - "-//tests/core/go_binary:goos_pure_bin"
