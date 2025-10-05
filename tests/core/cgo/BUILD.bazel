@@ -541,3 +541,8 @@ go_test(
     srcs = ["cgo_required_test.go"],
     pure = "on",
 )
+
+go_bazel_test(
+    name = "wrapped_cgo_test",
+    srcs = ["wrapped_cgo_test.go"],
+)
