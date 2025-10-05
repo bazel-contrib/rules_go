@@ -24,7 +24,7 @@ def _rpath(go, library, executable = None):
 
     origin = go.mode.goos == "darwin" and "@loader_path" or "$ORIGIN"
 
-    # Accomodate for two kinds of executable paths.
+    # Accommodate for three kinds of executable paths.
     rpaths = []
     library_dir = paths.dirname(library.short_path)
 
