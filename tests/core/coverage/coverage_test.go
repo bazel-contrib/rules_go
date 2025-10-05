@@ -54,7 +54,7 @@ go_library(
         ":b",
         "@io_bazel_rules_go//go/runfiles",
     ],
-	data = [":a_binary"],
+    data = [":a_binary"],
     x_defs = {
         "aBinaryRlocationPath": "$(rlocationpath :a_binary)",
     },
@@ -62,7 +62,7 @@ go_library(
 
 go_binary(
     name = "a_binary",
-	srcs = ["main.go"],
+    srcs = ["main.go"],
     deps = [":b"],
 )
 
@@ -127,8 +127,8 @@ package a
 import (
 	"os"
 	"os/exec"
-    "example.com/coverage/b"
-    "github.com/bazelbuild/rules_go/go/runfiles"
+	"example.com/coverage/b"
+	"github.com/bazelbuild/rules_go/go/runfiles"
 )
 
 var aBinaryRlocationPath string

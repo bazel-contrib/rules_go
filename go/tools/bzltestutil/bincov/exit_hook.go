@@ -39,27 +39,33 @@ func AddExitHook() {
 
 	exithook.Add(exithook.Hook{
 		F: func() {
-			if err := coverage.WriteMetaDir(coverageDir); err != nil {
+			dir, err := os.MkdirTemp(os.Getenv("TEST_TMPDIR"), "coverage")
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "create temp dir for coverage: %v\n", err)
+				return
+			}
+
+			if err := coverage.WriteMetaDir(dir); err != nil {
 				fmt.Fprintf(os.Stderr, "write meta: %v\n", err)
 				return
 			}
-			if err := coverage.WriteCountersDir(coverageDir); err != nil {
+			if err := coverage.WriteCountersDir(dir); err != nil {
 				fmt.Fprintf(os.Stderr, "write counters: %v\n", err)
 				return
 			}
 
-			var buf bytes.Buffer
-			visitor := makeVisitor(&buf)
+			buf := new(bytes.Buffer)
+			visitor := makeVisitor(buf)
 
 			verbosityLevel := 0
 			var flags cov.CovDataReaderFlags
-			reader := cov.MakeCovDataReader(visitor, []string{coverageDir}, verbosityLevel, flags, nil)
+			reader := cov.MakeCovDataReader(visitor, []string{dir}, verbosityLevel, flags, nil)
 			if err := reader.Visit(); err != nil {
 				fmt.Fprintf(os.Stderr, "error: %v\n", err)
 				return
 			}
 
-			if err := bzltestutil.ConvertCoverFromReaderToLcov(&buf); err != nil {
+			if err := bzltestutil.ConvertCoverFromReaderToLcov(buf); err != nil {
 				fmt.Fprintf(os.Stderr, "converting to lcov: %v\n", err)
 				return
 			}
