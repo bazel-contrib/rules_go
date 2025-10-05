@@ -121,7 +121,7 @@ func Hello() {
 }
 
 func TestWrappedCgo(t *testing.T) {
-	if o, err := bazel_testing.BazelOutput("test", "//:wrapped_go_hello_test", "--test_env=GO_TEST_WRAP_TESTV=1", "--test_output=all"); err != nil {
+	if o, err := bazel_testing.BazelOutput("test", "//:wrapped_go_hello_test", "--test_env=GO_TEST_WRAP_TESTV=1", "--test_output=all", "--experimental_cc_shared_library"); err != nil {
 		t.Fatalf("bazel test //:wrapped_go_hello_test: %v\n%s", err, string(o))
 	} else {
 		t.Logf("bazel test //:wrapped_go_hello_test: %s", string(o))
