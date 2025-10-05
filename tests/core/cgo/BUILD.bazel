@@ -545,4 +545,9 @@ go_test(
 go_bazel_test(
     name = "wrapped_cgo_test",
     srcs = ["wrapped_cgo_test.go"],
+    target_compatible_with = select({
+        "@platforms//os:macos": [],
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )
