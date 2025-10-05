@@ -30,6 +30,7 @@ def _rpath(go, library, executable = None):
 
     # Based on the logic for Bazel's own C++ rules:
     # https://github.com/bazelbuild/bazel/blob/51a4b8e5de225ba163d19ddcc330aff8860a1520/src/main/starlark/builtins_bzl/common/cc/link/collect_solib_dirs.bzl#L301
+    # with the bug fix https://github.com/bazelbuild/bazel/pull/27154.
     # We ignore the cases for --experimental_sibling_repository_layout.
 
     # 1. Where the executable is inside its own .runfiles directory.
