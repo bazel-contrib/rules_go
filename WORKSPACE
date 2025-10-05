@@ -16,10 +16,14 @@ http_archive(
 # The non-polyfill version of this is needed by rules_proto below.
 http_archive(
     name = "bazel_features",
-    sha256 = "d7787da289a7fb497352211ad200ec9f698822a9e0757a4976fd9f713ff372b3",
-    strip_prefix = "bazel_features-1.9.1",
-    url = "https://github.com/bazel-contrib/bazel_features/releases/download/v1.9.1/bazel_features-v1.9.1.tar.gz",
+    sha256 = "9390b391a68d3b24aef7966bce8556d28003fe3f022a5008efc7807e8acaaf1a",
+    strip_prefix = "bazel_features-1.36.0",
+    url = "https://github.com/bazel-contrib/bazel_features/releases/download/v1.36.0/bazel_features-v1.36.0.tar.gz",
 )
+
+load("@bazel_features//:deps.bzl", "bazel_features_deps")
+
+bazel_features_deps()
 
 # Required by protobuf and for //go/private:context.
 http_archive(
@@ -44,10 +48,6 @@ load("@rules_java//java:repositories.bzl", "rules_java_dependencies", "rules_jav
 rules_java_dependencies()
 
 rules_java_toolchains()
-
-load("@bazel_features//:deps.bzl", "bazel_features_deps")
-
-bazel_features_deps()
 
 go_rules_dependencies()
 
@@ -344,4 +344,12 @@ zig_toolchains(
         "macos-x86_64": "0c89e5d934ecbf9f4d2dea6e3b8dfcc548a3d4184a856178b3db74e361031a2b",
     },
     version = "0.11.0-dev.3886+0c1bfe271",
+)
+
+# Used to transition binaries in rules_go's test suite to different configurations.
+http_archive(
+    name = "with_cfg.bzl",
+    sha256 = "4da2d80d55c7013e52539b0e100f8f8465142cd05757aaecb3ddca962d735c05",
+    strip_prefix = "with_cfg.bzl-0.11.1",
+    url = "https://github.com/fmeum/with_cfg.bzl/releases/download/v0.11.1/with_cfg.bzl-v0.11.1.tar.gz",
 )

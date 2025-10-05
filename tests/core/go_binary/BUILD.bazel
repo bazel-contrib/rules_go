@@ -157,6 +157,7 @@ go_test(
         "@io_bazel_rules_go//go/platform:linux": [
             ":static_bin",
             ":static_cgo_bin",
+            ":static_cross_bin",
             ":static_pure_bin",
         ],
         "//conditions:default": [],
@@ -187,6 +188,13 @@ go_binary(
     pure = "on",
     static = "on",
     tags = ["manual"],
+)
+
+go_binary(
+    name = "static_cross_bin",
+    srcs = ["static_pure_bin.go"],
+    goarch = "amd64",
+    goos = "linux",
 )
 
 go_binary(

@@ -18,6 +18,9 @@ load(
 )
 load(
     "//go/private:context.bzl",
+    "CGO_ATTRS",
+    "CGO_FRAGMENTS",
+    "CGO_TOOLCHAINS",
     "go_context",
 )
 load(
@@ -45,8 +48,9 @@ stdlib = rule(
         "_allowlist_function_transition": attr.label(
             default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
         ),
-    },
+    } | CGO_ATTRS,
     doc = """stdlib builds the standard library for the target configuration
 or uses the precompiled standard library from the SDK if it is suitable.""",
-    toolchains = [GO_TOOLCHAIN],
+    fragments = CGO_FRAGMENTS,
+    toolchains = [GO_TOOLCHAIN] + CGO_TOOLCHAINS,
 )

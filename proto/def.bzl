@@ -31,6 +31,9 @@ load(
 )
 load(
     "//go/private:context.bzl",
+    "CGO_ATTRS",
+    "CGO_FRAGMENTS",
+    "CGO_TOOLCHAINS",
     "new_go_info",
 )
 load(
@@ -206,8 +209,9 @@ go_proto_library = rule(
         "_allowlist_function_transition": attr.label(
             default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
         ),
-    },
-    toolchains = [GO_TOOLCHAIN],
+    } | CGO_ATTRS,
+    fragments = CGO_FRAGMENTS,
+    toolchains = [GO_TOOLCHAIN] + CGO_TOOLCHAINS,
 )
 # go_proto_library is a rule that takes a proto_library (in the proto
 # attribute) and produces a go library for it.

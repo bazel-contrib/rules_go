@@ -79,6 +79,8 @@ CPP_TOOLCHAIN_TYPE = Label("@bazel_tools//tools/cpp:toolchain_type")
 CGO_ATTRS = {
     "_cc_toolchain": attr.label(default = "@bazel_tools//tools/cpp:optional_current_cc_toolchain"),
     "_xcode_config": attr.label(default = "@bazel_tools//tools/osx:current_xcode_config"),
+    "_pure_flag": attr.label(default = "//go/config:pure"),
+    "_pure_constraint": attr.label(default = "//go/toolchain:cgo_off"),
 }
 CGO_TOOLCHAINS = [
     # In pure mode, a C++ toolchain isn't needed when transitioning.
@@ -722,6 +724,11 @@ go_context_data = rule(
 )
 
 def cgo_context_data_impl(ctx):
+    pure_constraint = ctx.attr._pure_constraint[platform_common.ConstraintValueInfo]
+    if (ctx.target_platform_has_constraint(pure_constraint) or
+        ctx.attr._pure_flag[BuildSettingInfo].value):
+        return None
+
     # TODO(jayconrod): find a way to get a list of files that comprise the
     # toolchain (to be inputs into actions that need it).
     # ctx.files._cc_toolchain won't work when cc toolchain resolution

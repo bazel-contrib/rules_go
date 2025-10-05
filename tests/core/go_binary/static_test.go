@@ -25,7 +25,7 @@ import (
 )
 
 func TestStatic(t *testing.T) {
-	for _, name := range []string{"static_bin", "static_cgo_bin", "static_pure_bin"} {
+	for _, name := range []string{"static_bin", "static_cgo_bin", "static_cross_bin", "static_pure_bin"} {
 		if name != "static_pure_bin" && os.Getenv("ZIG_CC") == "1" {
 			// zig does not statically link glibc, by design or accident.
 			t.Skip()
