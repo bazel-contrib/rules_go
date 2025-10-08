@@ -25,11 +25,13 @@ filegroup(
     name = "srcs",
     srcs = glob(
         ["src/**/*"],
+        allow_empty = True,
         exclude = [
             "src/**/*_test.go",
             "src/**/testdata/**",
             # Only used by tests, cgo fails with linux before 3.17
             "src/crypto/internal/sysrand/internal/seccomp/**",
+            "src/encoding/json/internal/jsontest/**",
             "src/log/slog/internal/benchmarks/**",
             "src/log/slog/internal/slogtest/**",
             "src/internal/obscuretestdata/**",
@@ -79,10 +81,10 @@ go_tool_binary(
     srcs = ["@io_bazel_rules_go//go/tools/builders:builder_srcs"],
     exec_compatible_with = {exec_compatible_with},
     ldflags = "-X main.rulesGoStdlibPrefix={}".format(RULES_GO_STDLIB_PREFIX),
-    sdk = ":go_sdk",
     # The .exe suffix is required on Windows and harmless on other platforms.
     # Output attributes are not configurable, so we use it everywhere.
     out_pack = "pack.exe",
+    sdk = ":go_sdk",
 )
 
 non_go_reset_target(
@@ -106,8 +108,8 @@ package_list(
 
 declare_go_toolchains(
     builder = ":builder_reset",
-    pack = ":pack_reset",
     host_goos = "{goos}",
+    pack = ":pack_reset",
     sdk = ":go_sdk",
 )
 

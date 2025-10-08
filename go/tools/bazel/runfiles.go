@@ -41,7 +41,7 @@ const (
 // binaries invoked with 'bazel run'. On Windows,
 // only tests invoked with 'bazel test' are supported.
 //
-// Deprecated: Use github.com/bazelbuild/rules_go/go/runfiles instead for
+// Deprecated: Use [github.com/bazelbuild/rules_go/go/runfiles] instead for
 // cross-platform support matching the behavior of the Bazel-provided runfiles
 // libraries.
 func Runfile(path string) (string, error) {
@@ -91,17 +91,18 @@ func Runfile(path string) (string, error) {
 
 // FindBinary returns an absolute path to the binary built from a go_binary
 // rule in the given package with the given name. FindBinary is similar to
-// Runfile, but it accounts for varying configurations and file extensions,
+// [Runfile], but it accounts for varying configurations and file extensions,
 // which may cause the binary to have different paths on different platforms.
 //
 // FindBinary may be called from tests invoked with 'bazel test' and
 // binaries invoked with 'bazel run'. On Windows,
 // only tests invoked with 'bazel test' are supported.
 //
-// Deprecated: Use runfiles.Rlocation instead. The path argument can be
-// obtained by passing `$(rlocationpath //pkg:name)` to the `go_*` target
-// via `args`, `env` or `x_defs` (the latter is also available on `go_library`).
-// This avoids hardcoding the package and name of the binary in the source code.
+// Deprecated: Use [github.com/bazelbuild/rules_go/go/runfiles.Rlocation]
+// instead.  The path argument can be obtained by passing
+// $(rlocationpath //pkg:name) to the go_* target via args, env or x_defs
+// (the latter is also available on go_library).  This avoids hardcoding the
+// package and name of the binary in the source code.
 func FindBinary(pkg, name string) (string, bool) {
 	if err := ensureRunfiles(); err != nil {
 		return "", false
@@ -171,7 +172,7 @@ func FindBinary(pkg, name string) (string, bool) {
 
 // A RunfileEntry describes a runfile.
 //
-// Deprecated: See comment on ListRunfiles.
+// Deprecated: See comment on [ListRunfiles].
 type RunfileEntry struct {
 	// Workspace is the bazel workspace the file came from. For example,
 	// this would be "io_bazel_rules_go" for a file in rules_go.
@@ -188,8 +189,8 @@ type RunfileEntry struct {
 
 // ListRunfiles returns a list of available runfiles.
 //
-// Deprecated: Use fs.Glob or fs.WalkDir on the fs.FS implementation provided
-// by runfiles.New() instead.
+// Deprecated: Use [fs.Glob] or [fs.WalkDir] on the [fs.FS] implementation
+// provided by [github.com/bazelbuild/rules_go/go/runfiles.New] instead.
 func ListRunfiles() ([]RunfileEntry, error) {
 	if err := ensureRunfiles(); err != nil {
 		return nil, err
@@ -236,10 +237,10 @@ func ListRunfiles() ([]RunfileEntry, error) {
 
 // TestWorkspace returns the name of the Bazel workspace for this test.
 // TestWorkspace returns an error if the TEST_WORKSPACE environment variable
-// was not set or SetDefaultTestWorkspace was not called.
+// was not set or [SetDefaultTestWorkspace] was not called.
 //
-// Deprecated: With Bzlmod enabled, the workspace name is always "_main". Use
-// github.com/bazelbuild/rules_go/go/runfiles instead to access runfiles.
+// Deprecated: With Bzlmod enabled, the workspace name is always "_main".  Use
+// [github.com/bazelbuild/rules_go/go/runfiles] instead to access runfiles.
 func TestWorkspace() (string, error) {
 	if err := ensureRunfiles(); err != nil {
 		return "", err
@@ -254,8 +255,8 @@ func TestWorkspace() (string, error) {
 // environment variable TEST_WORKSPACE if it is not defined. This is useful
 // when running tests on the command line and not through Bazel.
 //
-// Deprecated: With Bzlmod enabled, the workspace name is always "_main". Use
-// github.com/bazelbuild/rules_go/go/runfiles instead to access runfiles.
+// Deprecated: With Bzlmod enabled, the workspace name is always "_main".  Use
+// [github.com/bazelbuild/rules_go/go/runfiles] instead to access runfiles.
 func SetDefaultTestWorkspace(w string) {
 	ensureRunfiles()
 	runfiles.workspace = w
@@ -266,8 +267,8 @@ func SetDefaultTestWorkspace(w string) {
 // the executable is run on Windows or was not invoked with 'bazel test'
 // or 'bazel run'.
 //
-// Deprecated: Use github.com/bazelbuild/rules_go/go/runfiles instead to access
-// runfiles, which provides a platform-agnostic fs.FS implementation.
+// Deprecated: Use [github.com/bazelbuild/rules_go/go/runfiles] instead to
+// access runfiles, which provides a platform-agnostic [fs.FS] implementation.
 func RunfilesPath() (string, error) {
 	if err := ensureRunfiles(); err != nil {
 		return "", err

@@ -12,6 +12,7 @@ bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "rules_proto", version = "7.0.2")
 bazel_dep(name = "protobuf", version = "29.0-rc2.bcr.1", repo_name = "com_google_protobuf")
 bazel_dep(name = "rules_shell", version = "0.3.0")
+bazel_dep(name = "rules_cc", version = "0.1.5")
 
 go_sdk = use_extension("//go:extensions.bzl", "go_sdk")
 

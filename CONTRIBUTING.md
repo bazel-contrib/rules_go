@@ -26,10 +26,10 @@ the one above, the
    an [issue](https://github.com/bazelbuild/rules_go/issues) or comment on an
    existing issue.
 1. Prepare a git commit with your change. Don't forget to
-   add [tests](https://github.com/bazelbuild/rules_go/tree/master/tests). 
+   add [tests](https://github.com/bazelbuild/rules_go/tree/master/tests).
    Run the existing tests with `bazel test //...`. Update
-   [README.md](https://github.com/bazelbuild/rules_go/blob/master/README.md)
-   if appropriate. 
+   [README.rst](https://github.com/bazelbuild/rules_go/blob/master/README.rst)
+   if appropriate.
 1. [Create a pull request](https://help.github.com/articles/creating-a-pull-request/).
    This will start the code review process. **All submissions, including
    submissions by project members, require review.**

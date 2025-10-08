@@ -26,20 +26,21 @@ import (
 
 // The name of the environment variable to access test data files.
 //
-// Deprecated: Use github.com/bazelbuild/rules_go/go/runfiles instead to access
-// runfiles.
+// Deprecated: Use [github.com/bazelbuild/rules_go/go/runfiles] instead to
+// access runfiles.
 const TEST_SRCDIR = "TEST_SRCDIR"
 
 const TEST_TMPDIR = "TEST_TMPDIR"
 
 // The name of the environment variable to access the test workspace name.
+// With Bzlmod enabled, the corresponding environment variable has the constant
+// value "_main".
 //
-// Deprecated: Use github.com/bazelbuild/rules_go/go/runfiles instead to access
-// runfiles. With Bzlmod enabled, the corresponding environment variable has the
-// constant value "_main".
+// Deprecated: Use [github.com/bazelbuild/rules_go/go/runfiles] instead to
+// access runfiles.
 const TEST_WORKSPACE = "TEST_WORKSPACE"
 
-// NewTmpDir creates a new temporary directory in TestTmpDir().
+// NewTmpDir creates a new temporary directory in [TestTmpDir].
 func NewTmpDir(prefix string) (string, error) {
 	return ioutil.TempDir(TestTmpDir(), prefix)
 }
@@ -53,9 +54,9 @@ func TestTmpDir() string {
 	return os.TempDir()
 }
 
-// SpliceDelimitedOSArgs is a utility function that scans the os.Args list for
-// entries delimited by the begin and end delimiters (typically the values
-// "-begin_files" and "-end_files" are used). Entries between these delimiters
+// SpliceDelimitedOSArgs is a utility function that scans the [os.Args] list
+// for entries delimited by the begin and end delimiters (typically the values
+// "-begin_files" and "-end_files" are used).  Entries between these delimiters
 // are spliced out of from os.Args and returned to the caller.  If the ordering
 // of -begin_files or -end_files is malformed, error is returned.
 //

@@ -11,6 +11,7 @@ tasks:
     bazel: 6.5.0 # test minimum supported version of bazel
     build_targets:
       - "//..."
+      - "-//tests/core/go_binary:goos_pure_bin"
     build_flags:
       - "--per_file_copt=external/.*@-w"
       - "--host_per_file_copt=external/.*@-w"
@@ -30,6 +31,7 @@ tasks:
       - "-//tests/integration/gazelle:gazelle_test"
       # Requires https://github.com/bazelbuild/bazel/commit/ceddfb1ece1f8ed7ff81558fa1751e6526df031b.
       - "-//tests/core/go_binary:configurable_attribute_good_test"
+      - "-//tests/core/go_binary:goos_pure_bin"
     test_flags:
       - "--per_file_copt=external/.*@-w"
       - "--host_per_file_copt=external/.*@-w"
