@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel_testing"
@@ -291,9 +293,44 @@ func testCoverageOfChildBinaries(t *testing.T, extraArgs ...string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Contains(coverageData, []byte("SF:main.go")) {
-		t.Errorf("%s: does not contain main.go\n", coveragePath)
+
+	expectedCoverage := []string{
+		"SF:main.go",
+		"FNF:0",
+		"FNH:0",
+		"DA:5,1",
+		"DA:6,1",
+		"DA:7,1",
+		"LH:3",
+		"LF:3",
 	}
+
+	extractedCoverage := extractCoverageSection(string(coverageData), "SF:main.go")
+	if !slices.Equal(expectedCoverage, extractedCoverage) {
+		t.Errorf("%s: is not matching expected coverage data\n", coveragePath)
+	}
+}
+
+func extractCoverageSection(coverageData, startAnchor string) []string {
+	lines := strings.Split(coverageData, "\n")
+	var (
+		result    []string
+		inSection bool
+	)
+	for _, line := range lines {
+		if !inSection {
+			if strings.TrimSpace(line) == startAnchor {
+				inSection = true
+				result = append(result, line)
+			}
+		} else {
+			if strings.TrimSpace(line) == "end_of_record" {
+				break
+			}
+			result = append(result, line)
+		}
+	}
+	return result
 }
 
 func TestCrossBuild(t *testing.T) {

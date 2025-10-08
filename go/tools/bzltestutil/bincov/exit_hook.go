@@ -35,7 +35,17 @@ func AddExitHook() {
 		return
 	}
 
-	os.Setenv("GOCOVERDIR", coverageDir)
+	// Go 1.24+ binaries built with -cover already emit their own coverage to GOCOVERDIR.
+	// We redirect them to a scratch directory that we can ignore.
+	// Once we only support these recent versions we could consider using the built-in support.
+	// We could also leave this env var unset but that would result in a misleading warning
+	// that coverage is not being collected
+	ignoredCoverageDir, err := os.MkdirTemp(os.Getenv("TEST_TMPDIR"), "ignored")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "creating temp dir for scratch coverage: %v\n", err)
+		return
+	}
+	os.Setenv("GOCOVERDIR", ignoredCoverageDir)
 
 	exithook.Add(exithook.Hook{
 		F: func() {
