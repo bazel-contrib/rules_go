@@ -116,7 +116,9 @@ func (b *BazelJSONBuilder) adjustToRelativePathIfPossible(request string) string
 
 func (b *BazelJSONBuilder) packageQuery(importPath string) string {
 	if strings.HasSuffix(importPath, "/...") {
-		importPath = fmt.Sprintf(`^%s(/.+)?$`, strings.TrimSuffix(importPath, "/..."))
+		importPath = fmt.Sprintf(`%s(/.+)?$`, regexp.QuoteMeta(strings.TrimSuffix(importPath, "/...")))
+	} else {
+		importPath = regexp.QuoteMeta(importPath)
 	}
 
 	return fmt.Sprintf(
