@@ -575,28 +575,22 @@ exit /b %GO_EXIT_CODE%
         args.add(out)
         args.add_all(ctx.files.srcs)
 
-        shell_script = ctx.actions.declare_file(name + "_build.sh")
-
         setting = ctx.attr._use_sh_toolchain_for_bootstrap_process_wrapper[BuildSettingInfo].value
         sh_toolchain = ctx.toolchains["@bazel_tools//tools/sh:toolchain_type"]
+        binary_wrapper = ctx.file._binary_wrapper
         if setting and sh_toolchain:
+            binary_wrapper = ctx.actions.declare_file(name + "_binary_wrapper.sh")
             ctx.actions.expand_template(
-                template = ctx.file._shell_tpl,
-                output = shell_script,
+                template = ctx.file._binary_wrapper,
+                output = binary_wrapper,
                 is_executable = True,
                 substitutions = {
                     "#!/usr/bin/env bash": "#!{}".format(sh_toolchain.path),
                 },
             )
-        else:
-            ctx.actions.symlink(
-                output = shell_script,
-                target_file = ctx.file._shell_tpl,
-                is_executable = True,
-            )
 
         ctx.actions.run(
-            executable = shell_script,
+            executable = binary_wrapper,
             arguments = [args],
             tools = [sdk.go],
             env = {
@@ -639,9 +633,9 @@ go_tool_binary = rule(
             doc = "Raw value to pass to go build via -ldflags without tokenization",
         ),
         "out_pack": attr.output(),
-        "_shell_tpl": attr.label(
+        "_binary_wrapper": attr.label(
             allow_single_file = True,
-            default = "//go/private/rules:binary.tpl.sh",
+            default = "//go/private/rules:binary_wrapper.sh",
         ),
         "_use_sh_toolchain_for_bootstrap_process_wrapper": attr.label(
             default = Label("//go/config:experimental_use_sh_toolchain"),
