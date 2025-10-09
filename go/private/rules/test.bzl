@@ -62,7 +62,6 @@ def _go_test_impl(ctx):
 
     go = go_context(
         ctx,
-        include_deprecated_properties = False,
         importpath = ctx.attr.importpath,
         embed = ctx.attr.embed,
         go_context_data = ctx.attr._go_context_data,
