@@ -18,6 +18,9 @@ load(
 )
 load(
     "//go/private:context.bzl",
+    "CGO_ATTRS",
+    "CGO_FRAGMENTS",
+    "CGO_TOOLCHAINS",
     "go_context",
     "new_go_info",
 )
@@ -108,8 +111,9 @@ _nogo = rule(
         "_allowlist_function_transition": attr.label(
             default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
         ),
-    },
-    toolchains = [GO_TOOLCHAIN],
+    } | CGO_ATTRS,
+    fragments = CGO_FRAGMENTS,
+    toolchains = [GO_TOOLCHAIN] + CGO_TOOLCHAINS,
     cfg = go_tool_transition,
 )
 

@@ -1,6 +1,7 @@
 load("@com_google_protobuf//bazel:proto_library.bzl", "proto_library")
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
+load(":defs.bzl", "host_platform_go_proto_library")
 
 # Common rules
 proto_library(
@@ -22,6 +23,14 @@ proto_library(
 
 go_proto_library(
     name = "bar_go_proto",
+    importpath = "github.com/bazelbuild/rules_go/tests/core/go_proto_library/bar",
+    proto = ":bar_proto",
+    deps = [":foo_go_proto"],
+)
+
+# Regression test for #4447
+host_platform_go_proto_library(
+    name = "host_bar_go_proto",
     importpath = "github.com/bazelbuild/rules_go/tests/core/go_proto_library/bar",
     proto = ":bar_proto",
     deps = [":foo_go_proto"],
