@@ -22,8 +22,6 @@ tasks:
       - "-//tests/core/nogo/bzlmod:includes_exclude_test"
       # _repo_mapping is missing
       - "-//tests/runfiles:runfiles_test"
-      # TODO: Investigate why this fails.
-      - "-//tests/core/starlark/cgo:missing_cc_toolchain_explicit_pure_off_test"
       # TODO: Bzlmod setup requires at least Bazel 7.
       - "-//tests/core/cross:proto_test"
       - "-//tests/core/from_go_mod_file:from_go_mod_file_test"
@@ -31,7 +29,6 @@ tasks:
       - "-//tests/integration/gazelle:gazelle_test"
       # Requires https://github.com/bazelbuild/bazel/commit/ceddfb1ece1f8ed7ff81558fa1751e6526df031b.
       - "-//tests/core/go_binary:configurable_attribute_good_test"
-      - "-//tests/core/go_binary:goos_pure_bin"
     test_flags:
       - "--per_file_copt=external/.*@-w"
       - "--host_per_file_copt=external/.*@-w"
