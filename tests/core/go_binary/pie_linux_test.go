@@ -60,7 +60,7 @@ func TestPIE(t *testing.T) {
 }
 
 func TestNoPIE(t *testing.T) {
-	e, err := openELF("tests/core/go_binary", "hello_nopie_bin")
+	e, err := openELF("tests/core/go_binary", "hello_auto_bin")
 	if err != nil {
 		t.Fatal(err)
 	}

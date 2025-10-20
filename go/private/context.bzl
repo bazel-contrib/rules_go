@@ -57,6 +57,7 @@ load(
 load(
     ":mode.bzl",
     "LINKMODE_NORMAL",
+    "LINKMODE_PIE",
     "installsuffix",
     "validate_mode",
 )
@@ -472,6 +473,14 @@ default_go_config_info = GoConfigInfo(
     export_stdlib = False,
 )
 
+def _defaults_to_pie(mode):
+    # based on DefaultPIE in src/internal/platform/supported.go
+    if mode.goos in ["android", "darwin", "ios"]:
+        return True
+    if mode.goos == "windows" and not mode.race:
+        return True
+    return False
+
 def go_context(
         ctx,
         attr = None,
@@ -534,6 +543,15 @@ def go_context(
             mode_kwargs["pure"] = True
         mode = GoConfigInfo(**mode_kwargs)
         validate_mode(mode)
+
+    # Mirror Go's logic by defaulting to PIE on supported platforms
+    if mode.linkmode == LINKMODE_NORMAL:
+        linkmode_attr = getattr(attr, "linkmode", "auto")
+        if linkmode_attr == "auto" and _defaults_to_pie(mode):
+            pie_mode_kwargs = structs.to_dict(mode)
+            pie_mode_kwargs["linkmode"] = LINKMODE_PIE
+            mode = GoConfigInfo(**pie_mode_kwargs)
+            validate_mode(mode)
 
     if stdlib:
         goroot = stdlib.root_file.dirname
