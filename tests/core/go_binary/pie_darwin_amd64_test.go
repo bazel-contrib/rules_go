@@ -20,7 +20,7 @@ import (
 )
 
 func TestNoPIE(t *testing.T) {
-	m, err := openMachO("tests/core/go_binary", "hello_nopie_bin")
+	m, err := openMachO("tests/core/go_binary", "hello_normal_bin")
 	if err != nil {
 		t.Fatal(err)
 	}

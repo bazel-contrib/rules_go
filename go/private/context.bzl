@@ -58,6 +58,7 @@ load(
 load(
     ":mode.bzl",
     "LINKMODE_NORMAL",
+    "LINKMODE_PIE",
     "installsuffix",
     "validate_mode",
 )
@@ -474,6 +475,14 @@ default_go_config_info = GoConfigInfo(
     pgoprofile = None,
     export_stdlib = False,
 )
+
+def _defaults_to_pie(goos, race):
+    # based on DefaultPIE in src/internal/platform/supported.go
+    if goos in ["android", "darwin", "ios"]:
+        return True
+    if goos == "windows" and not race:
+        return True
+    return False
 
 def go_context(
         ctx,
@@ -1000,6 +1009,11 @@ def _go_config_impl(ctx):
 
     toolchain = ctx.toolchains[GO_TOOLCHAIN]
 
+    linkmode = ctx.attr.linkmode[BuildSettingInfo].value
+    if linkmode == "auto":
+        # Mirror Go's logic by defaulting to PIE on supported platforms
+        linkmode = LINKMODE_PIE if _defaults_to_pie(toolchain.default_goos, race) else LINKMODE_NORMAL
+
     go_config_info = GoConfigInfo(
         goos = toolchain.default_goos,
         goarch = toolchain.default_goarch,
@@ -1009,7 +1023,7 @@ def _go_config_impl(ctx):
         pure = ctx.attr.pure[BuildSettingInfo].value,
         strip = ctx.attr.strip,
         debug = ctx.attr.debug[BuildSettingInfo].value,
-        linkmode = ctx.attr.linkmode[BuildSettingInfo].value,
+        linkmode = linkmode,
         gc_linkopts = ctx.attr.gc_linkopts[BuildSettingInfo].value,
         tags = tags,
         stamp = ctx.attr.stamp,

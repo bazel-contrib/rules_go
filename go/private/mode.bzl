@@ -128,6 +128,11 @@ _LINK_PIE_PLATFORMS = {
     "android/arm": None,
     "android/arm64": None,
     "android/386": None,
+    "darwin/amd64": None,
+    "darwin/arm64": None,
+    "ios/arm": None,
+    "ios/amd64": None,
+    "ios/arm64": None,
     "freebsd/amd64": None,
 }
 

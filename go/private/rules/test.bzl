@@ -345,7 +345,7 @@ _go_test_kwargs = {
             the same values as `go build -buildmode` and works the same way.
             <br><br>
             <ul>
-            <li>`auto` (default): Controlled by `//go/config:linkmode`, which defaults to `normal`.</li>
+            <li>`auto` (default): Controlled by `//go/config:linkmode`, which defaults to `pie` on supported platforms and `normal` elsewhere.</li>
             <li>`normal`: Builds a normal executable with position-dependent code.</li>
             <li>`pie`: Builds a position-independent executable.</li>
             <li>`plugin`: Builds a shared library that can be loaded as a Go plugin. Only supported on platforms that support plugins.</li>

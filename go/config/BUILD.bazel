@@ -4,10 +4,6 @@ load(
     "string_flag",
     "string_list_flag",
 )
-load(
-    "//go/private:mode.bzl",
-    "LINKMODE_NORMAL",
-)
 
 bool_flag(
     name = "static",
@@ -47,7 +43,7 @@ bool_flag(
 
 string_flag(
     name = "linkmode",
-    build_setting_default = LINKMODE_NORMAL,
+    build_setting_default = "auto",
     visibility = ["//visibility:public"],
 )
 

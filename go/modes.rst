@@ -79,11 +79,16 @@ or using `Bazel configuration transitions`_.
 | Controls which build tags are enabled when evaluating build constraints in   |
 | source files. Useful for conditional compilation.                            |
 +------------------------+---------------------+-------------------------------+
-| :param:`linkmode`      | :type:`string`      | :value:`"normal"`             |
+| :param:`linkmode`      | :type:`string`      | :value:`"auto"`               |
 +------------------------+---------------------+-------------------------------+
 | Determines how the Go binary is built and linked. Similar to ``-buildmode``. |
 | Must be one of ``"normal"``, ``"shared"``, ``"pie"``, ``"plugin"``,          |
 | ``"c-shared"``, ``"c-archive"``.                                             |
+|                                                                              |
+| When left at the default ``"auto"``, this builds PIE binaries on Android,    |
+| iOS, macOS and Windows (unless ``--@io_bazel_rules_go//go/config:race`` is   |
+| enabled) and uses ``"normal"`` elsewhere. Set ``"normal"`` explicitly if you |
+| need position-dependent binaries on a platform that would otherwise use PIE. |
 +------------------------+---------------------+-------------------------------+
 | :param:`export_stdlib` | :type:`bool`        | :value:`false`                |
 +------------------------+---------------------+-------------------------------+

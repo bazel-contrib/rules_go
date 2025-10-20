@@ -25,6 +25,7 @@ load(
 load(
     "//go/private:mode.bzl",
     "LINKMODE_NORMAL",
+    "LINKMODE_PIE",
     "extldflags_from_cc_toolchain",
     "link_mode_arg",
 )
@@ -60,7 +61,7 @@ def _should_use_sdk_stdlib(go):
             not go.mode.msan and
             not go.mode.pure and
             not go.mode.gc_goopts and
-            go.mode.linkmode == LINKMODE_NORMAL)
+            go.mode.linkmode in (LINKMODE_NORMAL, LINKMODE_PIE))
 
 def _build_stdlib_list_json(go):
     sdk = go.sdk
