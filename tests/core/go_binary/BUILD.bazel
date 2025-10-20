@@ -98,16 +98,32 @@ go_binary(
 )
 
 go_binary(
-    name = "hello_nopie_bin",
+    name = "hello_auto_bin",
     srcs = ["hello.go"],
     cgo = True,
+    tags = ["manual"],
+)
+
+go_binary(
+    name = "hello_normal_bin",
+    srcs = ["hello.go"],
+    cgo = True,
+    linkmode = "normal",
+    tags = ["manual"],
+)
+
+go_binary(
+    name = "hello_android_bin",
+    srcs = ["hello.go"],
+    goarch = "arm64",
+    goos = "android",
     tags = ["manual"],
 )
 
 linkmode_pie_wrapper(
     name = "hello_pie_setting_bin",
     tags = ["manual"],
-    target = ":hello_nopie_bin",
+    target = ":hello_auto_bin",
 )
 
 go_test(
@@ -133,13 +149,15 @@ go_test(
     ],
     data = select({
         "@io_bazel_rules_go//go/platform:darwin": [
-            ":hello_nopie_bin",
+            ":hello_auto_bin",
+            ":hello_normal_bin",
             ":hello_pie_bin",
             ":hello_pie_setting_bin",
             ":hello_pie_setting_test_bin",
         ],
         "@io_bazel_rules_go//go/platform:linux": [
-            ":hello_nopie_bin",
+            ":hello_android_bin",
+            ":hello_auto_bin",
             ":hello_pie_bin",
             ":hello_pie_setting_bin",
             ":hello_pie_setting_test_bin",
