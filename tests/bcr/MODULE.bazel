@@ -18,8 +18,8 @@ local_path_override(
     path = "../..",
 )
 
-bazel_dep(name = "gazelle", version = "0.33.0")
-bazel_dep(name = "protobuf", version = "3.19.6")
+bazel_dep(name = "gazelle", version = "0.36.0")
+bazel_dep(name = "protobuf", version = "29.0-rc2.bcr.1")
 bazel_dep(name = "rules_shell", version = "0.4.1")
 
 # Required with --incompatible_enable_proto_toolchain_resolution.
@@ -57,8 +57,8 @@ use_repo(go_sdk, "go_host_compatible_sdk_label")
 go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
 go_deps.module(
     path = "google.golang.org/grpc",
-    sum = "h1:pnP7OclFFFgFi4VHQDQDaoXUVauOFyktqTsqqgzFKbc=",
-    version = "v1.40.1",
+    sum = "h1:OgPcDAFKHnH8X3O4WcO4XUc8GRDeKsKReqbQtiCj7N8=",
+    version = "v1.67.3",
 )
 
 # Read in go_tool_test.sh.
