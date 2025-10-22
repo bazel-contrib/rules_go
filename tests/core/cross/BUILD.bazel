@@ -55,9 +55,8 @@ go_binary(
 )
 
 go_binary(
-    name = "native_bin",
+    name = "native_default_bin",
     srcs = ["main.go"],
-    pure = "on",
     deps = [":platform_lib"],
 )
 
@@ -77,6 +76,13 @@ go_cross_binary(
     name = "darwin_go_cross",
     platform = "@io_bazel_rules_go//go/toolchain:darwin_amd64",
     target = ":native_bin",
+)
+
+go_binary(
+    name = "native_bin",
+    srcs = ["main.go"],
+    pure = "on",
+    deps = [":platform_lib"],
 )
 
 # Because pure = "on" on the underlying target, this doesn't actually need cgo (and won't try to use it).
