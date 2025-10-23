@@ -1,3 +1,2 @@
 common --enable_bzlmod
-common --lockfile_mode=error
 build --@my_rules_go//go/toolchain:sdk_version=1.23.1
