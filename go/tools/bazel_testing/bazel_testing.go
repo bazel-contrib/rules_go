@@ -26,7 +26,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -205,7 +204,7 @@ func RunBazel(args ...string) error {
 	cmd := BazelCmd(args...)
 
 	buf := &bytes.Buffer{}
-	cmd.Stderr = buf
+	cmd.Stderr = io.MultiWriter(os.Stderr, buf)
 	err := cmd.Run()
 	if eErr, ok := err.(*exec.ExitError); ok {
 		eErr.Stderr = buf.Bytes()
@@ -234,7 +233,7 @@ func BazelOutputWithInput(stdin io.Reader, args ...string) ([]byte, []byte, erro
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	cmd.Stdout = stdout
-	cmd.Stderr = stderr
+	cmd.Stderr = io.MultiWriter(os.Stderr, stderr)
 	if stdin != nil {
 		cmd.Stdin = stdin
 	}
@@ -460,7 +459,7 @@ func extractTxtar(dir, txt string) error {
 				return err
 			}
 		}
-		if err := ioutil.WriteFile(filepath.Join(dir, f.Name), f.Data, 0666); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, f.Name), f.Data, 0666); err != nil {
 			return err
 		}
 	}
