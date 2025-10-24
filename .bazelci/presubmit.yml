@@ -5,7 +5,7 @@ matrix:
     - macos_arm64
     - windows
 imports:
-  - "bcr.yml" # symbolic link to ../../.bcr/presubmit.yml
+  - "bcr.yml" # symbolic link to ../.bcr/presubmit.yml
 
 tasks:
   debian11_bazel6:
