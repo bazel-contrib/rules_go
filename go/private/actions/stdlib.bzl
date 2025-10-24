@@ -143,9 +143,11 @@ def _build_stdlib(go):
     if not go.mode.pure:
         args.add("-package", "runtime/cgo")
 
-    # For bzltestutil's coverage support.
-    args.add("-package", "cmd/internal/cov")
-    args.add("-package", "cmd/internal/bio")
+    version = parse_version(go.sdk.version)
+    if version and version[0] >= 1 and version[1] >= 20:
+        # For bzltestutil's coverage support - `cmd/internal/cov` only introduced in go 1.20
+        args.add("-package", "cmd/internal/cov")
+        args.add("-package", "cmd/internal/bio")
 
     link_mode_flag = link_mode_arg(go.mode)
     if link_mode_flag:
