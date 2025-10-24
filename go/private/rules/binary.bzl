@@ -459,8 +459,8 @@ def _go_binary_kwargs(go_cc_aspects = []):
                 the same values as `go build -buildmode` and works the same way.
                 <br><br>
                 <ul>
-                <li>`auto` (default): Controlled by `//go/config:linkmode`, which defaults to `normal`.</li>
-                <li>`normal`: Builds a normal executable with position-dependent code.</li>
+                <li>`auto` (default): Controlled by `//go/config:linkmode`, which defaults to `normal` (or `pie` on Android, iOS, macOS, and Windows targets without `-race`).</li>
+                <li>`normal`: Builds a normal executable with position-dependent code. Some platforms (for example Android) may still require PIE, so prefer `auto` unless you have a specific need.</li>
                 <li>`pie`: Builds a position-independent executable.</li>
                 <li>`plugin`: Builds a shared library that can be loaded as a Go plugin. Only supported on platforms that support plugins.</li>
                 <li>`c-shared`: Builds a shared library that can be linked into a C program.</li>
