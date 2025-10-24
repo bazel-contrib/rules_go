@@ -63,6 +63,7 @@ tasks:
   bcr_tests:
     name: BCR test module
     platform: ${{ platform }}
+    bazel: [7.x, 8.x]
     working_directory: tests/bcr
     build_flags:
       - "--allow_yanked_versions=all"
