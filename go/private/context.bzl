@@ -78,7 +78,7 @@ load(
 CPP_TOOLCHAIN_TYPE = Label("@bazel_tools//tools/cpp:toolchain_type")
 CGO_ATTRS = {
     "_cc_toolchain": attr.label(default = "@bazel_tools//tools/cpp:optional_current_cc_toolchain"),
-    "_xcode_config": attr.label(default = "@bazel_tools//tools/osx:current_xcode_config"),
+    "_xcode_config": attr.label(default = configuration_field(fragment = "apple", name = "xcode_config_label")),
     "_pure_flag": attr.label(default = "//go/config:pure"),
     "_pure_constraint": attr.label(default = "//go/toolchain:cgo_off"),
 }
