@@ -570,15 +570,25 @@ def _parse_versions_json(data):
         for sdk in sdks
     }
 
-def fetch_sdks_by_version(ctx):
-    ctx.download(
+def fetch_sdks_by_version(ctx, allow_fail = False):
+    result = ctx.download(
         url = [
             "https://go.dev/dl/?mode=json&include=all",
             "https://golang.google.cn/dl/?mode=json&include=all",
         ],
         output = "versions.json",
+        allow_fail = allow_fail,
     )
+    if not result.success:
+        return {}
     data = ctx.read("versions.json")
+
+    # If the download is redirected through a proxy such as Artifactory, it may
+    # drop the query parameters and return an HTML page instead. In that case,
+    # just return an empty map if allow_fail is set. It is unfortunately not
+    # possible to attempt parsing as JSON and catch the error.
+    if (not data or data[0] != "[") and allow_fail:
+        return {}
 
     # module_ctx doesn't have delete, but its files are temporary anyway.
     if hasattr(ctx, "delete"):
