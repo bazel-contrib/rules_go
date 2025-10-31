@@ -20,6 +20,10 @@ gomock(
     interfaces = ["Client"],
     library = ":client",
     package = "client",
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
     visibility = ["//visibility:public"],
 )
 
@@ -30,5 +34,9 @@ go_test(
         "client_test.go",
     ],
     embed = [":client"],
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
     deps = ["@com_github_golang_mock//gomock"],
 )
