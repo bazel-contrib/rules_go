@@ -191,7 +191,32 @@ Limitations:
 -   `go.work` is supported exclusively in the root module.
 -   Dependencies that are indirect and depend on a go module specified in `go.work` will have that dependency diverge from the one in `go.work`. More details can be found here: https://github.com/bazelbuild/bazel-gazelle/issues/1797.
 
-#### Depending on tools
+#### Depending on tools (Go 1.24+)
+
+Go 1.24 introduced the [`tool` directive](https://tip.golang.org/doc/go1.24#tools), allowing you to specify tool dependencies directly in your `go.mod` like so:
+```sh
+bazel run @rules_go//go -- get -tool golang.org/x/tools/cmd/stringer
+```
+
+This will add a `tool` section in your `go.mod`:
+```
+tool golang.org/x/tools/cmd/stringer
+```
+as well as adding that tool as a dependency.
+
+The tools you have added are exported as a dictionary named `TOOLS` from `@gazelle//:go_tools.bzl`. This dictionary is in a suitable format for use by [`bazel_env.bzl`](https://github.com/buildbuddy-io/bazel_env.bzl), so you should be able to do the following to get all your repository’s tools into a `bazel_env` target:
+```starlark
+load("@bazel_env.bzl", "bazel_env")
+load("@gazelle//:go_tools.bzl", GO_TOOLS = "TOOLS")
+bazel_env(
+    name = "env",
+    tools = {
+        // […]
+    } | GO_TOOLS,
+)
+```
+
+#### Depending on tools (pre Go 1.24)
 
 If you need to depend on Go modules that are only used as tools, you can use the [`tools.go` technique](https://github.com/golang/go/issues/25922#issuecomment-1038394599):
 
