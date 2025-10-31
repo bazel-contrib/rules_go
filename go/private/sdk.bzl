@@ -580,7 +580,7 @@ def fetch_sdks_by_version(ctx, allow_fail = False):
         allow_fail = allow_fail,
     )
     if not result.success:
-        return {}
+        return None
     data = ctx.read("versions.json")
 
     # If the download is redirected through a proxy such as Artifactory, it may
@@ -588,7 +588,7 @@ def fetch_sdks_by_version(ctx, allow_fail = False):
     # just return an empty map if allow_fail is set. It is unfortunately not
     # possible to attempt parsing as JSON and catch the error.
     if (not data or data[0] != "[") and allow_fail:
-        return {}
+        return None
 
     # module_ctx doesn't have delete, but its files are temporary anyway.
     if hasattr(ctx, "delete"):

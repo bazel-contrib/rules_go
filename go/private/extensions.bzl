@@ -217,7 +217,9 @@ def _go_sdk_impl(ctx):
             # resolution. We must not break those builds.
             if not all_sdks_by_version:
                 all_sdks_by_version.clear()
-                all_sdks_by_version.update(fetch_sdks_by_version(ctx, allow_fail = True))
+                all_sdks_by_version.update(fetch_sdks_by_version(ctx, allow_fail = True) or {
+                    "fetch_failed_but_should_not_fetch_again_sentinel": [],
+                })
             sdks = all_sdks_by_version.get(version)
         if sdks == None:
             # This is either caused by an invalid version or because we are in an airgapped build
