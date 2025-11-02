@@ -5,3 +5,4 @@
 /examples/*/bazel-*
 /.ijwb/
 /tests/bcr/.ijwb/
+.vscode
