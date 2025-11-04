@@ -1,5 +1,6 @@
 module(name = "other_module")
 
+bazel_dep(name = "rules_cc", version = "0.0.17")
 bazel_dep(name = "rules_go", version = "")
 
 go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")

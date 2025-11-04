@@ -7,8 +7,9 @@ matrix:
     - windows
   # Only BCR tests use all Bazel versions. Others use the default.
   bazel:
-    - 7.x
-    - 8.x
+    - 7.*
+    - 8.*
+    - 9.*
 
 tasks:
   debian11_bazel6:
