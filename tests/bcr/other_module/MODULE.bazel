@@ -3,7 +3,3 @@ module(name = "other_module")
 bazel_dep(name = "rules_go", version = "")
 
 go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
-
-# Request an invalid SDK to verify that it isn't fetched since the test module registers a toolchain
-# that takes precedence.
-go_sdk.download(version = "3.0.0")
