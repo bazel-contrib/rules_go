@@ -34,6 +34,7 @@ BAZEL_GOARCH_CONSTRAINTS = {
     "ppc64": "@platforms//cpu:ppc",
     "ppc64le": "@platforms//cpu:ppc64le",
     "s390x": "@platforms//cpu:s390x",
+    "loong64": "@platforms//cpu:loongarch64",
 }
 
 GOOS_GOARCH = (
@@ -59,6 +60,7 @@ GOOS_GOARCH = (
     ("linux", "amd64"),
     ("linux", "arm"),
     ("linux", "arm64"),
+    ("linux", "loong64"),
     ("linux", "mips"),
     ("linux", "mips64"),
     ("linux", "mips64le"),
@@ -128,6 +130,7 @@ CGO_GOOS_GOARCH = {
     ("linux", "amd64"): None,
     ("linux", "arm"): None,
     ("linux", "arm64"): None,
+    ("linux", "loong64"): None,
     ("linux", "mips"): None,
     ("linux", "mips64"): None,
     ("linux", "mips64le"): None,
