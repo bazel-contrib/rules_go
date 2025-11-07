@@ -50,6 +50,10 @@ func link(args []string) error {
 	buildmode := flags.String("buildmode", "", "Build mode used.")
 	flags.Var(&xdefs, "X", "A string variable to replace in the linked binary (repeated).")
 	flags.Var(&stamps, "stamp", "The name of a file with stamping values.")
+	conflictErrMsg := flags.String("conflict_err", "", "Error message about conflicts to report if there's a link error.")
+	buildinfoFile := flags.String("buildinfo", "", "Path to buildinfo dependency file for Go 1.18+ buildInfo.")
+	versionMapFile := flags.String("versionmap", "", "Path to version map file with real dependency versions from package_info.")
+	bazelTarget := flags.String("bazeltarget", "", "Bazel target label for buildInfo metadata.")
 	if err := flags.Parse(builderArgs); err != nil {
 		return err
 	}
@@ -90,8 +94,201 @@ func link(args []string) error {
 		}
 	}
 
+	// Parse version map file if provided (real versions from package_info)
+	versionMap := make(map[string]string)
+	if *versionMapFile != "" {
+		versionMapData, err := ioutil.ReadFile(*versionMapFile)
+		if err != nil {
+			return fmt.Errorf("Failed reading version map file %s: %v", *versionMapFile, err)
+		}
+
+		// Parse the version map file: importpath\tversion
+		lines := strings.Split(string(versionMapData), "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if line == "" {
+				continue
+			}
+			parts := strings.Split(line, "\t")
+			if len(parts) >= 2 {
+				importpath := parts[0]
+				version := parts[1]
+				versionMap[importpath] = version
+			}
+		}
+	}
+
+	// Parse buildinfo file if provided (for Go 1.18+ dependency metadata)
+	// Merge with version map to replace v0.0.0 with real versions
+	var deps []*Module
+	if *buildinfoFile != "" {
+		buildinfoData, err := ioutil.ReadFile(*buildinfoFile)
+		if err != nil {
+			return fmt.Errorf("Failed reading buildinfo file %s: %v", *buildinfoFile, err)
+		}
+
+		// Parse the buildinfo file to extract dependency information
+		// Format: tab-separated lines with "path", "dep", etc.
+		// First pass: extract the main module path
+		mainModulePath := ""
+		lines := strings.Split(string(buildinfoData), "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if line == "" {
+				continue
+			}
+			parts := strings.Split(line, "\t")
+			if len(parts) >= 2 && parts[0] == "path" {
+				mainModulePath = parts[1]
+				break
+			}
+		}
+
+		// Second pass: collect dependencies
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if line == "" {
+				continue
+			}
+			parts := strings.Split(line, "\t")
+			if len(parts) >= 3 && parts[0] == "dep" {
+				importpath := parts[1]
+				version := parts[2]
+
+				// Skip internal packages (from main module)
+				// Filter out packages that are part of the main module being built
+				if mainModulePath != "" && strings.HasPrefix(importpath, mainModulePath+"/") {
+					continue
+				}
+
+				// Replace (devel) sentinel with real version from version map
+				if version == "(devel)" {
+					// First try exact match
+					if realVersion, ok := versionMap[importpath]; ok && realVersion != "" {
+						version = realVersion
+					} else {
+						// Try to find parent module version for subpackages
+						// Check progressively shorter prefixes to find the module root
+						bestMatch := ""
+						for modulePath := range versionMap {
+							if strings.HasPrefix(importpath, modulePath+"/") {
+								// Found a parent module, keep the longest match
+								if len(modulePath) > len(bestMatch) {
+									bestMatch = modulePath
+								}
+							}
+						}
+						if bestMatch != "" {
+							version = versionMap[bestMatch]
+						}
+					}
+				}
+
+				// Skip dependencies that still have (devel) after version resolution
+				// These are internal packages from the monorepo without real versions
+				// (devel) is an invalid semantic version used as a sentinel
+				if version == "(devel)" {
+					continue
+				}
+
+				// Format: dep\t<importpath>\t<version>
+				deps = append(deps, &Module{
+					Path:    importpath,
+					Version: version,
+					Sum:     "", // No checksum in Bazel builds
+				})
+			}
+		}
+	}
+
+	// Prepare link config for buildinfo generation
+	var realBuildMode string
+	if *buildmode == "" {
+		realBuildMode = "exe"
+	} else {
+		realBuildMode = *buildmode
+	}
+
+	cgoEnabled := os.Getenv("CGO_ENABLED") == "1"
+	goarch := os.Getenv("GOARCH")
+	goos := os.Getenv("GOOS")
+
+	// Extract architecture feature level
+	goarchFeatureKey := ""
+	goarchFeatureValue := ""
+	switch goarch {
+	case "amd64":
+		if v := os.Getenv("GOAMD64"); v != "" {
+			goarchFeatureKey = "GOAMD64"
+			goarchFeatureValue = v
+		}
+	case "arm":
+		if v := os.Getenv("GOARM"); v != "" {
+			goarchFeatureKey = "GOARM"
+			goarchFeatureValue = v
+		}
+	case "386":
+		if v := os.Getenv("GO386"); v != "" {
+			goarchFeatureKey = "GO386"
+			goarchFeatureValue = v
+		}
+	case "mips", "mipsle":
+		if v := os.Getenv("GOMIPS"); v != "" {
+			goarchFeatureKey = "GOMIPS"
+			goarchFeatureValue = v
+		}
+	case "mips64", "mips64le":
+		if v := os.Getenv("GOMIPS64"); v != "" {
+			goarchFeatureKey = "GOMIPS64"
+			goarchFeatureValue = v
+		}
+	case "ppc64", "ppc64le":
+		if v := os.Getenv("GOPPC64"); v != "" {
+			goarchFeatureKey = "GOPPC64"
+			goarchFeatureValue = v
+		}
+	case "riscv64":
+		if v := os.Getenv("GORISCV64"); v != "" {
+			goarchFeatureKey = "GORISCV64"
+			goarchFeatureValue = v
+		}
+	case "wasm":
+		if v := os.Getenv("GOWASM"); v != "" {
+			goarchFeatureKey = "GOWASM"
+			goarchFeatureValue = v
+		}
+	}
+
+	// Extract CGO flags
+	cgoCflags := ""
+	cgoCxxflags := ""
+	cgoLdflags := ""
+	if cgoEnabled {
+		cgoCflags = os.Getenv("CGO_CFLAGS")
+		cgoCxxflags = os.Getenv("CGO_CXXFLAGS")
+		cgoLdflags = os.Getenv("CGO_LDFLAGS")
+	}
+
+	cfg := linkConfig{
+		path:               *packagePath,
+		buildMode:          realBuildMode,
+		compiler:           "gc",
+		cgoEnabled:         cgoEnabled,
+		goos:               goos,
+		goarch:             goarch,
+		pgoProfilePath:     "",     // Will be set below if pgoprofile is provided
+		buildinfoFile:      *buildinfoFile,
+		deps:               deps,
+		goarchFeatureKey:   goarchFeatureKey,
+		goarchFeatureValue: goarchFeatureValue,
+		cgoCflags:          cgoCflags,
+		cgoCxxflags:        cgoCxxflags,
+		cgoLdflags:         cgoLdflags,
+		bazelTarget:        *bazelTarget,
+	}
+
 	// Build an importcfg file.
-	importcfgName, err := buildImportcfgFileForLink(archives, *packageList, goenv.installSuffix, filepath.Dir(*outFile))
+	importcfgName, err := buildImportcfgFileForLink(archives, *packageList, goenv.installSuffix, filepath.Dir(*outFile), cfg)
 	if err != nil {
 		return err
 	}

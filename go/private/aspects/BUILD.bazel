@@ -1,0 +1,12 @@
+filegroup(
+    name = "all_rules",
+    srcs = glob(["**/*.bzl"]),
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "all_files",
+    testonly = True,
+    srcs = glob(["**"]),
+    visibility = ["//visibility:public"],
+)

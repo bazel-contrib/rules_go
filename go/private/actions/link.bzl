@@ -44,13 +44,36 @@ def emit_link(
         executable = None,
         gc_linkopts = [],
         version_file = None,
-        info_file = None):
+        info_file = None,
+        version_map = None,
+        target_label = None):
     """See go/toolchains.rst#link for full documentation."""
 
     if archive == None:
         fail("archive is a required parameter")
     if executable == None:
         fail("executable is a required parameter")
+
+    # Generate buildinfo dependency file for Go 1.18+ buildInfo support
+    buildinfo_file = None
+    if hasattr(archive.data, "_buildinfo_deps") and archive.data._buildinfo_deps:
+        buildinfo_file = go.declare_file(go, path = executable.basename + ".buildinfo.txt")
+        buildinfo_content = ""
+
+        # Add main package path
+        if archive.data.importpath:
+            buildinfo_content += "path\t{}\n".format(archive.data.importpath)
+
+        # Add dependencies in sorted order for determinism
+        deps_list = sorted(archive.data._buildinfo_deps, key = lambda x: x[0])
+        for dep_path, dep_version in deps_list:
+            # Format: dep\t<importpath>\t<version>
+            buildinfo_content += "dep\t{}\t{}\n".format(dep_path, dep_version)
+
+        go.actions.write(
+            output = buildinfo_file,
+            content = buildinfo_content,
+        )
 
     # Exclude -lstdc++ from link options. We don't want to link against it
     # unless we actually have some C++ code. _cgo_codegen will include it
@@ -167,6 +190,15 @@ def emit_link(
     builder_args.add("-o", executable)
     builder_args.add("-main", archive.data.file)
     builder_args.add("-p", archive.data.importmap)
+
+    # Pass buildinfo file to builder if available
+    if buildinfo_file:
+        builder_args.add("-buildinfo", buildinfo_file)
+    if version_map:
+        builder_args.add("-versionmap", version_map)
+    if target_label:
+        builder_args.add("-bazeltarget", target_label)
+
     tool_args.add_all(gc_linkopts)
     tool_args.add_all(go.toolchain.flags.link)
 
@@ -177,6 +209,10 @@ def emit_link(
     tool_args.add_joined("-extldflags", extldflags, join_with = " ")
 
     inputs_direct = stamp_inputs + [go.sdk.package_list]
+    if buildinfo_file:
+        inputs_direct.append(buildinfo_file)
+    if version_map:
+        inputs_direct.append(version_map)
     if go.coverage_enabled and go.coverdata:
         inputs_direct.append(go.coverdata.data.file)
     inputs_transitive = [

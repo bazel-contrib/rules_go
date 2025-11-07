@@ -52,6 +52,11 @@ load(
     "go_transition",
     "non_go_transition",
 )
+load(
+    "//go/private/aspects:buildinfo_aspect.bzl",
+    "BuildInfoMetadata",
+    "buildinfo_aspect",
+)
 
 _EMPTY_DEPSET = depset([])
 
@@ -155,6 +160,42 @@ def _go_binary_impl(ctx):
         importable = False,
         is_main = is_main,
     )
+
+    # Collect version metadata from aspect for buildInfo
+    version_map_file = None
+    version_tuples = []
+
+    # Collect from embed attribute if present
+    if hasattr(ctx.attr, "embed"):
+        for embed in ctx.attr.embed:
+            if BuildInfoMetadata in embed:
+                version_tuples.extend(embed[BuildInfoMetadata].version_map.to_list())
+
+    # Collect from deps attribute if present
+    if hasattr(ctx.attr, "deps"):
+        for dep in ctx.attr.deps:
+            if BuildInfoMetadata in dep:
+                version_tuples.extend(dep[BuildInfoMetadata].version_map.to_list())
+
+    # Generate version map file if we have versions
+    if version_tuples:
+        version_map_file = ctx.actions.declare_file(ctx.label.name + "_versions.txt")
+
+        # Sort and deduplicate
+        version_dict = {}
+        for importpath, version in version_tuples:
+            if importpath not in version_dict:
+                version_dict[importpath] = version
+
+        # Write tab-separated file
+        lines = ["{}\t{}".format(imp, ver) for imp, ver in sorted(version_dict.items())]
+        ctx.actions.write(
+            output = version_map_file,
+            content = "\n".join(lines) + "\n" if lines else "",
+        )
+
+    # Get Bazel target label for buildInfo
+    target_label = str(ctx.label)
     name = ctx.attr.basename
     if not name:
         name = ctx.label.name
@@ -172,6 +213,8 @@ def _go_binary_impl(ctx):
         version_file = ctx.version_file,
         info_file = ctx.info_file,
         executable = executable,
+        version_map = version_map_file,
+        target_label = target_label,
     )
     validation_output = archive.data._validation_output
     nogo_diagnostics = archive.data._nogo_diagnostics
@@ -279,14 +322,14 @@ def _go_binary_kwargs(go_cc_aspects = []):
             ),
             "deps": attr.label_list(
                 providers = [GoInfo],
-                aspects = go_cc_aspects,
+                aspects = go_cc_aspects + [buildinfo_aspect],
                 doc = """List of Go libraries this package imports directly.
                 These may be `go_library` rules or compatible rules with the [GoInfo] provider.
                 """,
             ),
             "embed": attr.label_list(
                 providers = [GoInfo],
-                aspects = go_cc_aspects,
+                aspects = go_cc_aspects + [buildinfo_aspect],
                 doc = """List of Go libraries whose sources should be compiled together with this
                 binary's sources. Labels listed here must name `go_library`,
                 `go_proto_library`, or other compatible targets with the [GoInfo] provider.

@@ -54,6 +54,7 @@ bzl_library(
         "//go/private/rules:library",
         "//go/private/rules:nogo",
         "//go/private/rules:sdk",
+        "//go/private/aspects:all_rules",
         "//go/private/rules:source",
         "//go/private/rules:wrappers",
         "//go/private/tools:path",
