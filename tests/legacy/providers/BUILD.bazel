@@ -1,3 +1,4 @@
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//go:def.bzl", "go_source")
 load("//tests/legacy/providers:test.bzl", "test_source")
 
