@@ -204,7 +204,7 @@ tool golang.org/x/tools/cmd/stringer
 ```
 as well as adding that tool as a dependency.
 
-The tools you have added are exported as a dictionary named `GO_TOOLS` from `@gazelle//:go_tools.bzl`. This dictionary is in a suitable format for use by [`bazel_env.bzl`](https://github.com/buildbuddy-io/bazel_env.bzl), so you should be able to do the following to get all your repository’s tools into a `bazel_env` target:
+If you are using Gazelle >=0.47.0, then the tools you have added are exported as a dictionary named `GO_TOOLS` from `@gazelle//:go_tools.bzl`. This dictionary is in a suitable format for use by [`bazel_env.bzl`](https://github.com/buildbuddy-io/bazel_env.bzl), so you should be able to do the following to get all your repository’s tools into a `bazel_env` target:
 ```starlark
 load("@bazel_env.bzl", "bazel_env")
 load("@gazelle//:go_tools.bzl", "GO_TOOLS")
