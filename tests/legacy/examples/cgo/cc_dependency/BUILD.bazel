@@ -1,3 +1,7 @@
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+load("@rules_cc//cc:cc_import.bzl", "cc_import")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
 cc_library(
     name = "version",
     srcs = ["cxx_version.cc"],

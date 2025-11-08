@@ -4,7 +4,7 @@ matrix:
     - ubuntu2004_arm64
     - macos_arm64
     - windows
-  bazel: [7.x, 8.x]
+  bazel: [7.*, 8.*, 9.*]
 tasks:
   verify_targets:
     name: Verify build targets
@@ -20,7 +20,7 @@ bcr_test_module:
       - ubuntu2004_arm64
       - macos_arm64
       - windows
-    bazel: [7.x, 8.x]
+    bazel: [7.*, 8.*, 9.*]
   tasks:
     run_test_module:
       name: Run test module

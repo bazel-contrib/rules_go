@@ -39,6 +39,7 @@ load(
     NOGO_EXCLUDES = "EXCLUDES",
     NOGO_INCLUDES = "INCLUDES",
 )
+load("@rules_cc//cc/common:cc_common.bzl", "cc_common")
 load(
     "//go/platform:apple.bzl",
     "apple_ensure_options",

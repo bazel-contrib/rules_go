@@ -139,6 +139,14 @@ http_archive(
     urls = ["https://github.com/bazelbuild/buildtools/archive/refs/tags/v6.4.0.tar.gz"],
 )
 
+# Used for both testing objc interop and building on Apple platforms. Must be
+# above the llvm_toolchain declaration while it's still at 8.0.0.
+http_archive(
+    name = "build_bazel_apple_support",
+    sha256 = "85a7dc13e370f355bf00381238d1cba56450d3e598566b8c52d90ddf301c5dfb",
+    url = "https://github.com/bazelbuild/apple_support/releases/download/1.24.3/apple_support.1.24.3.tar.gz",
+)
+
 # For manual testing against an LLVM toolchain.
 # Use --extra_toolchains=@llvm_toolchain//:cc-toolchain-linux,@llvm_toolchain//:cc-toolchain-darwin
 http_archive(
@@ -292,13 +300,6 @@ http_archive(
 load("@io_bazel_stardoc//:setup.bzl", "stardoc_repositories")
 
 stardoc_repositories()
-
-# For testing objc_library interop, users should not need to install it
-http_archive(
-    name = "build_bazel_apple_support",
-    sha256 = "100d12617a84ebc7ee7a10ecf3b3e2fdadaebc167ad93a21f820a6cb60158ead",
-    url = "https://github.com/bazelbuild/apple_support/releases/download/1.12.0/apple_support.1.12.0.tar.gz",
-)
 
 load(
     "@build_bazel_apple_support//lib:repositories.bzl",
