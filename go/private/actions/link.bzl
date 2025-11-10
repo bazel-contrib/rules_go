@@ -45,7 +45,7 @@ def emit_link(
         gc_linkopts = [],
         version_file = None,
         info_file = None,
-        version_map = None,
+        buildinfo_metadata = None,
         target_label = None):
     """See go/toolchains.rst#link for full documentation."""
 
@@ -56,23 +56,55 @@ def emit_link(
 
     # Generate buildinfo dependency file for Go 1.18+ buildInfo support
     buildinfo_file = None
-    if hasattr(archive.data, "_buildinfo_deps") and archive.data._buildinfo_deps:
+    if buildinfo_metadata:
         buildinfo_file = go.declare_file(go, path = executable.basename + ".buildinfo.txt")
-        buildinfo_content = ""
+
+        # Materialize depsets at link time
+        importpaths = buildinfo_metadata.importpaths.to_list()
+        metadata_targets = buildinfo_metadata.metadata_providers.to_list()
+
+        # Build version map from metadata providers
+        # Sort targets by label for deterministic version resolution
+        # This ensures reproducible builds and consistent action cache keys
+        sorted_targets = sorted(
+            metadata_targets,
+            key = lambda t: str(t.label) if hasattr(t, "label") else str(t),
+        )
+
+        version_map = {}
+        for target in sorted_targets:
+            # Extract version info from PackageInfo provider
+            if hasattr(target, "package_info"):
+                # Handle both single object and list of package_info
+                package_infos = target.package_info if type(target.package_info) == type([]) else [target.package_info]
+                for info in package_infos:
+                    if hasattr(info, "module") and hasattr(info, "version"):
+                        module = info.module
+                        version = info.version
+                        # Use first version (by sorted label order) if duplicates exist
+                        # This makes conflicts deterministic and debuggable
+                        if module not in version_map:
+                            version_map[module] = version
+
+        # Build buildinfo content
+        content_lines = []
 
         # Add main package path
         if archive.data.importpath:
-            buildinfo_content += "path\t{}\n".format(archive.data.importpath)
+            content_lines.append("path\t{}".format(archive.data.importpath))
 
-        # Add dependencies in sorted order for determinism
-        deps_list = sorted(archive.data._buildinfo_deps, key = lambda x: x[0])
-        for dep_path, dep_version in deps_list:
-            # Format: dep\t<importpath>\t<version>
-            buildinfo_content += "dep\t{}\t{}\n".format(dep_path, dep_version)
+        # Add dependencies with versions
+        # Sort importpaths for deterministic output, which is required for:
+        # 1. Bazel action caching - identical inputs must produce identical outputs
+        # 2. Reproducible builds across different machines
+        # 3. Easier debugging and testing with predictable output order
+        for importpath in sorted(importpaths):
+            version = version_map.get(importpath, "(devel)")
+            content_lines.append("dep\t{}\t{}".format(importpath, version))
 
         go.actions.write(
             output = buildinfo_file,
-            content = buildinfo_content,
+            content = "\n".join(content_lines) + "\n" if content_lines else "",
         )
 
     # Exclude -lstdc++ from link options. We don't want to link against it
@@ -194,8 +226,6 @@ def emit_link(
     # Pass buildinfo file to builder if available
     if buildinfo_file:
         builder_args.add("-buildinfo", buildinfo_file)
-    if version_map:
-        builder_args.add("-versionmap", version_map)
     if target_label:
         builder_args.add("-bazeltarget", target_label)
 
@@ -211,8 +241,6 @@ def emit_link(
     inputs_direct = stamp_inputs + [go.sdk.package_list]
     if buildinfo_file:
         inputs_direct.append(buildinfo_file)
-    if version_map:
-        inputs_direct.append(version_map)
     if go.coverage_enabled and go.coverdata:
         inputs_direct.append(go.coverdata.data.file)
     inputs_transitive = [

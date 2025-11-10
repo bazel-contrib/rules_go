@@ -167,28 +167,7 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
             is_external_pkg = is_external_pkg,
         )
 
-    # Collect buildinfo dependency metadata from transitive closure
-    # Format: (importpath, version_string) tuples
-    # version_string uses "v0.0.0" as a valid pseudo-version
-    dep_buildinfo = []
-    dep_buildinfo_set = {}
-
-    # Add direct dependencies' buildinfo
-    for d in direct:
-        # Add this dependency's own metadata
-        dep_key = d.data.importpath
-        if dep_key not in dep_buildinfo_set and d.data.importpath:
-            # Use (devel) as sentinel - invalid version that will be replaced
-            # with real version from PackageInfo or filtered out if internal
-            version = "(devel)"
-            dep_buildinfo.append((d.data.importpath, version))
-            dep_buildinfo_set[dep_key] = None
-
-        # Add transitive dependencies
-        for dep_path, dep_version in getattr(d.data, "_buildinfo_deps", ()):
-            if dep_path not in dep_buildinfo_set:
-                dep_buildinfo.append((dep_path, dep_version))
-                dep_buildinfo_set[dep_path] = None
+    # Buildinfo metadata is collected via aspect and stored separately
 
     data = GoArchiveData(
         # TODO(#2578): reconsider the provider API. There's a lot of redundant
@@ -219,9 +198,6 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
 
         # Information on dependencies
         _dep_labels = tuple([d.data.label for d in direct]),
-
-        # BuildInfo dependency metadata for Go 1.18+ (deterministic)
-        _buildinfo_deps = tuple(dep_buildinfo),
 
         # Information needed by dependents
         file = out_lib,

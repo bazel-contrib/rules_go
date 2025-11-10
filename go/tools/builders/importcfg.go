@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -40,11 +39,11 @@ type archive struct {
 // for standard library packages.
 func checkImports(files []fileInfo, archives []archive, stdPackageListPath string, importPath string, recompileInternalDeps []string) (map[string]*archive, error) {
 	// Read the standard package list.
-	packagesTxt, err := ioutil.ReadFile(stdPackageListPath)
+	packagesTxt, err := os.ReadFile(stdPackageListPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("reading standard package list: %w", err)
 	}
-	stdPkgs := make(map[string]bool)
+	stdPkgs := make(map[string]struct{})
 	for len(packagesTxt) > 0 {
 		n := bytes.IndexByte(packagesTxt, '\n')
 		var line string
@@ -59,7 +58,7 @@ func checkImports(files []fileInfo, archives []archive, stdPackageListPath strin
 		if line == "" {
 			continue
 		}
-		stdPkgs[line] = true
+		stdPkgs[line] = struct{}{}
 	}
 
 	// Index the archives.
@@ -91,7 +90,7 @@ func checkImports(files []fileInfo, archives []archive, stdPackageListPath strin
 			if _, ok := recompileInternalDepMap[path]; ok {
 				return nil, fmt.Errorf("dependency cycle detected between %q and %q in file %q", importPath, path, f.filename)
 			}
-			if stdPkgs[path] {
+			if _, ok := stdPkgs[path]; ok {
 				imports[path] = nil
 			} else if arc := importToArchive[path]; arc != nil {
 				imports[path] = arc
@@ -138,34 +137,34 @@ func buildImportcfgFileForCompile(imports map[string]*archive, installSuffix, di
 		}
 	}
 
-	f, err := ioutil.TempFile(dir, "importcfg")
+	f, err := os.CreateTemp(dir, "importcfg")
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("creating importcfg temp file: %w", err)
 	}
 	filename := f.Name()
 	if _, err := io.Copy(f, buf); err != nil {
 		f.Close()
 		os.Remove(filename)
-		return "", err
+		return "", fmt.Errorf("writing importcfg: %w", err)
 	}
 	if err := f.Close(); err != nil {
 		os.Remove(filename)
-		return "", err
+		return "", fmt.Errorf("closing importcfg: %w", err)
 	}
 	return filename, nil
 }
 
 // linkConfig contains parameters for generating buildinfo
 type linkConfig struct {
-	path            string
-	buildMode       string
-	compiler        string
-	cgoEnabled      bool
-	goarch          string
-	goos            string
-	pgoProfilePath  string
-	buildinfoFile   string
-	deps            []*Module
+	path           string
+	buildMode      string
+	compiler       string
+	cgoEnabled     bool
+	goarch         string
+	goos           string
+	pgoProfilePath string
+	buildinfoFile  string
+	deps           []*Module
 	// Architecture feature level (e.g., key="GOAMD64", value="v3")
 	goarchFeatureKey   string
 	goarchFeatureValue string
@@ -186,7 +185,7 @@ func buildImportcfgFileForLink(archives []archive, stdPackageListPath, installSu
 	prefix := abs(filepath.Join(goroot, "pkg", installSuffix))
 	stdPackageListFile, err := os.Open(stdPackageListPath)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("opening standard package list %s: %w", stdPackageListPath, err)
 	}
 	defer stdPackageListFile.Close()
 	scanner := bufio.NewScanner(stdPackageListFile)
@@ -198,7 +197,7 @@ func buildImportcfgFileForLink(archives []archive, stdPackageListPath, installSu
 		fmt.Fprintf(buf, "packagefile %s=%s.a\n", line, filepath.Join(prefix, filepath.FromSlash(line)))
 	}
 	if err := scanner.Err(); err != nil {
-		return "", err
+		return "", fmt.Errorf("scanning standard package list %s: %w", stdPackageListPath, err)
 	}
 	depsSeen := map[string]string{}
 	for _, arc := range archives {
@@ -262,19 +261,19 @@ package with this path is linked.`,
 		fmt.Fprintf(buf, "modinfo %q\n", ModInfoData(buildInfo.String()))
 	}
 
-	f, err := ioutil.TempFile(dir, "importcfg")
+	f, err := os.CreateTemp(dir, "importcfg")
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("creating importcfg temp file: %w", err)
 	}
 	filename := f.Name()
 	if _, err := io.Copy(f, buf); err != nil {
 		f.Close()
 		os.Remove(filename)
-		return "", err
+		return "", fmt.Errorf("writing importcfg: %w", err)
 	}
 	if err := f.Close(); err != nil {
 		os.Remove(filename)
-		return "", err
+		return "", fmt.Errorf("closing importcfg: %w", err)
 	}
 	return filename, nil
 }

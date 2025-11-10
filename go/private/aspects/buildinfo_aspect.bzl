@@ -5,6 +5,9 @@ from Gazelle-generated package_info targets referenced via the package_metadata
 common attribute (inherited from REPO.bazel default_package_metadata).
 
 Implementation based on bazel-contrib/supply-chain gather_metadata pattern.
+Currently doesn't use the supply chain tools dep for this as it is not yet
+stable and we still need to support WORKSPACE which the supply-chain tools
+doesn't have support for.
 """
 
 load(
@@ -12,20 +15,23 @@ load(
     "GoArchive",
 )
 
+visibility(["//go/private/..."])
+
 BuildInfoMetadata = provider(
-    doc = "Provides dependency version metadata for buildInfo",
+    doc = "INTERNAL: Provides dependency version metadata for buildInfo. Do not depend on this provider.",
     fields = {
-        "version_map": "Depset of (importpath, version) tuples",
+        "importpaths": "Depset of importpath strings from Go dependencies",
+        "metadata_providers": "Depset of PackageInfo providers with version data",
     },
 )
 
 def _buildinfo_aspect_impl(target, ctx):
     """Collects package_info metadata from dependencies.
 
-    Following bazel-contrib/supply-chain gather_metadata pattern, this checks:
-    1. package_metadata common attribute (from REPO.bazel default_package_metadata)
-    2. applicable_licenses attribute (fallback for older configs)
-    3. Direct package_info providers on the target itself
+    This aspect collects version information from package_metadata attributes
+    (set via REPO.bazel default_package_metadata in go_repository) and tracks
+    importpaths from Go dependencies. The actual version matching is deferred
+    to execution time to avoid quadratic memory usage.
 
     Args:
         target: The target being visited
@@ -34,69 +40,59 @@ def _buildinfo_aspect_impl(target, ctx):
     Returns:
         List containing BuildInfoMetadata provider
     """
-    direct_versions = []
+    direct_importpaths = []
+    direct_metadata = []
+    transitive_importpaths = []
+    transitive_metadata = []
 
-    # Approach 1: Check package_metadata common attribute (Bazel 5.4+)
+    # Collect importpath from this target if it's a Go target
+    if GoArchive in target:
+        importpath = target[GoArchive].data.importpath
+        if importpath:
+            direct_importpaths.append(importpath)
+
+    # Check package_metadata common attribute (Bazel 6+)
     # This is set via REPO.bazel default_package_metadata in go_repository
-    package_metadata = []
     if hasattr(ctx.rule.attr, "package_metadata"):
         attr_value = ctx.rule.attr.package_metadata
         if attr_value:
-            package_metadata = attr_value if type(attr_value) == "list" else [attr_value]
+            package_metadata = attr_value if type(attr_value) == type([]) else [attr_value]
+            # Store the metadata targets directly for later processing
+            direct_metadata.extend(package_metadata)
 
-    # Approach 2: Check applicable_licenses (legacy compatibility)
-    if not package_metadata and hasattr(ctx.rule.attr, "applicable_licenses"):
-        attr_value = ctx.rule.attr.applicable_licenses
-        if attr_value:
-            package_metadata = attr_value if type(attr_value) == "list" else [attr_value]
-
-    # Collect metadata from transitive dependencies (supply-chain pattern)
-    transitive_depsets = []
-
-    # Traverse all attributes (supply-chain uses attr_aspects = ["*"])
-    attrs = [attr for attr in dir(ctx.rule.attr)]
-    for attr_name in attrs:
-        # Skip private attributes
-        if attr_name.startswith("_"):
+    # Collect transitive metadata from Go dependencies only
+    # Only traverse deps and embed to avoid non-Go dependencies
+    for attr_name in ["deps", "embed"]:
+        if not hasattr(ctx.rule.attr, attr_name):
             continue
 
         attr_value = getattr(ctx.rule.attr, attr_name)
         if not attr_value:
             continue
 
-        # Handle both lists and single values
-        deps = attr_value if type(attr_value) == "list" else [attr_value]
-
+        deps = attr_value if type(attr_value) == type([]) else [attr_value]
         for dep in deps:
-            # Only process Target types
-            if type(dep) != "Target":
-                continue
-
             # Collect transitive BuildInfoMetadata
             if BuildInfoMetadata in dep:
-                transitive_depsets.append(dep[BuildInfoMetadata].version_map)
+                transitive_importpaths.append(dep[BuildInfoMetadata].importpaths)
+                transitive_metadata.append(dep[BuildInfoMetadata].metadata_providers)
 
-    # Return using supply-chain memory optimization pattern
-    if not direct_versions and not transitive_depsets:
-        # No metadata at all, return empty provider
-        return [BuildInfoMetadata(version_map = depset([]))]
-
-    if not direct_versions and len(transitive_depsets) == 1:
-        # Only one transitive depset, pass it up directly to save memory
-        return [BuildInfoMetadata(version_map = transitive_depsets[0])]
-
-    # Combine direct and transitive metadata
+    # Build depsets (empty depsets are efficient, no need for early return)
     return [BuildInfoMetadata(
-        version_map = depset(
-            direct = direct_versions,
-            transitive = transitive_depsets,
+        importpaths = depset(
+            direct = direct_importpaths,
+            transitive = transitive_importpaths,
+        ),
+        metadata_providers = depset(
+            direct = direct_metadata,
+            transitive = transitive_metadata,
         ),
     )]
 
 buildinfo_aspect = aspect(
     doc = "Collects package_info metadata for Go buildInfo",
     implementation = _buildinfo_aspect_impl,
-    attr_aspects = ["*"],  # Traverse all attributes (supply-chain pattern)
+    attr_aspects = ["deps", "embed"],  # Only traverse Go dependencies
     provides = [BuildInfoMetadata],
     # Apply to generated targets including package_info
     apply_to_generating_rules = True,

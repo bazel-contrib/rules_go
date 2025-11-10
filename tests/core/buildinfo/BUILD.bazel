@@ -1,0 +1,69 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+
+# Test suite aggregation
+test_suite(
+    name = "buildinfo",
+    tests = [
+        ":metadata_test",
+        ":external_deps_test",
+    ],
+)
+
+# Test libraries with a dependency chain
+go_library(
+    name = "leaf_lib",
+    srcs = ["leaf_lib.go"],
+    importpath = "github.com/bazelbuild/rules_go/tests/core/buildinfo/leaf",
+)
+
+go_library(
+    name = "mid_lib",
+    srcs = ["mid_lib.go"],
+    importpath = "github.com/bazelbuild/rules_go/tests/core/buildinfo/mid",
+    deps = [":leaf_lib"],
+)
+
+go_library(
+    name = "top_lib",
+    srcs = ["top_lib.go"],
+    importpath = "github.com/bazelbuild/rules_go/tests/core/buildinfo/top",
+    deps = [":mid_lib"],
+)
+
+# Binary that uses the libraries
+go_binary(
+    name = "metadata_bin",
+    srcs = ["metadata_bin.go"],
+    deps = [":top_lib"],
+)
+
+# Runtime test that validates buildinfo metadata
+go_test(
+    name = "metadata_test",
+    srcs = ["metadata_test.go"],
+    data = [":metadata_bin"],
+    rundir = ".",
+    deps = ["@io_bazel_rules_go//go/tools/bazel:go_default_library"],
+)
+
+# Binary with external dependencies
+go_binary(
+    name = "external_deps_bin",
+    srcs = [
+        "external_deps_bin_unix.go",
+        "external_deps_bin_windows.go",
+    ],
+    deps = [
+        "@org_golang_x_sys//unix",
+        "@org_golang_x_sys//windows",
+    ],
+)
+
+# Test that validates external dependency metadata
+go_test(
+    name = "external_deps_test",
+    srcs = ["external_deps_test.go"],
+    data = [":external_deps_bin"],
+    rundir = ".",
+    deps = ["@io_bazel_rules_go//go/tools/bazel:go_default_library"],
+)

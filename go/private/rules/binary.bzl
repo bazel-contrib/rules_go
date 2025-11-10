@@ -162,36 +162,22 @@ def _go_binary_impl(ctx):
     )
 
     # Collect version metadata from aspect for buildInfo
-    version_map_file = None
-    version_tuples = []
+    # Merge ALL metadata from all deps and embed targets to ensure complete coverage
+    all_importpaths = []
+    all_metadata = []
+    for attr_name in ["embed", "deps"]:
+        if not hasattr(ctx.attr, attr_name):
+            continue
+        for target in getattr(ctx.attr, attr_name):
+            if BuildInfoMetadata in target:
+                all_importpaths.append(target[BuildInfoMetadata].importpaths)
+                all_metadata.append(target[BuildInfoMetadata].metadata_providers)
 
-    # Collect from embed attribute if present
-    if hasattr(ctx.attr, "embed"):
-        for embed in ctx.attr.embed:
-            if BuildInfoMetadata in embed:
-                version_tuples.extend(embed[BuildInfoMetadata].version_map.to_list())
-
-    # Collect from deps attribute if present
-    if hasattr(ctx.attr, "deps"):
-        for dep in ctx.attr.deps:
-            if BuildInfoMetadata in dep:
-                version_tuples.extend(dep[BuildInfoMetadata].version_map.to_list())
-
-    # Generate version map file if we have versions
-    if version_tuples:
-        version_map_file = ctx.actions.declare_file(ctx.label.name + "_versions.txt")
-
-        # Sort and deduplicate
-        version_dict = {}
-        for importpath, version in version_tuples:
-            if importpath not in version_dict:
-                version_dict[importpath] = version
-
-        # Write tab-separated file
-        lines = ["{}\t{}".format(imp, ver) for imp, ver in sorted(version_dict.items())]
-        ctx.actions.write(
-            output = version_map_file,
-            content = "\n".join(lines) + "\n" if lines else "",
+    buildinfo_metadata = None
+    if all_importpaths:
+        buildinfo_metadata = BuildInfoMetadata(
+            importpaths = depset(transitive = all_importpaths),
+            metadata_providers = depset(transitive = all_metadata),
         )
 
     # Get Bazel target label for buildInfo
@@ -213,7 +199,7 @@ def _go_binary_impl(ctx):
         version_file = ctx.version_file,
         info_file = ctx.info_file,
         executable = executable,
-        version_map = version_map_file,
+        buildinfo_metadata = buildinfo_metadata,
         target_label = target_label,
     )
     validation_output = archive.data._validation_output

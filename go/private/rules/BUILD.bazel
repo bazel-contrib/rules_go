@@ -45,6 +45,7 @@ bzl_library(
         "//go/private:mode",
         "//go/private:providers",
         "//go/private:rpath",
+        "//go/private/aspects:all_rules",
         "//go/private/rules:transition",
     ],
 )
