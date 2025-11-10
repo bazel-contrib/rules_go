@@ -167,12 +167,15 @@ func isStrippedPE(f io.ReaderAt) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	symtab := pe.Section(".symtab")
-	if symtab == nil {
-		return false, fmt.Errorf("no .symtab section")
+	// When the COFF symbol table is stripped the linker clears both the
+	// pointer and the symbol count in the PE header. That mirrors what Go's
+	// toolchain emits for PIE binaries.
+	if pe.FileHeader.PointerToSymbolTable == 0 || pe.FileHeader.NumberOfSymbols == 0 {
+		return true, nil
 	}
-	emptySymtab := (symtab.VirtualSize <= 4) && (symtab.Size <= 512)
-	return emptySymtab, nil
+	// Some toolchains leave the header populated but drop the table contents.
+	// Fall back to checking whether the parsed table still has entries.
+	return len(pe.COFFSymbols) == 0, nil
 }
 
 
