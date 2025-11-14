@@ -82,9 +82,6 @@ CGO_ATTRS = {
     "_xcode_config": attr.label(default = configuration_field(fragment = "apple", name = "xcode_config_label")),
     "_pure_flag": attr.label(default = "//go/config:pure"),
     "_pure_constraint": attr.label(default = "//go/toolchain:cgo_off"),
-    "_allowlist_function_transition": attr.label(
-        default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
-    ),
 }
 CGO_TOOLCHAINS = [
     # In pure mode, a C++ toolchain isn't needed when transitioning.
@@ -950,7 +947,11 @@ def cgo_context_data_impl(ctx):
 
 cgo_context_data = rule(
     implementation = cgo_context_data_impl,
-    attrs = CGO_ATTRS,
+    attrs = {
+        "_allowlist_function_transition": attr.label(
+            default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
+        ),
+    } | CGO_ATTRS,
     toolchains = CGO_TOOLCHAINS,
     fragments = CGO_FRAGMENTS,
     doc = """Collects information about the C/C++ toolchain. The C/C++ toolchain
