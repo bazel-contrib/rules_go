@@ -94,8 +94,8 @@ compiler. Typically, these are Well Known Types and proto runtime libraries.""",
         "valid_archive": """A Boolean indicating whether the .go files produced
 by this compiler are buildable on their own. Compilers that just add methods
 to structs produced by other compilers will set this to False.""",
-        "always_generates": """A Boolean indicating whether this compiler 
-        always generates files, regardless of whether the proto files have 
+        "always_generates": """A Boolean indicating whether this compiler
+        always generates files, regardless of whether the proto files have
         relevant definitions (e.g., services for grpc_gateway). This allows
         more strict check of compiler output.""",
         "internal": "Opaque value containing data used by compile.",
@@ -153,7 +153,7 @@ def go_proto_compile(go, compiler, protos, imports, importpath):
     args.add("-protoc", compiler.internal.protoc.executable)
     args.add("-importpath", importpath)
     args.add("-out_path", outpath)
-    args.add("-plugin", compiler.internal.plugin)
+    args.add("-plugin", compiler.internal.plugin.executable)
     if compiler.always_generates:
         args.add("-strict")
 
@@ -170,7 +170,6 @@ def go_proto_compile(go, compiler, protos, imports, importpath):
         inputs = depset(
             direct = [
                 compiler.internal.go_protoc,
-                compiler.internal.plugin,
             ],
             transitive = [transitive_descriptor_sets],
         ),
@@ -179,7 +178,7 @@ def go_proto_compile(go, compiler, protos, imports, importpath):
         mnemonic = "GoProtocGen",
         executable = compiler.internal.go_protoc,
         toolchain = GO_TOOLCHAIN_LABEL,
-        tools = [compiler.internal.protoc],
+        tools = [compiler.internal.protoc, compiler.internal.plugin],
         arguments = [args],
         env = go.env,
         # We may need the shell environment (potentially augmented with --action_env)
@@ -236,7 +235,7 @@ def _go_proto_compiler_impl(ctx):
                 suffixes = ctx.attr.suffixes,
                 protoc = proto_toolchain.proto_compiler,
                 go_protoc = ctx.executable._go_protoc,
-                plugin = ctx.executable.plugin,
+                plugin = ctx.attr.plugin[DefaultInfo].files_to_run,
                 import_path_option = ctx.attr.import_path_option,
             ),
         ),
