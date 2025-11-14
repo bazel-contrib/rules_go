@@ -82,6 +82,9 @@ CGO_ATTRS = {
     "_xcode_config": attr.label(default = configuration_field(fragment = "apple", name = "xcode_config_label")),
     "_pure_flag": attr.label(default = "//go/config:pure"),
     "_pure_constraint": attr.label(default = "//go/toolchain:cgo_off"),
+    "_allowlist_function_transition": attr.label(
+        default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
+    ),
 }
 CGO_TOOLCHAINS = [
     # In pure mode, a C++ toolchain isn't needed when transitioning.
@@ -954,6 +957,7 @@ cgo_context_data = rule(
     is needed to build cgo code, but is generally optional. Rules can't have
     optional toolchains, so instead, we have an optional dependency on this
     rule.""",
+    cfg = non_request_nogo_transition,
 )
 
 def _cgo_context_data_proxy_impl(ctx):

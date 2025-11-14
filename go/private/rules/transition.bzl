@@ -184,6 +184,9 @@ request_nogo_transition = transition(
 def _non_request_nogo_transition(_settings, _attr):
     # This transition is used to make sure we only end up with 1 copy of coverdata,
     # even if a test links against it and is run in coverage mode.
+    #
+    # It is also used to make sure that we do not end up with multiple configurations
+    # for CC toolchain dependencies when doing CGO.
     return {"//go/private:request_nogo": False}
 
 non_request_nogo_transition = transition(
