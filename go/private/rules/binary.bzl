@@ -124,6 +124,9 @@ _go_cc_aspect = aspect(
 
 def _go_binary_impl(ctx):
     """go_binary_impl emits actions for compiling and linking a go executable."""
+    if ctx.attr.out and ctx.attr.out_auto:
+        fail("Only one of out and out_auto must be set.")
+
     go = go_context(
         ctx,
         include_deprecated_properties = False,
@@ -158,23 +161,33 @@ def _go_binary_impl(ctx):
     name = ctx.attr.basename
     if not name:
         name = ctx.label.name
-    executable = None
-    if ctx.attr.out:
-        # Use declare_file instead of attr.output(). When users set output files
-        # directly, Bazel warns them not to use the same name as the rule, which is
-        # the common case with go_binary.
-        executable = ctx.actions.declare_file(ctx.attr.out)
-    archive, executable, runfiles = go.binary(
+    archive, executable_binary, runfiles = go.binary(
         go,
         name = name,
         source = go_info,
         gc_linkopts = gc_linkopts(ctx),
         version_file = ctx.version_file,
         info_file = ctx.info_file,
-        executable = executable,
+        executable = None,
     )
     validation_output = archive.data._validation_output
     nogo_diagnostics = archive.data._nogo_diagnostics
+
+    if ctx.attr.out or ctx.attr.out_auto:
+        if ctx.attr.out:
+            # Use declare_file instead of attr.output(). When users set output files
+            # directly, Bazel warns them not to use the same name as the rule, which is
+            # the common case with go_binary.
+            executable = ctx.actions.declare_file(ctx.attr.out)
+        else:
+            executable = ctx.actions.declare_file(name)
+        ctx.actions.symlink(
+            output = executable,
+            target_file = executable_binary,
+            is_executable = True,
+        )
+    else:
+        executable = executable_binary
 
     providers = [
         archive,
@@ -338,15 +351,15 @@ def _go_binary_kwargs(go_cc_aspects = []):
             "basename": attr.string(
                 doc = """The basename of this binary. The binary
                 basename may also be platform-dependent: on Windows, we add an .exe extension.
+                When not set, it will default to the label name.
                 """,
             ),
             "out": attr.string(
-                doc = """Sets the output filename for the generated executable. When set, `go_binary`
-                will write this file without mode-specific directory prefixes, without
-                linkmode-specific prefixes like "lib", and without platform-specific suffixes
-                like ".exe". Note that without a mode-specific directory prefix, the
-                output file (but not its dependencies) will be invalidated in Bazel's cache
-                when changing configurations.
+                doc = """Create a symlink with this name for the generated executable.
+                """,
+            ),
+            "out_auto": attr.bool(
+                doc = """Create a symlink with a name inferred from basename for the generated executable.
                 """,
             ),
             "cgo": attr.bool(
