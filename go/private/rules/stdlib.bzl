@@ -33,7 +33,7 @@ load(
 )
 
 def _stdlib_impl(ctx):
-    go = go_context(ctx, include_deprecated_properties = False)
+    go = go_context(ctx)
     return go.toolchain.actions.stdlib(go)
 
 stdlib = rule(
