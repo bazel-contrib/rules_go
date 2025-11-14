@@ -81,6 +81,7 @@ def emit_link(
                     if hasattr(info, "module") and hasattr(info, "version"):
                         module = info.module
                         version = info.version
+
                         # Use first version (by sorted label order) if duplicates exist
                         # This makes conflicts deterministic and debuggable
                         if module not in version_map:

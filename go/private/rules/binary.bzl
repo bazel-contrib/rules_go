@@ -48,14 +48,14 @@ load(
     "GoSDK",
 )
 load(
-    "//go/private/rules:transition.bzl",
-    "go_transition",
-    "non_go_transition",
-)
-load(
     "//go/private/aspects:buildinfo_aspect.bzl",
     "BuildInfoMetadata",
     "buildinfo_aspect",
+)
+load(
+    "//go/private/rules:transition.bzl",
+    "go_transition",
+    "non_go_transition",
 )
 
 _EMPTY_DEPSET = depset([])

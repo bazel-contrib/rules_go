@@ -4,8 +4,8 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
 test_suite(
     name = "buildinfo",
     tests = [
-        ":metadata_test",
         ":external_deps_test",
+        ":metadata_test",
     ],
 )
 

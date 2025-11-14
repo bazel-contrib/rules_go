@@ -57,6 +57,7 @@ def _buildinfo_aspect_impl(target, ctx):
         attr_value = ctx.rule.attr.package_metadata
         if attr_value:
             package_metadata = attr_value if type(attr_value) == type([]) else [attr_value]
+
             # Store the metadata targets directly for later processing
             direct_metadata.extend(package_metadata)
 

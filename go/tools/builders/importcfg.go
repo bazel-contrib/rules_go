@@ -219,8 +219,9 @@ package with this path is linked.`,
 		fmt.Fprintf(buf, "packagefile %s=%s\n", arc.packagePath, arc.file)
 	}
 
-	// Generate buildinfo if dependencies are provided
-	if cfg.deps != nil && len(cfg.deps) > 0 {
+	// Generate buildinfo if a buildinfo file was provided
+	// This ensures metadata is embedded even when there are no external dependencies
+	if cfg.buildinfoFile != "" {
 		buildInfo := BuildInfo{
 			GoVersion: runtime.Version(),
 			Path:      cfg.path,
