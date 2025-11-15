@@ -48,6 +48,11 @@ load(
     "GoSDK",
 )
 load(
+    "//go/private/aspects:buildinfo_aspect.bzl",
+    "BuildInfoMetadata",
+    "buildinfo_aspect",
+)
+load(
     "//go/private/rules:transition.bzl",
     "go_transition",
     "non_go_transition",
@@ -155,6 +160,28 @@ def _go_binary_impl(ctx):
         importable = False,
         is_main = is_main,
     )
+
+    # Collect version metadata from aspect for buildInfo
+    # Merge ALL metadata from all deps and embed targets to ensure complete coverage
+    all_importpaths = []
+    all_metadata = []
+    for attr_name in ["embed", "deps"]:
+        if not hasattr(ctx.attr, attr_name):
+            continue
+        for target in getattr(ctx.attr, attr_name):
+            if BuildInfoMetadata in target:
+                all_importpaths.append(target[BuildInfoMetadata].importpaths)
+                all_metadata.append(target[BuildInfoMetadata].metadata_providers)
+
+    buildinfo_metadata = None
+    if all_importpaths:
+        buildinfo_metadata = BuildInfoMetadata(
+            importpaths = depset(transitive = all_importpaths),
+            metadata_providers = depset(transitive = all_metadata),
+        )
+
+    # Get Bazel target label for buildInfo
+    target_label = str(ctx.label)
     name = ctx.attr.basename
     if not name:
         name = ctx.label.name
@@ -172,6 +199,8 @@ def _go_binary_impl(ctx):
         version_file = ctx.version_file,
         info_file = ctx.info_file,
         executable = executable,
+        buildinfo_metadata = buildinfo_metadata,
+        target_label = target_label,
     )
     validation_output = archive.data._validation_output
     nogo_diagnostics = archive.data._nogo_diagnostics
@@ -279,14 +308,14 @@ def _go_binary_kwargs(go_cc_aspects = []):
             ),
             "deps": attr.label_list(
                 providers = [GoInfo],
-                aspects = go_cc_aspects,
+                aspects = go_cc_aspects + [buildinfo_aspect],
                 doc = """List of Go libraries this package imports directly.
                 These may be `go_library` rules or compatible rules with the [GoInfo] provider.
                 """,
             ),
             "embed": attr.label_list(
                 providers = [GoInfo],
-                aspects = go_cc_aspects,
+                aspects = go_cc_aspects + [buildinfo_aspect],
                 doc = """List of Go libraries whose sources should be compiled together with this
                 binary's sources. Labels listed here must name `go_library`,
                 `go_proto_library`, or other compatible targets with the [GoInfo] provider.
