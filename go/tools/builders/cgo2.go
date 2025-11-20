@@ -28,6 +28,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 )
 
@@ -95,7 +96,39 @@ func cgo2(goenv *env, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSr
 		}
 	}
 	combinedLdFlags = append(combinedLdFlags, defaultLdFlags()...)
-	os.Setenv("CGO_LDFLAGS", strings.Join(combinedLdFlags, " "))
+
+	// go 1.23+ supports ldflags file.
+	// https://go-review.googlesource.com/c/go/+/584655
+	canUseLdflagsFile, err := onVersionOrHigher(23)
+	if err != nil {
+		return "", nil, nil, err
+	}
+
+	var ldflagsFile *os.File
+	combinedLdFlagsStr := strings.Join(combinedLdFlags, " ")
+	if canUseLdflagsFile {
+		// Write linker flags to a temporary file instead of pasing via env variable.
+		// This avoids "argument list too long" error with extremely large CGO_LDFLAGS
+		// that can exceed system limits.
+		// Future versions of `go` may remove support for CGO_LDFLAGS entirely, so
+		// use file even for small ldflags.
+		// https://go-review.googlesource.com/c/go/+/596615
+		ldflagsFile, err = os.CreateTemp("", "cgo-ldflags-*.txt")
+		if err != nil {
+			return "", nil, nil, fmt.Errorf("failed to create temporary file for ldflags: %w", err)
+		}
+		defer os.Remove(ldflagsFile.Name())
+		if _, err := ldflagsFile.WriteString(combinedLdFlagsStr); err != nil {
+			ldflagsFile.Close()
+			return "", nil, nil, fmt.Errorf("failed to write ldflags to temporary file: %w", err)
+		}
+		if err := ldflagsFile.Close(); err != nil {
+			return "", nil, nil, fmt.Errorf("failed to close temporary ldflags file: %w", err)
+		}
+	} else {
+		// Fallback to env variable for backwards compatibility with older `go` versions.
+		os.Setenv("CGO_LDFLAGS", combinedLdFlagsStr)
+	}
 
 	// If cgo sources are in different directories, gather them into a temporary
 	// directory so we can use -srcdir.
@@ -136,12 +169,16 @@ func cgo2(goenv *env, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSr
 	}
 	hdrIncludes = append(hdrIncludes, "-iquote", workDir) // for _cgo_export.h
 
-	execRoot, err := bazelExecRoot()
+	// Trim the path in //line comments emitted by cgo.
+	trimPath, err := createTrimPath()
 	if err != nil {
 		return "", nil, nil, err
 	}
-	// Trim the execroot from the //line comments emitted by cgo.
-	args := goenv.goTool("cgo", "-srcdir", srcDir, "-objdir", workDir, "-trimpath", execRoot)
+	args := goenv.goTool("cgo", "-srcdir", srcDir, "-objdir", workDir, "-trimpath", trimPath)
+	if ldflagsFile != nil {
+		// The "@" prefix tells cgo to read arguments from the file.
+		args = append(args, "-ldflags", "@"+ldflagsFile.Name())
+	}
 	if packagePath != "" {
 		args = append(args, "-importpath", packagePath)
 	}
@@ -159,6 +196,9 @@ func cgo2(goenv *env, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSr
 			return "", nil, nil, err
 		}
 	}
+	// Note: The tools/gopackagesdriver will break if the naming convention
+	// changes for genGoSrcs files. Changes here should be reflected
+	// there.
 	genGoSrcs := make([]string, 1+len(cgoSrcs))
 	genGoSrcs[0] = filepath.Join(workDir, "_cgo_gotypes.go")
 	genCSrcs := make([]string, 1+len(cgoSrcs))
@@ -381,18 +421,6 @@ func gatherSrcs(dir string, srcs []string) ([]string, error) {
 	return copiedBases, nil
 }
 
-func bazelExecRoot() (string, error) {
-	// Bazel executes the builder with a working directory of the form
-	// .../execroot/<workspace name>. By stripping the last segment, we obtain a
-	// prefix of all possible source files, even when contained in external
-	// repositories.
-	cwd, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Dir(cwd), nil
-}
-
 type cgoError []string
 
 func (e cgoError) Error() string {
@@ -434,4 +462,19 @@ func copyOrLinkFile(inPath, outPath string) error {
 	} else {
 		return linkFile(inPath, outPath)
 	}
+}
+
+func onVersionOrHigher(version int) (bool, error) {
+	v := runtime.Version()
+	m := versionExp.FindStringSubmatch(v)
+	if len(m) != 2 {
+		return false, fmt.Errorf("failed to match against Go version %q", v)
+	}
+	mvStr := m[1]
+	mv, err := strconv.Atoi(mvStr)
+	if err != nil {
+		return false, fmt.Errorf("convert minor version %q to int: %w", mvStr, err)
+	}
+
+	return mv >= version, nil
 }

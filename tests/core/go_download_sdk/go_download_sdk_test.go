@@ -173,11 +173,11 @@ go_download_sdk(
 )
 `,
 			optToWantVersion: map[string]string{
-				"": "go1.23.5 X:nocoverageredesign",
+				"": "go1.23.5",
 				"--@io_bazel_rules_go//go/toolchain:sdk_name=go_sdk_1_17_1":           "go1.17.1",
 				"--@io_bazel_rules_go//go/toolchain:sdk_name=go_sdk_1_17":             "go1.17",
-				"--@io_bazel_rules_go//go/toolchain:sdk_name=go_sdk":                  "go1.23.5 X:nocoverageredesign",
-				"--@io_bazel_rules_go//go/toolchain:sdk_name=go_sdk_with_experiments": "go1.23.5 X:nocoverageredesign,rangefunc",
+				"--@io_bazel_rules_go//go/toolchain:sdk_name=go_sdk":                  "go1.23.5",
+				"--@io_bazel_rules_go//go/toolchain:sdk_name=go_sdk_with_experiments": "go1.23.5 X:rangefunc",
 			},
 		},
 	} {

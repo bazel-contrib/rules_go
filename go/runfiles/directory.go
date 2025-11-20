@@ -22,7 +22,7 @@ import (
 )
 
 // Directory specifies the location of the runfiles directory.  You can pass
-// this as an option to New.  If unset or empty, use the value of the
+// this as an option to [New].  If unset or empty, use the value of the
 // environmental variable RUNFILES_DIR.
 type Directory string
 

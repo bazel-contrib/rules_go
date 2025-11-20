@@ -23,7 +23,7 @@ import (
 	"time"
 )
 
-// Open implements fs.FS for a Runfiles instance.
+// Open implements [fs.FS] for a [Runfiles] instance.
 //
 // Rlocation-style paths are supported with both apparent and canonical repo
 // names. The root directory of the filesystem (".") additionally lists the
@@ -39,7 +39,7 @@ func (r *Runfiles) Open(name string) (fs.File, error) {
 	}
 	repo, inRepoPath, hasInRepoPath := strings.Cut(name, "/")
 	key := repoMappingKey{r.sourceRepo, repo}
-	targetRepoDirectory, exists := r.repoMapping[key]
+	targetRepoDirectory, exists := r.repoMapping.Get(key)
 	if !exists {
 		// Either name uses a canonical repo name or refers to a root symlink.
 		// In both cases, we can just open the file directly.
@@ -93,11 +93,9 @@ func (r *rootDirFile) initEntries() error {
 	// visible to the main repo (plus root symlinks). We thus need to read
 	// the real entries and then transform and filter them.
 	canonicalToApparentName := make(map[string]string)
-	for k, v := range r.rf.repoMapping {
-		if k.sourceRepo == r.rf.sourceRepo {
-			canonicalToApparentName[v] = k.targetRepoApparentName
-		}
-	}
+	r.rf.repoMapping.ForEachVisible(r.rf.sourceRepo, func(targetApparentName, targetRepoDirectory string) {
+		canonicalToApparentName[targetRepoDirectory] = targetApparentName
+	})
 	rootFile, err := r.rf.impl.open(".")
 	if err != nil {
 		return err
@@ -163,7 +161,7 @@ type renamedFileInfo struct {
 	name string
 }
 
-func (r renamedFileInfo) Name() string { return r.name }
+func (r renamedFileInfo) Name() string   { return r.name }
 func (r renamedFileInfo) String() string { return fs.FormatFileInfo(r) }
 
 type emptyFile string
@@ -180,4 +178,4 @@ func (emptyFileInfo) Mode() fs.FileMode  { return 0444 }
 func (emptyFileInfo) ModTime() time.Time { return time.Time{} }
 func (emptyFileInfo) IsDir() bool        { return false }
 func (emptyFileInfo) Sys() interface{}   { return nil }
-func (i emptyFileInfo) String() string { return fs.FormatFileInfo(i) }
+func (i emptyFileInfo) String() string   { return fs.FormatFileInfo(i) }

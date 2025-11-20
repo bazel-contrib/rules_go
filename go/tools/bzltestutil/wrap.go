@@ -144,6 +144,12 @@ func Wrap(pkg string) error {
 	streamMerger.ErrW.Close()
 	streamMerger.OutW.Close()
 	streamMerger.Wait()
+	if err != nil {
+		// force jsonConverter to flush the buffer, so we get the "fail" event when a test case panics.
+		jsonConverter.Write([]byte{marker})
+		jsonConverter.Write(bigFail)
+		jsonConverter.Write([]byte("\n"))
+	}
 	jsonConverter.Close()
 	if out, ok := os.LookupEnv("XML_OUTPUT_FILE"); ok {
 		werr := writeReport(jsonBuffer, pkg, out)

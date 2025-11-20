@@ -24,7 +24,8 @@ load(
 def _go_info_impl(ctx):
     go = go_context(ctx)
     report = go.declare_file(go, ext = ".txt")
-    args = go.builder_args(go)
+    args = go.actions.args()
+    args.add("-sdk", go.sdk.root_file.dirname)
     args.add("-out", report)
     go.actions.run(
         inputs = depset([go.sdk.go], transitive = [go.sdk.tools]),

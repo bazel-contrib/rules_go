@@ -49,6 +49,7 @@ load(
 )
 load(
     "//go/private/rules:library.bzl",
+    _go_library = "go_library",
     _go_tool_library = "go_tool_library",
 )
 load(
@@ -64,14 +65,16 @@ load(
     _go_source = "go_source",
 )
 load(
+    "//go/private/rules:test.bzl",
+    _go_test = "go_test",
+)
+load(
     "//go/private/rules:transition.bzl",
     _go_reset_target = "go_reset_target",
 )
 load(
     "//go/private/rules:wrappers.bzl",
     _go_binary_macro = "go_binary_macro",
-    _go_library_macro = "go_library_macro",
-    _go_test_macro = "go_test_macro",
 )
 load(
     "//go/private/tools:path.bzl",
@@ -79,6 +82,7 @@ load(
 )
 
 _TOOLS_NOGO = [
+    "@org_golang_x_tools//go/analysis/passes/appends:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/asmdecl:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/assign:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/atomic:go_default_library",
@@ -91,9 +95,12 @@ _TOOLS_NOGO = [
     "@org_golang_x_tools//go/analysis/passes/composite:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/copylock:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/ctrlflow:go_default_library",
+    "@org_golang_x_tools//go/analysis/passes/defers:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/deepequalerrors:go_default_library",
+    "@org_golang_x_tools//go/analysis/passes/directive:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/errorsas:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/findcall:go_default_library",
+    "@org_golang_x_tools//go/analysis/passes/framepointer:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/httpresponse:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/ifaceassert:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/inspect:go_default_library",
@@ -101,16 +108,21 @@ _TOOLS_NOGO = [
     "@org_golang_x_tools//go/analysis/passes/lostcancel:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/nilfunc:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/nilness:go_default_library",
-    "@org_golang_x_tools//go/analysis/passes/pkgfact:go_default_library",
+    # demo only
+    # "@org_golang_x_tools//go/analysis/passes/pkgfact:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/printf:go_default_library",
-    "@org_golang_x_tools//go/analysis/passes/shadow:go_default_library",
+    # shadow analyzer is too noisy, see #4340
+    # "@org_golang_x_tools//go/analysis/passes/shadow:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/shift:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/sortslice:go_default_library",
+    "@org_golang_x_tools//go/analysis/passes/sigchanyzer:go_default_library",
+    "@org_golang_x_tools//go/analysis/passes/slog:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/stdmethods:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/stringintconv:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/structtag:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/testinggoroutine:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/tests:go_default_library",
+    "@org_golang_x_tools//go/analysis/passes/timeformat:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/unmarshal:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/unreachable:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/unsafeptr:go_default_library",
@@ -162,13 +174,13 @@ GoArchiveData = _GoArchiveData
 GoSDK = _GoSDK
 
 # See docs/go/core/rules.md#go_library for full documentation.
-go_library = _go_library_macro
+go_library = _go_library
 
 # See docs/go/core/rules.md#go_binary for full documentation.
 go_binary = _go_binary_macro
 
 # See docs/go/core/rules.md#go_test for full documentation.
-go_test = _go_test_macro
+go_test = _go_test
 
 # See docs/go/core/rules.md#go_test for full documentation.
 go_source = _go_source

@@ -25,9 +25,10 @@ func TestCompilationOutputs(t *testing.T) {
 		"compilation_outputs_test" + exe:                   true, // test binary; not relevant
 		"compilation_outputs_test" + exe + ".repo_mapping": true, // test binary repo mapping; not relevant
 
-		"lib.a":               false, // :lib archive
-		"lib_test.internal.a": false, // :lib_test archive
-		"bin.a":               false, // :bin archive
+		"lib.a":                    false, // :lib archive
+		"lib_test.internal.a":      false, // :lib_test internal archive
+		"lib_test_test.external.a": false, // :lib_test external archive
+		"bin.a":                    false, // :bin archive
 	}
 	for _, rf := range runfiles {
 		info, err := os.Stat(rf.Path)

@@ -34,12 +34,12 @@ load(
     "@bazel_tools//tools/cpp:toolchain_utils.bzl",
     "find_cpp_toolchain",
 )
-load("@io_bazel_rules_go_bazel_features//:features.bzl", "bazel_features")
 load(
     "@io_bazel_rules_nogo//:scope.bzl",
     NOGO_EXCLUDES = "EXCLUDES",
     NOGO_INCLUDES = "INCLUDES",
 )
+load("@rules_cc//cc/common:cc_common.bzl", "cc_common")
 load(
     "//go/platform:apple.bzl",
     "apple_ensure_options",
@@ -58,6 +58,7 @@ load(
 load(
     ":mode.bzl",
     "LINKMODE_NORMAL",
+    "LINKMODE_PIE",
     "installsuffix",
     "validate_mode",
 )
@@ -75,6 +76,21 @@ load(
     "get_archive",
     "get_source",
 )
+
+CPP_TOOLCHAIN_TYPE = Label("@bazel_tools//tools/cpp:toolchain_type")
+CGO_ATTRS = {
+    "_cc_toolchain": attr.label(default = "@bazel_tools//tools/cpp:optional_current_cc_toolchain"),
+    "_xcode_config": attr.label(default = configuration_field(fragment = "apple", name = "xcode_config_label")),
+    "_pure_flag": attr.label(default = "//go/config:pure"),
+    "_pure_constraint": attr.label(default = "//go/toolchain:cgo_off"),
+}
+CGO_TOOLCHAINS = [
+    # In pure mode, a C++ toolchain isn't needed when transitioning.
+    # But if we declare a mandatory toolchain dependency here, a cross-compiling C++ toolchain is required at toolchain resolution time.
+    # So we make this toolchain dependency optional, so that it's only attempted to be looked up if it's actually needed.
+    config_common.toolchain_type(CPP_TOOLCHAIN_TYPE, mandatory = False),
+]
+CGO_FRAGMENTS = ["apple", "cpp"]
 
 # cgo requires a gcc/clang style compiler.
 # We use a denylist instead of an allowlist:
@@ -166,7 +182,7 @@ def _declare_directory(go, path = "", ext = "", name = ""):
 def _dirname(file):
     return file.dirname
 
-def _builder_args(go, command = None, use_path_mapping = False):
+def _builder_args(go, command = None):
     args = go.actions.args()
     args.use_param_file("-param=%s")
     if command:
@@ -176,15 +192,15 @@ def _builder_args(go, command = None, use_path_mapping = False):
 
     # Path mapping can't map the values of environment variables, so we need to pass GOROOT to the
     # action via an argument instead.
-    if use_path_mapping:
-        if go.stdlib:
-            goroot_file = go.stdlib.root_file
-        else:
-            goroot_file = sdk_root_file
+    if go.stdlib:
+        goroot_file = go.stdlib.root_file
+    else:
+        goroot_file = sdk_root_file
 
-        # Use a file rather than goroot as the latter is just a string and thus
-        # not subject to path mapping.
-        args.add_all("-goroot", [goroot_file], map_each = _dirname, expand_directories = False)
+    # Use a file rather than goroot as the latter is just a string and thus
+    # not subject to path mapping.
+    args.add_all("-goroot", [goroot_file], map_each = _dirname, expand_directories = False)
+
     mode = go.mode
     args.add("-installsuffix", installsuffix(mode))
     args.add_joined("-tags", mode.tags, join_with = ",")
@@ -285,6 +301,7 @@ def new_go_info(
         coverage_instrumented = None,
         generated_srcs = [],
         pathtype = None,
+        deps = None,
         verify_resolver_deps = False):
     if not importpath:
         importpath = go.importpath
@@ -303,7 +320,10 @@ def new_go_info(
     attr_srcs = [f for t in getattr(attr, "srcs", []) for f in as_iterable(t.files)]
     srcs = attr_srcs + generated_srcs
     embedsrcs = [f for t in getattr(attr, "embedsrcs", []) for f in as_iterable(t.files)]
-    deps = [get_archive(dep) for dep in getattr(attr, "deps", [])]
+    data = getattr(attr, "data", [])
+
+    if deps == None:
+        deps = [get_archive(dep) for dep in getattr(attr, "deps", [])]
 
     go_info = {
         "name": go.label.name if not name else name,
@@ -321,7 +341,7 @@ def new_go_info(
         "x_defs": {},
         "deps": deps,
         "gc_goopts": _expand_opts(go, "gc_goopts", getattr(attr, "gc_goopts", [])),
-        "runfiles": _collect_runfiles(go, getattr(attr, "data", []), deps),
+        "runfiles": _collect_runfiles(go, data, deps),
         "cgo": getattr(attr, "cgo", False),
         "cdeps": getattr(attr, "cdeps", []),
         "cppopts": _expand_opts(go, "cppopts", getattr(attr, "cppopts", [])),
@@ -339,11 +359,13 @@ def new_go_info(
     x_defs = go_info["x_defs"]
 
     for k, v in getattr(attr, "x_defs", {}).items():
-        v = _expand_location(go, attr, v)
+        if "$" in v:
+            v = go._ctx.expand_location(v, data)
         if "." not in k:
-            k = "{}.{}".format(importmap, k)
+            k = "%s.%s" % (importmap, k)
         x_defs[k] = v
     go_info["x_defs"] = x_defs
+
     if not go_info["cgo"]:
         for k in ("cdeps", "cppopts", "copts", "cxxopts", "clinkopts"):
             if getattr(attr, k, None):
@@ -413,7 +435,7 @@ def _infer_importpath(ctx, embeds, importpath, importmap):
 def matches_scope(label, scope):
     if scope == "all":
         return True
-    if scope.workspace_name != label.workspace_name:
+    if scope.repo_name != label.repo_name:
         return False
     if scope.name == "__pkg__":
         return scope.package == label.package
@@ -454,6 +476,14 @@ default_go_config_info = GoConfigInfo(
     export_stdlib = False,
 )
 
+def _defaults_to_pie(goos, race):
+    # based on DefaultPIE in src/internal/platform/supported.go
+    if goos in ["android", "darwin", "ios"]:
+        return True
+    if goos == "windows" and not race:
+        return True
+    return False
+
 def go_context(
         ctx,
         attr = None,
@@ -479,28 +509,29 @@ def go_context(
 
     if go_context_data == None:
         if hasattr(attr, "_go_context_data"):
-            go_context_data = _flatten_possibly_transitioned_attr(attr._go_context_data)
-            if CgoContextInfo in go_context_data:
-                cgo_context_info = go_context_data[CgoContextInfo]
+            go_context_data = attr._go_context_data
             go_config_info = go_context_data[GoConfigInfo]
             stdlib = go_context_data[GoStdLib]
             go_context_info = go_context_data[GoContextInfo]
-        if getattr(attr, "_cgo_context_data", None) and CgoContextInfo in attr._cgo_context_data:
-            cgo_context_info = attr._cgo_context_data[CgoContextInfo]
-        if getattr(attr, "cgo_context_data", None) and CgoContextInfo in attr.cgo_context_data:
-            cgo_context_info = attr.cgo_context_data[CgoContextInfo]
         if hasattr(attr, "_go_config"):
             go_config_info = attr._go_config[GoConfigInfo]
         if hasattr(attr, "_stdlib"):
             stdlib = attr._stdlib[GoStdLib]
     else:
-        if CgoContextInfo in go_context_data:
-            cgo_context_info = go_context_data[CgoContextInfo]
         go_config_info = go_context_data[GoConfigInfo]
         stdlib = go_context_data[GoStdLib]
         go_context_info = go_context_data[GoContextInfo]
 
-    if goos == "auto" and goarch == "auto" and cgo_context_info:
+    if getattr(attr, "_cc_toolchain", None) and CPP_TOOLCHAIN_TYPE in ctx.toolchains:
+        cgo_context_info = cgo_context_data_impl(ctx)
+    elif go_context_data and CgoContextInfo in go_context_data:
+        cgo_context_info = go_context_data[CgoContextInfo]
+    elif getattr(attr, "_cgo_context_data", None) and CgoContextInfo in attr._cgo_context_data:
+        cgo_context_info = attr._cgo_context_data[CgoContextInfo]
+    elif getattr(attr, "cgo_context_data", None) and CgoContextInfo in attr.cgo_context_data:
+        cgo_context_info = attr.cgo_context_data[CgoContextInfo]
+
+    if goos == "auto" and goarch == "auto" and cgo_context_info and (go_config_info == None or not go_config_info.pure):
         # Fast-path to reuse the GoConfigInfo as-is
         mode = go_config_info or default_go_config_info
     else:
@@ -702,17 +733,19 @@ go_context_data = rule(
     cfg = request_nogo_transition,
 )
 
-def _cgo_context_data_impl(ctx):
+def cgo_context_data_impl(ctx):
+    pure_constraint = ctx.attr._pure_constraint[platform_common.ConstraintValueInfo]
+    if (ctx.target_platform_has_constraint(pure_constraint) or
+        ctx.attr._pure_flag[BuildSettingInfo].value):
+        return None
+
     # TODO(jayconrod): find a way to get a list of files that comprise the
     # toolchain (to be inputs into actions that need it).
     # ctx.files._cc_toolchain won't work when cc toolchain resolution
     # is switched on.
-    if bazel_features.cc.find_cpp_toolchain_has_mandatory_param:
-        cc_toolchain = find_cpp_toolchain(ctx, mandatory = False)
-    else:
-        cc_toolchain = find_cpp_toolchain(ctx)
+    cc_toolchain = find_cpp_toolchain(ctx, mandatory = False)
     if not cc_toolchain or cc_toolchain.compiler in _UNSUPPORTED_C_COMPILERS:
-        return []
+        return None
 
     feature_configuration = cc_common.configure_features(
         ctx = ctx,
@@ -901,7 +934,7 @@ def _cgo_context_data_impl(ctx):
             paths.append("/usr/bin")
     env["PATH"] = ctx.configuration.host_path_separator.join(paths)
 
-    return [CgoContextInfo(
+    return CgoContextInfo(
         cc_toolchain_files = cc_toolchain.all_files,
         env = env,
         cgo_tools = struct(
@@ -919,28 +952,22 @@ def _cgo_context_data_impl(ctx):
             ld_dynamic_lib_options = ld_dynamic_lib_options,
             ar_path = cc_toolchain.ar_executable,
         ),
-    )]
+    )
 
 cgo_context_data = rule(
-    implementation = _cgo_context_data_impl,
+    implementation = cgo_context_data_impl,
     attrs = {
-        "_cc_toolchain": attr.label(default = "@bazel_tools//tools/cpp:optional_current_cc_toolchain" if bazel_features.cc.find_cpp_toolchain_has_mandatory_param else "@bazel_tools//tools/cpp:current_cc_toolchain"),
-        "_xcode_config": attr.label(
-            default = "@bazel_tools//tools/osx:current_xcode_config",
+        "_allowlist_function_transition": attr.label(
+            default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
         ),
-    },
-    toolchains = [
-        # In pure mode, a C++ toolchain isn't needed when transitioning.
-        # But if we declare a mandatory toolchain dependency here, a cross-compiling C++ toolchain is required at toolchain resolution time.
-        # So we make this toolchain dependency optional, so that it's only attempted to be looked up if it's actually needed.
-        # Optional toolchain support was added in bazel 6.0.0.
-        config_common.toolchain_type("@bazel_tools//tools/cpp:toolchain_type", mandatory = False) if hasattr(config_common, "toolchain_type") else "@bazel_tools//tools/cpp:toolchain_type",
-    ],
-    fragments = ["apple", "cpp"],
+    } | CGO_ATTRS,
+    toolchains = CGO_TOOLCHAINS,
+    fragments = CGO_FRAGMENTS,
     doc = """Collects information about the C/C++ toolchain. The C/C++ toolchain
     is needed to build cgo code, but is generally optional. Rules can't have
     optional toolchains, so instead, we have an optional dependency on this
     rule.""",
+    cfg = non_request_nogo_transition,
 )
 
 def _cgo_context_data_proxy_impl(ctx):
@@ -982,6 +1009,11 @@ def _go_config_impl(ctx):
 
     toolchain = ctx.toolchains[GO_TOOLCHAIN]
 
+    linkmode = ctx.attr.linkmode[BuildSettingInfo].value
+    if linkmode == "auto":
+        # Mirror Go's logic by defaulting to PIE on supported platforms
+        linkmode = LINKMODE_PIE if _defaults_to_pie(toolchain.default_goos, race) else LINKMODE_NORMAL
+
     go_config_info = GoConfigInfo(
         goos = toolchain.default_goos,
         goarch = toolchain.default_goarch,
@@ -991,7 +1023,7 @@ def _go_config_impl(ctx):
         pure = ctx.attr.pure[BuildSettingInfo].value,
         strip = ctx.attr.strip,
         debug = ctx.attr.debug[BuildSettingInfo].value,
-        linkmode = ctx.attr.linkmode[BuildSettingInfo].value,
+        linkmode = linkmode,
         gc_linkopts = ctx.attr.gc_linkopts[BuildSettingInfo].value,
         tags = tags,
         stamp = ctx.attr.stamp,
@@ -1071,20 +1103,3 @@ go_config = rule(
 
 def _expand_opts(go, attribute_name, opts):
     return [go._ctx.expand_make_variables(attribute_name, opt, {}) for opt in opts]
-
-def _expand_location(go, attr, s):
-    return go._ctx.expand_location(s, getattr(attr, "data", []))
-
-_LIST_TYPE = type([])
-
-# Used to get attribute values which may have been transitioned.
-# Transitioned attributes end up as lists.
-# We never use split-transitions, so we always expect exactly one element in those lists.
-# But if the attribute wasn't transitioned, it won't be a list.
-def _flatten_possibly_transitioned_attr(maybe_list):
-    if type(maybe_list) == _LIST_TYPE:
-        if len(maybe_list) == 1:
-            return maybe_list[0]
-        else:
-            fail("Expected exactly one element in list but got {}".format(maybe_list))
-    return maybe_list

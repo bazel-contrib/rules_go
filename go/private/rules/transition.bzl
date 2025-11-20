@@ -128,6 +128,9 @@ def _go_transition_impl(settings, attr):
         # real setting can be reset to this value before the new configuration
         # would cross a non-deps dependency edge.
         if value != old_value:
+            if original_settings.get(original_key):
+                fail("go_transition can't be nested")
+
             # Encoding as JSON makes it possible to embed settings of arbitrary
             # types (currently bool, string and string_list) into a single type
             # of setting (string) with the information preserved whether the
@@ -139,9 +142,24 @@ def _go_transition_impl(settings, attr):
                 old_value = str(old_value)
             settings[original_key] = json.encode(old_value)
         else:
-            settings[original_key] = ""
+            # Preserve the value to keep the transition idempotent. While it
+            # should never be nested, Bazel applies it twice to check for
+            # idempotency and in Bazel 8.3.1 cquery and aquery don't handle
+            # targets with non-idempotent rule transitions correctly.
+            # https://github.com/bazelbuild/bazel/pull/26738
+            settings[original_key] = original_settings.get(original_key, "")
 
     return settings
+
+go_transition = transition(
+    implementation = _go_transition_impl,
+    inputs = [
+        "//command_line_option:platforms",
+    ] + TRANSITIONED_GO_SETTING_KEYS + _SETTING_KEY_TO_ORIGINAL_SETTING_KEY.values(),
+    outputs = [
+        "//command_line_option:platforms",
+    ] + TRANSITIONED_GO_SETTING_KEYS + _SETTING_KEY_TO_ORIGINAL_SETTING_KEY.values(),
+)
 
 def _request_nogo_transition(settings, _attr):
     """Indicates that we want the project configured nogo instead of a noop.
@@ -166,22 +184,15 @@ request_nogo_transition = transition(
 def _non_request_nogo_transition(_settings, _attr):
     # This transition is used to make sure we only end up with 1 copy of coverdata,
     # even if a test links against it and is run in coverage mode.
+    #
+    # It is also used to make sure that we do not end up with multiple configurations
+    # for CC toolchain dependencies when doing CGO.
     return {"//go/private:request_nogo": False}
 
 non_request_nogo_transition = transition(
     implementation = _non_request_nogo_transition,
     inputs = [],
     outputs = ["//go/private:request_nogo"],
-)
-
-go_transition = transition(
-    implementation = _go_transition_impl,
-    inputs = [
-        "//command_line_option:platforms",
-    ] + TRANSITIONED_GO_SETTING_KEYS,
-    outputs = [
-        "//command_line_option:platforms",
-    ] + TRANSITIONED_GO_SETTING_KEYS + _SETTING_KEY_TO_ORIGINAL_SETTING_KEY.values(),
 )
 
 _common_reset_transition_dict = dict({
@@ -267,12 +278,13 @@ def _go_stdlib_transition_impl(settings, _attr):
             settings[label] = value
     settings["//go/config:tags"] = [t for t in settings["//go/config:tags"] if t in _TAG_AFFECTS_STDLIB]
     settings["//go/private:bootstrap_nogo"] = False
+    settings["//command_line_option:collect_code_coverage"] = False
     return settings
 
 go_stdlib_transition = transition(
     implementation = _go_stdlib_transition_impl,
     inputs = _reset_transition_keys,
-    outputs = _reset_transition_keys,
+    outputs = _reset_transition_keys + ["//command_line_option:collect_code_coverage"],
 )
 
 def _go_reset_target_impl(ctx):
@@ -344,6 +356,7 @@ non_go_reset_target = rule(
         "dep": attr.label(
             mandatory = True,
             cfg = non_go_tool_transition,
+            allow_files = True,
         ),
         "_allowlist_function_transition": attr.label(
             default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
@@ -418,6 +431,7 @@ def _set_ternary(settings, attr, name):
 _SDK_VERSION_BUILD_SETTING = "//go/toolchain:sdk_version"
 TRANSITIONED_GO_CROSS_SETTING_KEYS = [
     _SDK_VERSION_BUILD_SETTING,
+    "//command_line_option:compilation_mode",
     "//command_line_option:platforms",
 ]
 
@@ -425,6 +439,9 @@ def _go_cross_transition_impl(settings, attr):
     settings = dict(settings)
     if attr.sdk_version != None:
         settings[_SDK_VERSION_BUILD_SETTING] = attr.sdk_version
+
+    if attr.compilation_mode != "":
+        settings["//command_line_option:compilation_mode"] = attr.compilation_mode
 
     if attr.platform != None:
         settings["//command_line_option:platforms"] = str(attr.platform)

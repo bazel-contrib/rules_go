@@ -197,12 +197,12 @@ func testLcovCoverage(t *testing.T, extraArgs ...string) {
 }
 
 func TestLcovCoverageWithTool(t *testing.T) {
-	args := append([]string{
+	args := []string{
 		"coverage",
 		"--combined_report=lcov",
 		"--java_runtime_version=remotejdk_11",
 		"//src:lib_with_tool_test",
-	})
+	}
 
 	if err := bazel_testing.RunBazel(args...); err != nil {
 		t.Fatal(err)

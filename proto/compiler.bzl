@@ -16,9 +16,10 @@ load(
     "@bazel_skylib//lib:paths.bzl",
     "paths",
 )
+load("@com_google_protobuf//bazel/common:proto_common.bzl", "proto_common")
 load(
-    "@rules_proto//proto:proto_common.bzl",
-    proto_toolchains = "toolchains",
+    "@com_google_protobuf//bazel/common:proto_lang_toolchain_info.bzl",
+    "ProtoLangToolchainInfo",
 )
 load(
     "//go:def.bzl",
@@ -48,6 +49,30 @@ load(
 #  default.
 _PROTO_TOOLCHAIN_TYPE = "@rules_proto//proto:toolchain_type"
 
+def _incompatible_toolchains_enabled():
+    return getattr(proto_common, "INCOMPATIBLE_ENABLE_PROTO_TOOLCHAIN_RESOLUTION", False)
+
+def _find_toolchain(ctx, legacy_attr, toolchain_type):
+    if _incompatible_toolchains_enabled():
+        toolchain = ctx.toolchains[toolchain_type]
+        if not toolchain:
+            fail("No toolchains registered for '%s'." % toolchain_type)
+        return toolchain.proto
+    else:
+        return getattr(ctx.attr, legacy_attr)[ProtoLangToolchainInfo]
+
+def _use_toolchain(toolchain_type):
+    if _incompatible_toolchains_enabled():
+        return [config_common.toolchain_type(toolchain_type, mandatory = False)]
+    else:
+        return []
+
+def _if_legacy_toolchain(legacy_attr_dict):
+    if _incompatible_toolchains_enabled():
+        return {}
+    else:
+        return legacy_attr_dict
+
 GoProtoCompiler = provider(
     doc = "Information and dependencies needed to generate Go code from protos",
     fields = {
@@ -69,6 +94,10 @@ compiler. Typically, these are Well Known Types and proto runtime libraries.""",
         "valid_archive": """A Boolean indicating whether the .go files produced
 by this compiler are buildable on their own. Compilers that just add methods
 to structs produced by other compilers will set this to False.""",
+        "always_generates": """A Boolean indicating whether this compiler
+        always generates files, regardless of whether the proto files have
+        relevant definitions (e.g., services for grpc_gateway). This allows
+        more strict check of compiler output.""",
         "internal": "Opaque value containing data used by compile.",
     },
 )
@@ -124,7 +153,9 @@ def go_proto_compile(go, compiler, protos, imports, importpath):
     args.add("-protoc", compiler.internal.protoc.executable)
     args.add("-importpath", importpath)
     args.add("-out_path", outpath)
-    args.add("-plugin", compiler.internal.plugin)
+    args.add("-plugin", compiler.internal.plugin.executable)
+    if compiler.always_generates:
+        args.add("-strict")
 
     # TODO(jayconrod): can we just use go.env instead?
     args.add_all(compiler.internal.options, before_each = "-option")
@@ -139,7 +170,6 @@ def go_proto_compile(go, compiler, protos, imports, importpath):
         inputs = depset(
             direct = [
                 compiler.internal.go_protoc,
-                compiler.internal.plugin,
             ],
             transitive = [transitive_descriptor_sets],
         ),
@@ -148,7 +178,7 @@ def go_proto_compile(go, compiler, protos, imports, importpath):
         mnemonic = "GoProtocGen",
         executable = compiler.internal.go_protoc,
         toolchain = GO_TOOLCHAIN_LABEL,
-        tools = [compiler.internal.protoc],
+        tools = [compiler.internal.protoc, compiler.internal.plugin],
         arguments = [args],
         env = go.env,
         # We may need the shell environment (potentially augmented with --action_env)
@@ -188,7 +218,7 @@ def proto_path(src, proto):
 def _go_proto_compiler_impl(ctx):
     go = go_context(ctx, include_deprecated_properties = False)
     go_info = new_go_info(go, ctx.attr)
-    proto_toolchain = proto_toolchains.find_toolchain(
+    proto_toolchain = _find_toolchain(
         ctx,
         legacy_attr = "_legacy_proto_toolchain",
         toolchain_type = _PROTO_TOOLCHAIN_TYPE,
@@ -198,13 +228,14 @@ def _go_proto_compiler_impl(ctx):
             deps = ctx.attr.deps,
             compile = go_proto_compile,
             valid_archive = ctx.attr.valid_archive,
+            always_generates = ctx.attr.always_generates,
             internal = struct(
                 options = ctx.attr.options,
                 suffix = ctx.attr.suffix,
                 suffixes = ctx.attr.suffixes,
                 protoc = proto_toolchain.proto_compiler,
                 go_protoc = ctx.executable._go_protoc,
-                plugin = ctx.executable.plugin,
+                plugin = ctx.attr.plugin[DefaultInfo].files_to_run,
                 import_path_option = ctx.attr.import_path_option,
             ),
         ),
@@ -219,6 +250,10 @@ _go_proto_compiler = rule(
         "suffix": attr.string(default = ".pb.go"),
         "suffixes": attr.string_list(),
         "valid_archive": attr.bool(default = True),
+        "always_generates": attr.bool(
+            default = False,
+            doc = "indicates whether this proto compiler always generate files, regardless of whether the proto files have relevant definitions (e.g., services for grpc_gateway).",
+        ),
         "import_path_option": attr.bool(default = False),
         "plugin": attr.label(
             executable = True,
@@ -233,7 +268,7 @@ _go_proto_compiler = rule(
         "_go_context_data": attr.label(
             default = "//:go_context_data",
         ),
-    }, **proto_toolchains.if_legacy_toolchain({
+    }, **_if_legacy_toolchain({
         "_legacy_proto_toolchain": attr.label(
             # Setting cfg = "exec" here as the legacy_proto_toolchain target
             # already needs to apply the non_go_tool_transition. Flipping the
@@ -243,7 +278,7 @@ _go_proto_compiler = rule(
             default = "//proto/private:legacy_proto_toolchain",
         ),
     })),
-    toolchains = [GO_TOOLCHAIN] + proto_toolchains.use_toolchain(_PROTO_TOOLCHAIN_TYPE),
+    toolchains = [GO_TOOLCHAIN] + _use_toolchain(_PROTO_TOOLCHAIN_TYPE),
 )
 
 def go_proto_compiler(name, **kwargs):

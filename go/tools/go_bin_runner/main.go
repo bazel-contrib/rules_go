@@ -128,10 +128,11 @@ func parseConfig() (Config, error) {
 }
 
 func getGoEnv(goBin string, cfg Config) ([]string, error) {
-	env := os.Environ()
+	var env []string
 	for k, v := range cfg.GoEnv {
 		env = append(env, k+"="+v)
 	}
+	env = append(env, os.Environ()...)
 
 	// The go binary lies at $GOROOT/bin/go.
 	goRoot, err := filepath.Abs(filepath.Dir(filepath.Dir(goBin)))

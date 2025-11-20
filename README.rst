@@ -15,10 +15,11 @@ Go rules for Bazel_
 .. _Coverage: https://bazel.google.cn/docs/coverage
 .. _Dependencies: go/dependencies.rst
 .. _Deprecation schedule: https://github.com/bazelbuild/rules_go/wiki/Deprecation-schedule
+.. _Editor setup instructions: docs/editors.md
 .. _examples/basic_gazelle: examples/basic_gazelle
 .. _examples/hello: examples/hello
 .. _Gopher Slack: https://invite.slack.golangbridge.org/
-.. _gopls integration: https://github.com/bazelbuild/rules_go/wiki/Editor-setup
+.. _gopls integration: docs/editors.md
 .. _Overriding dependencies: go/dependencies.rst#overriding-dependencies
 .. _Proto rules: proto/core.rst
 .. _Protocol buffers: proto/core.rst
@@ -48,7 +49,7 @@ Go rules for Bazel_
 .. _go_proto_compiler: proto/core.rst#go_proto_compiler
 .. _go_proto_library: proto/core.rst#go_proto_library
 .. _go_register_toolchains: go/toolchains.rst#go_register_toolchains
-.. _go_repository: https://github.com/bazelbuild/bazel-gazelle/blob/master/repository.md#go_repository
+.. _go_repository: https://github.com/bazelbuild/bazel-gazelle/blob/master/reference.md#go_repository
 .. _go_rules_dependencies: go/dependencies.rst#go_rules_dependencies
 .. _go_source: docs/go/core/rules.md#go_source
 .. _go_test: docs/go/core/rules.md#go_test
@@ -123,6 +124,7 @@ Documentation
 Quick links
 ~~~~~~~~~~~
 
+* `Editor setup instructions`_
 * `rules_go and Gazelle roadmap`_
 * `Deprecation schedule`_
 * `Using rules_go on Windows`_

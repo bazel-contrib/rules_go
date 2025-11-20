@@ -4,9 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"maps"
 	"os"
 	"path"
 	"path/filepath"
+	"reflect"
+	"slices"
+	"sort"
 	"strings"
 	"testing"
 
@@ -23,7 +27,8 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "hello",
-    srcs = ["hello.go"],
+    srcs = ["hello.go", "hellocgo.go"],
+    cgo = True,
     importpath = "example.com/hello",
     visibility = ["//visibility:public"],
 )
@@ -47,10 +52,25 @@ go_library(
 -- hello.go --
 package hello
 
-import "os"
+import (
+	"os"
+	"fmt"
+)
 
 func main() {
 	fmt.Fprintln(os.Stderr, "Hello World!")
+}
+
+-- hellocgo.go --
+package hello
+
+/*
+int num(void) { return 42; }
+*/
+import "C"
+
+func run() {
+    println(C.num)
 }
 
 -- hello_test.go --
@@ -115,20 +135,49 @@ func TestBaseFileLookup(t *testing.T) {
 
 	t.Run("package", func(t *testing.T) {
 		pkg := findPackageByID(resp.Packages, resp.Roots[0])
-
 		if pkg == nil {
 			t.Errorf("Expected to find %q in resp.Packages", resp.Roots[0])
 			return
 		}
 
-		if len(pkg.CompiledGoFiles) != 1 || len(pkg.GoFiles) != 1 ||
-			path.Base(pkg.GoFiles[0]) != "hello.go" || path.Base(pkg.CompiledGoFiles[0]) != "hello.go" {
-			t.Errorf("Expected to find 1 file (hello.go) in (Compiled)GoFiles:\n%+v", pkg)
-			return
+		wantCompiledGoFiles := map[string]struct{}{
+			"hello.go": {},
+			"_cgo_gotypes.go": {},
+			"_cgo_imports.go": {},
+			"hellocgo.cgo1.go": {},
+		}
+		for _, file := range pkg.CompiledGoFiles {
+			key := filepath.Base(file)
+			if _, ok := wantCompiledGoFiles[key]; !ok {
+				t.Errorf("Unexpected compiled file: %q", key)
+			} else {
+				delete(wantCompiledGoFiles, key)
+			}
+		}
+		if len(wantCompiledGoFiles) != 0 {
+			t.Errorf("Expected compiled files not found: %+v", slices.Sorted(maps.Keys(wantCompiledGoFiles)))
 		}
 
-		if len(pkg.Imports) != 1 {
-			t.Errorf("Expected one import:\n%+v", pkg)
+		wantGoFiles := map[string]struct{}{
+			"hello.go": {},
+			"hellocgo.go": {},
+		}
+		for _, file := range pkg.GoFiles {
+			key := filepath.Base(file)
+			if _, ok := wantGoFiles[key]; !ok {
+				t.Errorf("Unexpected go file: %q", key)
+			} else {
+				delete(wantGoFiles, key)
+			}
+		}
+		if len(wantGoFiles) != 0 {
+			t.Errorf("Expected go files not found: %+v", slices.Sorted(maps.Keys(wantGoFiles)))
+		}
+		wantImports := []string{"os", "fmt", "runtime/cgo", "syscall", "unsafe"}
+		sort.Strings(wantImports)
+		gotImports := slices.Sorted(maps.Keys(pkg.Imports))
+		if !reflect.DeepEqual(gotImports, wantImports) {
+			t.Errorf("Expected imports: %+v got: %+v\n", wantImports, gotImports)
 			return
 		}
 
@@ -254,7 +303,7 @@ func TestOverlay(t *testing.T) {
 	subhelloPath := path.Join(wd, "subhello/subhello.go")
 
 	expectedImportsPerFile := map[string][]string{
-		helloPath:    {"fmt"},
+		helloPath:    {"fmt", "runtime/cgo", "syscall", "unsafe"},
 		subhelloPath: {"os", "encoding/json"},
 	}
 

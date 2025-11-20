@@ -70,27 +70,36 @@ go_library(
 package flagger
 
 import (
-        "errors"
+	"errors"
 
-        "golang.org/x/tools/go/analysis"
+	"golang.org/x/tools/go/analysis"
 )
 
 var (
-        boolSwitch   bool
-        stringSwitch string
-        intSwitch    int
+	boolSwitch   			 bool
+	stringSwitch 			 string
+	intSwitch    			 int
+	subanalyzerBoolSwitch    bool
 )
+
+var Subanalyzer = &analysis.Analyzer{
+        Name: "flagger_subanalyzer",
+        Run:  subanalyzerRun,
+        Doc:  "Dummy subanalyzer that crashes if its flag is set'",
+}
 
 var Analyzer = &analysis.Analyzer{
         Name: "flagger",
         Run:  run,
-        Doc:  "Dummy analyzer that crashes when all its flags are set correctly",
+        Doc:  "Dummy analyzer that crashes when all its flags are set correctly. It contains subanalyzer.",
+	Requires: []*analysis.Analyzer{Subanalyzer},
 }
 
 func init() {
         Analyzer.Flags.BoolVar(&boolSwitch, "bool-switch", false, "Bool must be set to true to run")
         Analyzer.Flags.StringVar(&stringSwitch, "string-switch", "no", "String must be set to \"yes\" to run")
         Analyzer.Flags.IntVar(&intSwitch, "int-switch", 0, "Int must be set to 1 to run")
+        Subanalyzer.Flags.BoolVar(&subanalyzerBoolSwitch, "subanalyzer-bool-switch", false, "Bool must be set to trigger subanalyzer")
 }
 
 func run(pass *analysis.Pass) (interface{}, error) {
@@ -104,6 +113,13 @@ func run(pass *analysis.Pass) (interface{}, error) {
                 return nil, nil
         }
         return nil, errors.New("all switches were set -> fail")
+}
+
+func subanalyzerRun(pass *analysis.Pass) (interface{}, error) {
+	if !subanalyzerBoolSwitch {
+		return nil, nil
+	}
+	return nil, errors.New("subanalyzer flag was set -> fail")
 }
 
 -- all_flags_set.json --
@@ -128,6 +144,17 @@ func run(pass *analysis.Pass) (interface{}, error) {
     }
   }
 }
+
+-- subanalyzer_flag_set.json --
+{
+  "flagger_subanalyzer": {
+    "description": "this will succeed on every file",
+    "analyzer_flags": {
+        "subanalyzer-bool-switch": "true"
+    }
+  }
+}
+
 
 -- invalid_int.json --
 {
@@ -195,6 +222,11 @@ func Test(t *testing.T) {
 			wantSuccess: false,
 			config:      "all_flags_set.json",
 			includes:    []string{"all switches were set -> fail"},
+		}, {
+			desc:        "config_subanalyzer_flags_triggering_error",
+			wantSuccess: false,
+			config:      "subanalyzer_flag_set.json",
+			includes:    []string{"failed prerequisites: flagger_subanalyzer"},
 		}, {
 			desc:        "config_flags_triggering_success",
 			wantSuccess: true,

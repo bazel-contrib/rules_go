@@ -7,6 +7,7 @@ Basic go_library functionality
 .. _#1772: https://github.com/bazelbuild/rules_go/issues/1772
 .. _#2058: https://github.com/bazelbuild/rules_go/issues/2058
 .. _#3558: https://github.com/bazelbuild/rules_go/issues/3558
+.. _#4434: https://github.com/bazel-contrib/rules_go/issues/4434
 
 empty
 -----
@@ -55,3 +56,8 @@ no_srcs_test
 
 Verifies that `go_library`_ targets without Go source files build concurrently,
 even unsandboxed, and reproducibly. Verifies `#3558`_.
+
+trimpath_test
+-------------
+
+Verifies that trimpath has the expected effect on paths. Verifies `#4434`_.

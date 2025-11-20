@@ -27,28 +27,32 @@ load("//go/private/actions:stdlib.bzl", "emit_stdlib")
 def _go_toolchain_impl(ctx):
     sdk = ctx.attr.sdk[GoSDK]
     cross_compile = ctx.attr.goos != sdk.goos or ctx.attr.goarch != sdk.goarch
-    return [platform_common.ToolchainInfo(
-        # Public fields
-        name = ctx.label.name,
-        cross_compile = cross_compile,
-        default_goos = ctx.attr.goos,
-        default_goarch = ctx.attr.goarch,
-        actions = struct(
-            archive = emit_archive,
-            binary = emit_binary,
-            link = emit_link,
-            stdlib = emit_stdlib,
-        ),
-        flags = struct(
-            compile = (),
-            link = ctx.attr.link_flags,
-            link_cgo = ctx.attr.cgo_link_flags,
-        ),
-        sdk = sdk,
+    return [
+        ctx.attr.sdk[DefaultInfo],
+        platform_common.ToolchainInfo(
+            # Public fields
+            name = ctx.label.name,
+            cross_compile = cross_compile,
+            default_goos = ctx.attr.goos,
+            default_goarch = ctx.attr.goarch,
+            actions = struct(
+                archive = emit_archive,
+                binary = emit_binary,
+                link = emit_link,
+                stdlib = emit_stdlib,
+            ),
+            flags = struct(
+                compile = (),
+                link = ctx.attr.link_flags,
+                link_cgo = ctx.attr.cgo_link_flags,
+            ),
+            sdk = sdk,
 
-        # Internal fields -- may be read by emit functions.
-        _builder = ctx.executable.builder,
-    )]
+            # Internal fields -- may be read by emit functions.
+            _builder = ctx.executable.builder,
+            _pack = ctx.executable.pack,
+        ),
+    ]
 
 go_toolchain = rule(
     _go_toolchain_impl,
@@ -59,6 +63,12 @@ go_toolchain = rule(
             cfg = "exec",
             executable = True,
             doc = "Tool used to execute most Go actions",
+        ),
+        "pack": attr.label(
+            mandatory = True,
+            cfg = "exec",
+            executable = True,
+            doc = "Tool used to pack object files into archives",
         ),
         "goos": attr.string(
             mandatory = True,
@@ -86,7 +96,7 @@ go_toolchain = rule(
     provides = [platform_common.ToolchainInfo],
 )
 
-def declare_go_toolchains(host_goos, sdk, builder):
+def declare_go_toolchains(host_goos, sdk, builder, pack):
     """Declares go_toolchain targets for each platform."""
     for p in PLATFORMS:
         if p.cgo:
@@ -108,6 +118,7 @@ def declare_go_toolchains(host_goos, sdk, builder):
             goarch = p.goarch,
             sdk = sdk,
             builder = builder,
+            pack = pack,
             link_flags = link_flags,
             cgo_link_flags = cgo_link_flags,
             tags = ["manual"],

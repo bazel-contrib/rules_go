@@ -1,6 +1,8 @@
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 load("@bazel_skylib//rules:common_settings.bzl", "bool_setting")
 
+exports_files(["coverage_shim.go"])
+
 filegroup(
     name = "all_rules",
     srcs = [
@@ -64,8 +66,8 @@ bzl_library(
         "@bazel_skylib//rules:common_settings",
         "@bazel_tools//tools/build_defs/cc:action_names.bzl",
         "@bazel_tools//tools/cpp:toolchain_utils.bzl",
-        "@io_bazel_rules_go_bazel_features//:features",
         "@io_bazel_rules_nogo//:scope.bzl",
+        "@rules_cc//cc:find_cc_toolchain_bzl",  # Transitive dep of @bazel_tools//tools/cpp:toolchain_utils.bzl
     ],
 )
 

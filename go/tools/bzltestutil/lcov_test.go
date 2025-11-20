@@ -18,7 +18,7 @@ func TestConvertCoverToLcov(t *testing.T) {
 		},
 		{
 			"mode only",
-			"mode: set\n",
+			"mode: atomic\n",
 			"",
 		},
 		{

@@ -16,36 +16,36 @@
 //
 // # Usage
 //
-// This package has two main entry points, the global functions Rlocation, Env
-// and New, as well as the Runfiles type.
+// This package has two main entry points, the global functions [Rlocation],
+// [Env] and [New], as well as the [Runfiles] type.
 //
 // # Global functions
 //
-// Most users should use the Rlocation and Env functions directly to access
-// individual runfiles. Use Rlocation to find the filesystem location of a
-// runfile, and use Env to obtain environmental variables to pass on to
+// Most users should use the [Rlocation] and [Env] functions directly to access
+// individual runfiles.  Use [Rlocation] to find the filesystem location of a
+// runfile, and use [Env] to obtain environmental variables to pass on to
 // subprocesses that themselves may need to access runfiles.
 //
-// The New function returns a Runfiles object that implements fs.FS. This allows
-// more complex operations on runfiles, such as iterating over all runfiles in a
-// certain directory or evaluating glob patterns, consistently across all
-// platforms.
+// The [New] function returns a [Runfiles] object that implements [fs.FS].
+// This allows more complex operations on runfiles, such as iterating over all
+// runfiles in a certain directory or evaluating glob patterns, consistently
+// across all platforms.
 //
 // All of these functions follow the standard runfiles discovery process, which
-// works uniformly across Bazel build actions, `bazel test`, and `bazel run`. It
-// does rely on cooperation between processes (see Env for details).
+// works uniformly across Bazel build actions, bazel test, and bazel run.  It
+// does rely on cooperation between processes (see [Env] for details).
 //
 // # Custom runfiles discovery and lookup
 //
 // If you need to look up runfiles in a custom way (e.g., you use them for a
-// packaged application or one that is available on PATH), you can pass Option
-// values to New to force a specific runfiles location.
+// packaged application or one that is available on PATH), you can pass
+// [Option] values to [New] to force a specific runfiles location.
 //
-// ## Restrictions
+// # Restrictions
 //
 // Functions in this package may not observe changes to the environment or
-// os.Args after the first call to any of them. Pass Option values to New to
-// customize runfiles discovery instead.
+// [os.Args] after the first call to any of them.  Pass [Option] values to
+// [New] to customize runfiles discovery instead.
 package runfiles
 
 import (
@@ -55,6 +55,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -69,29 +70,29 @@ type repoMappingKey struct {
 	targetRepoApparentName string
 }
 
-// Runfiles allows access to Bazel runfiles.  Use New to create Runfiles
+// Runfiles allows access to Bazel runfiles.  Use [New] to create Runfiles
 // objects; the zero Runfiles object always returns errors.  See
 // https://bazel.build/extending/rules#runfiles for some information on
 // Bazel runfiles.
 //
-// Runfiles implements fs.FS regardless of the type of runfiles that backs it.
-// This is the preferred way to interact with runfiles in a platform-agnostic
-// way. For example, to find all runfiles beneath a directory, use fs.Glob or
-// fs.WalkDir.
+// Runfiles implements [fs.FS] regardless of the type of runfiles that backs
+// it.  This is the preferred way to interact with runfiles in a
+// platform-agnostic way.  For example, to find all runfiles beneath a
+// directory, use [fs.Glob] or [fs.WalkDir].
 type Runfiles struct {
 	// We don’t need concurrency control since Runfiles objects are
 	// immutable once created.
 	impl        runfiles
 	env         []string
-	repoMapping map[repoMappingKey]string
+	repoMapping *repoMapping
 	sourceRepo  string
 }
 
 const noSourceRepoSentinel = "_not_a_valid_repository_name"
 
-// New creates a given Runfiles object.  By default, it uses os.Args and the
-// RUNFILES_MANIFEST_FILE and RUNFILES_DIR environmental variables to find the
-// runfiles location.  This can be overwritten by passing some options.
+// New creates a given [Runfiles] object.  By default, it uses [os.Args] and
+// the RUNFILES_MANIFEST_FILE and RUNFILES_DIR environmental variables to find
+// the runfiles location.  This can be overwritten by passing some options.
 //
 // See section “Runfiles discovery” in
 // https://docs.google.com/document/d/e/2PACX-1vSDIrFnFvEYhKsCMdGdD40wZRBX3m3aZ5HhVj4CtHPmiXKDCxioTUbYsDydjKtFDAzER5eg7OjJWs3V/pub.
@@ -121,7 +122,21 @@ func New(opts ...Option) (*Runfiles, error) {
 	}
 
 	if o.program == "" {
-		o.program = ProgramName(os.Args[0])
+		// If the binary is invoked via a relative path, it's important to use
+		// os.Args[0] since that may point to a symlink wrapping the actual
+		// executable and Bazel materializes the runfiles next to the symlink,
+		// not the actual executable.
+		// If the binary is invoked from PATH, then os.Args[0] is just the
+		// basename of the executable and isn't useful for locating runfiles.
+		if filepath.Base(os.Args[0]) != os.Args[0] {
+			o.program = ProgramName(os.Args[0])
+		} else {
+			exe, err := os.Executable()
+			if err != nil {
+				return nil, fmt.Errorf("runfiles: could not determine executable name: %w", err)
+			}
+			o.program = ProgramName(exe)
+		}
 	}
 	manifest := ManifestFile(o.program + ".runfiles_manifest")
 	if stat, err := os.Stat(string(manifest)); err == nil && stat.Mode().IsRegular() {
@@ -141,9 +156,10 @@ func New(opts ...Option) (*Runfiles, error) {
 // backslash) as directory separator. It is typically of the form
 // "repo/path/to/pkg/file".
 //
-// If r is the zero Runfiles object, Rlocation always returns an error. If the
-// runfiles manifest maps s to an empty name (indicating an empty runfile not
-// present in the filesystem), Rlocation returns an error that wraps ErrEmpty.
+// If r is the zero [Runfiles] object, Rlocation always returns an error.  If
+// the runfiles manifest maps s to an empty name (indicating an empty runfile
+// not present in the filesystem), Rlocation returns an error that wraps
+// [ErrEmpty].
 //
 // See section “Library interface” in
 // https://docs.google.com/document/d/e/2PACX-1vSDIrFnFvEYhKsCMdGdD40wZRBX3m3aZ5HhVj4CtHPmiXKDCxioTUbYsDydjKtFDAzER5eg7OjJWs3V/pub.
@@ -171,7 +187,7 @@ func (r *Runfiles) Rlocation(path string) (string, error) {
 	split := strings.SplitN(path, "/", 2)
 	if len(split) == 2 {
 		key := repoMappingKey{r.sourceRepo, split[0]}
-		if targetRepoDirectory, exists := r.repoMapping[key]; exists {
+		if targetRepoDirectory, exists := r.repoMapping.Get(key); exists {
 			mappedPath = targetRepoDirectory + "/" + split[1]
 		}
 	}
@@ -200,9 +216,12 @@ func isNormalizedPath(s string) error {
 // This mutates the Runfiles object, but is idempotent.
 func (r *Runfiles) loadRepoMapping() error {
 	repoMappingPath, err := r.impl.path(repoMappingRlocation)
-	// If Bzlmod is disabled, the repository mapping manifest isn't created, so
-	// it is not an error if it is missing.
+	// The repo mapping manifest only exists with Bzlmod, so it's not an
+	// error if it's missing. Since any repository name not contained in the
+	// mapping is assumed to be already canonical, an empty map is
+	// equivalent to not applying any mapping.
 	if err != nil {
+		r.repoMapping = &repoMapping{}
 		return nil
 	}
 	r.repoMapping, err = parseRepoMapping(repoMappingPath)
@@ -213,15 +232,15 @@ func (r *Runfiles) loadRepoMapping() error {
 // Env returns additional environmental variables to pass to subprocesses.
 // Each element is of the form “key=value”.  Pass these variables to
 // Bazel-built binaries so they can find their runfiles as well.  See the
-// Runfiles example for an illustration of this.
+// [Runfiles] example for an illustration of this.
 //
 // The return value is a newly-allocated slice; you can modify it at will.  If
-// r is the zero Runfiles object, the return value is nil.
+// r is the zero [Runfiles] object, the return value is nil.
 func (r *Runfiles) Env() []string {
 	return r.env
 }
 
-// WithSourceRepo returns a Runfiles instance identical to the current one,
+// WithSourceRepo returns a [Runfiles] instance identical to the current one,
 // except that it uses the given repository's repository mapping when resolving
 // runfiles paths.
 func (r *Runfiles) WithSourceRepo(sourceRepo string) *Runfiles {
@@ -233,19 +252,20 @@ func (r *Runfiles) WithSourceRepo(sourceRepo string) *Runfiles {
 	return &clone
 }
 
-// Option is an option for the New function to override runfiles discovery.
+// Option is an option for the [New] function to override runfiles discovery.
 type Option interface {
 	apply(*options)
 }
 
-// ProgramName is an Option that sets the program name. If not set, New uses
-// os.Args[0].
+// ProgramName is an [Option] that sets the program name.  If not set, [New]
+// uses os.Args[0].
 type ProgramName string
 
-// SourceRepo is an Option that sets the canonical name of the repository whose
-// repository mapping should be used to resolve runfiles paths. If not set, New
-// uses the repository containing the source file from which New is called.
-// Use CurrentRepository to get the name of the current repository.
+// SourceRepo is an [Option] that sets the canonical name of the repository
+// whose repository mapping should be used to resolve runfiles paths.  If not
+// set, [New] uses the repository containing the source file from which [New]
+// is called.  Use [CurrentRepository] to get the name of the current
+// repository.
 type SourceRepo string
 
 // Error represents a failure to look up a runfile.
@@ -257,12 +277,12 @@ type Error struct {
 	Err error
 }
 
-// Error implements error.Error.
+// Error implements [error.Error].
 func (e Error) Error() string {
 	return fmt.Sprintf("runfile %s: %s", e.Name, e.Err.Error())
 }
 
-// Unwrap returns the underlying error, for errors.Unwrap.
+// Unwrap returns the underlying error, for [errors.Unwrap].
 func (e Error) Unwrap() error { return e.Err }
 
 // ErrEmpty indicates that a runfile isn’t present in the filesystem, but
@@ -290,15 +310,58 @@ type runfiles interface {
 // https://cs.opensource.google/bazel/bazel/+/1b073ac0a719a09c9b2d1a52680517ab22dc971e:src/main/java/com/google/devtools/build/lib/analysis/Runfiles.java;l=424
 const repoMappingRlocation = "_repo_mapping"
 
+type prefixMapping struct {
+	prefix  string
+	mapping map[string]string
+}
+
+// The zero value of repoMapping is an empty mapping.
+type repoMapping struct {
+	exactMappings  map[repoMappingKey]string
+	prefixMappings []prefixMapping
+}
+
+func (rm *repoMapping) Get(key repoMappingKey) (string, bool) {
+	if mapping, ok := rm.exactMappings[key]; ok {
+		return mapping, true
+	}
+	i, _ := slices.BinarySearchFunc(rm.prefixMappings, key.sourceRepo, func(prefixMapping prefixMapping, s string) int {
+		return strings.Compare(prefixMapping.prefix, s)
+	})
+	if i > 0 && strings.HasPrefix(key.sourceRepo, rm.prefixMappings[i-1].prefix) {
+		mapping, ok := rm.prefixMappings[i-1].mapping[key.targetRepoApparentName]
+		return mapping, ok
+	}
+	return "", false
+}
+
+// ForEachVisible iterates over all target repositories that are visible to the
+// given source repo in an unspecified order.
+func (rm *repoMapping) ForEachVisible(sourceRepo string, f func(targetRepoApparentName, targetRepoDirectory string)) {
+	for key, targetRepoDirectory := range rm.exactMappings {
+		if key.sourceRepo == sourceRepo {
+			f(key.targetRepoApparentName, targetRepoDirectory)
+		}
+	}
+	i, _ := slices.BinarySearchFunc(rm.prefixMappings, sourceRepo, func(prefixMapping prefixMapping, s string) int {
+		return strings.Compare(prefixMapping.prefix, s)
+	})
+	if i > 0 && strings.HasPrefix(sourceRepo, rm.prefixMappings[i-1].prefix) {
+		for targetRepoApparentName, targetRepoDirectory := range rm.prefixMappings[i-1].mapping {
+			f(targetRepoApparentName, targetRepoDirectory)
+		}
+	}
+}
+
 // Parses a repository mapping manifest file emitted with Bzlmod enabled.
-func parseRepoMapping(path string) (map[repoMappingKey]string, error) {
+func parseRepoMapping(path string) (*repoMapping, error) {
 	r, err := os.Open(path)
 	if err != nil {
 		// The repo mapping manifest only exists with Bzlmod, so it's not an
 		// error if it's missing. Since any repository name not contained in the
 		// mapping is assumed to be already canonical, an empty map is
 		// equivalent to not applying any mapping.
-		return nil, nil
+		return &repoMapping{}, nil
 	}
 	defer r.Close()
 
@@ -306,18 +369,41 @@ func parseRepoMapping(path string) (map[repoMappingKey]string, error) {
 	// canonical name of source repo,apparent name of target repo,target repo runfiles directory
 	// https://cs.opensource.google/bazel/bazel/+/1b073ac0a719a09c9b2d1a52680517ab22dc971e:src/main/java/com/google/devtools/build/lib/analysis/RepoMappingManifestAction.java;l=117
 	s := bufio.NewScanner(r)
-	repoMapping := make(map[repoMappingKey]string)
+	exactMappings := make(map[repoMappingKey]string)
+	prefixMappingsMap := make(map[string]map[string]string)
 	for s.Scan() {
 		fields := strings.SplitN(s.Text(), ",", 3)
 		if len(fields) != 3 {
 			return nil, fmt.Errorf("runfiles: bad repo mapping line %q in file %s", s.Text(), path)
 		}
-		repoMapping[repoMappingKey{fields[0], fields[1]}] = fields[2]
+		if strings.HasSuffix(fields[0], "*") {
+			prefix := strings.TrimSuffix(fields[0], "*")
+			if _, ok := prefixMappingsMap[prefix]; !ok {
+				prefixMappingsMap[prefix] = make(map[string]string)
+			}
+			prefixMappingsMap[prefix][fields[1]] = fields[2]
+		} else {
+			exactMappings[repoMappingKey{fields[0], fields[1]}] = fields[2]
+		}
 	}
 
 	if err = s.Err(); err != nil {
 		return nil, fmt.Errorf("runfiles: error parsing repo mapping file %s: %w", path, err)
 	}
 
-	return repoMapping, nil
+	// No prefix can be a prefix of another prefix, so we can use binary search
+	// on a sorted slice to find the unique prefix that may match a given source
+	// repo.
+	var prefixMappings []prefixMapping
+	for prefix, mapping := range prefixMappingsMap {
+		prefixMappings = append(prefixMappings, prefixMapping{
+			prefix:  prefix,
+			mapping: mapping,
+		})
+	}
+	slices.SortFunc(prefixMappings, func(a, b prefixMapping) int {
+		return strings.Compare(a.prefix, b.prefix)
+	})
+
+	return &repoMapping{exactMappings, prefixMappings}, nil
 }

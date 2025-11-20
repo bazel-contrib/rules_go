@@ -74,10 +74,11 @@ func run(args []string) (error, int) {
 	factMap := factMultiFlag{}
 	flags := flag.NewFlagSet("nogo", flag.ExitOnError)
 	flags.Var(&factMap, "fact", "Import path and file containing facts for that library, separated by '=' (may be repeated)'")
+	factsOnly := flags.Bool("facts_only", false, "If true, only facts are emitted, no analyzers are run")
 	importcfg := flags.String("importcfg", "", "The import configuration file")
 	packagePath := flags.String("p", "", "The package path (importmap) of the package being compiled")
 	xPath := flags.String("x", "", "The archive file where serialized facts should be written")
-	nogoFixPath := flags.String("fix", "", "The path of the file to store the nogo fixes")
+	nogoFixDir := flags.String("fix_dir", "", "The path of the directory to store the nogo fixes in")
 	var ignores multiFlag
 	flags.Var(&ignores, "ignore", "Names of files to ignore")
 	flags.Parse(args)
@@ -88,17 +89,30 @@ func run(args []string) (error, int) {
 		return fmt.Errorf("error parsing importcfg: %v", err), nogoError
 	}
 
-
-	diagnostics, pkg, err := checkPackage(analyzers, *packagePath, packageFile, importMap, factMap, srcs, ignores)
+	diagnostics, pkg, err := checkPackage(analyzers, *packagePath, packageFile, importMap, factMap, *factsOnly, srcs, ignores)
 	if err != nil {
 		return fmt.Errorf("error running analyzers: %v", err), nogoError
 	}
+
 	// Write the facts file for downstream consumers before failing due to diagnostics.
 	if *xPath != "" {
-		if err := os.WriteFile(abs(*xPath), pkg.facts.Encode(), 0o666); err != nil {
+		var factsContent []byte
+		if pkg != nil {
+			factsContent = pkg.facts.Encode()
+		}
+
+		if err := os.WriteFile(abs(*xPath), factsContent, 0o666); err != nil {
 			return fmt.Errorf("error writing facts: %v", err), nogoError
 		}
 	}
+
+	var fset *token.FileSet
+	if pkg != nil {
+		fset = pkg.fset
+	} else if len(diagnostics) > 0 {
+		return fmt.Errorf("pkg should not be nil with diagnostics"), nogoError
+	}
+
 	exitCode := nogoSuccess
 	var errMsg bytes.Buffer
 	if len(diagnostics) > 0 {
@@ -110,11 +124,11 @@ func run(args []string) (error, int) {
 		}
 		errMsg.WriteString("errors found by nogo during build-time code analysis:")
 		for _, d := range diagnostics {
-			fmt.Fprintf(&errMsg, "\n%s: %s (%s)", pkg.fset.Position(d.Pos), d.Message, d.analyzerName)
+			fmt.Fprintf(&errMsg, "\n%s: %s (%s)", fset.Position(d.Pos), d.Message, d.analyzerName)
 		}
 	}
 
-	if errs := saveSuggestedFixes(*nogoFixPath, diagnostics, pkg); len(errs) > 0 {
+	if errs := saveSuggestedFixes(*nogoFixDir, diagnostics, fset); len(errs) > 0 {
 		errMsg.WriteString("\nsaving suggested fixes:")
 		for _, err := range errs {
 			fmt.Fprintf(&errMsg, "\n%v", err)
@@ -127,22 +141,25 @@ func run(args []string) (error, int) {
 	return nil, exitCode
 }
 
-func saveSuggestedFixes(nogoFixPath string, diagnostics []diagnosticEntry, pkg *goPackage) []error {
-	if nogoFixPath == "" {
+func saveSuggestedFixes(nogoFixDir string, diagnostics []diagnosticEntry, fset *token.FileSet) []error {
+	if nogoFixDir == "" {
 		return nil
 	}
 	var errs []error
-	// the patch file has to be created even if there is no fix.
-	patchFile, err := os.Create(nogoFixPath)
-	if err != nil {
-		errs = append(errs, fmt.Errorf("creating %q: %w", nogoFixPath, err))
-		return errs
-	}
-	defer patchFile.Close()
-	fixes, err := getFixes(diagnostics, pkg.fset)
+	fixes, err := getFixes(diagnostics, fset)
 	if err != nil {
 		errs = append(errs, err)
 	}
+	if len(fixes) == 0 {
+		return errs
+	}
+	patchFilePath := filepath.Join(nogoFixDir, nogoFixBasename)
+	patchFile, err := os.Create(patchFilePath)
+	if err != nil {
+		errs = append(errs, fmt.Errorf("creating %q: %w", patchFilePath, err))
+		return errs
+	}
+	defer patchFile.Close()
 	if err := writePatch(patchFile, fixes); err != nil {
 		errs = append(errs, err)
 	}
@@ -192,12 +209,27 @@ func readImportCfg(file string) (packageFile map[string]string, importMap map[st
 	return packageFile, importMap, nil
 }
 
+func setAnalyzerFlags(a *analysis.Analyzer, flags map[string]string) error {
+	for flagKey, flagVal := range flags {
+		if strings.HasPrefix(flagKey, "-") {
+			return fmt.Errorf("%s: flag should not begin with '-': %s", a.Name, flagKey)
+		}
+		if flag := a.Flags.Lookup(flagKey); flag == nil {
+			return fmt.Errorf("%s: unrecognized flag: %s", a.Name, flagKey)
+		}
+		if err := a.Flags.Set(flagKey, flagVal); err != nil {
+			return fmt.Errorf("%s: invalid value for flag: %s=%s: %w", a.Name, flagKey, flagVal, err)
+		}
+	}
+	return nil
+}
+
 // checkPackage runs all the given analyzers on the specified package and
 // returns the source code diagnostics that the must be printed in the build log.
 // It returns an empty string if no source code diagnostics need to be printed.
 //
 // This implementation was adapted from that of golang.org/x/tools/go/checker/internal/checker.
-func checkPackage(analyzers []*analysis.Analyzer, packagePath string, packageFile, importMap, factMap map[string]string, filenames, ignoreFiles []string) ([]diagnosticEntry, *goPackage, error) {
+func checkPackage(analyzers []*analysis.Analyzer, packagePath string, packageFile, importMap, factMap map[string]string, factsOnly bool, filenames, ignoreFiles []string) ([]diagnosticEntry, *goPackage, error) {
 	// Register fact types and establish dependencies between analyzers.
 	actions := make(map[*analysis.Analyzer]*action)
 	var visit func(a *analysis.Analyzer) *action
@@ -222,24 +254,32 @@ func checkPackage(analyzers []*analysis.Analyzer, packagePath string, packageFil
 		return act
 	}
 
-	roots := make([]*action, 0, len(analyzers))
+	// We populate flags for analyzers and their subanalyzers to depth of one. Some analyzers require to provide
+	// flags to their dependencies e.g. nilaway has specific nilaway_config subanalyzer.
 	for _, a := range analyzers {
 		if cfg, ok := configs[a.Name]; ok {
-			for flagKey, flagVal := range cfg.analyzerFlags {
-				if strings.HasPrefix(flagKey, "-") {
-					return nil, nil, fmt.Errorf(
-						"%s: flag should not begin with '-': %s", a.Name, flagKey)
-				}
-				if flag := a.Flags.Lookup(flagKey); flag == nil {
-					return nil, nil, fmt.Errorf("%s: unrecognized flag: %s", a.Name, flagKey)
-				}
-				if err := a.Flags.Set(flagKey, flagVal); err != nil {
-					return nil, nil, fmt.Errorf(
-						"%s: invalid value for flag: %s=%s: %w", a.Name, flagKey, flagVal, err)
+			if err := setAnalyzerFlags(a, cfg.analyzerFlags); err != nil {
+				return nil, nil, err
+			}
+		}
+		for _, ra := range a.Requires {
+			if cfg, ok := configs[ra.Name]; ok {
+				if err := setAnalyzerFlags(ra, cfg.analyzerFlags); err != nil {
+					return nil, nil, err
 				}
 			}
 		}
-		roots = append(roots, visit(a))
+	}
+
+	roots := make([]*action, 0, len(analyzers))
+	for _, a := range analyzers {
+		if !factsOnly || len(a.FactTypes) > 0 {
+			roots = append(roots, visit(a))
+		}
+	}
+	if len(roots) == 0 {
+		// No analyzers to run, return early.
+		return nil, nil, nil
 	}
 
 	// Load the package, including AST, types, and facts.
@@ -410,6 +450,12 @@ func (act *action) execOnce() {
 	act.pass = pass
 
 	var err error
+	defer func() {
+		if r := recover(); r != nil {
+			// If the analyzer panics, we catch it here and return an error.
+			act.err = fmt.Errorf("panic: %v", r)
+		}
+	}()
 	if !act.pkg.illTyped || pass.Analyzer.RunDespiteErrors {
 		act.result, err = pass.Analyzer.Run(pass)
 		if err == nil {

@@ -43,10 +43,10 @@ go_library(
 -- lib.go --
 package lib
 
-func shadowed() string {
+func useless() string {
 	foo := "original"
 	if foo == "original" {
-		foo := "shadow"
+		foo = foo
 		return foo
 	}
 	return foo
@@ -64,10 +64,10 @@ go_library(
 -- go/lib.go --
 package lib
 
-func shadowed() string {
+func useless() string {
 	foo := "original"
 	if foo == "original" {
-		foo := "shadow"
+		foo = foo
 		return foo
 	}
 	return foo
@@ -85,10 +85,10 @@ go_library(
 -- go/third_party/lib.go --
 package lib
 
-func shadowed() string {
+func useless() string {
 	foo := "original"
 	if foo == "original" {
-		foo := "shadow"
+		foo = foo
 		return foo
 	}
 	return foo
@@ -114,8 +114,8 @@ func TestNotIncluded(t *testing.T) {
 func TestIncluded(t *testing.T) {
 	if err := bazel_testing.RunBazel("build", "//go:lib"); err == nil {
 		t.Fatal("Expected build to fail")
-	} else if !strings.Contains(err.Error(), "lib.go:6:3: declaration of \"foo\" shadows declaration at line 4 (shadow)") {
-		t.Fatalf("Expected error to contain \"lib.go:6:3: declaration of \"foo\" shadows declaration at line 4 (shadow)\", got %s", err)
+	} else if !strings.Contains(err.Error(), "lib.go:6:3: self-assignment of foo to foo (assign)") {
+		t.Fatalf("Expected error to contain \"lib.go:6:3: self-assignment of foo to foo (assign)\", got %s", err)
 	}
 }
 

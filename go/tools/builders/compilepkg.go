@@ -17,6 +17,7 @@
 package main
 
 import (
+	"crypto/sha256"
 	"errors"
 	"flag"
 	"fmt"
@@ -36,6 +37,7 @@ func compilePkg(args []string) error {
 
 	fs := flag.NewFlagSet("GoCompilePkg", flag.ExitOnError)
 	goenv := envFlags(fs)
+	var pack string
 	var unfilteredSrcs, coverSrcs, embedSrcs, embedLookupDirs, embedRoots, recompileInternalDeps multiFlag
 	var deps archiveMultiFlag
 	var importPath, packagePath, packageListPath, coverMode string
@@ -44,6 +46,7 @@ func compilePkg(args []string) error {
 	var gcFlags, asmFlags, cppFlags, cFlags, cxxFlags, objcFlags, objcxxFlags, ldFlags quoteMultiFlag
 	var coverFormat string
 	var pgoprofile string
+	fs.StringVar(&pack, "pack", "", "Path of the pack tool.")
 	fs.Var(&unfilteredSrcs, "src", ".go, .c, .cc, .m, .mm, .s, or .S file to be filtered and compiled")
 	fs.Var(&coverSrcs, "cover", ".go file that should be instrumented for coverage (must also be a -src)")
 	fs.Var(&embedSrcs, "embedsrc", "file that may be compiled into the package with a //go:embed directive")
@@ -105,6 +108,7 @@ func compilePkg(args []string) error {
 
 	return compileArchive(
 		goenv,
+		pack,
 		importPath,
 		packagePath,
 		srcs,
@@ -136,6 +140,7 @@ func compilePkg(args []string) error {
 
 func compileArchive(
 	goenv *env,
+	pack string,
 	importPath string,
 	packagePath string,
 	srcs archiveSrcs,
@@ -243,7 +248,8 @@ func compileArchive(
 	goSrcsNogo := append([]string{}, goSrcs...)
 	cgoSrcsNogo := append([]string{}, cgoSrcs...)
 
-	// Instrument source files for coverage.
+	// Instrument source files in a package for coverage.
+	var coverageCfg string
 	if coverMode != "" {
 		relCoverPath := make(map[string]string)
 		for _, s := range coverSrcs {
@@ -254,6 +260,12 @@ func compileArchive(
 		if cgoEnabled {
 			combined = append(combined, cgoSrcs...)
 		}
+
+		var (
+			coverIn        []string
+			coverOut       []string
+			srcPathMapping = make(map[string]string)
+		)
 		for i, origSrc := range combined {
 			if _, ok := relCoverPath[origSrc]; !ok {
 				continue
@@ -269,7 +281,16 @@ func compileArchive(
 			case "lcov":
 				// Bazel merges lcov reports across languages and thus assumes
 				// that the source file paths are relative to the exec root.
+				//
+				// In the go's coverageredesign, rules_go no longer is able to
+				// set the filepath key generated to Go's coverage output files
+				// so we keep a mapping from importpath/filename format emitted
+				// by the go runtime in the coverageredesign to the exec root
+				// relative source path required by lcov. We will use this mapping
+				// to write the lcov file with the expected exec root relative source
+				// path.
 				srcName = relCoverPath[origSrc]
+				srcPathMapping[srcName] = path.Join(importPath, filepath.Base(srcName))
 			default:
 				return fmt.Errorf("invalid value for -cover_format: %q", coverFormat)
 			}
@@ -278,12 +299,10 @@ func compileArchive(
 			if ext := filepath.Ext(stem); ext != "" {
 				stem = stem[:len(stem)-len(ext)]
 			}
-			coverVar := fmt.Sprintf("Cover_%s_%d_%s", sanitizePathForIdentifier(importPath), i, sanitizePathForIdentifier(stem))
-			coverVar = strings.ReplaceAll(coverVar, "_", "Z")
 			coverSrc := filepath.Join(workDir, fmt.Sprintf("cover_%d.go", i))
-			if err := instrumentForCoverage(goenv, origSrc, srcName, coverVar, coverMode, coverSrc); err != nil {
-				return err
-			}
+
+			coverIn = append(coverIn, origSrc)
+			coverOut = append(coverOut, coverSrc)
 
 			if i < len(goSrcs) {
 				goSrcs[i] = coverSrc
@@ -291,6 +310,19 @@ func compileArchive(
 			}
 
 			cgoSrcs[i-len(goSrcs)] = coverSrc
+		}
+
+		// Modeled after go toolchain's coverage variables configuration.
+		// https://github.com/golang/go/blob/go1.24.5/src/cmd/go/internal/work/exec.go#L1932
+		sum := sha256.Sum256([]byte(importPath))
+		coverVar := fmt.Sprintf("goCover_%x_", sum[:6])
+		if len(coverOut) > 0 {
+			coverageCfg = workDir + "pkgcfg.txt"
+			coverOut, err := instrumentForCoverage(goenv, importPath, packageName, coverIn, coverVar, coverMode, coverOut, workDir, relCoverPath, srcPathMapping)
+			if err != nil {
+				return err
+			}
+			goSrcs = append(goSrcs, coverOut[0])
 		}
 	}
 
@@ -321,14 +353,35 @@ func compileArchive(
 				return err
 			}
 		}
-		gcFlags = append(gcFlags, createTrimPath(gcFlags, srcDir))
+		gcFlags = append(gcFlags, "-trimpath="+srcDir)
 	} else {
 		if cgoExportHPath != "" {
 			if err := os.WriteFile(cgoExportHPath, nil, 0o666); err != nil {
 				return err
 			}
 		}
-		gcFlags = append(gcFlags, createTrimPath(gcFlags, "."))
+		trimPath, err := createTrimPath()
+		if err != nil {
+			return err
+		}
+		// Preserve an existing -trimpath argument, applying abs() to each prefix.
+		for i, flag := range gcFlags {
+			if strings.HasPrefix(flag, "-trimpath=") {
+				gcFlags = append(gcFlags[:i], gcFlags[i+1:]...)
+				rewrites := strings.Split(flag[len("-trimpath="):], ";")
+				for j, rewrite := range rewrites {
+					prefix, replace := rewrite, ""
+					if p := strings.LastIndex(rewrite, "=>"); p >= 0 {
+						prefix, replace = rewrite[:p], rewrite[p:]
+					}
+					rewrites[j] = abs(prefix) + replace
+				}
+				rewrites = append(rewrites, trimPath)
+				trimPath = strings.Join(rewrites, ";")
+				break
+			}
+		}
+		gcFlags = append(gcFlags, "-trimpath="+trimPath)
 	}
 
 	importcfgPath, err := checkImportsAndBuildCfg(goenv, importPath, srcs, deps, packageListPath, recompileInternalDeps, compilingWithCgo, coverMode, workDir)
@@ -389,7 +442,7 @@ func compileArchive(
 	}
 
 	// Compile the filtered .go files.
-	if err := compileGo(goenv, goSrcs, packagePath, importcfgPath, embedcfgPath, asmHdrPath, symabisPath, gcFlags, pgoprofile, outLinkObj, outInterfacePath); err != nil {
+	if err := compileGo(goenv, goSrcs, packagePath, importcfgPath, embedcfgPath, asmHdrPath, symabisPath, gcFlags, pgoprofile, outLinkObj, outInterfacePath, coverageCfg); err != nil {
 		return err
 	}
 
@@ -428,7 +481,7 @@ func compileArchive(
 	// Pack .o and .syso files into the archive. These may come from cgo generated code,
 	// cgo dependencies (cdeps), windows resource file generation, or assembly.
 	if len(objFiles) > 0 {
-		if err := appendToArchive(goenv, outLinkObj, objFiles); err != nil {
+		if err := appendToArchive(goenv, pack, outLinkObj, objFiles); err != nil {
 			return err
 		}
 	}
@@ -465,6 +518,7 @@ func checkImportsAndBuildCfg(goenv *env, importPath string, srcs archiveSrcs, de
 			return "", errors.New("coverage requested but coverdata dependency not provided")
 		}
 		imports[coverdataPath] = coverdata
+		imports["runtime/coverage"] = nil
 	}
 
 	// Build an importcfg file for the compiler.
@@ -475,7 +529,7 @@ func checkImportsAndBuildCfg(goenv *env, importPath string, srcs archiveSrcs, de
 	return importcfgPath, nil
 }
 
-func compileGo(goenv *env, srcs []string, packagePath, importcfgPath, embedcfgPath, asmHdrPath, symabisPath string, gcFlags []string, pgoprofile, outLinkobjPath, outInterfacePath string) error {
+func compileGo(goenv *env, srcs []string, packagePath, importcfgPath, embedcfgPath, asmHdrPath, symabisPath string, gcFlags []string, pgoprofile, outLinkobjPath, outInterfacePath, coverageCfg string) error {
 	args := goenv.goTool("compile")
 	args = append(args, "-p", packagePath, "-importcfg", importcfgPath, "-pack")
 	if embedcfgPath != "" {
@@ -490,30 +544,35 @@ func compileGo(goenv *env, srcs []string, packagePath, importcfgPath, embedcfgPa
 	if pgoprofile != "" {
 		args = append(args, "-pgoprofile", pgoprofile)
 	}
+	if coverageCfg != "" {
+		args = append(args, "-coveragecfg", coverageCfg)
+	}
 	args = append(args, gcFlags...)
 	args = append(args, "-o", outInterfacePath)
 	args = append(args, "-linkobj", outLinkobjPath)
 	args = append(args, "--")
 	args = append(args, srcs...)
-	absArgs(args, []string{"-I", "-o", "-trimpath", "-importcfg"})
+	absArgs(args, []string{"-I", "-o", "-importcfg"})
 	return goenv.runCommand(args)
 }
 
-func appendToArchive(goenv *env, outPath string, objFiles []string) error {
+func appendToArchive(goenv *env, pack, outPath string, objFiles []string) error {
 	// Use abs to work around long path issues on Windows.
-	args := goenv.goTool("pack", "r", abs(outPath))
+	args := []string{pack, "r", abs(outPath)}
 	args = append(args, objFiles...)
 	return goenv.runCommand(args)
 }
 
-func createTrimPath(gcFlags []string, path string) string {
-	for _, flag := range gcFlags {
-		if strings.HasPrefix(flag, "-trimpath=") {
-			return flag + ":" + path
-		}
+func createTrimPath() (string, error) {
+	trimPath, err := os.Getwd()
+	if err != nil {
+		return "", err
 	}
-
-	return "-trimpath=" + path
+	// Create a trim path to make paths relative to the working directory.
+	// First, attempt to trim the working directory, and if this fails, replace
+	// the parent of the working directory with "..".
+	trimPath = fmt.Sprintf("%s;%s=>..", trimPath, filepath.Dir(trimPath))
+	return trimPath, nil
 }
 
 func sanitizePathForIdentifier(path string) string {

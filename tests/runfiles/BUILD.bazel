@@ -43,6 +43,14 @@ go_test(
     ],
 )
 
+go_test(
+    name = "runfiles_internal_test",
+    srcs = [
+        "runfiles_internal_test.go",
+    ],
+    embed = ["//go/runfiles"],
+)
+
 go_bazel_test(
     name = "runfiles_bazel_test",
     srcs = ["runfiles_bazel_test.go"],

@@ -18,3 +18,5 @@ runfiles_export_envvars
 export BUILD_WORKING_DIRECTORY=$(pwd)
 [[ "$("$GO_TOOL" version)" =~ ^go ]]
 [[ "$("$GO_TOOL" env GOPRIVATE)" == example.com ]]
+# Test that explicit env vars override `go_env` settings.
+[[ "$(GOPRIVATE=foo.com "$GO_TOOL" env GOPRIVATE)" == foo.com ]]

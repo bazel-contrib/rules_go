@@ -5,6 +5,7 @@
 # there, but it is required to build the examples.
 
 common:ci --enable_bzlmod
+common:ci --lockfile_mode=error
 common:ci --color=no
 common:ci --verbose_failures
 common:ci --sandbox_debug

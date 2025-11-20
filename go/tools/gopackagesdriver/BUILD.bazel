@@ -52,6 +52,6 @@ go_bazel_test(
 filegroup(
     name = "all_files",
     testonly = True,
-    srcs = glob(["**"]),
+    srcs = glob(["**"]) + ["//go/tools/gopackagesdriver/pkgjson:all_files"],
     visibility = ["//visibility:public"],
 )

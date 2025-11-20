@@ -29,7 +29,7 @@ import (
 )
 
 // ManifestFile specifies the location of the runfile manifest file.  You can
-// pass this as an option to New.  If unset or empty, use the value of the
+// pass this as an option to [New].  If unset or empty, use the value of the
 // environmental variable RUNFILES_MANIFEST_FILE.
 type ManifestFile string
 
@@ -77,7 +77,7 @@ func (f ManifestFile) parse() (manifest, error) {
 	defer r.Close()
 
 	s := bufio.NewScanner(r)
-	m := manifest{make(map[string]string),  nil}
+	m := manifest{make(map[string]string), nil}
 	for s.Scan() {
 		line := s.Text()
 		var link, target string
@@ -238,7 +238,7 @@ type dirFile string
 
 func (r dirFile) Stat() (fs.FileInfo, error) { return dirFileInfo(r), nil }
 func (r dirFile) Read(_ []byte) (int, error) { return 0, syscall.EISDIR }
-func (r dirFile) Close() error { return nil }
+func (r dirFile) Close() error               { return nil }
 
 type dirFileInfo string
 
@@ -248,4 +248,4 @@ func (dirFileInfo) Mode() fs.FileMode  { return fs.ModeDir | 0555 }
 func (dirFileInfo) ModTime() time.Time { return time.Time{} }
 func (dirFileInfo) IsDir() bool        { return true }
 func (dirFileInfo) Sys() interface{}   { return nil }
-func (i dirFileInfo) String() string { return fs.FormatFileInfo(i) }
+func (i dirFileInfo) String() string   { return fs.FormatFileInfo(i) }

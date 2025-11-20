@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/pmezard/go-difflib/difflib"
 	"golang.org/x/tools/go/analysis"
@@ -87,6 +88,9 @@ func getFixes(entries []diagnosticEntry, fileSet *token.FileSet) ([]fileChange, 
 	finalChanges := make(map[string][]nogoEdit)
 
 	for _, entry := range entries {
+		if len(entry.Diagnostic.SuggestedFixes) == 0 {
+			continue
+		}
 		// According to the [doc](https://pkg.go.dev/golang.org/x/tools@v0.28.0/go/analysis#Diagnostic),
 		// an analyzer may suggest several alternative fixes, but only one should be applied.
 		// We will go over all the suggested fixes until the we find one with no conflict
@@ -94,6 +98,7 @@ func getFixes(entries []diagnosticEntry, fileSet *token.FileSet) ([]fileChange, 
 		// none of the suggested fixes of a diagnostic can be applied, the diagnostic entry will be skipped
 		// with an error message to the user.
 		foundApplicableFix := false
+		var perAnalyzerErrors []error
 		for _, sf := range entry.Diagnostic.SuggestedFixes {
 			candidateChanges := make(map[string][]nogoEdit)
 			applicable := true
@@ -124,8 +129,11 @@ func getFixes(entries []diagnosticEntry, fileSet *token.FileSet) ([]fileChange, 
 			for fileName, edits := range candidateChanges {
 				edits = append(edits, finalChanges[fileName]...)
 				var err error
+
 				if candidateChanges[fileName], err = validate(edits); err != nil {
 					applicable = false
+					// record the reason why this suggested fix is not applicable.
+					perAnalyzerErrors = append(perAnalyzerErrors, err)
 					break
 				}
 			}
@@ -140,8 +148,9 @@ func getFixes(entries []diagnosticEntry, fileSet *token.FileSet) ([]fileChange, 
 		}
 		if !foundApplicableFix {
 			allErrors = append(allErrors, fmt.Errorf(
-				"ignoring suggested fixes from analyzer %q at %s",
+				"ignoring suggested fixes from analyzer %q at %s because:\n\t%s",
 				entry.analyzerName, fileSet.Position(entry.Pos),
+				strings.Join(formatErrors(perAnalyzerErrors), "\n\t"),
 			))
 		}
 	}
@@ -156,12 +165,10 @@ func getFixes(entries []diagnosticEntry, fileSet *token.FileSet) ([]fileChange, 
 	}
 
 	var errMsg bytes.Buffer
-	errMsg.WriteString("some suggested fixes are invalid or have conflicts with other fixes:")
 	for _, e := range allErrors {
 		errMsg.WriteString("\n\t")
 		errMsg.WriteString(e.Error())
 	}
-	errMsg.WriteString("\nplease apply other fixes and rerun the build.")
 	return finalFileChanges, errors.New(errMsg.String())
 }
 
@@ -235,4 +242,12 @@ func writePatch(patchFile io.Writer, changes []fileChange) error {
 	}
 
 	return nil
+}
+
+func formatErrors(errs []error) []string {
+	result := make([]string, len(errs))
+	for i, err := range errs {
+		result[i] = fmt.Sprintf("- %v", err)
+	}
+	return result
 }

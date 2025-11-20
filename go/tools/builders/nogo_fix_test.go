@@ -177,9 +177,12 @@ func TestGetFixes_Conflict(t *testing.T) {
 		},
 	}
 	expectedError := `ignoring suggested fixes from analyzer "analyzer2"`
+	detailedExpectedError := `because:
+	- overlapping suggestions from "analyzer2" and "analyzer1" at {Start:54,End:61,New:""} and {Start:54,End:62,New:""}`
+
 	fileChanges, err := getFixes(diagnosticEntries, fset)
-	if err == nil || !strings.Contains(err.Error(), expectedError) {
-		t.Errorf("expected error: %s\ngot:%v+", expectedError, err)
+	if err == nil || !strings.Contains(err.Error(), expectedError) || !strings.Contains(err.Error(), detailedExpectedError) {
+		t.Errorf("expected errors: %s or %s\ngot:%v+", expectedError, detailedExpectedError, err)
 	}
 	expectedChanges := []fileChange{
 		{
@@ -192,6 +195,28 @@ func TestGetFixes_Conflict(t *testing.T) {
 	}
 	if !reflect.DeepEqual(fileChanges, expectedChanges) {
 		t.Errorf("unexpected changes:\n\tgot:\t%v\n\twant:\t%v", fileChanges, expectedChanges)
+	}
+}
+
+func TestGetFixes_NoFixes(t *testing.T) {
+	fset := token.NewFileSet()
+
+	diagnosticEntries := []diagnosticEntry{
+		{
+			analyzerName: "analyzer1",
+			Diagnostic: analysis.Diagnostic{
+				SuggestedFixes: []analysis.SuggestedFix{},
+			},
+		},
+	}
+
+	fileChanges, err := getFixes(diagnosticEntries, fset)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if fileChanges != nil {
+		t.Errorf("expected no file changes, got: %v", fileChanges)
 	}
 }
 

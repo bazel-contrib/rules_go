@@ -66,7 +66,7 @@ def emit_link(
 
     # use ar tool from cc toolchain if cc toolchain provides it
     if go.cgo_tools and go.cgo_tools.ar_path and go.cgo_tools.ar_path.endswith("ar"):
-        tool_args.add_all(["-extar", go.cgo_tools.ar_path])
+        tool_args.add("-extar", go.cgo_tools.ar_path)
 
     # Add in any mode specific behaviours
     if go.mode.race:
@@ -214,10 +214,21 @@ def _extract_extldflags(gc_linkopts, extldflags):
     """
     filtered_gc_linkopts = []
     is_extldflags = False
-    for opt in gc_linkopts:
+    skip_next = False
+
+    for i, opt in enumerate(gc_linkopts):
+        if skip_next:
+            skip_next = False
+            continue
+
         if is_extldflags:
+            if opt == "-Wl" and i + 1 < len(gc_linkopts):
+                # Merge '-Wl,' and next value
+                extldflags.append("-Wl," + gc_linkopts[i + 1])
+                skip_next = True
+            else:
+                extldflags.append(opt)
             is_extldflags = False
-            extldflags.append(opt)
         elif opt == "-extldflags":
             is_extldflags = True
         else:

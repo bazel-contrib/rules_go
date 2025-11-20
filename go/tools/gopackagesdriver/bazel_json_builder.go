@@ -159,7 +159,7 @@ func NewBazelJSONBuilder(bazel *Bazel, includeTests bool) (*BazelJSONBuilder, er
 }
 
 func (b *BazelJSONBuilder) outputGroupsForMode(mode packages.LoadMode) string {
-	og := "go_pkg_driver_json_file,go_pkg_driver_stdlib_json_file,go_pkg_driver_srcs"
+	og := "go_pkg_driver_json_file,go_pkg_driver_stdlib_json_file,go_pkg_driver_stdlib_cache_dir,go_pkg_driver_srcs"
 	if mode&packages.NeedExportsFile != 0 {
 		og += ",go_pkg_driver_export_file"
 	}

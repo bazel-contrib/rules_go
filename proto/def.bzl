@@ -17,7 +17,7 @@ load(
     "types",
 )
 load(
-    "@rules_proto//proto:defs.bzl",
+    "@com_google_protobuf//bazel/common:proto_info.bzl",
     "ProtoInfo",
 )
 load(
@@ -31,6 +31,9 @@ load(
 )
 load(
     "//go/private:context.bzl",
+    "CGO_ATTRS",
+    "CGO_FRAGMENTS",
+    "CGO_TOOLCHAINS",
     "new_go_info",
 )
 load(
@@ -69,6 +72,17 @@ def get_imports(attr, importpath):
 
 def _go_proto_aspect_impl(_target, ctx):
     attr = ctx.rule.attr
+    for attr_name in ["importpath", "_go_context_data"]:
+        if not hasattr(attr, attr_name):
+            fail("""While processing go_proto_library deps: {label}, which is a {kind} is missing the '{attr_name}' \
+attribute. go_proto_library deps are usually other go_proto_library targets. We recommend double-checking the deps \
+to make sure they're the right type. If this is intentional (for example you're developing a new rule) make sure it \
+declares the \"{attr_name}\" attribute.""".format(
+                label = _target.label,
+                kind = ctx.rule.kind,
+                attr_name = attr_name,
+            ))
+
     go = go_context(
         ctx,
         attr,
@@ -195,8 +209,9 @@ go_proto_library = rule(
         "_allowlist_function_transition": attr.label(
             default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
         ),
-    },
-    toolchains = [GO_TOOLCHAIN],
+    } | CGO_ATTRS,
+    fragments = CGO_FRAGMENTS,
+    toolchains = [GO_TOOLCHAIN] + CGO_TOOLCHAINS,
 )
 # go_proto_library is a rule that takes a proto_library (in the proto
 # attribute) and produces a go library for it.

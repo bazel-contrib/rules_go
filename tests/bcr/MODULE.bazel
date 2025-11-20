@@ -18,12 +18,15 @@ local_path_override(
     path = "../..",
 )
 
-bazel_dep(name = "gazelle", version = "0.33.0")
-bazel_dep(name = "protobuf", version = "3.19.6")
+bazel_dep(name = "gazelle", version = "0.36.0")
+bazel_dep(name = "platforms", version = "1.0.0")
+bazel_dep(name = "protobuf", version = "29.0-rc2.bcr.1")
+bazel_dep(name = "rules_cc", version = "0.0.17")
+bazel_dep(name = "rules_shell", version = "0.4.1")
 
 # Required with --incompatible_enable_proto_toolchain_resolution.
 # Avoids building protoc from source, which speeds up CI runs.
-bazel_dep(name = "toolchains_protoc", version = "0.2.1")
+bazel_dep(name = "toolchains_protoc", version = "0.3.4")
 
 go_sdk = use_extension("@my_rules_go//go:extensions.bzl", "go_sdk")
 go_sdk.download(
@@ -32,6 +35,9 @@ go_sdk.download(
         "//:test_go_sdk.patch",
     ],
     version = "1.23.1",
+)
+go_sdk.wrap(
+    root_file = "@go_default_sdk//:README.md",
 )
 
 # Request an invalid SDK to verify that it isn't fetched since the first tag takes precedence.
@@ -42,17 +48,19 @@ go_sdk.nogo(
     nogo = "//:my_nogo",
 )
 
-# Bring the default SDK into scope to verify that it exists.
+# Don't depend on this repo by name, use toolchains instead.
+# See https://github.com/bazel-contrib/rules_go/blob/master/go/toolchains.rst.
 use_repo(go_sdk, "go_default_sdk")
 
-# Bring the selected host compatible SDK into scope to verify that it exists.
+# Don't depend on this repo by name, use toolchains instead.
+# See https://github.com/bazel-contrib/rules_go/blob/master/go/toolchains.rst
 use_repo(go_sdk, "go_host_compatible_sdk_label")
 
 go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
 go_deps.module(
     path = "google.golang.org/grpc",
-    sum = "h1:pnP7OclFFFgFi4VHQDQDaoXUVauOFyktqTsqqgzFKbc=",
-    version = "v1.40.1",
+    sum = "h1:OgPcDAFKHnH8X3O4WcO4XUc8GRDeKsKReqbQtiCj7N8=",
+    version = "v1.67.3",
 )
 
 # Read in go_tool_test.sh.

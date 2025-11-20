@@ -1,5 +1,6 @@
 load("@my_rules_go//go:def.bzl", "go_test")
 load("@my_rules_go//proto:def.bzl", "go_grpc_library", "go_proto_library")
+load("@protobuf//bazel:proto_library.bzl", "proto_library")
 
 proto_library(
     name = "foo_proto",
