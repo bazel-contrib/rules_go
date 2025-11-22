@@ -110,7 +110,6 @@ func ResolvePaths(pak *packages.Package, prf PathResolverFunc) error {
 // FilterFilesForBuildTags filters the source files given the current build
 // tags.
 func FilterFilesForBuildTags(pak *packages.Package) {
-	pak.GoFiles = filterSourceFilesForTags(pak.GoFiles)
 	pak.CompiledGoFiles = filterSourceFilesForTags(pak.CompiledGoFiles)
 }
 
