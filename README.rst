@@ -12,7 +12,7 @@ Go rules for Bazel_
 .. _Go with Bzlmod: docs/go/core/bzlmod.md
 .. _Go with WORKSPACE: docs/go/core/workspace.md
 .. _Core rules: docs/go/core/rules.md
-.. _Coverage: https://bazel.google.cn/docs/coverage
+.. _Coverage: https://bazel.build/configure/coverage
 .. _Dependencies: go/dependencies.rst
 .. _Deprecation schedule: https://github.com/bazelbuild/rules_go/wiki/Deprecation-schedule
 .. _Editor setup instructions: docs/editors.md
