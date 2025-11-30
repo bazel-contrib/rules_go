@@ -36,6 +36,7 @@ filegroup(
             "src/log/slog/internal/slogtest/**",
             "src/internal/obscuretestdata/**",
             "src/internal/testpty/**",
+            "src/net/internal/cgotest/**",
             "src/net/internal/socktest/**",
             "src/reflect/internal/example*/**",
             "src/runtime/internal/startlinetest/**",
