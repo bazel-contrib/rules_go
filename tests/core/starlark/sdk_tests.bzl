@@ -24,8 +24,8 @@ _123_PREFIX_PRERELEASE_SUFFIX = "rc1"
         """declare_bazel_toolchains(
     prefix = "123_prefix_",
     go_toolchain_repo = "@sdk_repo",
-    host_goarch = "amd64",
-    host_goos = "linux",
+    exec_goarch = "amd64",
+    exec_goos = "linux",
     major = _123_PREFIX_MAJOR_VERSION,
     minor = _123_PREFIX_MINOR_VERSION,
     patch = _123_PREFIX_PATCH_VERSION,
@@ -64,8 +64,8 @@ def _go_toolchains_single_definition_without_version_test(ctx):
         """declare_bazel_toolchains(
     prefix = "123_prefix_",
     go_toolchain_repo = "@sdk_repo",
-    host_goarch = "amd64",
-    host_goos = "linux",
+    exec_goarch = "amd64",
+    exec_goos = "linux",
     major = _123_PREFIX_MAJOR_VERSION,
     minor = _123_PREFIX_MINOR_VERSION,
     patch = _123_PREFIX_PATCH_VERSION,

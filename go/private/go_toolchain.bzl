@@ -96,7 +96,7 @@ go_toolchain = rule(
     provides = [platform_common.ToolchainInfo],
 )
 
-def declare_go_toolchains(host_goos, sdk, builder, pack):
+def declare_go_toolchains(exec_goos, sdk, builder, pack):
     """Declares go_toolchain targets for each platform."""
     for p in PLATFORMS:
         if p.cgo:
@@ -107,9 +107,9 @@ def declare_go_toolchains(host_goos, sdk, builder, pack):
 
         link_flags = []
         cgo_link_flags = []
-        if host_goos == "darwin":
+        if exec_goos == "darwin":
             cgo_link_flags.extend(["-shared", "-Wl,-all_load"])
-        if host_goos == "linux":
+        elif exec_goos == "linux":
             cgo_link_flags.append("-Wl,-whole-archive")
 
         go_toolchain(
@@ -128,8 +128,8 @@ def declare_go_toolchains(host_goos, sdk, builder, pack):
 def declare_bazel_toolchains(
         *,
         go_toolchain_repo,
-        host_goarch,
-        host_goos,
+        exec_goarch,
+        exec_goos,
         major,
         minor,
         patch,
@@ -260,8 +260,8 @@ def declare_bazel_toolchains(
             name = prefix + "go_" + p.name,
             toolchain_type = GO_TOOLCHAIN,
             exec_compatible_with = [
-                "@io_bazel_rules_go//go/toolchain:" + host_goos,
-                "@io_bazel_rules_go//go/toolchain:" + host_goarch,
+                "@io_bazel_rules_go//go/toolchain:" + exec_goos,
+                "@io_bazel_rules_go//go/toolchain:" + exec_goarch,
             ],
             target_compatible_with = constraints,
             target_settings = [

@@ -108,7 +108,7 @@ package_list(
 
 declare_go_toolchains(
     builder = ":builder_reset",
-    host_goos = "{goos}",
+    exec_goos = "{goos}",
     pack = ":pack_reset",
     sdk = ":go_sdk",
 )

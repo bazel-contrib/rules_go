@@ -211,8 +211,8 @@ def go_toolchains_single_definition(ctx, *, prefix, goos, goarch, sdk_repo, sdk_
     chunks.append("""declare_bazel_toolchains(
     prefix = "{prefix}",
     go_toolchain_repo = "@{sdk_repo}",
-    host_goarch = "{goarch}",
-    host_goos = "{goos}",
+    exec_goarch = "{goarch}",
+    exec_goos = "{goos}",
     major = {identifier_prefix}MAJOR_VERSION,
     minor = {identifier_prefix}MINOR_VERSION,
     patch = {identifier_prefix}PATCH_VERSION,
