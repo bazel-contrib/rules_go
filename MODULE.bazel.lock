@@ -263,7 +263,7 @@
     },
     "@@rules_kotlin~//src/main/starlark/core/repositories:bzlmod_setup.bzl%rules_kotlin_extensions": {
       "general": {
-        "bzlTransitiveDigest": "fus14IFJ/1LGWWGKPH/U18VnJCoMjfDt1ckahqCnM0A=",
+        "bzlTransitiveDigest": "eecmTsmdIQveoA97hPtH3/Ej/kugbdCI24bhXIXaly8=",
         "usagesDigest": "aJF6fLy82rR95Ff5CZPAqxNoFgOMLMN5ImfBS0nhnkg=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
@@ -1131,7 +1131,7 @@
     },
     "@@rules_python~//python/extensions:python.bzl%python": {
       "general": {
-        "bzlTransitiveDigest": "8vDKUdCc6qEk2/YsFiPsFO1Jqgl+XPFRklapOxMAbE8=",
+        "bzlTransitiveDigest": "NKPsijGE1IrFTzT0W0yfAohwWNIZt6eB23MGn2bM1OU=",
         "usagesDigest": "VeZ9AAKeQZSVw3zpP+cQF00n7ph8TEMpVgkm6b6+I9s=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
@@ -1964,7 +1964,7 @@
     },
     "@@rules_python~//python/private/bzlmod:internal_deps.bzl%internal_deps": {
       "general": {
-        "bzlTransitiveDigest": "7yogJIhmw7i9Wq/n9sQB8N0F84220dJbw64SjOwrmQk=",
+        "bzlTransitiveDigest": "5gQYH7IOUlRNgdc7jspILfMHm3iqMl3ZPlJvONOn1/o=",
         "usagesDigest": "r7vtlnQfWxEwrL+QFXux06yzeWEkq/hrcwAssoCoSLY=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},

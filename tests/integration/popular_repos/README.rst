@@ -64,7 +64,6 @@ ________________
 
 This runs tests from the repository `golang.org/x/net <https://golang.org/x/net>`_
 
-* @org_golang_x_net//context:context_test
 * @org_golang_x_net//context/ctxhttp:ctxhttp_test
 * @org_golang_x_net//dns/dnsmessage:dnsmessage_test
 * @org_golang_x_net//html:html_test

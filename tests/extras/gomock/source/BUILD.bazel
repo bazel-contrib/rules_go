@@ -9,7 +9,7 @@ go_library(
     importpath = "github.com/bazelbuild/rules_go/gomock/client",
     visibility = ["//visibility:public"],
     deps = [
-        "@org_golang_google_genproto//googleapis/bytestream",
+        "@org_golang_google_genproto_googleapis_bytestream//:bytestream",
         "@org_golang_google_grpc//:grpc",
     ],
 )

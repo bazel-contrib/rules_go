@@ -33,8 +33,8 @@ func Test_stdliblist_noexport(t *testing.T) {
 			t.Errorf("unable to decode output json: %v\n", err)
 		}
 
-		if !strings.HasPrefix(result.ID, "@//stdlib:") {
-			t.Errorf("ID should be prefixed with @//stdlib: :%v", result)
+		if !strings.HasPrefix(result.ID, "@@//stdlib:") {
+			t.Errorf("ID should be prefixed with @@//stdlib: :%v", result)
 		}
 		if result.ExportFile != "" {
 			t.Errorf("ExportsFile should be empty when disabled but got: %v", result)
@@ -75,8 +75,8 @@ func Test_stdliblist_export(t *testing.T) {
 			t.Errorf("unable to decode output json: %v\n", err)
 		}
 
-		if !strings.HasPrefix(result.ID, "@//stdlib:") {
-			t.Errorf("ID should be prefixed with @//stdlib: :%v", result)
+		if !strings.HasPrefix(result.ID, "@@//stdlib:") {
+			t.Errorf("ID should be prefixed with @@//stdlib: :%v", result)
 		}
 		if result.ExportFile != "" {
 			anyExportSet = true

@@ -1,9 +1,6 @@
 startup --host_jvm_args=-DBAZEL_TRACK_SOURCE_DIRECTORIES=1
 
 common --enable_platform_specific_config
-# TODO: Temporarily disable while rules_go migrates to Bzlmod for its dev build.
-# https://github.com/bazelbuild/bazel/issues/18958
-common --noexperimental_enable_bzlmod
 # Improve caching, but allow integration tests to find `bazel` in PATH.
 # Doesn't work on Windows as protoc requires DLLs outside the default PATH.
 common:macos --incompatible_strict_action_env

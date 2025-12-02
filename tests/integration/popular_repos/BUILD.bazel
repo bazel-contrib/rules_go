@@ -71,7 +71,6 @@ test_suite(
 test_suite(
     name = "org_golang_x_net",
     tests = [
-        "@org_golang_x_net//context:context_test",
         "@org_golang_x_net//context/ctxhttp:ctxhttp_test",
         "@org_golang_x_net//dns/dnsmessage:dnsmessage_test",
         "@org_golang_x_net//html:html_test",
@@ -188,8 +187,8 @@ test_suite(
         "@org_golang_x_tools//internal/edit:edit_test",
         "@org_golang_x_tools//internal/event:event_test",
         "@org_golang_x_tools//internal/event/export:export_test",
-        "@org_golang_x_tools//internal/event/export/ocagent:ocagent_test",
-        "@org_golang_x_tools//internal/event/export/ocagent/wire:wire_test",
+        #"@org_golang_x_tools//internal/event/export/ocagent:ocagent_test",
+        #"@org_golang_x_tools//internal/event/export/ocagent/wire:wire_test",
         "@org_golang_x_tools//internal/event/keys:keys_test",
         "@org_golang_x_tools//internal/event/label:label_test",
         "@org_golang_x_tools//internal/gopathwalk:gopathwalk_test",

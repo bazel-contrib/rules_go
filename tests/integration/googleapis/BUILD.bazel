@@ -17,7 +17,7 @@ go_proto_library(
     importpath = "github.com/bazelbuild/rules_go/tests/integration/googleapis/color_service_proto",
     proto = ":color_service_proto",
     deps = [
-        "@org_golang_google_genproto//googleapis/rpc/status",
+        "@org_golang_google_genproto_googleapis_rpc//status",
         "@org_golang_google_genproto//googleapis/type/color",
     ],
 )
@@ -28,9 +28,9 @@ go_library(
     importpath = "github.com/bazelbuild/rules_go/tests/integration/googleapis/color_service",
     deps = [
         ":color_service_go_proto",
-        "@org_golang_google_genproto//googleapis/rpc/code",
-        "@org_golang_google_genproto//googleapis/rpc/status",
         "@org_golang_google_genproto//googleapis/type/color",
+        "@org_golang_google_genproto_googleapis_rpc//code",
+        "@org_golang_google_genproto_googleapis_rpc//status",
     ],
 )
 

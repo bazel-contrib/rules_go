@@ -6,7 +6,7 @@ module(
 
 # The custom repo_name is used to prevent our bazel_features polyfill for WORKSPACE builds from
 # conflicting with the real bazel_features repo.
-bazel_dep(name = "bazel_features", version = "1.9.1", repo_name = "io_bazel_rules_go_bazel_features")
+bazel_dep(name = "bazel_features", version = "1.28.0", repo_name = "io_bazel_rules_go_bazel_features")
 bazel_dep(name = "bazel_skylib", version = "1.2.0")
 bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "rules_proto", version = "7.0.2")
@@ -50,4 +50,22 @@ use_repo(
     "org_golang_x_tools",
     # Exported by gazelle specifically for rules_go.
     "bazel_gazelle_go_repository_config",
+    "org_golang_google_genproto_googleapis_bytestream",
+    "org_golang_google_genproto_googleapis_rpc",
+    "org_golang_x_crypto",
+)
+
+# This maps more closely to how vanilla go pulls in modules.
+# See https://github.com/bazelbuild/bazel-gazelle/pull/1888
+go_deps.gazelle_default_attributes(
+    build_file_generation = "on",
+    directives = [
+        "gazelle:proto disable",
+    ],
+)
+go_deps.gazelle_override(
+    build_extra_args = ["-exclude=vendor"],
+    build_file_generation = "on",
+    path = "google.golang.org/genproto",
+    #build_file_proto_mode = "disable_global",
 )
