@@ -69,6 +69,13 @@ or using `Bazel configuration transitions`_.
 | ``CGO_ENABLED=0``). Packages that contain cgo code may still be built, but   |
 | the cgo code will be filtered out, and the ``cgo`` build tag will be false.  |
 +------------------------+---------------------+-------------------------------+
+| :param:`gofips140`     | :type:`string`      | :value:`"off"`                |
++------------------------+---------------------+-------------------------------+
+| Controls the ``GOFIPS140`` environment variable used by Go 1.24+ to select   |
+| the version of the Go Cryptographic Module. Can be set to ``"off"``          |
+| (default), ``"latest"``, or a specific version like ``"v1.0.0"``.            |
+| See the `Go 1.24 FIPS 140-3 documentation`_ for more details.                |
++------------------------+---------------------+-------------------------------+
 | :param:`debug`         | :type:`bool`        | :value:`false`                |
 +------------------------+---------------------+-------------------------------+
 | Includes debugging information in compiled packages (using the ``-N`` and    |
