@@ -67,5 +67,8 @@ go_deps.gazelle_override(
     build_extra_args = ["-exclude=vendor"],
     build_file_generation = "on",
     path = "google.golang.org/genproto",
-    #build_file_proto_mode = "disable_global",
 )
+
+### Dev dependencies
+
+bazel_dep(name = "stardoc", version = "0.8.0", dev_dependency = True)

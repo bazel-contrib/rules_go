@@ -234,16 +234,6 @@ http_archive(
     ],
 )
 
-go_repository(
-    name = "org_golang_google_genproto",
-    build_extra_args = ["-exclude=vendor"],
-    build_file_generation = "on",
-    build_file_proto_mode = "disable_global",
-    importpath = "google.golang.org/genproto",
-    sum = "h1:S9GbmC1iCgvbLyAokVCwiO6tVIrU9Y7c5oMx1V/ki/Y=",
-    version = "v0.0.0-20221024183307-1bc688fe9f3e",
-)
-
 load("@io_bazel_rules_go//tests/legacy/test_chdir:remote.bzl", "test_chdir_remote")
 
 test_chdir_remote()
@@ -256,22 +246,6 @@ local_repository(
     name = "runfiles_remote_test",
     path = "tests/core/runfiles/runfiles_remote_test",
 )
-
-# For API doc generation
-# This is a dev dependency, users should not need to install it
-# so we declare it in the WORKSPACE
-http_archive(
-    name = "io_bazel_stardoc",
-    sha256 = "3fd8fec4ddec3c670bd810904e2e33170bedfe12f90adf943508184be458c8bb",
-    urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/stardoc/releases/download/0.5.3/stardoc-0.5.3.tar.gz",
-        "https://github.com/bazelbuild/stardoc/releases/download/0.5.3/stardoc-0.5.3.tar.gz",
-    ],
-)
-
-load("@io_bazel_stardoc//:setup.bzl", "stardoc_repositories")
-
-stardoc_repositories()
 
 load(
     "@build_bazel_apple_support//lib:repositories.bzl",

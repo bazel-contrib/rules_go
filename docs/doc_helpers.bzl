@@ -14,13 +14,13 @@
 
 load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
-load("@io_bazel_stardoc//stardoc:stardoc.bzl", "stardoc")
+load("@stardoc//stardoc:stardoc.bzl", "stardoc")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 
 def stardoc_with_diff_test(
         bzl_library_target,
         out_label,
-        rule_template = "@io_bazel_stardoc//stardoc:templates/markdown_tables/rule.vm"):
+        rule_template = "@stardoc//stardoc:templates/markdown_tables/rule.vm"):
     """Creates a stardoc target coupled with a diff_test for a given bzl_library.
 
     This is helpful for minimizing boilerplate when lots of stardoc targets are to be generated.

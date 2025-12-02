@@ -33,16 +33,16 @@ func TestEmptyBuildID(t *testing.T) {
 	// Locate the buildid tool and several archive files to check.
 	//   fmt.a - pure go
 	//   crypto/aes.a - contains assembly
-	//   runtime/cgo.a - contains cgo
+	//   net.a - contains cgo
 	// The path may vary depending on platform and architecture, so just
 	// do a search.
-	var buildidPath string
+	var goPath string
 	pkgPaths := map[string]string{
 		"fmt.a": "",
 		"aes.a": "",
-		"cgo.a": "",
+		"net.a": "",
 	}
-	stdlibPkgDir, err := runfiles.Rlocation("io_bazel_rules_go/stdlib_/pkg")
+	stdlibPkgDir, err := runfiles.Rlocation("_main/stdlib_/pkg")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,8 +53,8 @@ func TestEmptyBuildID(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		if filepath.Base(path) == "buildid" && (info.Mode()&0111) != 0 {
-			buildidPath = path
+		if filepath.Base(path) == "go" && (info.Mode()&0111) != 0 {
+			goPath = path
 		}
 		for pkg := range pkgPaths {
 			if filepath.Base(path) == pkg {
@@ -62,7 +62,7 @@ func TestEmptyBuildID(t *testing.T) {
 				n--
 			}
 		}
-		if buildidPath != "" && n == 0 {
+		if goPath != "" && n == 0 {
 			return done
 		}
 		return nil
@@ -70,8 +70,8 @@ func TestEmptyBuildID(t *testing.T) {
 	if err = filepath.Walk(stdlibPkgDir, visit); err != nil && err != done {
 		t.Fatal(err)
 	}
-	if buildidPath == "" {
-		t.Fatal("buildid not found")
+	if goPath == "" {
+		t.Fatal("go not found")
 	}
 
 	for pkg, path := range pkgPaths {
@@ -79,9 +79,8 @@ func TestEmptyBuildID(t *testing.T) {
 			t.Errorf("could not locate %s", pkg)
 			continue
 		}
-		// Equivalent to: go tool buildid pkg.a
 		// It's an error if this produces any output.
-		cmd := exec.Command(buildidPath, path)
+		cmd := exec.Command(goPath, "tool", "buildid", path)
 		out, err := cmd.Output()
 		if err != nil {
 			t.Error(err)
