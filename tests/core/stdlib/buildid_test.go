@@ -44,7 +44,7 @@ func TestEmptyBuildID(t *testing.T) {
 	pkgPaths := map[string]string{
 		"fmt.a": "",
 		"aes.a": "",
-		//"net.a": "",
+		"net.a": "",
 	}
 	toFind := make(map[string]struct{})
 	for k := range pkgPaths {
