@@ -191,7 +191,7 @@ def _go_sdk_impl(ctx):
         else:
             multi_version_module[module.name] = False
 
-    # We remember the first host compatible toolchain declared by the download and host tags.
+    # We remember the first host compatible toolchain declared by the download, host, and from_file tags.
     # The order follows bazel's iteration over modules (the toolchains declared by the root module are considered first).
     # We know that at least `go_default_sdk` (which is declared by the `rules_go` module itself) is host compatible.
     first_host_compatible_toolchain = None
@@ -271,7 +271,11 @@ def _go_sdk_impl(ctx):
             download_tag["version"] = version
             additional_download_tags.append(struct(**download_tag))
 
-        for index, download_tag in enumerate(module.tags.download + additional_download_tags):
+        # We handle the `additional_download_tags` first so that `from_file` takes precedence
+        # over extra SDKs specified with `download`. That way the `from_file` toolchains are registered
+        # with higher precedence and become default, while `download`'ed toolchains can still be
+        # requested explicitly.
+        for index, download_tag in enumerate(additional_download_tags + module.tags.download):
             # SDKs without an explicit version are fetched even when not selected by toolchain
             # resolution. This is acceptable if brought in by the root module, but transitive
             # dependencies should not slow down the build in this way.

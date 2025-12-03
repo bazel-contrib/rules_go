@@ -95,32 +95,6 @@ protoc_toolchains(
     version = "v25.3",
 )
 
-# An up-to-date version is required by com_google_protobuf below.
-http_archive(
-    name = "rules_python",
-    sha256 = "ca77768989a7f311186a29747e3e95c936a41dffac779aff6b443db22290d913",
-    strip_prefix = "rules_python-0.36.0",
-    url = "https://github.com/bazelbuild/rules_python/releases/download/0.36.0/rules_python-0.36.0.tar.gz",
-)
-
-load("@rules_python//python:repositories.bzl", "py_repositories")
-
-py_repositories()
-
-http_archive(
-    name = "com_google_protobuf",
-    integrity = "sha256-zl0At4RQoMpAC/NgrADA1ZnMIl8EnZhqJ+mk45bFqEo=",
-    strip_prefix = "protobuf-29.0-rc2",
-    urls = [
-        "https://github.com/protocolbuffers/protobuf/archive/v29.0-rc2.tar.gz",
-        "https://mirror.bazel.build/github.com/protocolbuffers/protobuf/archive/v29.0-rc2.tar.gz",
-    ],
-)
-
-load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
-
-protobuf_deps()
-
 # Used by //tests:buildifier_test.
 http_archive(
     name = "com_github_bazelbuild_buildtools",
@@ -245,19 +219,6 @@ load(
 
 apple_support_dependencies()
 
-http_archive(
-    name = "rules_shell",
-    sha256 = "d8cd4a3a91fc1dc68d4c7d6b655f09def109f7186437e3f50a9b60ab436a0c53",
-    strip_prefix = "rules_shell-0.3.0",
-    url = "https://github.com/bazelbuild/rules_shell/releases/download/v0.3.0/rules_shell-v0.3.0.tar.gz",
-)
-
-load("@rules_shell//shell:repositories.bzl", "rules_shell_dependencies", "rules_shell_toolchains")
-
-rules_shell_dependencies()
-
-rules_shell_toolchains()
-
 load("@googleapis//:repository_rules.bzl", "switched_rules_by_language")
 
 switched_rules_by_language(
@@ -282,12 +243,4 @@ zig_toolchains(
         "macos-x86_64": "0c89e5d934ecbf9f4d2dea6e3b8dfcc548a3d4184a856178b3db74e361031a2b",
     },
     version = "0.11.0-dev.3886+0c1bfe271",
-)
-
-# Used to transition binaries in rules_go's test suite to different configurations.
-http_archive(
-    name = "with_cfg.bzl",
-    sha256 = "4da2d80d55c7013e52539b0e100f8f8465142cd05757aaecb3ddca962d735c05",
-    strip_prefix = "with_cfg.bzl-0.11.1",
-    url = "https://github.com/fmeum/with_cfg.bzl/releases/download/v0.11.1/with_cfg.bzl-v0.11.1.tar.gz",
 )
