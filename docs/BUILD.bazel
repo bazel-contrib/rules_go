@@ -4,13 +4,11 @@ load("//docs:doc_helpers.bzl", "stardoc_with_diff_test", "update_docs")
 stardoc_with_diff_test(
     bzl_library_target = "//docs/go/extras:extras",
     out_label = "//docs/go/extras:extras.md",
-    rule_template = "rule_body.vm",
 )
 
 stardoc_with_diff_test(
     bzl_library_target = "//docs/go/core:rules",
     out_label = "//docs/go/core:rules.md",
-    rule_template = "rule_body.vm",
 )
 
 # Update MD in local source tree
