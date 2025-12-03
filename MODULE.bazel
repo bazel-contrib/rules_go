@@ -55,20 +55,13 @@ use_repo(
     "org_golang_x_crypto",
 )
 
-# This maps more closely to how vanilla go pulls in modules.
-# See https://github.com/bazelbuild/bazel-gazelle/pull/1888
-go_deps.gazelle_default_attributes(
-    build_file_generation = "on",
-    directives = [
-        "gazelle:proto disable",
-    ],
-)
-go_deps.gazelle_override(
-    build_extra_args = ["-exclude=vendor"],
-    build_file_generation = "on",
-    path = "google.golang.org/genproto",
-)
-
 ### Dev dependencies
 
 bazel_dep(name = "stardoc", version = "0.8.0", dev_dependency = True)
+
+dev_go_sdk = use_extension("//go:extensions.bzl", "go_sdk", dev_dependency = True)
+
+dev_go_sdk.download(
+    name = "rules_go_internal_compatibility_sdk",
+    version = "1.22.12",
+)

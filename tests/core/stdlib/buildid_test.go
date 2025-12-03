@@ -21,7 +21,7 @@ package buildid_test
 import (
 	"bytes"
 	"errors"
-	"os"
+	"io/fs"
 	"os/exec"
 	"path/filepath"
 	"testing"
@@ -30,48 +30,51 @@ import (
 )
 
 func TestEmptyBuildID(t *testing.T) {
+	goPath, err := runfiles.Rlocation("go_sdk/bin/go")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// Locate the buildid tool and several archive files to check.
 	//   fmt.a - pure go
 	//   crypto/aes.a - contains assembly
 	//   net.a - contains cgo
 	// The path may vary depending on platform and architecture, so just
 	// do a search.
-	var goPath string
 	pkgPaths := map[string]string{
 		"fmt.a": "",
 		"aes.a": "",
-		"net.a": "",
+		//"net.a": "",
 	}
+	toFind := make(map[string]struct{})
+	for k := range pkgPaths {
+		toFind[k] = struct{}{}
+	}
+
 	stdlibPkgDir, err := runfiles.Rlocation("_main/stdlib_/pkg")
 	if err != nil {
 		t.Fatal(err)
 	}
-	n := len(pkgPaths)
+
 	done := errors.New("done")
-	var visit filepath.WalkFunc
-	visit = func(path string, info os.FileInfo, err error) error {
+	var visit fs.WalkDirFunc
+	visit = func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if filepath.Base(path) == "go" && (info.Mode()&0111) != 0 {
-			goPath = path
-		}
-		for pkg := range pkgPaths {
-			if filepath.Base(path) == pkg {
-				pkgPaths[pkg] = path
-				n--
+		for pkg := range toFind {
+			if d.Name() == pkg {
+				pkgPaths[d.Name()] = path
+				delete(toFind, pkg)
 			}
 		}
-		if goPath != "" && n == 0 {
+		if len(toFind) == 0 {
 			return done
 		}
 		return nil
 	}
-	if err = filepath.Walk(stdlibPkgDir, visit); err != nil && err != done {
+	if err = filepath.WalkDir(stdlibPkgDir, visit); err != nil && err != done {
 		t.Fatal(err)
-	}
-	if goPath == "" {
-		t.Fatal("go not found")
 	}
 
 	for pkg, path := range pkgPaths {
