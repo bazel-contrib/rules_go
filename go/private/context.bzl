@@ -487,7 +487,7 @@ def _defaults_to_pie(goos, race):
 def go_context(
         ctx,
         attr = None,
-        include_deprecated_properties = True,
+        include_deprecated_properties = False,
         importpath = None,
         importmap = None,
         embed = None,
