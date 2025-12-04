@@ -6,7 +6,7 @@ module(
 
 # The custom repo_name is used to prevent our bazel_features polyfill for WORKSPACE builds from
 # conflicting with the real bazel_features repo.
-bazel_dep(name = "bazel_features", version = "1.28.0", repo_name = "io_bazel_rules_go_bazel_features")
+bazel_dep(name = "bazel_features", version = "1.36.0", repo_name = "io_bazel_rules_go_bazel_features")
 bazel_dep(name = "bazel_skylib", version = "1.2.0")
 bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "rules_proto", version = "7.0.2")

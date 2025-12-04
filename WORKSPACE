@@ -3,16 +3,6 @@ workspace(name = "io_bazel_rules_go")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@io_bazel_rules_go//go:deps.bzl", "go_register_nogo", "go_register_toolchains", "go_rules_dependencies")
 
-# Required by toolchains_protoc.
-http_archive(
-    name = "platforms",
-    sha256 = "218efe8ee736d26a3572663b374a253c012b716d8af0c07e842e82f238a0a7ee",
-    urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/platforms/releases/download/0.0.10/platforms-0.0.10.tar.gz",
-        "https://github.com/bazelbuild/platforms/releases/download/0.0.10/platforms-0.0.10.tar.gz",
-    ],
-)
-
 # The non-polyfill version of this is needed by rules_proto below.
 http_archive(
     name = "bazel_features",
@@ -25,30 +15,6 @@ load("@bazel_features//:deps.bzl", "bazel_features_deps")
 
 bazel_features_deps()
 
-# Required by protobuf and for //go/private:context.
-http_archive(
-    name = "rules_cc",
-    sha256 = "b8b918a85f9144c01f6cfe0f45e4f2838c7413961a8ff23bc0c6cdf8bb07a3b6",
-    strip_prefix = "rules_cc-0.1.5",
-    urls = ["https://github.com/bazelbuild/rules_cc/releases/download/0.1.5/rules_cc-0.1.5.tar.gz"],
-)
-
-# An up-to-date version is transitively required by Stardoc to fix
-# https://github.com/bazelbuild/rules_java/commit/9fd8c492e7e5751f809912554d5ee9a4cc3f53d9
-http_archive(
-    name = "rules_java",
-    sha256 = "9b9614f8a7f7b7ed93cb7975d227ece30fe7daed2c0a76f03a5ee37f69e437de",
-    urls = [
-        "https://github.com/bazelbuild/rules_java/releases/download/8.3.2/rules_java-8.3.2.tar.gz",
-    ],
-)
-
-load("@rules_java//java:repositories.bzl", "rules_java_dependencies", "rules_java_toolchains")
-
-rules_java_dependencies()
-
-rules_java_toolchains()
-
 go_rules_dependencies()
 
 go_register_toolchains(version = "1.24.0")
@@ -56,30 +22,6 @@ go_register_toolchains(version = "1.24.0")
 go_register_nogo(
     nogo = "@//internal:nogo",
 )
-
-# Create the host platform repository transitively required by rules_go.
-load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
-load("@platforms//host:extension.bzl", "host_platform_repo")
-
-maybe(
-    host_platform_repo,
-    name = "host_platform",
-)
-
-http_archive(
-    name = "rules_proto",
-    sha256 = "0e5c64a2599a6e26c6a03d6162242d231ecc0de219534c38cb4402171def21e8",
-    strip_prefix = "rules_proto-7.0.2",
-    url = "https://github.com/bazelbuild/rules_proto/releases/download/7.0.2/rules_proto-7.0.2.tar.gz",
-)
-
-load("@rules_proto//proto:repositories.bzl", "rules_proto_dependencies")
-
-rules_proto_dependencies()
-
-load("@rules_proto//proto:toolchains.bzl", "rules_proto_toolchains")
-
-rules_proto_toolchains()
 
 http_archive(
     name = "toolchains_protoc",
@@ -144,11 +86,6 @@ rbe_preconfig(
     name = "buildkite_config",
     toolchain = "ubuntu2204",
 )
-
-# Needed for tests and tools
-load("@bazel_skylib//:workspace.bzl", "bazel_skylib_workspace")
-
-bazel_skylib_workspace()
 
 http_archive(
     name = "bazel_gazelle",
