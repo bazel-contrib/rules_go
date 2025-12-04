@@ -59,7 +59,9 @@ use_repo(
 
 bazel_dep(name = "stardoc", version = "0.8.0", dev_dependency = True)
 
-go_sdk.download(
+dev_go_sdk = use_extension("//go:extensions.bzl", "go_sdk", dev_dependency = True)
+
+dev_go_sdk.download(
     name = "rules_go_internal_compatibility_sdk",
     version = "1.22.12",
 )

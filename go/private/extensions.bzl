@@ -275,6 +275,8 @@ def _go_sdk_impl(ctx):
         # over extra SDKs specified with `download`. That way the `from_file` toolchains are registered
         # with higher precedence and become default, while `download`'ed toolchains can still be
         # requested explicitly.
+        # TODO(zbarsky/fmeum): This is still not the ideal ordering. We should respect the order that tags are
+        # specified in, but Bzlmod currently doesn't provide this information across tag classes.
         for index, download_tag in enumerate(additional_download_tags + module.tags.download):
             # SDKs without an explicit version are fetched even when not selected by toolchain
             # resolution. This is acceptable if brought in by the root module, but transitive

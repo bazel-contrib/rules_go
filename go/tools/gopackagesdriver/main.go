@@ -52,9 +52,7 @@ type driverResponse struct {
 }
 
 var (
-	// Injected via x_defs.
-
-	rulesGoRepositoryName string
+	rulesGoRepositoryName = "@io_bazel_rules_go"
 	goDefaultAspect       = rulesGoRepositoryName + "//go/tools/gopackagesdriver:aspect.bzl%go_pkg_info_aspect"
 	bazelBin              = getenvDefault("GOPACKAGESDRIVER_BAZEL", "bazel")
 	bazelStartupFlags     = strings.Fields(os.Getenv("GOPACKAGESDRIVER_BAZEL_FLAGS"))

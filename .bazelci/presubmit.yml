@@ -14,7 +14,7 @@ matrix:
 tasks:
   debian11_bazel6:
     platform: debian11
-    bazel: 6.5.0 # test minimum supported version of bazel
+    bazel: 7.1.0 # test minimum supported version of bazel that works with our bzlmod setup
     build_targets:
       - "//..."
       - "-//tests/core/go_binary:goos_pure_bin"
