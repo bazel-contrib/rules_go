@@ -23,20 +23,6 @@ go_register_nogo(
     nogo = "@//internal:nogo",
 )
 
-http_archive(
-    name = "toolchains_protoc",
-    sha256 = "f7302cce01d00c52f7ed8a033a3f133bd2c95f9608f3e4ad7d69f9e1ac2b0cc0",
-    strip_prefix = "toolchains_protoc-0.3.4",
-    url = "https://github.com/aspect-build/toolchains_protoc/releases/download/v0.3.4/toolchains_protoc-v0.3.4.tar.gz",
-)
-
-load("@toolchains_protoc//protoc:toolchain.bzl", "protoc_toolchains")
-
-protoc_toolchains(
-    name = "protoc_toolchains",
-    version = "v25.3",
-)
-
 # Used by //tests:buildifier_test.
 http_archive(
     name = "com_github_bazelbuild_buildtools",
@@ -46,38 +32,7 @@ http_archive(
     urls = ["https://github.com/bazelbuild/buildtools/archive/refs/tags/v6.4.0.tar.gz"],
 )
 
-# Used for both testing objc interop and building on Apple platforms. Must be
-# above the llvm_toolchain declaration while it's still at 8.0.0.
-http_archive(
-    name = "build_bazel_apple_support",
-    sha256 = "85a7dc13e370f355bf00381238d1cba56450d3e598566b8c52d90ddf301c5dfb",
-    url = "https://github.com/bazelbuild/apple_support/releases/download/1.24.3/apple_support.1.24.3.tar.gz",
-)
-
-# For manual testing against an LLVM toolchain.
-# Use --extra_toolchains=@llvm_toolchain//:cc-toolchain-linux,@llvm_toolchain//:cc-toolchain-darwin
-http_archive(
-    name = "com_grail_bazel_toolchain",
-    sha256 = "fb762268ca70ced1a0f65d24f92cd881098afd34990ae5767df0ab325217620e",
-    strip_prefix = "toolchains_llvm-0.4.4",
-    urls = ["https://github.com/bazel-contrib/toolchains_llvm/archive/0.4.4.tar.gz"],
-)
-
-load("@com_grail_bazel_toolchain//toolchain:rules.bzl", "llvm_toolchain")
-
-llvm_toolchain(
-    name = "llvm_toolchain",
-    llvm_version = "8.0.0",
-)
-
-http_archive(
-    name = "bazelci_rules",
-    sha256 = "eca21884e6f66a88c358e580fd67a6b148d30ab57b1680f62a96c00f9bc6a07e",
-    strip_prefix = "bazelci_rules-1.0.0",
-    url = "https://github.com/bazelbuild/continuous-integration/releases/download/rules-1.0.0/bazelci_rules-1.0.0.tar.gz",
-)
-
-load("@bazelci_rules//:rbe_repo.bzl", "rbe_preconfig")
+load("@bazel_ci_rules//:rbe_repo.bzl", "rbe_preconfig")
 
 # Creates a default toolchain config for RBE.
 # Use this as is if you are using the rbe_ubuntu16_04 container,
@@ -96,13 +51,7 @@ http_archive(
     ],
 )
 
-# TODO: Move this back to the end after Gazelle updates golang.org/x/net to at least v0.26.0.
-# See https://github.com/bettercap/bettercap/issues/1106 for how this breaks Go 1.23 compatibility.
-load("@io_bazel_rules_go//tests:grpc_repos.bzl", "grpc_dependencies")
-
-grpc_dependencies()
-
-load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
+load("@gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
 
 gazelle_dependencies(go_sdk = "go_sdk")
 
@@ -127,15 +76,6 @@ go_repository(
     version = "v0.6.0",
 )
 
-http_archive(
-    name = "googleapis",
-    sha256 = "9d1a930e767c93c825398b8f8692eca3fe353b9aaadedfbcf1fca2282c85df88",
-    strip_prefix = "googleapis-64926d52febbf298cb82a8f472ade4a3969ba922",
-    urls = [
-        "https://github.com/googleapis/googleapis/archive/64926d52febbf298cb82a8f472ade4a3969ba922.zip",
-    ],
-)
-
 load("@io_bazel_rules_go//tests/legacy/test_chdir:remote.bzl", "test_chdir_remote")
 
 test_chdir_remote()
@@ -144,23 +84,12 @@ load("@io_bazel_rules_go//tests/integration/popular_repos:popular_repos.bzl", "p
 
 popular_repos()
 
-local_repository(
-    name = "runfiles_remote_test",
-    path = "tests/core/runfiles/runfiles_remote_test",
-)
-
 load(
     "@build_bazel_apple_support//lib:repositories.bzl",
     "apple_support_dependencies",
 )
 
 apple_support_dependencies()
-
-load("@googleapis//:repository_rules.bzl", "switched_rules_by_language")
-
-switched_rules_by_language(
-    name = "com_google_googleapis_imports",
-)
 
 # For testing the compatibility with a hermetic cc toolchain. Users should not have to enable it.
 http_archive(

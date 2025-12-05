@@ -60,11 +60,46 @@ use_repo(
 bazel_dep(name = "stardoc", version = "0.8.0", dev_dependency = True)
 
 dev_go_sdk = use_extension("//go:extensions.bzl", "go_sdk", dev_dependency = True)
-
 dev_go_sdk.download(
     name = "rules_go_internal_compatibility_sdk",
     version = "1.22.12",
 )
 
+bazel_dep(name = "toolchains_protoc", version = "0.6.0", dev_dependency = True)
+
+protoc = use_extension("@toolchains_protoc//protoc:extensions.bzl", "protoc", dev_dependency = True)
+protoc.toolchain(
+    name = "protoc_toolchains",
+    version = "v25.3",
+)
+use_repo(protoc, "protoc_toolchains")
+
+register_toolchains(
+    "@protoc_toolchains//...",
+    dev_dependency = True,
+)
+
 # Used to transition binaries in rules_go's test suite to different configurations.
 bazel_dep(name = "with_cfg.bzl", version = "0.14.1", dev_dependency = True)
+bazel_dep(name = "runfiles_remote_test", version = "0.0.0", dev_dependency = True)
+local_path_override(
+    module_name = "runfiles_remote_test",
+    path = "tests/core/runfiles/runfiles_remote_test",
+)
+
+bazel_dep(name = "googleapis", version = "0.0.0-20241220-5e258e33", dev_dependency = True)
+
+# Used for both testing objc interop and building on Apple platforms.
+bazel_dep(name = "apple_support", version = "1.24.3", dev_dependency = True, repo_name = "build_bazel_apple_support")
+
+# For manual testing against an LLVM toolchain.
+# Use --extra_toolchains=@llvm_toolchain//:cc-toolchain-linux,@llvm_toolchain//:cc-toolchain-darwin
+bazel_dep(name = "toolchains_llvm", version = "0.10.3", dev_dependency = True)
+
+llvm = use_extension("@toolchains_llvm//toolchain/extensions:llvm.bzl", "llvm", dev_dependency = True)
+llvm.toolchain(
+    name = "llvm_toolchain",
+    llvm_version = "8.0.0",
+)
+
+bazel_dep(name = "bazel_ci_rules", version = "1.0.0", dev_dependency = True)
