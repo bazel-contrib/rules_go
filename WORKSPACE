@@ -3,16 +3,6 @@ workspace(name = "io_bazel_rules_go")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@io_bazel_rules_go//go:deps.bzl", "go_register_nogo", "go_register_toolchains", "go_rules_dependencies")
 
-# Required by toolchains_protoc.
-http_archive(
-    name = "platforms",
-    sha256 = "218efe8ee736d26a3572663b374a253c012b716d8af0c07e842e82f238a0a7ee",
-    urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/platforms/releases/download/0.0.10/platforms-0.0.10.tar.gz",
-        "https://github.com/bazelbuild/platforms/releases/download/0.0.10/platforms-0.0.10.tar.gz",
-    ],
-)
-
 # The non-polyfill version of this is needed by rules_proto below.
 http_archive(
     name = "bazel_features",
@@ -25,74 +15,12 @@ load("@bazel_features//:deps.bzl", "bazel_features_deps")
 
 bazel_features_deps()
 
-# Required by protobuf and for //go/private:context.
-http_archive(
-    name = "rules_cc",
-    sha256 = "b8b918a85f9144c01f6cfe0f45e4f2838c7413961a8ff23bc0c6cdf8bb07a3b6",
-    strip_prefix = "rules_cc-0.1.5",
-    urls = ["https://github.com/bazelbuild/rules_cc/releases/download/0.1.5/rules_cc-0.1.5.tar.gz"],
-)
-
-# An up-to-date version is transitively required by Stardoc to fix
-# https://github.com/bazelbuild/rules_java/commit/9fd8c492e7e5751f809912554d5ee9a4cc3f53d9
-http_archive(
-    name = "rules_java",
-    sha256 = "9b9614f8a7f7b7ed93cb7975d227ece30fe7daed2c0a76f03a5ee37f69e437de",
-    urls = [
-        "https://github.com/bazelbuild/rules_java/releases/download/8.3.2/rules_java-8.3.2.tar.gz",
-    ],
-)
-
-load("@rules_java//java:repositories.bzl", "rules_java_dependencies", "rules_java_toolchains")
-
-rules_java_dependencies()
-
-rules_java_toolchains()
-
 go_rules_dependencies()
 
 go_register_toolchains(version = "1.24.0")
 
 go_register_nogo(
     nogo = "@//internal:nogo",
-)
-
-# Create the host platform repository transitively required by rules_go.
-load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
-load("@platforms//host:extension.bzl", "host_platform_repo")
-
-maybe(
-    host_platform_repo,
-    name = "host_platform",
-)
-
-http_archive(
-    name = "rules_proto",
-    sha256 = "0e5c64a2599a6e26c6a03d6162242d231ecc0de219534c38cb4402171def21e8",
-    strip_prefix = "rules_proto-7.0.2",
-    url = "https://github.com/bazelbuild/rules_proto/releases/download/7.0.2/rules_proto-7.0.2.tar.gz",
-)
-
-load("@rules_proto//proto:repositories.bzl", "rules_proto_dependencies")
-
-rules_proto_dependencies()
-
-load("@rules_proto//proto:toolchains.bzl", "rules_proto_toolchains")
-
-rules_proto_toolchains()
-
-http_archive(
-    name = "toolchains_protoc",
-    sha256 = "f7302cce01d00c52f7ed8a033a3f133bd2c95f9608f3e4ad7d69f9e1ac2b0cc0",
-    strip_prefix = "toolchains_protoc-0.3.4",
-    url = "https://github.com/aspect-build/toolchains_protoc/releases/download/v0.3.4/toolchains_protoc-v0.3.4.tar.gz",
-)
-
-load("@toolchains_protoc//protoc:toolchain.bzl", "protoc_toolchains")
-
-protoc_toolchains(
-    name = "protoc_toolchains",
-    version = "v25.3",
 )
 
 # Used by //tests:buildifier_test.
@@ -104,38 +32,7 @@ http_archive(
     urls = ["https://github.com/bazelbuild/buildtools/archive/refs/tags/v6.4.0.tar.gz"],
 )
 
-# Used for both testing objc interop and building on Apple platforms. Must be
-# above the llvm_toolchain declaration while it's still at 8.0.0.
-http_archive(
-    name = "build_bazel_apple_support",
-    sha256 = "85a7dc13e370f355bf00381238d1cba56450d3e598566b8c52d90ddf301c5dfb",
-    url = "https://github.com/bazelbuild/apple_support/releases/download/1.24.3/apple_support.1.24.3.tar.gz",
-)
-
-# For manual testing against an LLVM toolchain.
-# Use --extra_toolchains=@llvm_toolchain//:cc-toolchain-linux,@llvm_toolchain//:cc-toolchain-darwin
-http_archive(
-    name = "com_grail_bazel_toolchain",
-    sha256 = "fb762268ca70ced1a0f65d24f92cd881098afd34990ae5767df0ab325217620e",
-    strip_prefix = "toolchains_llvm-0.4.4",
-    urls = ["https://github.com/bazel-contrib/toolchains_llvm/archive/0.4.4.tar.gz"],
-)
-
-load("@com_grail_bazel_toolchain//toolchain:rules.bzl", "llvm_toolchain")
-
-llvm_toolchain(
-    name = "llvm_toolchain",
-    llvm_version = "8.0.0",
-)
-
-http_archive(
-    name = "bazelci_rules",
-    sha256 = "eca21884e6f66a88c358e580fd67a6b148d30ab57b1680f62a96c00f9bc6a07e",
-    strip_prefix = "bazelci_rules-1.0.0",
-    url = "https://github.com/bazelbuild/continuous-integration/releases/download/rules-1.0.0/bazelci_rules-1.0.0.tar.gz",
-)
-
-load("@bazelci_rules//:rbe_repo.bzl", "rbe_preconfig")
+load("@bazel_ci_rules//:rbe_repo.bzl", "rbe_preconfig")
 
 # Creates a default toolchain config for RBE.
 # Use this as is if you are using the rbe_ubuntu16_04 container,
@@ -144,11 +41,6 @@ rbe_preconfig(
     name = "buildkite_config",
     toolchain = "ubuntu2204",
 )
-
-# Needed for tests and tools
-load("@bazel_skylib//:workspace.bzl", "bazel_skylib_workspace")
-
-bazel_skylib_workspace()
 
 http_archive(
     name = "bazel_gazelle",
@@ -159,13 +51,7 @@ http_archive(
     ],
 )
 
-# TODO: Move this back to the end after Gazelle updates golang.org/x/net to at least v0.26.0.
-# See https://github.com/bettercap/bettercap/issues/1106 for how this breaks Go 1.23 compatibility.
-load("@io_bazel_rules_go//tests:grpc_repos.bzl", "grpc_dependencies")
-
-grpc_dependencies()
-
-load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
+load("@gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
 
 gazelle_dependencies(go_sdk = "go_sdk")
 
@@ -190,15 +76,6 @@ go_repository(
     version = "v0.6.0",
 )
 
-http_archive(
-    name = "googleapis",
-    sha256 = "9d1a930e767c93c825398b8f8692eca3fe353b9aaadedfbcf1fca2282c85df88",
-    strip_prefix = "googleapis-64926d52febbf298cb82a8f472ade4a3969ba922",
-    urls = [
-        "https://github.com/googleapis/googleapis/archive/64926d52febbf298cb82a8f472ade4a3969ba922.zip",
-    ],
-)
-
 load("@io_bazel_rules_go//tests/legacy/test_chdir:remote.bzl", "test_chdir_remote")
 
 test_chdir_remote()
@@ -207,23 +84,12 @@ load("@io_bazel_rules_go//tests/integration/popular_repos:popular_repos.bzl", "p
 
 popular_repos()
 
-local_repository(
-    name = "runfiles_remote_test",
-    path = "tests/core/runfiles/runfiles_remote_test",
-)
-
 load(
     "@build_bazel_apple_support//lib:repositories.bzl",
     "apple_support_dependencies",
 )
 
 apple_support_dependencies()
-
-load("@googleapis//:repository_rules.bzl", "switched_rules_by_language")
-
-switched_rules_by_language(
-    name = "com_google_googleapis_imports",
-)
 
 # For testing the compatibility with a hermetic cc toolchain. Users should not have to enable it.
 http_archive(

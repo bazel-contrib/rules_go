@@ -363,7 +363,7 @@ def new_go_info(
             v = go._ctx.expand_location(v, data)
         if "." not in k:
             k = "%s.%s" % (importmap, k)
-        x_defs[k] = v
+        x_defs[k] = go._ctx.expand_make_variables("x_defs." + k, v, {})
     go_info["x_defs"] = x_defs
 
     if not go_info["cgo"]:
