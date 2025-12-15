@@ -5,7 +5,10 @@ load(
     "TRANSITIONED_GO_SETTING_KEYS",
 )
 
-exports_files(["library.bzl"])
+exports_files([
+    "library.bzl",
+    "binary_wrapper.sh",
+])
 
 [
     string_setting(

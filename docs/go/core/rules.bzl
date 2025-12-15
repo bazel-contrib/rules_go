@@ -3,14 +3,13 @@
   [Bourne shell tokenization]: https://docs.bazel.build/versions/master/be/common-definitions.html#sh-tokenization
   [Gazelle]: https://github.com/bazelbuild/bazel-gazelle
   [GoArchive]: /go/providers.rst#GoArchive
-  [GoLibrary]: /go/providers.rst#GoLibrary
   [GoPath]: /go/providers.rst#GoPath
-  [GoSource]: /go/providers.rst#GoSource
+  [GoInfo]: /go/providers.rst#GoInfo
   [build constraints]: https://golang.org/pkg/go/build/#hdr-Build_Constraints
   [cc_library deps]: https://docs.bazel.build/versions/master/be/c-cpp.html#cc_library.deps
   [cgo]: http://golang.org/cmd/cgo/
   [config_setting]: https://docs.bazel.build/versions/master/be/general.html#config_setting
-  [data dependencies]: https://docs.bazel.build/versions/master/build-ref.html#data
+  [data dependencies]: https://bazel.build/concepts/dependencies#data-dependencies
   [goarch]: /go/modes.rst#goarch
   [goos]: /go/modes.rst#goos
   [mode attributes]: /go/modes.rst#mode-attributes
@@ -25,7 +24,7 @@
   [test_filter]: https://docs.bazel.build/versions/master/user-manual.html#flag--test_filter
   [test_env]: https://docs.bazel.build/versions/master/user-manual.html#flag--test_env
   [test_runner_fail_fast]: https://docs.bazel.build/versions/master/command-line-reference.html#flag--test_runner_fail_fast
-  [write a CROSSTOOL file]: https://github.com/bazelbuild/bazel/wiki/Yet-Another-CROSSTOOL-Writing-Tutorial
+  [define and register a C/C++ toolchain and platforms]: https://bazel.build/extending/toolchains#toolchain-definitions
   [bazel]: https://pkg.go.dev/github.com/bazelbuild/rules_go/go/tools/bazel?tab=doc
   [go_library]: #go_library
   [go_binary]: #go_binary
@@ -33,6 +32,7 @@
   [go_path]: #go_path
   [go_source]: #go_source
   [go_test]: #go_test
+  [go_reset_target]: #go_reset_target
   [Examples]: examples.md#examples
   [Defines and stamping]: defines_and_stamping.md#defines-and-stamping
   [Stamping with the workspace status script]: defines_and_stamping.md#stamping-with-the-workspace-status-script
@@ -50,9 +50,8 @@ sufficient to match the capabilities of the normal go tools.
 - [Bourne shell tokenization]
 - [Gazelle]
 - [GoArchive]
-- [GoLibrary]
 - [GoPath]
-- [GoSource]
+- [GoInfo]
 - [build constraints]:
 - [cc_library deps]
 - [cgo]
@@ -72,7 +71,7 @@ sufficient to match the capabilities of the normal go tools.
 - [test_filter]
 - [test_env]
 - [test_runner_fail_fast]
-- [write a CROSSTOOL file]
+- [define and register a C/C++ toolchain and platforms]
 - [bazel]
 
 
@@ -106,7 +105,7 @@ Here is an example of a Bazel build graph for a project using these core rules:
 
 ![](./buildgraph.svg)
 
-By instrumenting the lower level go tooling, we can cache smaller, finer 
+By instrumenting the lower level go tooling, we can cache smaller, finer
 artifacts with Bazel and thus, speed up incremental builds.
 
 Rules
@@ -114,12 +113,13 @@ Rules
 
 """
 
-load("//go/private/rules:library.bzl", _go_library = "go_library")
 load("//go/private/rules:binary.bzl", _go_binary = "go_binary")
-load("//go/private/rules:test.bzl", _go_test = "go_test")
-load("//go/private/rules:source.bzl", _go_source = "go_source")
-load("//go/private/tools:path.bzl", _go_path = "go_path")
 load("//go/private/rules:cross.bzl", _go_cross_binary = "go_cross_binary")
+load("//go/private/rules:library.bzl", _go_library = "go_library")
+load("//go/private/rules:source.bzl", _go_source = "go_source")
+load("//go/private/rules:test.bzl", _go_test = "go_test")
+load("//go/private/rules:transition.bzl", _go_reset_target = "go_reset_target")
+load("//go/private/tools:path.bzl", _go_path = "go_path")
 
 go_library = _go_library
 go_binary = _go_binary
@@ -127,3 +127,4 @@ go_test = _go_test
 go_source = _go_source
 go_path = _go_path
 go_cross_binary = _go_cross_binary
+go_reset_target = _go_reset_target

@@ -28,9 +28,9 @@ def _stdlib_files_impl(ctx):
     # ctx.attr._stdlib is a list of Target.
     stdlib = ctx.attr._stdlib[0][GoStdLib]
     libs = stdlib.libs
-    runfiles = ctx.runfiles(files = libs)
+    runfiles = ctx.runfiles(transitive_files = libs)
     return [DefaultInfo(
-        files = depset(libs + [stdlib._list_json]),
+        files = depset([stdlib._list_json], transitive = [libs]),
         runfiles = runfiles,
     )]
 

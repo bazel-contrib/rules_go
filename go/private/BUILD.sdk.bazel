@@ -1,8 +1,9 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_sdk")
+load("@io_bazel_rules_go//go/private:common.bzl", "RULES_GO_STDLIB_PREFIX")
+load("@io_bazel_rules_go//go/private:go_toolchain.bzl", "declare_go_toolchains")
 load("@io_bazel_rules_go//go/private/rules:binary.bzl", "go_tool_binary")
 load("@io_bazel_rules_go//go/private/rules:sdk.bzl", "package_list")
 load("@io_bazel_rules_go//go/private/rules:transition.bzl", "non_go_reset_target")
-load("@io_bazel_rules_go//go/private:go_toolchain.bzl", "declare_go_toolchains")
-load("@io_bazel_rules_go//go:def.bzl", "go_sdk")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -22,7 +23,25 @@ filegroup(
 
 filegroup(
     name = "srcs",
-    srcs = glob(["src/**"]),
+    srcs = glob(
+        ["src/**/*"],
+        allow_empty = True,
+        exclude = [
+            "src/**/*_test.go",
+            "src/**/testdata/**",
+            # Only used by tests, cgo fails with linux before 3.17
+            "src/crypto/internal/sysrand/internal/seccomp/**",
+            "src/encoding/json/internal/jsontest/**",
+            "src/log/slog/internal/benchmarks/**",
+            "src/log/slog/internal/slogtest/**",
+            "src/internal/obscuretestdata/**",
+            "src/internal/testpty/**",
+            "src/net/internal/cgotest/**",
+            "src/net/internal/socktest/**",
+            "src/reflect/internal/example*/**",
+            "src/runtime/internal/startlinetest/**",
+        ],
+    ),
 )
 
 filegroup(
@@ -30,7 +49,17 @@ filegroup(
     srcs = glob([
         "pkg/tool/**",
         "bin/gofmt*",
-    ]),
+    ]) + [
+        ":config",
+    ],
+)
+
+filegroup(
+    name = "config",
+    srcs = glob(
+        ["go.env*"],
+        allow_empty = True,
+    ),
 )
 
 go_sdk(
@@ -51,12 +80,22 @@ go_sdk(
 go_tool_binary(
     name = "builder",
     srcs = ["@io_bazel_rules_go//go/tools/builders:builder_srcs"],
+    exec_compatible_with = {exec_compatible_with},
+    ldflags = "-X main.rulesGoStdlibPrefix={}".format(RULES_GO_STDLIB_PREFIX),
+    # The .exe suffix is required on Windows and harmless on other platforms.
+    # Output attributes are not configurable, so we use it everywhere.
+    out_pack = "pack.exe",
     sdk = ":go_sdk",
 )
 
 non_go_reset_target(
     name = "builder_reset",
     dep = ":builder",
+)
+
+non_go_reset_target(
+    name = "pack_reset",
+    dep = ":pack.exe",
 )
 
 # TODO(jayconrod): Gazelle depends on this file directly. This dependency
@@ -70,7 +109,8 @@ package_list(
 
 declare_go_toolchains(
     builder = ":builder_reset",
-    host_goos = "{goos}",
+    exec_goos = "{goos}",
+    pack = ":pack_reset",
     sdk = ":go_sdk",
 )
 
@@ -80,16 +120,19 @@ filegroup(
         "bin/go*",
         "src/**",
         "pkg/**",
-    ]) + glob(
-        ["go.env*"],
-        allow_empty = True,
-    ),
+    ]) + [
+        ":config",
+    ],
 )
 
 exports_files(
     glob([
         "lib/time/zoneinfo.zip",
-        "misc/wasm/**",
+        # wasm support files including wasm_exec.js
+        # for GOOS=js GOARCH=wasm
+        # located in misc/wasm/ (Go 1.23 and earlier)
+        # or lib/wasm/ (Go 1.24 and later)
+        "*/wasm/**",
     ]),
     visibility = ["//visibility:public"],
 )

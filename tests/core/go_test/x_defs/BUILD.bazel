@@ -49,22 +49,36 @@ go_library(
     x_defs = {"Qux": "Qux"},
 )
 
+genrule(
+    name = "data_dep",
+    outs = ["data_dep.txt"],
+    cmd = "touch $@",
+)
+
 go_library(
     name = "x_defs_lib",
     srcs = ["x_defs_lib.go"],
-    data = ["x_defs_lib.go"],
+    data = [
+        "data_dep.txt",
+        "x_defs_lib.go",
+    ],
     importpath = "github.com/bazelbuild/rules_go/tests/core/go_test/x_defs/x_defs_lib",
     x_defs = {
         "LibGo": "$(rlocationpath x_defs_lib.go)",
+        "DataDep": "$(rlocationpath :data_dep.txt)",
     },
 )
 
 go_test(
     name = "x_defs_test",
     srcs = ["x_defs_test.go"],
-    data = ["x_defs_test.go"],
+    data = [
+        "data_dep.txt",
+        "x_defs_test.go",
+    ],
     x_defs = {
         "BinGo": "$(rlocationpath x_defs_test.go)",
+        "DataDep": "$(rlocationpath :data_dep.txt)",
     },
     deps = [
         ":x_defs_lib",

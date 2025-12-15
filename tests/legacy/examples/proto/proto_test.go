@@ -35,9 +35,3 @@ func TestEmbed(t *testing.T) {
 		t.Errorf("Unable to call method from embedded go files")
 	}
 }
-
-func TestValidate(t *testing.T) {
-	if err := embed.OtherThing().Validate(); err != nil {
-		t.Errorf("Proto did not pass validation")
-	}
-}

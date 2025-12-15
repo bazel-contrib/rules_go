@@ -5,12 +5,16 @@ go_tool_library(
     srcs = [
         "lcov.go",
         "test2json.go",
+        "timeout.go",
         "wrap.go",
         "xml.go",
     ],
     importpath = "github.com/bazelbuild/rules_go/go/tools/bzltestutil",
     visibility = ["//visibility:public"],
-    deps = ["//go/tools/bzltestutil/chdir"],
+    deps = [
+        "//go/tools/bzltestutil/chdir",
+        "//go/tools/coverdata",
+    ],
 )
 
 go_test(
@@ -31,7 +35,10 @@ go_test(
 filegroup(
     name = "all_files",
     testonly = True,
-    srcs = ["//go/tools/bzltestutil/chdir:all_files"] + glob(
+    srcs = [
+        "//go/tools/bzltestutil/bincov:all_files",
+        "//go/tools/bzltestutil/chdir:all_files",
+    ] + glob(
         ["**"],
         exclude = ["testdata/*"],
     ),

@@ -39,6 +39,7 @@ type xmlTestSuite struct {
 	Tests     int           `xml:"tests,attr"`
 	Time      string        `xml:"time,attr"`
 	Name      string        `xml:"name,attr"`
+	Timestamp string        `xml:"timestamp,attr,omitempty"`
 }
 
 type xmlTestCase struct {
@@ -71,12 +72,17 @@ type testCase struct {
 	state    string
 	output   strings.Builder
 	duration *float64
+	start *time.Time
+	end *time.Time
 }
+
+const (
+	timeoutPanicPrefix = "panic: test timed out after "
+)
 
 // json2xml converts test2json's output into an xml output readable by Bazel.
 // http://windyroad.com.au/dl/Open%20Source/JUnit.xsd
 func json2xml(r io.Reader, pkgName string) ([]byte, error) {
-	var pkgDuration *float64
 	testcases := make(map[string]*testCase)
 	testCaseByName := func(name string) *testCase {
 		if name == "" {
@@ -89,6 +95,7 @@ func json2xml(r io.Reader, pkgName string) ([]byte, error) {
 	}
 
 	dec := json.NewDecoder(r)
+	var inTimeoutSection, inRunningTestSection bool
 	for {
 		var e jsonEvent
 		if err := dec.Decode(&e); err == io.EOF {
@@ -100,51 +107,104 @@ func json2xml(r io.Reader, pkgName string) ([]byte, error) {
 		case "run":
 			if c := testCaseByName(e.Test); c != nil {
 				c.state = s
+				c.start = e.Time
 			}
 		case "output":
+			trimmedOutput := strings.TrimSpace(e.Output)
+			if strings.HasPrefix(trimmedOutput, timeoutPanicPrefix) {
+				inTimeoutSection = true
+				continue
+			}
+			if inTimeoutSection && strings.HasPrefix(trimmedOutput, "running tests:") {
+				inRunningTestSection = true
+				continue
+			}
+			if inRunningTestSection {
+				// looking for something like "TestReport/test_3 (2s)"
+				parts := strings.Fields(e.Output)
+				if len(parts) != 2 || !strings.HasPrefix(parts[1], "(") || !strings.HasSuffix(parts[1], ")") {
+					inTimeoutSection = false
+					inRunningTestSection = false
+				} else if duration, err := time.ParseDuration(parts[1][1 : len(parts[1])-1]); err != nil {
+					inTimeoutSection = false
+					inRunningTestSection = false
+				} else if c := testCaseByName(parts[0]); c != nil {
+					c.state = "interrupt"
+					seconds := duration.Seconds()
+					c.duration = &seconds
+					c.output.WriteString(e.Output)
+				}
+				continue
+			}
 			if c := testCaseByName(e.Test); c != nil {
 				c.output.WriteString(e.Output)
+				c.end = e.Time
 			}
 		case "skip":
 			if c := testCaseByName(e.Test); c != nil {
 				c.output.WriteString(e.Output)
 				c.state = s
 				c.duration = e.Elapsed
+				c.end = e.Time
 			}
 		case "fail":
 			if c := testCaseByName(e.Test); c != nil {
 				c.state = s
 				c.duration = e.Elapsed
-			} else {
-				pkgDuration = e.Elapsed
+				c.end = e.Time
 			}
 		case "pass":
 			if c := testCaseByName(e.Test); c != nil {
 				c.duration = e.Elapsed
 				c.state = s
-			} else {
-				pkgDuration = e.Elapsed
+				c.end = e.Time
 			}
 		}
 	}
 
-	return xml.MarshalIndent(toXML(pkgName, pkgDuration, testcases), "", "\t")
+	return xml.MarshalIndent(toXML(pkgName, testcases), "", "\t")
 }
 
-func toXML(pkgName string, pkgDuration *float64, testcases map[string]*testCase) *xmlTestSuites {
+func toXML(pkgName string, testcases map[string]*testCase) *xmlTestSuites {
 	cases := make([]string, 0, len(testcases))
 	for k := range testcases {
 		cases = append(cases, k)
 	}
 	sort.Strings(cases)
-	suite := xmlTestSuite{
-		Name: pkgName,
-	}
-	if pkgDuration != nil {
-		suite.Time = fmt.Sprintf("%.3f", *pkgDuration)
-	}
+
+	suiteByName := make(map[string]*xmlTestSuite)
+	var suiteNames []string
+
 	for _, name := range cases {
+		suiteName := strings.SplitN(name, "/", 2)[0]
+		var suite *xmlTestSuite
+		suite, ok := suiteByName[suiteName]
+		if !ok {
+			suite = &xmlTestSuite{
+				Name: pkgName + "." + suiteName,
+			}
+			suiteByName[suiteName] = suite
+			suiteNames = append(suiteNames, suiteName)
+		}
 		c := testcases[name]
+		if name == suiteName {
+			var duration float64
+			if c.duration != nil {
+				duration = *c.duration
+			}
+			if c.start != nil && c.end != nil {
+				// the duration of a test suite may be greater than c.duration
+				// when any test case uses t.Parallel().
+				d := c.end.Sub(*c.start).Seconds()
+				if d > duration {
+					duration = d
+				}
+			}
+			suite.Time = fmt.Sprintf("%.3f", duration)
+			if c.start != nil {
+				suite.Timestamp = c.start.Format("2006-01-02T15:04:05.000Z")
+			}
+		}
 		suite.Tests++
 		newCase := xmlTestCase{
 			Name:      name,
@@ -166,6 +226,12 @@ func toXML(pkgName string, pkgDuration *float64, testcases map[string]*testCase)
 				Message:  "Failed",
 				Contents: c.output.String(),
 			}
+		case "interrupt":
+			suite.Errors++
+			newCase.Error = &xmlMessage{
+				Message:  "Interrupted",
+				Contents: c.output.String(),
+			}
 		case "pass":
 			break
 		default:
@@ -177,5 +243,10 @@ func toXML(pkgName string, pkgDuration *float64, testcases map[string]*testCase)
 		}
 		suite.TestCases = append(suite.TestCases, newCase)
 	}
-	return &xmlTestSuites{Suites: []xmlTestSuite{suite}}
+	var suites xmlTestSuites
+	// because test cases are sorted by name, the suite names are also sorted.
+	for _, name := range suiteNames {
+		suites.Suites = append(suites.Suites, *suiteByName[name])
+	}
+	return &suites
 }

@@ -1,5 +1,6 @@
 load("//go:def.bzl", "go_binary", "go_library")
-load(":aspect.bzl", "bazel_supports_canonical_label_literals")
+load("//go/private:common.bzl", "RULES_GO_REPO_NAME")
+load("//go/tools/bazel_testing:def.bzl", "go_bazel_test")
 
 go_library(
     name = "gopackagesdriver_lib",
@@ -15,25 +16,34 @@ go_library(
         "utils.go",
     ],
     importpath = "github.com/bazelbuild/rules_go/go/tools/gopackagesdriver",
-    visibility = ["//visibility:private"],
+    visibility = [
+        "//tests/integration/gopackagesdriver:__pkg__",
+    ],
+    deps = ["@org_golang_x_tools//go/packages"],
 )
 
 go_binary(
     name = "gopackagesdriver",
     embed = [":gopackagesdriver_lib"],
+    visibility = ["//visibility:public"],
     x_defs = {
-        # Determine the name of the rules_go repository as we need to specify it when invoking the
-        # aspect.
-        # If canonical label literals are supported, we can use a canonical label literal (starting
-        # with @@) to pass the repository_name() through repo mapping unchanged.
-        # If canonical label literals are not supported, then bzlmod is certainly not enabled and
-        # we can assume that the repository name is not affected by repo mappings.
-        # If run in the rules_go repo itself, repository_name() returns "@", which is equivalent to
-        # "@io_bazel_rules_go" since Bazel 6:
-        # https://github.com/bazelbuild/bazel/commit/7694cf75e6366b92e3905c2ad60234cda57627ee
-        # TODO: Once we drop support for Bazel 5, we can remove the feature detection logic and
-        #       use "@" + repository_name().
-        "rulesGoRepositoryName": "@" + repository_name() if bazel_supports_canonical_label_literals() else repository_name(),
+        # Determine the repository part of labels pointing into the rules_go repo. This is needed
+        # both to specify the aspect and to match labels in query output.
+        "rulesGoRepositoryName": RULES_GO_REPO_NAME,
     },
+)
+
+go_bazel_test(
+    name = "gopackagesdriver_test",
+    size = "enormous",
+    srcs = ["gopackagesdriver_test.go"],
+    embed = [":gopackagesdriver_lib"],
+    rule_files = ["//:all_files"],
+)
+
+filegroup(
+    name = "all_files",
+    testonly = True,
+    srcs = glob(["**"]) + ["//go/tools/gopackagesdriver/pkgjson:all_files"],
     visibility = ["//visibility:public"],
 )

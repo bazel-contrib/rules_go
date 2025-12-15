@@ -1,0 +1,36 @@
+load("@com_google_protobuf//bazel:proto_library.bzl", "proto_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_test")
+load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
+
+# Common rules
+proto_library(
+    name = "foo_proto",
+    srcs = ["foo.proto"],
+)
+
+go_proto_library(
+    name = "foo_go_proto",
+    importpath = "path/to/foo_go",
+    proto = ":foo_proto",
+)
+
+proto_library(
+    name = "bar_proto",
+    srcs = ["bar.proto"],
+    deps = [":foo_proto"],
+)
+
+go_proto_library(
+    name = "bar_go_proto",
+    proto = ":bar_proto",
+    deps = [":foo_go_proto"],
+)
+
+go_test(
+    name = "importpath_test",
+    srcs = ["importpath_test.go"],
+    deps = [
+        ":bar_go_proto",
+        ":foo_go_proto",
+    ],
+)

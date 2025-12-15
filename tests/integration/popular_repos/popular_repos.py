@@ -13,19 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from subprocess import check_output, call
-from sys import exit
 from os import path
+from subprocess import check_output
 
 POPULAR_REPOS = [
     dict(
         name = "org_golang_x_crypto",
         importpath = "golang.org/x/crypto",
-        urls = "https://codeload.github.com/golang/crypto/zip/5ea612d1eb830b38bc4e914e37f55311eb58adce",
-        strip_prefix = "crypto-5ea612d1eb830b38bc4e914e37f55311eb58adce",
-        type = "zip",
+        commit = "e47973b1c1089f6c67ab89261f7aa067b3d611d2",
         excludes = [
-            "internal/wycheproof:wycheproof_test", # Needs GOROOT
+            "internal/wycheproof:wycheproof_test", # requires build cache
+            "nacl/secretbox:secretbox_test", # panics in salsa2020_amd64.s
             "ssh/agent:agent_test",
             "ssh/test:test_test",
             "ssh:ssh_test",
@@ -45,9 +43,6 @@ POPULAR_REPOS = [
             "nettest:nettest_test", #
             "lif:lif_test",
         ],
-        darwin_tests = [
-            "route:route_test", # Not supported on linux
-        ]
     ),
 
     dict(
@@ -88,13 +83,13 @@ POPULAR_REPOS = [
             "cmd/bundle:bundle_test", # Needs testdata directory
             "cmd/callgraph/testdata/src/pkg:pkg_test", # is testdata
             "cmd/callgraph:callgraph_test", # Needs testdata directory
-            "cmd/cover:cover_test", # Needs testdata directory
             "cmd/file2fuzz:file2fuzz_test", # Requires working GOROOT, uses go build
             "cmd/fiximports:fiximports_test", # requires working GOROOT, not present in CI.
+            "cmd/deadcode:deadcode_test", # Needs GOROOT
             "cmd/godoc:godoc_test", # TODO(#417)
-            "cmd/gorename:gorename_test", # TODO(#417)
+            "cmd/gonew:gonew_test", # requires build cache
             "cmd/guru/testdata/src/referrers:referrers_test", # Not a real test
-            "cmd/guru:guru_test", # Needs testdata directory
+            # "cmd/guru:guru_test", # Needs testdata directory
             "cmd/signature-fuzzer/fuzz-driver:fuzz-driver_test", # requires working GOROOT
             "cmd/signature-fuzzer/fuzz-runner:fuzz-runner_test", # requires working GOROOT
             "cmd/signature-fuzzer/internal/fuzz-generator:fuzz-generator_test", # requires working GOROOT
@@ -102,10 +97,13 @@ POPULAR_REPOS = [
             "container/intsets:intsets_test", # TODO(#413): External test depends on symbols defined in internal test.
             "copyright:copyright_test", # # requires runfiles
             "go/analysis/analysistest:analysistest_test", # requires build cache
+            "go/analysis/checker:checker_test", # Needs go tool
             "go/analysis/internal/analysisflags:analysisflags_test", # calls os.Exit(0) in a test
             "go/analysis/internal/checker:checker_test", # loads test package with go/packages, which probably needs go list
+            "go/analysis/internal/versiontest:versiontest_test", # Needs GOROOT
             "go/analysis/multichecker:multichecker_test", # requires go vet
             "go/analysis/passes/asmdecl:asmdecl_test", # Needs testdata directory
+            "go/analysis/passes/appends:appends_test", # Needs GOROOT
             "go/analysis/passes/assign:assign_test", # Needs testdata directory
             "go/analysis/passes/atomic:atomic_test", # Needs testdata directory
             "go/analysis/passes/atomicalign:atomicalign_test", # requires go list
@@ -118,10 +116,13 @@ POPULAR_REPOS = [
             "go/analysis/passes/copylock:copylock_test", # Needs testdata directory
             "go/analysis/passes/ctrlflow:ctrlflow_test", # Needs testdata directory
             "go/analysis/passes/deepequalerrors:deepequalerrors_test", # requires go list
+            "go/analysis/passes/defers:defers_test", # Needs GOROOT
+            "go/analysis/passes/directive:directive_test", # Needs GOROOT
             "go/analysis/passes/errorsas:errorsas_test", # requires go list and testdata
             "go/analysis/passes/fieldalignment:fieldalignment_test", # Needs GOROOT
             "go/analysis/passes/findcall:findcall_test", # requires build cache
             "go/analysis/passes/framepointer:framepointer_test", # Needs GOROOT
+            "go/analysis/passes/httpmux:httpmux_test", # Needs GOROOT
             "go/analysis/passes/httpresponse:httpresponse_test", # Needs testdata directory
             "go/analysis/passes/ifaceassert:ifaceassert_test", # Needs GOROOT
             "go/analysis/passes/loopclosure:loopclosure_test", # Needs testdata directory
@@ -134,8 +135,10 @@ POPULAR_REPOS = [
             "go/analysis/passes/shadow:shadow_test", # Needs testdata directory
             "go/analysis/passes/shift:shift_test", # Needs testdata director
             "go/analysis/passes/sigchanyzer:sigchanyzer_test", # Needs testdata directory
+            "go/analysis/passes/slog:slog_test", # Needs GOROOT
             "go/analysis/passes/sortslice:sortslice_test", # Needs 'go list'
             "go/analysis/passes/stdmethods:stdmethods_test", # Needs testdata directory
+            "go/analysis/passes/stdversion:stdversion_test", # Needs GOROOT
             "go/analysis/passes/stringintconv:stringintconv_test", # Needs 'go list'
             "go/analysis/passes/structtag:structtag_test", # Needs testdata directory
             "go/analysis/passes/testinggoroutine:testinggoroutine_test", # Need 'go env'
@@ -151,12 +154,15 @@ POPULAR_REPOS = [
             "go/analysis/passes/unusedwrite:unusedwrite_test", # Needs testdata directory
             "go/analysis/passes/timeformat:timeformat_test", # Needs go tool
             "go/analysis/passes/usesgenerics:usesgenerics_test", # Needs go tool
+            "go/analysis/passes/waitgroup:waitgroup_test", # Needs go tool
             "go/analysis/unitchecker:unitchecker_test", # requires go vet
             "go/ast/inspector:inspector_test", # requires GOROOT and GOPATH
             "go/buildutil:buildutil_test", # Needs testdata directory
             "go/callgraph/cha:cha_test", # Needs testdata directory
             "go/callgraph/rta:rta_test", # Needs testdata directory
+            "go/callgraph/static:static_test", # Needs go tool
             "go/callgraph/vta:vta_test", # Needs testdata directory
+            "go/cfg:cfg_test", # Needs GOROOT
             "go/expect:expect_test", # Needs testdata directory
             "go/gccgoexportdata:gccgoexportdata_test", # Needs testdata directory
             "go/gcexportdata:gcexportdata_test", # Needs testdata directory
@@ -166,7 +172,7 @@ POPULAR_REPOS = [
             "go/packages/packagestest/testdata:testdata_test", # Is testdata
             "go/packages/packagestest:packagestest_test", # requires build cache
             "go/packages:packages_test", # Hah!
-            "go/pointer:pointer_test", # Needs testdata directory
+            # "go/pointer:pointer_test", # Needs testdata directory
             "go/ssa/interp:interp_test", # Needs testdata directory
             "go/ssa/ssautil:ssautil_test", # Needs testdata directory
             "go/ssa:ssa_test", # Needs testdata directory
@@ -175,17 +181,36 @@ POPULAR_REPOS = [
             "godoc/static:static_test", # requires data files
             "godoc/vfs/zipfs:zipfs_test", # requires GOROOT
             "godoc:godoc_test", # requires GOROOT and GOPATH
+            "internal/analysisinternal:analysisinternal_test", # requires GOROOT and GOPATH
             "internal/apidiff:apidiff_test", # Needs testdata directory
+            "internal/astutil/cursor:cursor_test", # requires GOROOT
             "internal/diff/difftest:difftest_test", # Needs diff tool
+            "internal/diffp:diffp_test", # Needs testdata directory
+            "internal/drivertest:drivertest_test", # Needs go tool
+            "internal/expect:expect_test", # Needs testdata directory
             "internal/facts:facts_test", # loads test package with go/packages, which probably needs go list
             "internal/gcimporter:gcimporter_test", # Needs testdata directory
             "internal/gocommand:gocommand_test", # Needs go tool
             "internal/imports:imports_test", # Needs testdata directory
+            "internal/packagestest:packagestest_test", # Needs go tool
+            "internal/packagestest/testdata/groups/two/primarymod/expect:expect_test",
+            "internal/pprof:pprof_test", # Needs testdata directory
+            "internal/refactor/inline:inline_test", # Needs GOROOT
+            "internal/refactor/inline/analyzer:analyzer_test", # Needs GOROOT
             "internal/typeparams:typeparams_test", # Needs go tool
+            "internal/testfiles:testfiles_test", # Needs testdata directory
+            "internal/versions:versions_test", # Needs GoVersion
             "present:present_test", # Needs goldmark
             "refactor/eg:eg_test", # Needs testdata directory
             "refactor/importgraph:importgraph_test", # TODO(#417)
             "refactor/rename:rename_test", # TODO(#417)
+        ],
+        build_excludes = [
+            "blog:blog", # requires present
+            "cmd/deadcode:deadcode", # requires x_telemetry
+            "cmd/godoc:godoc", # requires godoc
+            "godoc:godoc", # requires goldmark
+            "present:present", # Needs goldmark
         ],
     ),
 
@@ -278,16 +303,15 @@ def build_bazel():
     f.write(BUILD_HEADER)
     f.write("\n" + LOAD_BAZEL_TEST_RULE)
     build_only = []
+    build_excludes = []
     for repo in POPULAR_REPOS:
       name = repo["name"]
       tests = check_output(["bazel", "query", "kind(go_test, \"@{}//...\")".format(name)], text=True).split("\n")
       excludes = ["@{}//{}".format(name, l) for l in repo.get("excludes", [])]
+      build_excludes.extend(["@{}//{}".format(name, l) for l in repo.get("build_excludes", [])])
       for k in repo:
         if k.endswith("_excludes") or k.endswith("_tests"):
           excludes.extend(["@{}//{}".format(name, l) for l in repo[k]])
-      invalid_excludes = [t for t in excludes if not t in tests]
-      if invalid_excludes:
-        exit("Invalid excludes found: {}".format(invalid_excludes))
       build_only.extend(excludes)
       f.write('\ntest_suite(\n')
       f.write('    name = "{}",\n'.format(name))
@@ -307,11 +331,10 @@ def build_bazel():
     f.write('    name = "{}",\n'.format("build_only"))
     f.write('    targets = [\n')
     for package in build_only:
-        if "/internal/" not in package and "/testdata/" not in package:
-            if package.endswith("_test"):
-                f.write('        "{}",\n'.format(package[:-5]))
-            else:
-                f.write('        "{}",\n'.format(package))
+      if "/internal/" not in package and "/testdata/" not in package:
+        p = package[:-5] if package.endswith("_test") else package
+        if p not in build_excludes:
+          f.write('        "{}",\n'.format(p))
     f.write('    ],\n')
     f.write(')\n')
 

@@ -27,9 +27,7 @@ def popular_repos():
         go_repository,
         name = "org_golang_x_crypto",
         importpath = "golang.org/x/crypto",
-        strip_prefix = "crypto-5ea612d1eb830b38bc4e914e37f55311eb58adce",
-        type = "zip",
-        urls = ["https://codeload.github.com/golang/crypto/zip/5ea612d1eb830b38bc4e914e37f55311eb58adce"],
+        commit = "e47973b1c1089f6c67ab89261f7aa067b3d611d2",
     )
     _maybe(
         go_repository,

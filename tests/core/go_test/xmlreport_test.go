@@ -104,13 +104,24 @@ func Test(t *testing.T) {
 			args: []string{"test", "//:xml_test"},
 			expected: xmlTestSuites{
 				XMLName: xml.Name{Local: "testsuites"},
-				Suites: []xmlTestSuite{{
-					XMLName:  xml.Name{Local: "testsuite"},
-					Name:     "github.com/bazelbuild/rules_go/tests/core/go_test/xml_test",
-					Errors:   0,
-					Failures: 3,
-					Tests:    3,
-				}},
+				Suites: []xmlTestSuite{
+					{
+						XMLName:  xml.Name{Local: "testsuite"},
+						Name:     "github.com/bazelbuild/rules_go/tests/core/go_test/xml_test.TestFail",
+						Errors:   0,
+						Failures: 1,
+						Skipped:  0,
+						Tests:    1,
+					},
+					{
+						XMLName:  xml.Name{Local: "testsuite"},
+						Name:     "github.com/bazelbuild/rules_go/tests/core/go_test/xml_test.TestSubtests",
+						Errors:   0,
+						Failures: 2,
+						Skipped:  0,
+						Tests:    2,
+					},
+				},
 			},
 		},
 		{
@@ -118,14 +129,40 @@ func Test(t *testing.T) {
 			args: []string{"test", "--test_env=GO_TEST_WRAP_TESTV=1", "//:xml_test"},
 			expected: xmlTestSuites{
 				XMLName: xml.Name{Local: "testsuites"},
-				Suites: []xmlTestSuite{{
-					XMLName:  xml.Name{Local: "testsuite"},
-					Name:     "github.com/bazelbuild/rules_go/tests/core/go_test/xml_test",
-					Errors:   0,
-					Failures: 3,
-					Skipped:  1,
-					Tests:    7,
-				}},
+				Suites: []xmlTestSuite{
+					{
+						XMLName:  xml.Name{Local: "testsuite"},
+						Name:     "github.com/bazelbuild/rules_go/tests/core/go_test/xml_test.TestFail",
+						Errors:   0,
+						Failures: 1,
+						Skipped:  0,
+						Tests:    1,
+					},
+					{
+						XMLName:  xml.Name{Local: "testsuite"},
+						Name:     "github.com/bazelbuild/rules_go/tests/core/go_test/xml_test.TestPass",
+						Errors:   0,
+						Failures: 0,
+						Skipped:  0,
+						Tests:    1,
+					},
+					{
+						XMLName:  xml.Name{Local: "testsuite"},
+						Name:     "github.com/bazelbuild/rules_go/tests/core/go_test/xml_test.TestPassLog",
+						Errors:   0,
+						Failures: 0,
+						Skipped:  0,
+						Tests:    1,
+					},
+					{
+						XMLName:  xml.Name{Local: "testsuite"},
+						Name:     "github.com/bazelbuild/rules_go/tests/core/go_test/xml_test.TestSubtests",
+						Errors:   0,
+						Failures: 2,
+						Skipped:  1,
+						Tests:    4,
+					},
+				},
 			},
 		},
 	}
@@ -142,7 +179,7 @@ func Test(t *testing.T) {
 
 			p, err := bazel_testing.BazelOutput("info", "bazel-testlogs")
 			if err != nil {
-				t.Fatal("could not find testlog root: %s", err)
+				t.Fatalf("could not find testlog root: %s", err)
 			}
 			path := filepath.Join(strings.TrimSpace(string(p)), "xml_test/test.xml")
 			b, err := ioutil.ReadFile(path)

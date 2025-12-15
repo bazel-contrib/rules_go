@@ -1,0 +1,35 @@
+load("@com_google_protobuf//bazel:proto_library.bzl", "proto_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("@io_bazel_rules_go//proto:def.bzl", "go_grpc_library")
+
+proto_library(
+    name = "hello_proto",
+    srcs = ["hello.proto"],
+    deps = [],
+)
+
+go_grpc_library(
+    name = "hello_go_proto",
+    importpath = "github.com/bazelbuild/rules_go/tests/integration/grpc_plugin/hello_proto",
+    proto = ":hello_proto",
+    deps = [],
+)
+
+go_library(
+    name = "hello",
+    srcs = ["hello.go"],
+    importpath = "github.com/bazelbuild/rules_go/tests/integration/grpc_plugin/hello",
+    deps = [
+        ":hello_go_proto",
+    ],
+)
+
+go_test(
+    name = "hello_test",
+    srcs = ["hello_test.go"],
+    deps = [
+        ":hello",
+        ":hello_go_proto",
+        "@org_golang_google_grpc//:go_default_library",
+    ],
+)

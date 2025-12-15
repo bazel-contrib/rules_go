@@ -35,7 +35,7 @@ var ASM_DEFINES = []string{
 // by the compiler. This is only needed in go1.12+ when there is at least one
 // .s file. If the symabis file is not needed, no file will be generated,
 // and "", nil will be returned.
-func buildSymabisFile(goenv *env, sFiles, hFiles []fileInfo, asmhdr string) (string, error) {
+func buildSymabisFile(goenv *env, packagePath string, sFiles, hFiles []fileInfo, asmhdr string) (string, error) {
 	if len(sFiles) == 0 {
 		return "", nil
 	}
@@ -93,6 +93,13 @@ func buildSymabisFile(goenv *env, sFiles, hFiles []fileInfo, asmhdr string) (str
 			asmargs = append(asmargs, "-I", hdrDir)
 			seenHdrDirs[hdrDir] = true
 		}
+	}
+	// The package path has to be specified as of Go 1.22 or the resulting
+	// object will be unlinkable, but the -p flag is only required in
+	// preparing symabis since Go1.22, however, go build has been
+	// emitting -p for both symabi and actual assembly since at least Go1.19
+	if packagePath != "" && isGo119OrHigher() {
+		asmargs = append(asmargs, "-p", packagePath)
 	}
 	asmargs = append(asmargs, ASM_DEFINES...)
 	asmargs = append(asmargs, "-gensymabis", "-o", symabisName, "--")

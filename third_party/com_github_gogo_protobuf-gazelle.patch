@@ -1,5 +1,5 @@
 diff -urN a/codec/BUILD.bazel b/codec/BUILD.bazel
---- a/codec/BUILD.bazel	1969-12-31 16:00:00
+--- a/codec/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/codec/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,22 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -25,7 +25,7 @@ diff -urN a/codec/BUILD.bazel b/codec/BUILD.bazel
 +    deps = ["//test"],
 +)
 diff -urN a/conformance/BUILD.bazel b/conformance/BUILD.bazel
---- a/conformance/BUILD.bazel	1969-12-31 16:00:00
+--- a/conformance/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/conformance/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,19 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
@@ -48,7 +48,7 @@ diff -urN a/conformance/BUILD.bazel b/conformance/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/conformance/internal/conformance_proto/BUILD.bazel b/conformance/internal/conformance_proto/BUILD.bazel
---- a/conformance/internal/conformance_proto/BUILD.bazel	1969-12-31 16:00:00
+--- a/conformance/internal/conformance_proto/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/conformance/internal/conformance_proto/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,24 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -76,7 +76,7 @@ diff -urN a/conformance/internal/conformance_proto/BUILD.bazel b/conformance/int
 +    visibility = ["//conformance:__subpackages__"],
 +)
 diff -urN a/gogoproto/BUILD.bazel b/gogoproto/BUILD.bazel
---- a/gogoproto/BUILD.bazel	1969-12-31 16:00:00
+--- a/gogoproto/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/gogoproto/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,28 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -108,7 +108,7 @@ diff -urN a/gogoproto/BUILD.bazel b/gogoproto/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/gogoreplace/BUILD.bazel b/gogoreplace/BUILD.bazel
---- a/gogoreplace/BUILD.bazel	1969-12-31 16:00:00
+--- a/gogoreplace/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/gogoreplace/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,14 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
@@ -126,7 +126,7 @@ diff -urN a/gogoreplace/BUILD.bazel b/gogoreplace/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/io/BUILD.bazel b/io/BUILD.bazel
---- a/io/BUILD.bazel	1969-12-31 16:00:00
+--- a/io/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/io/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,33 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -163,7 +163,7 @@ diff -urN a/io/BUILD.bazel b/io/BUILD.bazel
 +    ],
 +)
 diff -urN a/jsonpb/BUILD.bazel b/jsonpb/BUILD.bazel
---- a/jsonpb/BUILD.bazel	1969-12-31 16:00:00
+--- a/jsonpb/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/jsonpb/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,30 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -197,7 +197,7 @@ diff -urN a/jsonpb/BUILD.bazel b/jsonpb/BUILD.bazel
 +    ],
 +)
 diff -urN a/jsonpb/jsonpb_test_proto/BUILD.bazel b/jsonpb/jsonpb_test_proto/BUILD.bazel
---- a/jsonpb/jsonpb_test_proto/BUILD.bazel	1969-12-31 16:00:00
+--- a/jsonpb/jsonpb_test_proto/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/jsonpb/jsonpb_test_proto/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,31 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -232,7 +232,7 @@ diff -urN a/jsonpb/jsonpb_test_proto/BUILD.bazel b/jsonpb/jsonpb_test_proto/BUIL
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/plugin/compare/BUILD.bazel b/plugin/compare/BUILD.bazel
---- a/plugin/compare/BUILD.bazel	1969-12-31 16:00:00
+--- a/plugin/compare/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/plugin/compare/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,25 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -261,7 +261,7 @@ diff -urN a/plugin/compare/BUILD.bazel b/plugin/compare/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/plugin/defaultcheck/BUILD.bazel b/plugin/defaultcheck/BUILD.bazel
---- a/plugin/defaultcheck/BUILD.bazel	1969-12-31 16:00:00
+--- a/plugin/defaultcheck/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/plugin/defaultcheck/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,18 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -283,7 +283,7 @@ diff -urN a/plugin/defaultcheck/BUILD.bazel b/plugin/defaultcheck/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/plugin/description/BUILD.bazel b/plugin/description/BUILD.bazel
---- a/plugin/description/BUILD.bazel	1969-12-31 16:00:00
+--- a/plugin/description/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/plugin/description/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,24 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -311,7 +311,7 @@ diff -urN a/plugin/description/BUILD.bazel b/plugin/description/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/plugin/embedcheck/BUILD.bazel b/plugin/embedcheck/BUILD.bazel
---- a/plugin/embedcheck/BUILD.bazel	1969-12-31 16:00:00
+--- a/plugin/embedcheck/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/plugin/embedcheck/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,18 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -333,7 +333,7 @@ diff -urN a/plugin/embedcheck/BUILD.bazel b/plugin/embedcheck/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/plugin/enumstringer/BUILD.bazel b/plugin/enumstringer/BUILD.bazel
---- a/plugin/enumstringer/BUILD.bazel	1969-12-31 16:00:00
+--- a/plugin/enumstringer/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/plugin/enumstringer/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,18 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -355,7 +355,7 @@ diff -urN a/plugin/enumstringer/BUILD.bazel b/plugin/enumstringer/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/plugin/equal/BUILD.bazel b/plugin/equal/BUILD.bazel
---- a/plugin/equal/BUILD.bazel	1969-12-31 16:00:00
+--- a/plugin/equal/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/plugin/equal/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,25 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -384,7 +384,7 @@ diff -urN a/plugin/equal/BUILD.bazel b/plugin/equal/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/plugin/face/BUILD.bazel b/plugin/face/BUILD.bazel
---- a/plugin/face/BUILD.bazel	1969-12-31 16:00:00
+--- a/plugin/face/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/plugin/face/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,22 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -410,7 +410,7 @@ diff -urN a/plugin/face/BUILD.bazel b/plugin/face/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/plugin/gostring/BUILD.bazel b/plugin/gostring/BUILD.bazel
---- a/plugin/gostring/BUILD.bazel	1969-12-31 16:00:00
+--- a/plugin/gostring/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/plugin/gostring/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,22 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -436,7 +436,7 @@ diff -urN a/plugin/gostring/BUILD.bazel b/plugin/gostring/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/plugin/marshalto/BUILD.bazel b/plugin/marshalto/BUILD.bazel
---- a/plugin/marshalto/BUILD.bazel	1969-12-31 16:00:00
+--- a/plugin/marshalto/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/plugin/marshalto/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,21 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -461,7 +461,7 @@ diff -urN a/plugin/marshalto/BUILD.bazel b/plugin/marshalto/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/plugin/oneofcheck/BUILD.bazel b/plugin/oneofcheck/BUILD.bazel
---- a/plugin/oneofcheck/BUILD.bazel	1969-12-31 16:00:00
+--- a/plugin/oneofcheck/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/plugin/oneofcheck/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,18 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -483,7 +483,7 @@ diff -urN a/plugin/oneofcheck/BUILD.bazel b/plugin/oneofcheck/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/plugin/populate/BUILD.bazel b/plugin/populate/BUILD.bazel
---- a/plugin/populate/BUILD.bazel	1969-12-31 16:00:00
+--- a/plugin/populate/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/plugin/populate/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,21 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -508,7 +508,7 @@ diff -urN a/plugin/populate/BUILD.bazel b/plugin/populate/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/plugin/size/BUILD.bazel b/plugin/size/BUILD.bazel
---- a/plugin/size/BUILD.bazel	1969-12-31 16:00:00
+--- a/plugin/size/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/plugin/size/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,25 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -537,7 +537,7 @@ diff -urN a/plugin/size/BUILD.bazel b/plugin/size/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/plugin/stringer/BUILD.bazel b/plugin/stringer/BUILD.bazel
---- a/plugin/stringer/BUILD.bazel	1969-12-31 16:00:00
+--- a/plugin/stringer/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/plugin/stringer/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,22 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -563,7 +563,7 @@ diff -urN a/plugin/stringer/BUILD.bazel b/plugin/stringer/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/plugin/testgen/BUILD.bazel b/plugin/testgen/BUILD.bazel
---- a/plugin/testgen/BUILD.bazel	1969-12-31 16:00:00
+--- a/plugin/testgen/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/plugin/testgen/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,18 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -585,7 +585,7 @@ diff -urN a/plugin/testgen/BUILD.bazel b/plugin/testgen/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/plugin/union/BUILD.bazel b/plugin/union/BUILD.bazel
---- a/plugin/union/BUILD.bazel	1969-12-31 16:00:00
+--- a/plugin/union/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/plugin/union/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,22 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -611,7 +611,7 @@ diff -urN a/plugin/union/BUILD.bazel b/plugin/union/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/plugin/unmarshal/BUILD.bazel b/plugin/unmarshal/BUILD.bazel
---- a/plugin/unmarshal/BUILD.bazel	1969-12-31 16:00:00
+--- a/plugin/unmarshal/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/plugin/unmarshal/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,20 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -635,7 +635,7 @@ diff -urN a/plugin/unmarshal/BUILD.bazel b/plugin/unmarshal/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/proto/BUILD.bazel b/proto/BUILD.bazel
---- a/proto/BUILD.bazel	1969-12-31 16:00:00
+--- a/proto/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/proto/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,78 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -717,7 +717,7 @@ diff -urN a/proto/BUILD.bazel b/proto/BUILD.bazel
 +    ],
 +)
 diff -urN a/proto/proto3_proto/BUILD.bazel b/proto/proto3_proto/BUILD.bazel
---- a/proto/proto3_proto/BUILD.bazel	1969-12-31 16:00:00
+--- a/proto/proto3_proto/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/proto/proto3_proto/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,25 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -746,7 +746,7 @@ diff -urN a/proto/proto3_proto/BUILD.bazel b/proto/proto3_proto/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/proto/test_proto/BUILD.bazel b/proto/test_proto/BUILD.bazel
---- a/proto/test_proto/BUILD.bazel	1969-12-31 16:00:00
+--- a/proto/test_proto/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/proto/test_proto/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,21 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -771,7 +771,7 @@ diff -urN a/proto/test_proto/BUILD.bazel b/proto/test_proto/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/protobuf/google/protobuf/BUILD.bazel b/protobuf/google/protobuf/BUILD.bazel
---- a/protobuf/google/protobuf/BUILD.bazel	1969-12-31 16:00:00
+--- a/protobuf/google/protobuf/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protobuf/google/protobuf/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,17 @@
 +filegroup(
@@ -792,7 +792,7 @@ diff -urN a/protobuf/google/protobuf/BUILD.bazel b/protobuf/google/protobuf/BUIL
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/protobuf/google/protobuf/compiler/BUILD.bazel b/protobuf/google/protobuf/compiler/BUILD.bazel
---- a/protobuf/google/protobuf/compiler/BUILD.bazel	1969-12-31 16:00:00
+--- a/protobuf/google/protobuf/compiler/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protobuf/google/protobuf/compiler/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,5 @@
 +filegroup(
@@ -801,7 +801,7 @@ diff -urN a/protobuf/google/protobuf/compiler/BUILD.bazel b/protobuf/google/prot
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/protoc-gen-combo/BUILD.bazel b/protoc-gen-combo/BUILD.bazel
---- a/protoc-gen-combo/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-combo/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-combo/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,15 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
@@ -820,7 +820,7 @@ diff -urN a/protoc-gen-combo/BUILD.bazel b/protoc-gen-combo/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/protoc-gen-gofast/BUILD.bazel b/protoc-gen-gofast/BUILD.bazel
---- a/protoc-gen-gofast/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-gofast/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-gofast/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,18 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
@@ -842,7 +842,7 @@ diff -urN a/protoc-gen-gofast/BUILD.bazel b/protoc-gen-gofast/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/protoc-gen-gogo/BUILD.bazel b/protoc-gen-gogo/BUILD.bazel
---- a/protoc-gen-gogo/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-gogo/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-gogo/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,21 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
@@ -867,7 +867,7 @@ diff -urN a/protoc-gen-gogo/BUILD.bazel b/protoc-gen-gogo/BUILD.bazel
 +    embed = [":protoc-gen-gogo_lib"],
 +)
 diff -urN a/protoc-gen-gogo/descriptor/BUILD.bazel b/protoc-gen-gogo/descriptor/BUILD.bazel
---- a/protoc-gen-gogo/descriptor/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-gogo/descriptor/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-gogo/descriptor/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,29 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -900,7 +900,7 @@ diff -urN a/protoc-gen-gogo/descriptor/BUILD.bazel b/protoc-gen-gogo/descriptor/
 +    ],
 +)
 diff -urN a/protoc-gen-gogo/generator/BUILD.bazel b/protoc-gen-gogo/generator/BUILD.bazel
---- a/protoc-gen-gogo/generator/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-gogo/generator/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-gogo/generator/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,31 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -935,7 +935,7 @@ diff -urN a/protoc-gen-gogo/generator/BUILD.bazel b/protoc-gen-gogo/generator/BU
 +    deps = ["//protoc-gen-gogo/descriptor"],
 +)
 diff -urN a/protoc-gen-gogo/generator/internal/remap/BUILD.bazel b/protoc-gen-gogo/generator/internal/remap/BUILD.bazel
---- a/protoc-gen-gogo/generator/internal/remap/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-gogo/generator/internal/remap/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-gogo/generator/internal/remap/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,20 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -959,7 +959,7 @@ diff -urN a/protoc-gen-gogo/generator/internal/remap/BUILD.bazel b/protoc-gen-go
 +    embed = [":remap"],
 +)
 diff -urN a/protoc-gen-gogo/grpc/BUILD.bazel b/protoc-gen-gogo/grpc/BUILD.bazel
---- a/protoc-gen-gogo/grpc/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-gogo/grpc/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-gogo/grpc/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,18 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -981,7 +981,7 @@ diff -urN a/protoc-gen-gogo/grpc/BUILD.bazel b/protoc-gen-gogo/grpc/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/protoc-gen-gogo/plugin/BUILD.bazel b/protoc-gen-gogo/plugin/BUILD.bazel
---- a/protoc-gen-gogo/plugin/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-gogo/plugin/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-gogo/plugin/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,18 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -1003,7 +1003,7 @@ diff -urN a/protoc-gen-gogo/plugin/BUILD.bazel b/protoc-gen-gogo/plugin/BUILD.ba
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/protoc-gen-gogo/testdata/BUILD.bazel b/protoc-gen-gogo/testdata/BUILD.bazel
---- a/protoc-gen-gogo/testdata/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-gogo/testdata/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-gogo/testdata/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,16 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_test")
@@ -1023,7 +1023,7 @@ diff -urN a/protoc-gen-gogo/testdata/BUILD.bazel b/protoc-gen-gogo/testdata/BUIL
 +    ],
 +)
 diff -urN a/protoc-gen-gogo/testdata/deprecated/BUILD.bazel b/protoc-gen-gogo/testdata/deprecated/BUILD.bazel
---- a/protoc-gen-gogo/testdata/deprecated/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-gogo/testdata/deprecated/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-gogo/testdata/deprecated/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,26 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -1053,7 +1053,7 @@ diff -urN a/protoc-gen-gogo/testdata/deprecated/BUILD.bazel b/protoc-gen-gogo/te
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/protoc-gen-gogo/testdata/extension_base/BUILD.bazel b/protoc-gen-gogo/testdata/extension_base/BUILD.bazel
---- a/protoc-gen-gogo/testdata/extension_base/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-gogo/testdata/extension_base/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-gogo/testdata/extension_base/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,21 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -1078,7 +1078,7 @@ diff -urN a/protoc-gen-gogo/testdata/extension_base/BUILD.bazel b/protoc-gen-gog
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/protoc-gen-gogo/testdata/extension_extra/BUILD.bazel b/protoc-gen-gogo/testdata/extension_extra/BUILD.bazel
---- a/protoc-gen-gogo/testdata/extension_extra/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-gogo/testdata/extension_extra/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-gogo/testdata/extension_extra/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,21 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -1103,7 +1103,7 @@ diff -urN a/protoc-gen-gogo/testdata/extension_extra/BUILD.bazel b/protoc-gen-go
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/protoc-gen-gogo/testdata/extension_user/BUILD.bazel b/protoc-gen-gogo/testdata/extension_user/BUILD.bazel
---- a/protoc-gen-gogo/testdata/extension_user/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-gogo/testdata/extension_user/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-gogo/testdata/extension_user/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,25 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -1132,7 +1132,7 @@ diff -urN a/protoc-gen-gogo/testdata/extension_user/BUILD.bazel b/protoc-gen-gog
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/protoc-gen-gogo/testdata/grpc/BUILD.bazel b/protoc-gen-gogo/testdata/grpc/BUILD.bazel
---- a/protoc-gen-gogo/testdata/grpc/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-gogo/testdata/grpc/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-gogo/testdata/grpc/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,32 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -1168,7 +1168,7 @@ diff -urN a/protoc-gen-gogo/testdata/grpc/BUILD.bazel b/protoc-gen-gogo/testdata
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/protoc-gen-gogo/testdata/import_public/BUILD.bazel b/protoc-gen-gogo/testdata/import_public/BUILD.bazel
---- a/protoc-gen-gogo/testdata/import_public/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-gogo/testdata/import_public/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-gogo/testdata/import_public/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,30 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -1202,7 +1202,7 @@ diff -urN a/protoc-gen-gogo/testdata/import_public/BUILD.bazel b/protoc-gen-gogo
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/protoc-gen-gogo/testdata/import_public/importing/BUILD.bazel b/protoc-gen-gogo/testdata/import_public/importing/BUILD.bazel
---- a/protoc-gen-gogo/testdata/import_public/importing/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-gogo/testdata/import_public/importing/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-gogo/testdata/import_public/importing/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,25 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -1231,7 +1231,7 @@ diff -urN a/protoc-gen-gogo/testdata/import_public/importing/BUILD.bazel b/proto
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/protoc-gen-gogo/testdata/import_public/sub/BUILD.bazel b/protoc-gen-gogo/testdata/import_public/sub/BUILD.bazel
---- a/protoc-gen-gogo/testdata/import_public/sub/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-gogo/testdata/import_public/sub/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-gogo/testdata/import_public/sub/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,27 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -1262,7 +1262,7 @@ diff -urN a/protoc-gen-gogo/testdata/import_public/sub/BUILD.bazel b/protoc-gen-
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/protoc-gen-gogo/testdata/imports/BUILD.bazel b/protoc-gen-gogo/testdata/imports/BUILD.bazel
---- a/protoc-gen-gogo/testdata/imports/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-gogo/testdata/imports/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-gogo/testdata/imports/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,35 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -1301,7 +1301,7 @@ diff -urN a/protoc-gen-gogo/testdata/imports/BUILD.bazel b/protoc-gen-gogo/testd
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/protoc-gen-gogo/testdata/imports/fmt/BUILD.bazel b/protoc-gen-gogo/testdata/imports/fmt/BUILD.bazel
---- a/protoc-gen-gogo/testdata/imports/fmt/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-gogo/testdata/imports/fmt/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-gogo/testdata/imports/fmt/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,21 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -1326,7 +1326,7 @@ diff -urN a/protoc-gen-gogo/testdata/imports/fmt/BUILD.bazel b/protoc-gen-gogo/t
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/protoc-gen-gogo/testdata/imports/test_a_1/BUILD.bazel b/protoc-gen-gogo/testdata/imports/test_a_1/BUILD.bazel
---- a/protoc-gen-gogo/testdata/imports/test_a_1/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-gogo/testdata/imports/test_a_1/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-gogo/testdata/imports/test_a_1/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,27 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -1357,7 +1357,7 @@ diff -urN a/protoc-gen-gogo/testdata/imports/test_a_1/BUILD.bazel b/protoc-gen-g
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/protoc-gen-gogo/testdata/imports/test_a_2/BUILD.bazel b/protoc-gen-gogo/testdata/imports/test_a_2/BUILD.bazel
---- a/protoc-gen-gogo/testdata/imports/test_a_2/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-gogo/testdata/imports/test_a_2/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-gogo/testdata/imports/test_a_2/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,27 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -1388,7 +1388,7 @@ diff -urN a/protoc-gen-gogo/testdata/imports/test_a_2/BUILD.bazel b/protoc-gen-g
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/protoc-gen-gogo/testdata/imports/test_b_1/BUILD.bazel b/protoc-gen-gogo/testdata/imports/test_b_1/BUILD.bazel
---- a/protoc-gen-gogo/testdata/imports/test_b_1/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-gogo/testdata/imports/test_b_1/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-gogo/testdata/imports/test_b_1/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,27 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -1419,7 +1419,7 @@ diff -urN a/protoc-gen-gogo/testdata/imports/test_b_1/BUILD.bazel b/protoc-gen-g
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/protoc-gen-gogo/testdata/multi/BUILD.bazel b/protoc-gen-gogo/testdata/multi/BUILD.bazel
---- a/protoc-gen-gogo/testdata/multi/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-gogo/testdata/multi/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-gogo/testdata/multi/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,9 @@
 +filegroup(
@@ -1432,7 +1432,7 @@ diff -urN a/protoc-gen-gogo/testdata/multi/BUILD.bazel b/protoc-gen-gogo/testdat
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/protoc-gen-gogo/testdata/my_test/BUILD.bazel b/protoc-gen-gogo/testdata/my_test/BUILD.bazel
---- a/protoc-gen-gogo/testdata/my_test/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-gogo/testdata/my_test/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-gogo/testdata/my_test/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,21 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -1457,7 +1457,7 @@ diff -urN a/protoc-gen-gogo/testdata/my_test/BUILD.bazel b/protoc-gen-gogo/testd
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/protoc-gen-gogo/testdata/proto3/BUILD.bazel b/protoc-gen-gogo/testdata/proto3/BUILD.bazel
---- a/protoc-gen-gogo/testdata/proto3/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-gogo/testdata/proto3/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-gogo/testdata/proto3/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,21 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -1482,7 +1482,7 @@ diff -urN a/protoc-gen-gogo/testdata/proto3/BUILD.bazel b/protoc-gen-gogo/testda
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/protoc-gen-gogofast/BUILD.bazel b/protoc-gen-gogofast/BUILD.bazel
---- a/protoc-gen-gogofast/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-gogofast/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-gogofast/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,18 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
@@ -1504,7 +1504,7 @@ diff -urN a/protoc-gen-gogofast/BUILD.bazel b/protoc-gen-gogofast/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/protoc-gen-gogofaster/BUILD.bazel b/protoc-gen-gogofaster/BUILD.bazel
---- a/protoc-gen-gogofaster/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-gogofaster/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-gogofaster/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,18 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
@@ -1526,7 +1526,7 @@ diff -urN a/protoc-gen-gogofaster/BUILD.bazel b/protoc-gen-gogofaster/BUILD.baze
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/protoc-gen-gogoslick/BUILD.bazel b/protoc-gen-gogoslick/BUILD.bazel
---- a/protoc-gen-gogoslick/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-gogoslick/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-gogoslick/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,18 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
@@ -1548,7 +1548,7 @@ diff -urN a/protoc-gen-gogoslick/BUILD.bazel b/protoc-gen-gogoslick/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/protoc-gen-gogotypes/BUILD.bazel b/protoc-gen-gogotypes/BUILD.bazel
---- a/protoc-gen-gogotypes/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-gogotypes/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-gogotypes/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,18 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
@@ -1570,7 +1570,7 @@ diff -urN a/protoc-gen-gogotypes/BUILD.bazel b/protoc-gen-gogotypes/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/protoc-gen-gostring/BUILD.bazel b/protoc-gen-gostring/BUILD.bazel
---- a/protoc-gen-gostring/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-gostring/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-gostring/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,18 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
@@ -1592,7 +1592,7 @@ diff -urN a/protoc-gen-gostring/BUILD.bazel b/protoc-gen-gostring/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/protoc-min-version/BUILD.bazel b/protoc-min-version/BUILD.bazel
---- a/protoc-min-version/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-min-version/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-min-version/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,15 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
@@ -1611,7 +1611,7 @@ diff -urN a/protoc-min-version/BUILD.bazel b/protoc-min-version/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/sortkeys/BUILD.bazel b/sortkeys/BUILD.bazel
---- a/sortkeys/BUILD.bazel	1969-12-31 16:00:00
+--- a/sortkeys/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/sortkeys/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,14 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -1628,8 +1628,45 @@ diff -urN a/sortkeys/BUILD.bazel b/sortkeys/BUILD.bazel
 +    actual = ":sortkeys",
 +    visibility = ["//visibility:public"],
 +)
+diff -urN a/test/asymetric-issue125/BUILD.bazel b/test/asymetric-issue125/BUILD.bazel
+--- a/test/asymetric-issue125/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
++++ b/test/asymetric-issue125/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
+@@ -0,0 +1,33 @@
++load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
++
++filegroup(
++    name = "go_default_library_protos",
++    srcs = ["asym.proto"],
++    visibility = ["//visibility:public"],
++)
++
++go_library(
++    name = "asymetric-issue125",
++    srcs = [
++        "asym.pb.go",
++        "pop.go",
++    ],
++    importpath = "github.com/gogo/protobuf/test/asymetric-issue125",
++    visibility = ["//visibility:public"],
++    deps = [
++        "//gogoproto",
++        "//proto",
++    ],
++)
++
++alias(
++    name = "go_default_library",
++    actual = ":asymetric-issue125",
++    visibility = ["//visibility:public"],
++)
++
++go_test(
++    name = "asymetric-issue125_test",
++    srcs = ["asym_test.go"],
++    embed = [":asymetric-issue125"],
++)
 diff -urN a/test/BUILD.bazel b/test/BUILD.bazel
---- a/test/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,48 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -1680,45 +1717,8 @@ diff -urN a/test/BUILD.bazel b/test/BUILD.bazel
 +        "//proto",
 +    ],
 +)
-diff -urN a/test/asymetric-issue125/BUILD.bazel b/test/asymetric-issue125/BUILD.bazel
---- a/test/asymetric-issue125/BUILD.bazel	1969-12-31 16:00:00
-+++ b/test/asymetric-issue125/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
-@@ -0,0 +1,33 @@
-+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
-+
-+filegroup(
-+    name = "go_default_library_protos",
-+    srcs = ["asym.proto"],
-+    visibility = ["//visibility:public"],
-+)
-+
-+go_library(
-+    name = "asymetric-issue125",
-+    srcs = [
-+        "asym.pb.go",
-+        "pop.go",
-+    ],
-+    importpath = "github.com/gogo/protobuf/test/asymetric-issue125",
-+    visibility = ["//visibility:public"],
-+    deps = [
-+        "//gogoproto",
-+        "//proto",
-+    ],
-+)
-+
-+alias(
-+    name = "go_default_library",
-+    actual = ":asymetric-issue125",
-+    visibility = ["//visibility:public"],
-+)
-+
-+go_test(
-+    name = "asymetric-issue125_test",
-+    srcs = ["asym_test.go"],
-+    embed = [":asymetric-issue125"],
-+)
 diff -urN a/test/cachedsize/BUILD.bazel b/test/cachedsize/BUILD.bazel
---- a/test/cachedsize/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/cachedsize/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/cachedsize/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,31 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -1753,7 +1753,7 @@ diff -urN a/test/cachedsize/BUILD.bazel b/test/cachedsize/BUILD.bazel
 +    deps = ["//proto"],
 +)
 diff -urN a/test/casttype/BUILD.bazel b/test/casttype/BUILD.bazel
---- a/test/casttype/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/casttype/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/casttype/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,20 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -1777,7 +1777,7 @@ diff -urN a/test/casttype/BUILD.bazel b/test/casttype/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/test/casttype/combos/both/BUILD.bazel b/test/casttype/combos/both/BUILD.bazel
---- a/test/casttype/combos/both/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/casttype/combos/both/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/casttype/combos/both/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,38 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -1819,7 +1819,7 @@ diff -urN a/test/casttype/combos/both/BUILD.bazel b/test/casttype/combos/both/BU
 +    ],
 +)
 diff -urN a/test/casttype/combos/marshaler/BUILD.bazel b/test/casttype/combos/marshaler/BUILD.bazel
---- a/test/casttype/combos/marshaler/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/casttype/combos/marshaler/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/casttype/combos/marshaler/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,38 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -1861,7 +1861,7 @@ diff -urN a/test/casttype/combos/marshaler/BUILD.bazel b/test/casttype/combos/ma
 +    ],
 +)
 diff -urN a/test/casttype/combos/neither/BUILD.bazel b/test/casttype/combos/neither/BUILD.bazel
---- a/test/casttype/combos/neither/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/casttype/combos/neither/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/casttype/combos/neither/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,38 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -1903,7 +1903,7 @@ diff -urN a/test/casttype/combos/neither/BUILD.bazel b/test/casttype/combos/neit
 +    ],
 +)
 diff -urN a/test/casttype/combos/unmarshaler/BUILD.bazel b/test/casttype/combos/unmarshaler/BUILD.bazel
---- a/test/casttype/combos/unmarshaler/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/casttype/combos/unmarshaler/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/casttype/combos/unmarshaler/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,38 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -1945,7 +1945,7 @@ diff -urN a/test/casttype/combos/unmarshaler/BUILD.bazel b/test/casttype/combos/
 +    ],
 +)
 diff -urN a/test/castvalue/BUILD.bazel b/test/castvalue/BUILD.bazel
---- a/test/castvalue/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/castvalue/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/castvalue/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,40 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -1989,7 +1989,7 @@ diff -urN a/test/castvalue/BUILD.bazel b/test/castvalue/BUILD.bazel
 +    ],
 +)
 diff -urN a/test/castvalue/combos/both/BUILD.bazel b/test/castvalue/combos/both/BUILD.bazel
---- a/test/castvalue/combos/both/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/castvalue/combos/both/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/castvalue/combos/both/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,40 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -2033,7 +2033,7 @@ diff -urN a/test/castvalue/combos/both/BUILD.bazel b/test/castvalue/combos/both/
 +    ],
 +)
 diff -urN a/test/castvalue/combos/marshaler/BUILD.bazel b/test/castvalue/combos/marshaler/BUILD.bazel
---- a/test/castvalue/combos/marshaler/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/castvalue/combos/marshaler/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/castvalue/combos/marshaler/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,40 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -2077,7 +2077,7 @@ diff -urN a/test/castvalue/combos/marshaler/BUILD.bazel b/test/castvalue/combos/
 +    ],
 +)
 diff -urN a/test/castvalue/combos/unmarshaler/BUILD.bazel b/test/castvalue/combos/unmarshaler/BUILD.bazel
---- a/test/castvalue/combos/unmarshaler/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/castvalue/combos/unmarshaler/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/castvalue/combos/unmarshaler/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,40 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -2121,7 +2121,7 @@ diff -urN a/test/castvalue/combos/unmarshaler/BUILD.bazel b/test/castvalue/combo
 +    ],
 +)
 diff -urN a/test/combos/both/BUILD.bazel b/test/combos/both/BUILD.bazel
---- a/test/combos/both/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/combos/both/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/combos/both/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,46 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -2171,7 +2171,7 @@ diff -urN a/test/combos/both/BUILD.bazel b/test/combos/both/BUILD.bazel
 +    ],
 +)
 diff -urN a/test/combos/marshaler/BUILD.bazel b/test/combos/marshaler/BUILD.bazel
---- a/test/combos/marshaler/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/combos/marshaler/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/combos/marshaler/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,46 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -2221,7 +2221,7 @@ diff -urN a/test/combos/marshaler/BUILD.bazel b/test/combos/marshaler/BUILD.baze
 +    ],
 +)
 diff -urN a/test/combos/unmarshaler/BUILD.bazel b/test/combos/unmarshaler/BUILD.bazel
---- a/test/combos/unmarshaler/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/combos/unmarshaler/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/combos/unmarshaler/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,46 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -2271,7 +2271,7 @@ diff -urN a/test/combos/unmarshaler/BUILD.bazel b/test/combos/unmarshaler/BUILD.
 +    ],
 +)
 diff -urN a/test/custom/BUILD.bazel b/test/custom/BUILD.bazel
---- a/test/custom/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/custom/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/custom/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,20 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -2294,26 +2294,8 @@ diff -urN a/test/custom/BUILD.bazel b/test/custom/BUILD.bazel
 +    srcs = ["custom_test.go"],
 +    embed = [":custom"],
 +)
-diff -urN a/test/custom-dash-type/BUILD.bazel b/test/custom-dash-type/BUILD.bazel
---- a/test/custom-dash-type/BUILD.bazel	1969-12-31 16:00:00
-+++ b/test/custom-dash-type/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
-@@ -0,0 +1,14 @@
-+load("@io_bazel_rules_go//go:def.bzl", "go_library")
-+
-+go_library(
-+    name = "custom-dash-type",
-+    srcs = ["customdash.go"],
-+    importpath = "github.com/gogo/protobuf/test/custom-dash-type",
-+    visibility = ["//visibility:public"],
-+)
-+
-+alias(
-+    name = "go_default_library",
-+    actual = ":custom-dash-type",
-+    visibility = ["//visibility:public"],
-+)
 diff -urN a/test/custombytesnonstruct/BUILD.bazel b/test/custombytesnonstruct/BUILD.bazel
---- a/test/custombytesnonstruct/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/custombytesnonstruct/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/custombytesnonstruct/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,33 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -2349,8 +2331,26 @@ diff -urN a/test/custombytesnonstruct/BUILD.bazel b/test/custombytesnonstruct/BU
 +    srcs = ["custombytesnonstruct_test.go"],
 +    embed = [":custombytesnonstruct"],
 +)
+diff -urN a/test/custom-dash-type/BUILD.bazel b/test/custom-dash-type/BUILD.bazel
+--- a/test/custom-dash-type/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
++++ b/test/custom-dash-type/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
+@@ -0,0 +1,14 @@
++load("@io_bazel_rules_go//go:def.bzl", "go_library")
++
++go_library(
++    name = "custom-dash-type",
++    srcs = ["customdash.go"],
++    importpath = "github.com/gogo/protobuf/test/custom-dash-type",
++    visibility = ["//visibility:public"],
++)
++
++alias(
++    name = "go_default_library",
++    actual = ":custom-dash-type",
++    visibility = ["//visibility:public"],
++)
 diff -urN a/test/dashfilename/BUILD.bazel b/test/dashfilename/BUILD.bazel
---- a/test/dashfilename/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/dashfilename/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/dashfilename/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,26 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -2380,7 +2380,7 @@ diff -urN a/test/dashfilename/BUILD.bazel b/test/dashfilename/BUILD.bazel
 +    embed = [":dashfilename"],
 +)
 diff -urN a/test/data/BUILD.bazel b/test/data/BUILD.bazel
---- a/test/data/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/data/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/data/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,35 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -2419,7 +2419,7 @@ diff -urN a/test/data/BUILD.bazel b/test/data/BUILD.bazel
 +    ],
 +)
 diff -urN a/test/defaultconflict/BUILD.bazel b/test/defaultconflict/BUILD.bazel
---- a/test/defaultconflict/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/defaultconflict/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/defaultconflict/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,32 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -2455,7 +2455,7 @@ diff -urN a/test/defaultconflict/BUILD.bazel b/test/defaultconflict/BUILD.bazel
 +    embed = [":defaultconflict"],
 +)
 diff -urN a/test/deterministic/BUILD.bazel b/test/deterministic/BUILD.bazel
---- a/test/deterministic/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/deterministic/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/deterministic/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,32 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -2491,7 +2491,7 @@ diff -urN a/test/deterministic/BUILD.bazel b/test/deterministic/BUILD.bazel
 +    deps = ["//proto"],
 +)
 diff -urN a/test/embedconflict/BUILD.bazel b/test/embedconflict/BUILD.bazel
---- a/test/embedconflict/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/embedconflict/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/embedconflict/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,33 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -2528,7 +2528,7 @@ diff -urN a/test/embedconflict/BUILD.bazel b/test/embedconflict/BUILD.bazel
 +    embed = [":embedconflict"],
 +)
 diff -urN a/test/empty-issue70/BUILD.bazel b/test/empty-issue70/BUILD.bazel
---- a/test/empty-issue70/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/empty-issue70/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/empty-issue70/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,30 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -2562,7 +2562,7 @@ diff -urN a/test/empty-issue70/BUILD.bazel b/test/empty-issue70/BUILD.bazel
 +    embed = [":empty-issue70"],
 +)
 diff -urN a/test/enumcustomname/BUILD.bazel b/test/enumcustomname/BUILD.bazel
---- a/test/enumcustomname/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/enumcustomname/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/enumcustomname/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,25 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -2591,7 +2591,7 @@ diff -urN a/test/enumcustomname/BUILD.bazel b/test/enumcustomname/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/test/enumdecl/BUILD.bazel b/test/enumdecl/BUILD.bazel
---- a/test/enumdecl/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/enumdecl/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/enumdecl/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,38 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -2633,7 +2633,7 @@ diff -urN a/test/enumdecl/BUILD.bazel b/test/enumdecl/BUILD.bazel
 +    ],
 +)
 diff -urN a/test/enumdecl_all/BUILD.bazel b/test/enumdecl_all/BUILD.bazel
---- a/test/enumdecl_all/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/enumdecl_all/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/enumdecl_all/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,38 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -2675,7 +2675,7 @@ diff -urN a/test/enumdecl_all/BUILD.bazel b/test/enumdecl_all/BUILD.bazel
 +    ],
 +)
 diff -urN a/test/enumprefix/BUILD.bazel b/test/enumprefix/BUILD.bazel
---- a/test/enumprefix/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/enumprefix/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/enumprefix/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,25 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -2704,7 +2704,7 @@ diff -urN a/test/enumprefix/BUILD.bazel b/test/enumprefix/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/test/enumstringer/BUILD.bazel b/test/enumstringer/BUILD.bazel
---- a/test/enumstringer/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/enumstringer/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/enumstringer/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,38 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -2746,7 +2746,7 @@ diff -urN a/test/enumstringer/BUILD.bazel b/test/enumstringer/BUILD.bazel
 +    ],
 +)
 diff -urN a/test/example/BUILD.bazel b/test/example/BUILD.bazel
---- a/test/example/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/example/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/example/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,41 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -2791,7 +2791,7 @@ diff -urN a/test/example/BUILD.bazel b/test/example/BUILD.bazel
 +    ],
 +)
 diff -urN a/test/filedotname/BUILD.bazel b/test/filedotname/BUILD.bazel
---- a/test/filedotname/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/filedotname/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/filedotname/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,36 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -2831,7 +2831,7 @@ diff -urN a/test/filedotname/BUILD.bazel b/test/filedotname/BUILD.bazel
 +    ],
 +)
 diff -urN a/test/fuzztests/BUILD.bazel b/test/fuzztests/BUILD.bazel
---- a/test/fuzztests/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/fuzztests/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/fuzztests/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,31 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -2866,7 +2866,7 @@ diff -urN a/test/fuzztests/BUILD.bazel b/test/fuzztests/BUILD.bazel
 +    deps = ["//proto"],
 +)
 diff -urN a/test/group/BUILD.bazel b/test/group/BUILD.bazel
---- a/test/group/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/group/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/group/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,36 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -2906,7 +2906,7 @@ diff -urN a/test/group/BUILD.bazel b/test/group/BUILD.bazel
 +    ],
 +)
 diff -urN a/test/importcustom-issue389/imported/BUILD.bazel b/test/importcustom-issue389/imported/BUILD.bazel
---- a/test/importcustom-issue389/imported/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/importcustom-issue389/imported/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/importcustom-issue389/imported/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,38 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -2948,7 +2948,7 @@ diff -urN a/test/importcustom-issue389/imported/BUILD.bazel b/test/importcustom-
 +    ],
 +)
 diff -urN a/test/importcustom-issue389/importing/BUILD.bazel b/test/importcustom-issue389/importing/BUILD.bazel
---- a/test/importcustom-issue389/importing/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/importcustom-issue389/importing/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/importcustom-issue389/importing/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,37 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -2989,7 +2989,7 @@ diff -urN a/test/importcustom-issue389/importing/BUILD.bazel b/test/importcustom
 +    ],
 +)
 diff -urN a/test/importdedup/BUILD.bazel b/test/importdedup/BUILD.bazel
---- a/test/importdedup/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/importdedup/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/importdedup/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,31 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -3024,7 +3024,7 @@ diff -urN a/test/importdedup/BUILD.bazel b/test/importdedup/BUILD.bazel
 +    embed = [":importdedup"],
 +)
 diff -urN a/test/importdedup/subpkg/BUILD.bazel b/test/importdedup/subpkg/BUILD.bazel
---- a/test/importdedup/subpkg/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/importdedup/subpkg/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/importdedup/subpkg/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,27 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -3055,7 +3055,7 @@ diff -urN a/test/importdedup/subpkg/BUILD.bazel b/test/importdedup/subpkg/BUILD.
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/test/importduplicate/BUILD.bazel b/test/importduplicate/BUILD.bazel
---- a/test/importduplicate/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/importduplicate/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/importduplicate/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,43 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -3102,7 +3102,7 @@ diff -urN a/test/importduplicate/BUILD.bazel b/test/importduplicate/BUILD.bazel
 +    ],
 +)
 diff -urN a/test/importduplicate/proto/BUILD.bazel b/test/importduplicate/proto/BUILD.bazel
---- a/test/importduplicate/proto/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/importduplicate/proto/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/importduplicate/proto/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,35 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -3141,7 +3141,7 @@ diff -urN a/test/importduplicate/proto/BUILD.bazel b/test/importduplicate/proto/
 +    ],
 +)
 diff -urN a/test/importduplicate/sortkeys/BUILD.bazel b/test/importduplicate/sortkeys/BUILD.bazel
---- a/test/importduplicate/sortkeys/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/importduplicate/sortkeys/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/importduplicate/sortkeys/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,35 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -3180,7 +3180,7 @@ diff -urN a/test/importduplicate/sortkeys/BUILD.bazel b/test/importduplicate/sor
 +    ],
 +)
 diff -urN a/test/indeximport-issue72/BUILD.bazel b/test/indeximport-issue72/BUILD.bazel
---- a/test/indeximport-issue72/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/indeximport-issue72/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/indeximport-issue72/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,37 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -3221,7 +3221,7 @@ diff -urN a/test/indeximport-issue72/BUILD.bazel b/test/indeximport-issue72/BUIL
 +    ],
 +)
 diff -urN a/test/indeximport-issue72/index/BUILD.bazel b/test/indeximport-issue72/index/BUILD.bazel
---- a/test/indeximport-issue72/index/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/indeximport-issue72/index/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/indeximport-issue72/index/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,35 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -3260,7 +3260,7 @@ diff -urN a/test/indeximport-issue72/index/BUILD.bazel b/test/indeximport-issue7
 +    ],
 +)
 diff -urN a/test/int64support/BUILD.bazel b/test/int64support/BUILD.bazel
---- a/test/int64support/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/int64support/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/int64support/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,41 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -3305,7 +3305,7 @@ diff -urN a/test/int64support/BUILD.bazel b/test/int64support/BUILD.bazel
 +    ],
 +)
 diff -urN a/test/issue260/BUILD.bazel b/test/issue260/BUILD.bazel
---- a/test/issue260/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/issue260/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/issue260/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,41 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -3350,7 +3350,7 @@ diff -urN a/test/issue260/BUILD.bazel b/test/issue260/BUILD.bazel
 +    ],
 +)
 diff -urN a/test/issue261/BUILD.bazel b/test/issue261/BUILD.bazel
---- a/test/issue261/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/issue261/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/issue261/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,26 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -3380,7 +3380,7 @@ diff -urN a/test/issue261/BUILD.bazel b/test/issue261/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/test/issue262/BUILD.bazel b/test/issue262/BUILD.bazel
---- a/test/issue262/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/issue262/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/issue262/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,25 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -3408,8 +3408,29 @@ diff -urN a/test/issue262/BUILD.bazel b/test/issue262/BUILD.bazel
 +    actual = ":issue262",
 +    visibility = ["//visibility:public"],
 +)
+diff -urN a/test/issue270/a/BUILD.bazel b/test/issue270/a/BUILD.bazel
+--- a/test/issue270/a/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
++++ b/test/issue270/a/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
+@@ -0,0 +1,8 @@
++filegroup(
++    name = "go_default_library_protos",
++    srcs = [
++        "a1.proto",
++        "a2.proto",
++    ],
++    visibility = ["//visibility:public"],
++)
+diff -urN a/test/issue270/b/BUILD.bazel b/test/issue270/b/BUILD.bazel
+--- a/test/issue270/b/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
++++ b/test/issue270/b/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
+@@ -0,0 +1,5 @@
++filegroup(
++    name = "go_default_library_protos",
++    srcs = ["b.proto"],
++    visibility = ["//visibility:public"],
++)
 diff -urN a/test/issue270/BUILD.bazel b/test/issue270/BUILD.bazel
---- a/test/issue270/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/issue270/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/issue270/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,20 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -3432,29 +3453,8 @@ diff -urN a/test/issue270/BUILD.bazel b/test/issue270/BUILD.bazel
 +    srcs = ["issue270_test.go"],
 +    embed = [":issue270"],
 +)
-diff -urN a/test/issue270/a/BUILD.bazel b/test/issue270/a/BUILD.bazel
---- a/test/issue270/a/BUILD.bazel	1969-12-31 16:00:00
-+++ b/test/issue270/a/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
-@@ -0,0 +1,8 @@
-+filegroup(
-+    name = "go_default_library_protos",
-+    srcs = [
-+        "a1.proto",
-+        "a2.proto",
-+    ],
-+    visibility = ["//visibility:public"],
-+)
-diff -urN a/test/issue270/b/BUILD.bazel b/test/issue270/b/BUILD.bazel
---- a/test/issue270/b/BUILD.bazel	1969-12-31 16:00:00
-+++ b/test/issue270/b/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
-@@ -0,0 +1,5 @@
-+filegroup(
-+    name = "go_default_library_protos",
-+    srcs = ["b.proto"],
-+    visibility = ["//visibility:public"],
-+)
 diff -urN a/test/issue312/BUILD.bazel b/test/issue312/BUILD.bazel
---- a/test/issue312/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/issue312/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/issue312/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,24 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -3482,7 +3482,7 @@ diff -urN a/test/issue312/BUILD.bazel b/test/issue312/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/test/issue312/events/BUILD.bazel b/test/issue312/events/BUILD.bazel
---- a/test/issue312/events/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/issue312/events/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/issue312/events/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,37 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -3523,7 +3523,7 @@ diff -urN a/test/issue312/events/BUILD.bazel b/test/issue312/events/BUILD.bazel
 +    ],
 +)
 diff -urN a/test/issue322/BUILD.bazel b/test/issue322/BUILD.bazel
---- a/test/issue322/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/issue322/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/issue322/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,35 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -3562,7 +3562,7 @@ diff -urN a/test/issue322/BUILD.bazel b/test/issue322/BUILD.bazel
 +    ],
 +)
 diff -urN a/test/issue330/BUILD.bazel b/test/issue330/BUILD.bazel
---- a/test/issue330/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/issue330/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/issue330/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,38 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -3604,7 +3604,7 @@ diff -urN a/test/issue330/BUILD.bazel b/test/issue330/BUILD.bazel
 +    ],
 +)
 diff -urN a/test/issue34/BUILD.bazel b/test/issue34/BUILD.bazel
---- a/test/issue34/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/issue34/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/issue34/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,31 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -3639,7 +3639,7 @@ diff -urN a/test/issue34/BUILD.bazel b/test/issue34/BUILD.bazel
 +    deps = ["//proto"],
 +)
 diff -urN a/test/issue411/BUILD.bazel b/test/issue411/BUILD.bazel
---- a/test/issue411/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/issue411/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/issue411/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,37 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -3680,7 +3680,7 @@ diff -urN a/test/issue411/BUILD.bazel b/test/issue411/BUILD.bazel
 +    ],
 +)
 diff -urN a/test/issue427/BUILD.bazel b/test/issue427/BUILD.bazel
---- a/test/issue427/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/issue427/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/issue427/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,5 @@
 +filegroup(
@@ -3689,7 +3689,7 @@ diff -urN a/test/issue427/BUILD.bazel b/test/issue427/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/test/issue42order/BUILD.bazel b/test/issue42order/BUILD.bazel
---- a/test/issue42order/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/issue42order/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/issue42order/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,31 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -3724,7 +3724,7 @@ diff -urN a/test/issue42order/BUILD.bazel b/test/issue42order/BUILD.bazel
 +    deps = ["//proto"],
 +)
 diff -urN a/test/issue435/BUILD.bazel b/test/issue435/BUILD.bazel
---- a/test/issue435/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/issue435/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/issue435/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,31 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -3759,7 +3759,7 @@ diff -urN a/test/issue435/BUILD.bazel b/test/issue435/BUILD.bazel
 +    deps = ["//proto"],
 +)
 diff -urN a/test/issue438/BUILD.bazel b/test/issue438/BUILD.bazel
---- a/test/issue438/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/issue438/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/issue438/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,25 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -3788,7 +3788,7 @@ diff -urN a/test/issue438/BUILD.bazel b/test/issue438/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/test/issue444/BUILD.bazel b/test/issue444/BUILD.bazel
---- a/test/issue444/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/issue444/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/issue444/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,30 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -3822,7 +3822,7 @@ diff -urN a/test/issue444/BUILD.bazel b/test/issue444/BUILD.bazel
 +    embed = [":issue444"],
 +)
 diff -urN a/test/issue449/BUILD.bazel b/test/issue449/BUILD.bazel
---- a/test/issue449/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/issue449/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/issue449/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,31 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -3857,7 +3857,7 @@ diff -urN a/test/issue449/BUILD.bazel b/test/issue449/BUILD.bazel
 +    deps = ["//proto"],
 +)
 diff -urN a/test/issue498/BUILD.bazel b/test/issue498/BUILD.bazel
---- a/test/issue498/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/issue498/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/issue498/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,35 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -3896,7 +3896,7 @@ diff -urN a/test/issue498/BUILD.bazel b/test/issue498/BUILD.bazel
 +    ],
 +)
 diff -urN a/test/issue503/BUILD.bazel b/test/issue503/BUILD.bazel
---- a/test/issue503/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/issue503/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/issue503/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,31 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -3931,7 +3931,7 @@ diff -urN a/test/issue503/BUILD.bazel b/test/issue503/BUILD.bazel
 +    deps = ["//proto"],
 +)
 diff -urN a/test/issue530/BUILD.bazel b/test/issue530/BUILD.bazel
---- a/test/issue530/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/issue530/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/issue530/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,39 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -3974,7 +3974,7 @@ diff -urN a/test/issue530/BUILD.bazel b/test/issue530/BUILD.bazel
 +    ],
 +)
 diff -urN a/test/issue617/BUILD.bazel b/test/issue617/BUILD.bazel
---- a/test/issue617/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/issue617/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/issue617/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,24 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -4002,7 +4002,7 @@ diff -urN a/test/issue617/BUILD.bazel b/test/issue617/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/test/issue620/BUILD.bazel b/test/issue620/BUILD.bazel
---- a/test/issue620/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/issue620/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/issue620/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,31 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -4037,7 +4037,7 @@ diff -urN a/test/issue620/BUILD.bazel b/test/issue620/BUILD.bazel
 +    deps = ["//proto"],
 +)
 diff -urN a/test/issue630/BUILD.bazel b/test/issue630/BUILD.bazel
---- a/test/issue630/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/issue630/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/issue630/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,30 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -4071,7 +4071,7 @@ diff -urN a/test/issue630/BUILD.bazel b/test/issue630/BUILD.bazel
 +    embed = [":issue630"],
 +)
 diff -urN a/test/issue8/BUILD.bazel b/test/issue8/BUILD.bazel
---- a/test/issue8/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/issue8/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/issue8/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,35 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -4110,7 +4110,7 @@ diff -urN a/test/issue8/BUILD.bazel b/test/issue8/BUILD.bazel
 +    ],
 +)
 diff -urN a/test/jsonpb-gogo/BUILD.bazel b/test/jsonpb-gogo/BUILD.bazel
---- a/test/jsonpb-gogo/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/jsonpb-gogo/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/jsonpb-gogo/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,21 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -4135,7 +4135,7 @@ diff -urN a/test/jsonpb-gogo/BUILD.bazel b/test/jsonpb-gogo/BUILD.bazel
 +    deps = ["//jsonpb"],
 +)
 diff -urN a/test/mapdefaults/BUILD.bazel b/test/mapdefaults/BUILD.bazel
---- a/test/mapdefaults/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/mapdefaults/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/mapdefaults/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,21 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -4160,7 +4160,7 @@ diff -urN a/test/mapdefaults/BUILD.bazel b/test/mapdefaults/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/test/mapdefaults/combos/both/BUILD.bazel b/test/mapdefaults/combos/both/BUILD.bazel
---- a/test/mapdefaults/combos/both/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/mapdefaults/combos/both/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/mapdefaults/combos/both/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,41 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -4205,7 +4205,7 @@ diff -urN a/test/mapdefaults/combos/both/BUILD.bazel b/test/mapdefaults/combos/b
 +    ],
 +)
 diff -urN a/test/mapdefaults/combos/marshaler/BUILD.bazel b/test/mapdefaults/combos/marshaler/BUILD.bazel
---- a/test/mapdefaults/combos/marshaler/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/mapdefaults/combos/marshaler/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/mapdefaults/combos/marshaler/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,40 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -4249,7 +4249,7 @@ diff -urN a/test/mapdefaults/combos/marshaler/BUILD.bazel b/test/mapdefaults/com
 +    ],
 +)
 diff -urN a/test/mapdefaults/combos/neither/BUILD.bazel b/test/mapdefaults/combos/neither/BUILD.bazel
---- a/test/mapdefaults/combos/neither/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/mapdefaults/combos/neither/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/mapdefaults/combos/neither/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,40 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -4293,7 +4293,7 @@ diff -urN a/test/mapdefaults/combos/neither/BUILD.bazel b/test/mapdefaults/combo
 +    ],
 +)
 diff -urN a/test/mapdefaults/combos/unmarshaler/BUILD.bazel b/test/mapdefaults/combos/unmarshaler/BUILD.bazel
---- a/test/mapdefaults/combos/unmarshaler/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/mapdefaults/combos/unmarshaler/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/mapdefaults/combos/unmarshaler/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,41 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -4338,7 +4338,7 @@ diff -urN a/test/mapdefaults/combos/unmarshaler/BUILD.bazel b/test/mapdefaults/c
 +    ],
 +)
 diff -urN a/test/mapsproto2/BUILD.bazel b/test/mapsproto2/BUILD.bazel
---- a/test/mapsproto2/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/mapsproto2/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/mapsproto2/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,23 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -4365,7 +4365,7 @@ diff -urN a/test/mapsproto2/BUILD.bazel b/test/mapsproto2/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/test/mapsproto2/combos/both/BUILD.bazel b/test/mapsproto2/combos/both/BUILD.bazel
---- a/test/mapsproto2/combos/both/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/mapsproto2/combos/both/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/mapsproto2/combos/both/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,42 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -4411,7 +4411,7 @@ diff -urN a/test/mapsproto2/combos/both/BUILD.bazel b/test/mapsproto2/combos/bot
 +    ],
 +)
 diff -urN a/test/mapsproto2/combos/marshaler/BUILD.bazel b/test/mapsproto2/combos/marshaler/BUILD.bazel
---- a/test/mapsproto2/combos/marshaler/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/mapsproto2/combos/marshaler/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/mapsproto2/combos/marshaler/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,42 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -4457,7 +4457,7 @@ diff -urN a/test/mapsproto2/combos/marshaler/BUILD.bazel b/test/mapsproto2/combo
 +    ],
 +)
 diff -urN a/test/mapsproto2/combos/neither/BUILD.bazel b/test/mapsproto2/combos/neither/BUILD.bazel
---- a/test/mapsproto2/combos/neither/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/mapsproto2/combos/neither/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/mapsproto2/combos/neither/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,42 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -4503,7 +4503,7 @@ diff -urN a/test/mapsproto2/combos/neither/BUILD.bazel b/test/mapsproto2/combos/
 +    ],
 +)
 diff -urN a/test/mapsproto2/combos/unmarshaler/BUILD.bazel b/test/mapsproto2/combos/unmarshaler/BUILD.bazel
---- a/test/mapsproto2/combos/unmarshaler/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/mapsproto2/combos/unmarshaler/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/mapsproto2/combos/unmarshaler/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,42 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -4549,7 +4549,7 @@ diff -urN a/test/mapsproto2/combos/unmarshaler/BUILD.bazel b/test/mapsproto2/com
 +    ],
 +)
 diff -urN a/test/merge/BUILD.bazel b/test/merge/BUILD.bazel
---- a/test/merge/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/merge/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/merge/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,31 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -4584,7 +4584,7 @@ diff -urN a/test/merge/BUILD.bazel b/test/merge/BUILD.bazel
 +    deps = ["//proto"],
 +)
 diff -urN a/test/mixbench/BUILD.bazel b/test/mixbench/BUILD.bazel
---- a/test/mixbench/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/mixbench/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/mixbench/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,14 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
@@ -4602,7 +4602,7 @@ diff -urN a/test/mixbench/BUILD.bazel b/test/mixbench/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/test/moredefaults/BUILD.bazel b/test/moredefaults/BUILD.bazel
---- a/test/moredefaults/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/moredefaults/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/moredefaults/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,40 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -4646,7 +4646,7 @@ diff -urN a/test/moredefaults/BUILD.bazel b/test/moredefaults/BUILD.bazel
 +    ],
 +)
 diff -urN a/test/nopackage/BUILD.bazel b/test/nopackage/BUILD.bazel
---- a/test/nopackage/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/nopackage/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/nopackage/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,27 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -4677,7 +4677,7 @@ diff -urN a/test/nopackage/BUILD.bazel b/test/nopackage/BUILD.bazel
 +    embed = [":nopackage"],
 +)
 diff -urN a/test/oneof/BUILD.bazel b/test/oneof/BUILD.bazel
---- a/test/oneof/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/oneof/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/oneof/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,20 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -4701,7 +4701,7 @@ diff -urN a/test/oneof/BUILD.bazel b/test/oneof/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/test/oneof/combos/both/BUILD.bazel b/test/oneof/combos/both/BUILD.bazel
---- a/test/oneof/combos/both/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/oneof/combos/both/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/oneof/combos/both/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,38 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -4743,7 +4743,7 @@ diff -urN a/test/oneof/combos/both/BUILD.bazel b/test/oneof/combos/both/BUILD.ba
 +    ],
 +)
 diff -urN a/test/oneof/combos/marshaler/BUILD.bazel b/test/oneof/combos/marshaler/BUILD.bazel
---- a/test/oneof/combos/marshaler/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/oneof/combos/marshaler/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/oneof/combos/marshaler/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,38 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -4785,7 +4785,7 @@ diff -urN a/test/oneof/combos/marshaler/BUILD.bazel b/test/oneof/combos/marshale
 +    ],
 +)
 diff -urN a/test/oneof/combos/neither/BUILD.bazel b/test/oneof/combos/neither/BUILD.bazel
---- a/test/oneof/combos/neither/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/oneof/combos/neither/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/oneof/combos/neither/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,38 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -4827,7 +4827,7 @@ diff -urN a/test/oneof/combos/neither/BUILD.bazel b/test/oneof/combos/neither/BU
 +    ],
 +)
 diff -urN a/test/oneof/combos/unmarshaler/BUILD.bazel b/test/oneof/combos/unmarshaler/BUILD.bazel
---- a/test/oneof/combos/unmarshaler/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/oneof/combos/unmarshaler/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/oneof/combos/unmarshaler/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,38 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -4869,7 +4869,7 @@ diff -urN a/test/oneof/combos/unmarshaler/BUILD.bazel b/test/oneof/combos/unmars
 +    ],
 +)
 diff -urN a/test/oneof3/BUILD.bazel b/test/oneof3/BUILD.bazel
---- a/test/oneof3/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/oneof3/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/oneof3/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,20 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -4893,7 +4893,7 @@ diff -urN a/test/oneof3/BUILD.bazel b/test/oneof3/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/test/oneof3/combos/both/BUILD.bazel b/test/oneof3/combos/both/BUILD.bazel
---- a/test/oneof3/combos/both/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/oneof3/combos/both/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/oneof3/combos/both/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,36 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -4933,7 +4933,7 @@ diff -urN a/test/oneof3/combos/both/BUILD.bazel b/test/oneof3/combos/both/BUILD.
 +    ],
 +)
 diff -urN a/test/oneof3/combos/marshaler/BUILD.bazel b/test/oneof3/combos/marshaler/BUILD.bazel
---- a/test/oneof3/combos/marshaler/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/oneof3/combos/marshaler/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/oneof3/combos/marshaler/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,36 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -4973,7 +4973,7 @@ diff -urN a/test/oneof3/combos/marshaler/BUILD.bazel b/test/oneof3/combos/marsha
 +    ],
 +)
 diff -urN a/test/oneof3/combos/neither/BUILD.bazel b/test/oneof3/combos/neither/BUILD.bazel
---- a/test/oneof3/combos/neither/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/oneof3/combos/neither/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/oneof3/combos/neither/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,36 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -5013,7 +5013,7 @@ diff -urN a/test/oneof3/combos/neither/BUILD.bazel b/test/oneof3/combos/neither/
 +    ],
 +)
 diff -urN a/test/oneof3/combos/unmarshaler/BUILD.bazel b/test/oneof3/combos/unmarshaler/BUILD.bazel
---- a/test/oneof3/combos/unmarshaler/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/oneof3/combos/unmarshaler/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/oneof3/combos/unmarshaler/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,36 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -5053,7 +5053,7 @@ diff -urN a/test/oneof3/combos/unmarshaler/BUILD.bazel b/test/oneof3/combos/unma
 +    ],
 +)
 diff -urN a/test/oneofembed/BUILD.bazel b/test/oneofembed/BUILD.bazel
---- a/test/oneofembed/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/oneofembed/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/oneofembed/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,35 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -5092,7 +5092,7 @@ diff -urN a/test/oneofembed/BUILD.bazel b/test/oneofembed/BUILD.bazel
 +    ],
 +)
 diff -urN a/test/packed/BUILD.bazel b/test/packed/BUILD.bazel
---- a/test/packed/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/packed/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/packed/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,34 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -5130,7 +5130,7 @@ diff -urN a/test/packed/BUILD.bazel b/test/packed/BUILD.bazel
 +    deps = ["//proto"],
 +)
 diff -urN a/test/proto3extension/BUILD.bazel b/test/proto3extension/BUILD.bazel
---- a/test/proto3extension/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/proto3extension/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/proto3extension/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,24 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -5158,7 +5158,7 @@ diff -urN a/test/proto3extension/BUILD.bazel b/test/proto3extension/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/test/protobuffer/BUILD.bazel b/test/protobuffer/BUILD.bazel
---- a/test/protobuffer/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/protobuffer/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/protobuffer/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,31 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -5193,7 +5193,7 @@ diff -urN a/test/protobuffer/BUILD.bazel b/test/protobuffer/BUILD.bazel
 +    deps = ["//proto"],
 +)
 diff -urN a/test/protosize/BUILD.bazel b/test/protosize/BUILD.bazel
---- a/test/protosize/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/protosize/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/protosize/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,38 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -5235,7 +5235,7 @@ diff -urN a/test/protosize/BUILD.bazel b/test/protosize/BUILD.bazel
 +    ],
 +)
 diff -urN a/test/registration/BUILD.bazel b/test/registration/BUILD.bazel
---- a/test/registration/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/registration/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/registration/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,5 @@
 +filegroup(
@@ -5244,7 +5244,7 @@ diff -urN a/test/registration/BUILD.bazel b/test/registration/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/test/required/BUILD.bazel b/test/required/BUILD.bazel
---- a/test/required/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/required/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/required/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,34 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -5282,7 +5282,7 @@ diff -urN a/test/required/BUILD.bazel b/test/required/BUILD.bazel
 +    ],
 +)
 diff -urN a/test/setextensionbytes/BUILD.bazel b/test/setextensionbytes/BUILD.bazel
---- a/test/setextensionbytes/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/setextensionbytes/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/setextensionbytes/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,31 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -5317,7 +5317,7 @@ diff -urN a/test/setextensionbytes/BUILD.bazel b/test/setextensionbytes/BUILD.ba
 +    deps = ["//proto"],
 +)
 diff -urN a/test/sizerconflict/BUILD.bazel b/test/sizerconflict/BUILD.bazel
---- a/test/sizerconflict/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/sizerconflict/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/sizerconflict/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,26 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -5347,7 +5347,7 @@ diff -urN a/test/sizerconflict/BUILD.bazel b/test/sizerconflict/BUILD.bazel
 +    embed = [":sizerconflict"],
 +)
 diff -urN a/test/sizeunderscore/BUILD.bazel b/test/sizeunderscore/BUILD.bazel
---- a/test/sizeunderscore/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/sizeunderscore/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/sizeunderscore/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,35 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -5386,7 +5386,7 @@ diff -urN a/test/sizeunderscore/BUILD.bazel b/test/sizeunderscore/BUILD.bazel
 +    ],
 +)
 diff -urN a/test/stdtypes/BUILD.bazel b/test/stdtypes/BUILD.bazel
---- a/test/stdtypes/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/stdtypes/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/stdtypes/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,41 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -5431,7 +5431,7 @@ diff -urN a/test/stdtypes/BUILD.bazel b/test/stdtypes/BUILD.bazel
 +    ],
 +)
 diff -urN a/test/tags/BUILD.bazel b/test/tags/BUILD.bazel
---- a/test/tags/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/tags/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/tags/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,33 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -5468,7 +5468,7 @@ diff -urN a/test/tags/BUILD.bazel b/test/tags/BUILD.bazel
 +    embed = [":tags"],
 +)
 diff -urN a/test/theproto3/BUILD.bazel b/test/theproto3/BUILD.bazel
---- a/test/theproto3/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/theproto3/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/theproto3/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,25 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -5497,7 +5497,7 @@ diff -urN a/test/theproto3/BUILD.bazel b/test/theproto3/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/test/theproto3/combos/both/BUILD.bazel b/test/theproto3/combos/both/BUILD.bazel
---- a/test/theproto3/combos/both/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/theproto3/combos/both/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/theproto3/combos/both/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,43 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -5544,7 +5544,7 @@ diff -urN a/test/theproto3/combos/both/BUILD.bazel b/test/theproto3/combos/both/
 +    ],
 +)
 diff -urN a/test/theproto3/combos/marshaler/BUILD.bazel b/test/theproto3/combos/marshaler/BUILD.bazel
---- a/test/theproto3/combos/marshaler/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/theproto3/combos/marshaler/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/theproto3/combos/marshaler/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,43 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -5591,7 +5591,7 @@ diff -urN a/test/theproto3/combos/marshaler/BUILD.bazel b/test/theproto3/combos/
 +    ],
 +)
 diff -urN a/test/theproto3/combos/neither/BUILD.bazel b/test/theproto3/combos/neither/BUILD.bazel
---- a/test/theproto3/combos/neither/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/theproto3/combos/neither/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/theproto3/combos/neither/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,43 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -5638,7 +5638,7 @@ diff -urN a/test/theproto3/combos/neither/BUILD.bazel b/test/theproto3/combos/ne
 +    ],
 +)
 diff -urN a/test/theproto3/combos/unmarshaler/BUILD.bazel b/test/theproto3/combos/unmarshaler/BUILD.bazel
---- a/test/theproto3/combos/unmarshaler/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/theproto3/combos/unmarshaler/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/theproto3/combos/unmarshaler/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,43 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -5685,7 +5685,7 @@ diff -urN a/test/theproto3/combos/unmarshaler/BUILD.bazel b/test/theproto3/combo
 +    ],
 +)
 diff -urN a/test/typedecl/BUILD.bazel b/test/typedecl/BUILD.bazel
---- a/test/typedecl/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/typedecl/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/typedecl/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,39 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -5728,7 +5728,7 @@ diff -urN a/test/typedecl/BUILD.bazel b/test/typedecl/BUILD.bazel
 +    ],
 +)
 diff -urN a/test/typedecl_all/BUILD.bazel b/test/typedecl_all/BUILD.bazel
---- a/test/typedecl_all/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/typedecl_all/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/typedecl_all/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,39 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -5771,7 +5771,7 @@ diff -urN a/test/typedecl_all/BUILD.bazel b/test/typedecl_all/BUILD.bazel
 +    ],
 +)
 diff -urN a/test/typedeclimport/BUILD.bazel b/test/typedeclimport/BUILD.bazel
---- a/test/typedeclimport/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/typedeclimport/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/typedeclimport/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,34 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -5809,7 +5809,7 @@ diff -urN a/test/typedeclimport/BUILD.bazel b/test/typedeclimport/BUILD.bazel
 +    embed = [":typedeclimport"],
 +)
 diff -urN a/test/typedeclimport/subpkg/BUILD.bazel b/test/typedeclimport/subpkg/BUILD.bazel
---- a/test/typedeclimport/subpkg/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/typedeclimport/subpkg/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/typedeclimport/subpkg/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,24 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -5837,7 +5837,7 @@ diff -urN a/test/typedeclimport/subpkg/BUILD.bazel b/test/typedeclimport/subpkg/
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/test/types/BUILD.bazel b/test/types/BUILD.bazel
---- a/test/types/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/types/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/types/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,5 @@
 +filegroup(
@@ -5846,7 +5846,7 @@ diff -urN a/test/types/BUILD.bazel b/test/types/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/test/types/combos/both/BUILD.bazel b/test/types/combos/both/BUILD.bazel
---- a/test/types/combos/both/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/types/combos/both/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/types/combos/both/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,40 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -5890,7 +5890,7 @@ diff -urN a/test/types/combos/both/BUILD.bazel b/test/types/combos/both/BUILD.ba
 +    ],
 +)
 diff -urN a/test/types/combos/marshaler/BUILD.bazel b/test/types/combos/marshaler/BUILD.bazel
---- a/test/types/combos/marshaler/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/types/combos/marshaler/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/types/combos/marshaler/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,40 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -5934,7 +5934,7 @@ diff -urN a/test/types/combos/marshaler/BUILD.bazel b/test/types/combos/marshale
 +    ],
 +)
 diff -urN a/test/types/combos/neither/BUILD.bazel b/test/types/combos/neither/BUILD.bazel
---- a/test/types/combos/neither/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/types/combos/neither/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/types/combos/neither/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,40 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -5978,7 +5978,7 @@ diff -urN a/test/types/combos/neither/BUILD.bazel b/test/types/combos/neither/BU
 +    ],
 +)
 diff -urN a/test/types/combos/unmarshaler/BUILD.bazel b/test/types/combos/unmarshaler/BUILD.bazel
---- a/test/types/combos/unmarshaler/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/types/combos/unmarshaler/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/types/combos/unmarshaler/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,40 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -6022,7 +6022,7 @@ diff -urN a/test/types/combos/unmarshaler/BUILD.bazel b/test/types/combos/unmars
 +    ],
 +)
 diff -urN a/test/unmarshalmerge/BUILD.bazel b/test/unmarshalmerge/BUILD.bazel
---- a/test/unmarshalmerge/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/unmarshalmerge/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/unmarshalmerge/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,38 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -6064,7 +6064,7 @@ diff -urN a/test/unmarshalmerge/BUILD.bazel b/test/unmarshalmerge/BUILD.bazel
 +    ],
 +)
 diff -urN a/test/unrecognized/BUILD.bazel b/test/unrecognized/BUILD.bazel
---- a/test/unrecognized/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/unrecognized/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/unrecognized/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,39 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -6107,7 +6107,7 @@ diff -urN a/test/unrecognized/BUILD.bazel b/test/unrecognized/BUILD.bazel
 +    ],
 +)
 diff -urN a/test/unrecognizedgroup/BUILD.bazel b/test/unrecognizedgroup/BUILD.bazel
---- a/test/unrecognizedgroup/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/unrecognizedgroup/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/unrecognizedgroup/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,39 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -6150,7 +6150,7 @@ diff -urN a/test/unrecognizedgroup/BUILD.bazel b/test/unrecognizedgroup/BUILD.ba
 +    ],
 +)
 diff -urN a/test/xxxfields/BUILD.bazel b/test/xxxfields/BUILD.bazel
---- a/test/xxxfields/BUILD.bazel	1969-12-31 16:00:00
+--- a/test/xxxfields/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/test/xxxfields/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,35 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -6189,7 +6189,7 @@ diff -urN a/test/xxxfields/BUILD.bazel b/test/xxxfields/BUILD.bazel
 +    ],
 +)
 diff -urN a/types/BUILD.bazel b/types/BUILD.bazel
---- a/types/BUILD.bazel	1969-12-31 16:00:00
+--- a/types/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/types/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,51 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -6244,7 +6244,7 @@ diff -urN a/types/BUILD.bazel b/types/BUILD.bazel
 +    ],
 +)
 diff -urN a/vanity/BUILD.bazel b/vanity/BUILD.bazel
---- a/vanity/BUILD.bazel	1969-12-31 16:00:00
+--- a/vanity/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/vanity/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,25 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -6273,7 +6273,7 @@ diff -urN a/vanity/BUILD.bazel b/vanity/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/vanity/command/BUILD.bazel b/vanity/command/BUILD.bazel
---- a/vanity/command/BUILD.bazel	1969-12-31 16:00:00
+--- a/vanity/command/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/vanity/command/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,36 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -6313,7 +6313,7 @@ diff -urN a/vanity/command/BUILD.bazel b/vanity/command/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/vanity/test/BUILD.bazel b/vanity/test/BUILD.bazel
---- a/vanity/test/BUILD.bazel	1969-12-31 16:00:00
+--- a/vanity/test/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/vanity/test/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,35 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -6352,7 +6352,7 @@ diff -urN a/vanity/test/BUILD.bazel b/vanity/test/BUILD.bazel
 +    ],
 +)
 diff -urN a/vanity/test/fast/BUILD.bazel b/vanity/test/fast/BUILD.bazel
---- a/vanity/test/fast/BUILD.bazel	1969-12-31 16:00:00
+--- a/vanity/test/fast/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/vanity/test/fast/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,22 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -6378,7 +6378,7 @@ diff -urN a/vanity/test/fast/BUILD.bazel b/vanity/test/fast/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/vanity/test/faster/BUILD.bazel b/vanity/test/faster/BUILD.bazel
---- a/vanity/test/faster/BUILD.bazel	1969-12-31 16:00:00
+--- a/vanity/test/faster/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/vanity/test/faster/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,22 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -6404,7 +6404,7 @@ diff -urN a/vanity/test/faster/BUILD.bazel b/vanity/test/faster/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/vanity/test/slick/BUILD.bazel b/vanity/test/slick/BUILD.bazel
---- a/vanity/test/slick/BUILD.bazel	1969-12-31 16:00:00
+--- a/vanity/test/slick/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/vanity/test/slick/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,22 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -6430,7 +6430,7 @@ diff -urN a/vanity/test/slick/BUILD.bazel b/vanity/test/slick/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/version/BUILD.bazel b/version/BUILD.bazel
---- a/version/BUILD.bazel	1969-12-31 16:00:00
+--- a/version/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/version/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,14 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")

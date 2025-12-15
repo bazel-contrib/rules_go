@@ -24,7 +24,7 @@ func openMachO(dir, bin string) (*macho.File, error) {
 }
 
 func TestPIE(t *testing.T) {
-	m, err := openMachO("tests/core/go_binary", "hello_pie_bin")
+	m, err := openMachO("tests/core/go_binary", "hello_auto_bin")
 	if err != nil {
 		t.Fatal(err)
 	}

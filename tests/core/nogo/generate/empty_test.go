@@ -63,8 +63,6 @@ package noempty
 
 import (
 	"fmt"
-	"path/filepath"
-	"strings"
 
 	"golang.org/x/tools/go/analysis"
 )
@@ -77,12 +75,11 @@ var Analyzer = &analysis.Analyzer{
 
 func run(pass *analysis.Pass) (interface{}, error) {
 	for _, f := range pass.Files {
-		pos := pass.Fset.PositionFor(f.Pos(), false)
-
-		if strings.HasSuffix(pos.Filename, filepath.Join(".", "_empty.go")) {
+		// Fail on any package that isn't the "simple_test"'s package ('simple') or 'main'.
+		if f.Name.Name != "simple" && f.Name.Name != "main" {
 			pass.Report(analysis.Diagnostic{
 				Pos:     0,
-				Message: fmt.Sprintf("Detected generated source code from rules_go: %s", pos.Filename),
+				Message: fmt.Sprintf("Detected generated source code from rules_go: package %s", f.Name.Name),
 			})
 		}
 	}

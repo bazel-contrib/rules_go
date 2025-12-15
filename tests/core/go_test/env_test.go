@@ -15,25 +15,23 @@
 package env_test
 
 import (
+    "github.com/bazelbuild/rules_go/go/runfiles"
     "os"
     "testing"
-
-    "github.com/bazelbuild/rules_go/go/tools/bazel"
 )
 
 func TestEnv(t *testing.T) {
-    v := os.Getenv("ZONEINFO")
-    if v == "" {
-        t.Fatalf("ZONEINFO env var was empty")
-    }
+	v := os.Getenv("ZONEINFO")
+	if v == "" {
+		t.Fatalf("ZONEINFO env var was empty")
+	}
 
-    path, err := bazel.Runfile(v)
-    if err != nil {
-        t.Fatalf("Could not find runfile %v: %v", v, err)
-    }
+	path, err := runfiles.Rlocation(v)
+	if err != nil {
+		t.Fatalf("Could not find runfile %v: %v", v, err)
+	}
 
-    if _, err := os.Stat(path); err != nil {
-        t.Fatalf("Could not find file at env var $ZONEINFO (value: %v) at path %v: %v", v, path, err)
-    }
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("Could not find file at env var $ZONEINFO (value: %v) at path %v: %v", v, path, err)
+	}
 }
-

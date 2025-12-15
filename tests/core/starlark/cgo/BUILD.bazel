@@ -1,0 +1,25 @@
+load("@io_bazel_rules_go//go/private:common.bzl", "GO_TOOLCHAIN")
+load(":cgo_test.bzl", "cgo_test_suite")
+
+constraint_value(
+    name = "os_does_not_exist",
+    constraint_setting = "@platforms//os:os",
+)
+
+# Make a platform we know won't have a C++ toolchain registered for it.
+platform(
+    name = "platform_has_no_cc_toolchain",
+    constraint_values = [":os_does_not_exist"],
+)
+
+# Make a fake Go toolchain for this platform
+toolchain(
+    name = "fake_go_toolchain",
+    target_compatible_with = [
+        ":os_does_not_exist",
+    ],
+    toolchain = "@go_sdk//:go_linux_amd64-impl",
+    toolchain_type = GO_TOOLCHAIN,
+)
+
+cgo_test_suite()

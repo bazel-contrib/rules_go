@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package tests.core.go_proto_library_importpath.bar;
+
+import "tests/core/go_proto_library_importpath/foo.proto";
+
+message Bar {
+  foo.Foo value = 1;
+}

@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+package tests.core.go_proto_library_importpath.foo;
+
+message Foo {
+  int64 value = 1;
+}

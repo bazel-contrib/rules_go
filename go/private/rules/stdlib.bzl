@@ -13,12 +13,15 @@
 # limitations under the License.
 
 load(
-    "//go/private:context.bzl",
-    "go_context",
+    "//go/private:common.bzl",
+    "GO_TOOLCHAIN",
 )
 load(
-    "//go/private:go_toolchain.bzl",
-    "GO_TOOLCHAIN",
+    "//go/private:context.bzl",
+    "CGO_ATTRS",
+    "CGO_FRAGMENTS",
+    "CGO_TOOLCHAINS",
+    "go_context",
 )
 load(
     "//go/private:providers.bzl",
@@ -30,9 +33,8 @@ load(
 )
 
 def _stdlib_impl(ctx):
-    go = go_context(ctx)
-    source, library = go.toolchain.actions.stdlib(go)
-    return [source, library, source.stdlib]
+    go = go_context(ctx, include_deprecated_properties = False)
+    return go.toolchain.actions.stdlib(go)
 
 stdlib = rule(
     implementation = _stdlib_impl,
@@ -46,8 +48,9 @@ stdlib = rule(
         "_allowlist_function_transition": attr.label(
             default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
         ),
-    },
+    } | CGO_ATTRS,
     doc = """stdlib builds the standard library for the target configuration
 or uses the precompiled standard library from the SDK if it is suitable.""",
-    toolchains = [GO_TOOLCHAIN],
+    fragments = CGO_FRAGMENTS,
+    toolchains = [GO_TOOLCHAIN] + CGO_TOOLCHAINS,
 )

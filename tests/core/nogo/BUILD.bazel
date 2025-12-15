@@ -1,5 +1,0 @@
-filegroup(
-    name = "rules_go_deps",
-    srcs = [":common.bzl"],
-    visibility = ["//visibility:public"],
-)

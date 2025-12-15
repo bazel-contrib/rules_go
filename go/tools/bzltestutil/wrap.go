@@ -23,10 +23,12 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 
 	"github.com/bazelbuild/rules_go/go/tools/bzltestutil/chdir"
 )
@@ -67,9 +69,9 @@ func shouldAddTestV() bool {
 // ensure that one line at a time is written to the inner writer.
 type streamMerger struct {
 	OutW, ErrW *io.PipeWriter
-	mutex sync.Mutex
-	inner io.Writer
-	wg sync.WaitGroup
+	mutex      sync.Mutex
+	inner      io.Writer
+	wg         sync.WaitGroup
 	outR, errR *bufio.Reader
 }
 
@@ -78,10 +80,10 @@ func NewStreamMerger(w io.Writer) *streamMerger {
 	errR, errW := io.Pipe()
 	return &streamMerger{
 		inner: w,
-		OutW: outW,
-		ErrW: errW,
-		outR: bufio.NewReader(outR),
-		errR: bufio.NewReader(errR),
+		OutW:  outW,
+		ErrW:  errW,
+		outR:  bufio.NewReader(outR),
+		errR:  bufio.NewReader(errR),
 	}
 }
 
@@ -116,12 +118,23 @@ func Wrap(pkg string) error {
 
 	args := os.Args[1:]
 	if shouldAddTestV() {
-		args = append([]string{"-test.v"}, args...)
+		// The -test.v=test2json flag is like -test.v=true but causes the test to add
+		// extra ^V characters before testing output lines and other framing,
+		// which helps test2json do a better job creating the JSON events.
+		args = append([]string{"-test.v=test2json"}, args...)
 	}
 	exePath := os.Args[0]
 	if !filepath.IsAbs(exePath) && strings.ContainsRune(exePath, filepath.Separator) && chdir.TestExecDir != "" {
 		exePath = filepath.Join(chdir.TestExecDir, exePath)
 	}
+
+	// If Bazel sends a SIGTERM because the test timed out, it sends it to all child processes. However,
+	// we want the wrapper to be around to capute and forward the test output when this happens. Thus,
+	// we need to ignore the signal. This wrapper will natually ends after the Go test ends, either by
+	// SIGTERM or the time set by -test.timeout expires. If that doesn't happen, the test and this warpper
+	// will be killed by Bazel after the grace period (15s) expires.
+	signal.Ignore(syscall.SIGTERM)
+
 	cmd := exec.Command(exePath, args...)
 	cmd.Env = append(os.Environ(), "GO_TEST_WRAP=0")
 	cmd.Stderr = io.MultiWriter(os.Stderr, streamMerger.ErrW)
@@ -131,6 +144,12 @@ func Wrap(pkg string) error {
 	streamMerger.ErrW.Close()
 	streamMerger.OutW.Close()
 	streamMerger.Wait()
+	if err != nil {
+		// force jsonConverter to flush the buffer, so we get the "fail" event when a test case panics.
+		jsonConverter.Write([]byte{marker})
+		jsonConverter.Write(bigFail)
+		jsonConverter.Write([]byte("\n"))
+	}
 	jsonConverter.Close()
 	if out, ok := os.LookupEnv("XML_OUTPUT_FILE"); ok {
 		werr := writeReport(jsonBuffer, pkg, out)

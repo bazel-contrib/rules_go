@@ -51,8 +51,20 @@ func TestParseNolint(t *testing.T) {
 			Linters: []string{"foo"},
 		},
 		{
+			Name:    "Single linter with an explanation",
+			Comment: "//nolint:foo // the foo lint is invalid for this line",
+			Valid:   true,
+			Linters: []string{"foo"},
+		},
+		{
 			Name:    "Multiple linters",
 			Comment: "// nolint:a,b,c",
+			Valid:   true,
+			Linters: []string{"a", "b", "c"},
+		},
+		{
+			Name:    "Multiple linters with explanation",
+			Comment: "// nolint:a,b,c // some reason",
 			Valid:   true,
 			Linters: []string{"a", "b", "c"},
 		},

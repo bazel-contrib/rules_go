@@ -21,9 +21,7 @@ which disables cgo; cgo files will not be compiled, and C/C++ dependencies will
 not be compiled or linked.
 
 Cross-compiling cgo code is possible, but not fully supported. You will need to
-[write a CROSSTOOL file] that describes your C/C++ toolchain. You'll need to
-ensure it works by building `cc_binary` and `cc_library` targets with the
-`--cpu` command line flag set. Then, to build a mixed Go / C / C++ project,
-add `pure = "off"` to your `go_binary` target and run Bazel with `--cpu`
-and `--platforms`.
-
+[define and register a C/C++ toolchain and platforms](https://bazel.build/extending/toolchains#toolchain-definitions). You'll need to ensure it
+works by building `cc_binary` and `cc_library` targets with the `--platforms`
+command line flag set. Then, to build a mixed Go / C / C++ project, add
+`pure = "off"` to your `go_binary` target and run Bazel with `--platforms`.

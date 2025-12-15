@@ -23,46 +23,33 @@ may change without notice.
 """
 
 load(
+    "//extras:gomock.bzl",
+    _gomock = "gomock",
+)
+load(
     "//go/private:context.bzl",
     _go_context = "go_context",
-)
-load(
-    "//go/private:providers.bzl",
-    _GoArchive = "GoArchive",
-    _GoArchiveData = "GoArchiveData",
-    _GoLibrary = "GoLibrary",
-    _GoPath = "GoPath",
-    _GoSDK = "GoSDK",
-    _GoSource = "GoSource",
-)
-load(
-    "//go/private/rules:sdk.bzl",
-    _go_sdk = "go_sdk",
+    _new_go_info = "new_go_info",
 )
 load(
     "//go/private:go_toolchain.bzl",
     _go_toolchain = "go_toolchain",
 )
 load(
-    "//go/private/rules:wrappers.bzl",
-    _go_binary_macro = "go_binary_macro",
-    _go_library_macro = "go_library_macro",
-    _go_test_macro = "go_test_macro",
+    "//go/private:providers.bzl",
+    _GoArchive = "GoArchive",
+    _GoArchiveData = "GoArchiveData",
+    _GoInfo = "GoInfo",
+    _GoPath = "GoPath",
+    _GoSDK = "GoSDK",
 )
 load(
-    "//go/private/rules:source.bzl",
-    _go_source = "go_source",
-)
-load(
-    "//extras:gomock.bzl",
-    _gomock = "gomock",
-)
-load(
-    "//go/private/tools:path.bzl",
-    _go_path = "go_path",
+    "//go/private/rules:cross.bzl",
+    _go_cross_binary = "go_cross_binary",
 )
 load(
     "//go/private/rules:library.bzl",
+    _go_library = "go_library",
     _go_tool_library = "go_tool_library",
 )
 load(
@@ -70,15 +57,32 @@ load(
     _nogo = "nogo_wrapper",
 )
 load(
-    "//go/private/rules:cross.bzl",
-    _go_cross_binary = "go_cross_binary",
+    "//go/private/rules:sdk.bzl",
+    _go_sdk = "go_sdk",
+)
+load(
+    "//go/private/rules:source.bzl",
+    _go_source = "go_source",
+)
+load(
+    "//go/private/rules:test.bzl",
+    _go_test = "go_test",
+)
+load(
+    "//go/private/rules:transition.bzl",
+    _go_reset_target = "go_reset_target",
+)
+load(
+    "//go/private/rules:wrappers.bzl",
+    _go_binary_macro = "go_binary_macro",
+)
+load(
+    "//go/private/tools:path.bzl",
+    _go_path = "go_path",
 )
 
-# TOOLS_NOGO is a list of all analysis passes in
-# golang.org/x/tools/go/analysis/passes.
-# This is not backward compatible, so use caution when depending on this --
-# new analyses may discover issues in existing builds.
-TOOLS_NOGO = [
+_TOOLS_NOGO = [
+    "@org_golang_x_tools//go/analysis/passes/appends:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/asmdecl:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/assign:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/atomic:go_default_library",
@@ -91,9 +95,12 @@ TOOLS_NOGO = [
     "@org_golang_x_tools//go/analysis/passes/composite:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/copylock:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/ctrlflow:go_default_library",
+    "@org_golang_x_tools//go/analysis/passes/defers:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/deepequalerrors:go_default_library",
+    "@org_golang_x_tools//go/analysis/passes/directive:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/errorsas:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/findcall:go_default_library",
+    "@org_golang_x_tools//go/analysis/passes/framepointer:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/httpresponse:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/ifaceassert:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/inspect:go_default_library",
@@ -101,25 +108,37 @@ TOOLS_NOGO = [
     "@org_golang_x_tools//go/analysis/passes/lostcancel:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/nilfunc:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/nilness:go_default_library",
-    "@org_golang_x_tools//go/analysis/passes/pkgfact:go_default_library",
+    # demo only
+    # "@org_golang_x_tools//go/analysis/passes/pkgfact:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/printf:go_default_library",
-    "@org_golang_x_tools//go/analysis/passes/shadow:go_default_library",
+    # shadow analyzer is too noisy, see #4340
+    # "@org_golang_x_tools//go/analysis/passes/shadow:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/shift:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/sortslice:go_default_library",
+    "@org_golang_x_tools//go/analysis/passes/sigchanyzer:go_default_library",
+    "@org_golang_x_tools//go/analysis/passes/slog:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/stdmethods:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/stringintconv:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/structtag:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/testinggoroutine:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/tests:go_default_library",
+    "@org_golang_x_tools//go/analysis/passes/timeformat:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/unmarshal:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/unreachable:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/unsafeptr:go_default_library",
     "@org_golang_x_tools//go/analysis/passes/unusedresult:go_default_library",
 ]
 
-# Current version or next version to be tagged. Gazelle and other tools may
-# check this to determine compatibility.
-RULES_GO_VERSION = "0.41.0"
+# TOOLS_NOGO is a list of all analysis passes in
+# golang.org/x/tools/go/analysis/passes.
+# This is not backward compatible, so use caution when depending on this --
+# new analyses may discover issues in existing builds.
+TOOLS_NOGO = [str(Label(l)) for l in _TOOLS_NOGO]
+
+# Deprecated field previously used for version detection. This will not be
+# updated for new releases, use bazel_dep in MODULE.bazel to specify a minimum
+# version of rules_go instead.
+RULES_GO_VERSION = "0.50.0"
 
 go_context = _go_context
 gomock = _gomock
@@ -128,11 +147,19 @@ go_tool_library = _go_tool_library
 go_toolchain = _go_toolchain
 nogo = _nogo
 
-# See go/providers.rst#GoLibrary for full documentation.
-GoLibrary = _GoLibrary
+# This provider is deprecated and will be removed in a future release.
+# Use GoInfo instead.
+GoLibrary = _GoInfo
 
-# See go/providers.rst#GoSource for full documentation.
-GoSource = _GoSource
+# This provider is deprecated and will be removed in a future release.
+# Use GoInfo instead.
+GoSource = _GoInfo
+
+# See go/providers.rst#GoInfo for full documentation.
+GoInfo = _GoInfo
+
+# See go/toolchains.rst#new_go_info for full documentation.
+new_go_info = _new_go_info
 
 # See go/providers.rst#GoPath for full documentation.
 GoPath = _GoPath
@@ -147,19 +174,22 @@ GoArchiveData = _GoArchiveData
 GoSDK = _GoSDK
 
 # See docs/go/core/rules.md#go_library for full documentation.
-go_library = _go_library_macro
+go_library = _go_library
 
 # See docs/go/core/rules.md#go_binary for full documentation.
 go_binary = _go_binary_macro
 
 # See docs/go/core/rules.md#go_test for full documentation.
-go_test = _go_test_macro
+go_test = _go_test
 
 # See docs/go/core/rules.md#go_test for full documentation.
 go_source = _go_source
 
 # See docs/go/core/rules.md#go_path for full documentation.
 go_path = _go_path
+
+# See docs/go/core/rules.md#go_reset_target for full documentation.
+go_reset_target = _go_reset_target
 
 # See docs/go/core/rules.md#go_cross_binary for full documentation.
 go_cross_binary = _go_cross_binary

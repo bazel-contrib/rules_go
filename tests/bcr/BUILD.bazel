@@ -1,5 +1,20 @@
 load("@my_rules_go//extras:gomock.bzl", "gomock")
-load("@my_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+load(
+    "@my_rules_go//go:def.bzl",
+    "TOOLS_NOGO",
+    "go_binary",
+    "go_library",
+    "go_test",
+    "nogo",
+)
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("//:transition.bzl", "sdk_transition_test")
+
+nogo(
+    name = "my_nogo",
+    visibility = ["//visibility:public"],
+    deps = TOOLS_NOGO,
+)
 
 go_library(
     name = "lib",
@@ -19,11 +34,14 @@ go_test(
     embed = [":lib"],
 )
 
+go_test(
+    name = "sdk_patch_test",
+    srcs = ["sdk_patch_test.go"],
+)
+
 go_library(
     name = "mockable",
-    srcs = [
-        "mockable.go",
-    ],
+    srcs = ["mockable.go"],
     importpath = "example.com/mockable",
 )
 
@@ -47,9 +65,38 @@ go_test(
 )
 
 sh_test(
-    name = "go_version_test",
-    srcs = ["go_version_test.sh"],
+    name = "go_tool_test",
+    srcs = ["go_tool_test.sh"],
     data = ["@my_rules_go//go"],
     env = {"GO_TOOL_RLOCATION": "$(rlocationpath @my_rules_go//go)"},
     deps = ["@bazel_tools//tools/bash/runfiles"],
+)
+
+go_test(
+    name = "wrap_test",
+    srcs = ["wrap_test.go"],
+    tags = ["manual"],
+)
+
+sdk_transition_test(
+    name = "wrap_sdk_test",
+    binary = ":wrap_test",
+    sdk_version = "1.25.0",
+)
+
+go_library(
+    name = "cgonested",
+    srcs = ["cgo_nestedmod.go"],
+    cdeps = [
+        "@other_module//:bar_shared",
+    ],
+    cgo = True,
+)
+
+go_test(
+    name = "cgonested_test",
+    srcs = ["cgo_nestedmod_test.go"],
+    embed = [":cgonested"],
+    # TODO: temporarily enabled only for linux.
+    target_compatible_with = ["@platforms//os:linux"],
 )

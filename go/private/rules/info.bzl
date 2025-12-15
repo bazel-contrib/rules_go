@@ -13,21 +13,22 @@
 # limitations under the License.
 
 load(
-    "//go/private:context.bzl",
-    "go_context",
+    "//go/private:common.bzl",
+    "GO_TOOLCHAIN",
 )
 load(
-    "//go/private:go_toolchain.bzl",
-    "GO_TOOLCHAIN",
+    "//go/private:context.bzl",
+    "go_context",
 )
 
 def _go_info_impl(ctx):
     go = go_context(ctx)
     report = go.declare_file(go, ext = ".txt")
-    args = go.builder_args(go)
+    args = go.actions.args()
+    args.add("-sdk", go.sdk.root_file.dirname)
     args.add("-out", report)
     go.actions.run(
-        inputs = go.sdk_files,
+        inputs = depset([go.sdk.go], transitive = [go.sdk.tools]),
         outputs = [report],
         mnemonic = "GoInfo",
         executable = ctx.executable._go_info,

@@ -48,6 +48,7 @@ const (
 	objcxxExt
 	sExt
 	hExt
+	sysoExt
 )
 
 type fileImport struct {
@@ -62,7 +63,7 @@ type fileEmbed struct {
 }
 
 type archiveSrcs struct {
-	goSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSrcs, hSrcs []fileInfo
+	goSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSrcs, hSrcs, sysoSrcs []fileInfo
 }
 
 // filterAndSplitFiles filters files using build constraints and collates
@@ -97,6 +98,8 @@ func filterAndSplitFiles(fileNames []string) (archiveSrcs, error) {
 			srcs = &res.sSrcs
 		case hExt:
 			srcs = &res.hSrcs
+		case sysoExt:
+			srcs = &res.sysoSrcs
 		}
 		*srcs = append(*srcs, src)
 	}
@@ -107,6 +110,36 @@ func filterAndSplitFiles(fileNames []string) (archiveSrcs, error) {
 		res.sSrcs = nil
 	}
 	return res, nil
+}
+
+// applyTestFilter filters out test files from the list of sources in place
+// according to the filter.
+func applyTestFilter(testFilter string, srcs *archiveSrcs) error {
+	// TODO(jayconrod): remove -testfilter flag. The test action should compile
+	// the main, internal, and external packages by calling compileArchive
+	// with the correct sources for each.
+	switch testFilter {
+	case "off":
+	case "only":
+		testSrcs := make([]fileInfo, 0, len(srcs.goSrcs))
+		for _, f := range srcs.goSrcs {
+			if strings.HasSuffix(f.pkg, "_test") {
+				testSrcs = append(testSrcs, f)
+			}
+		}
+		srcs.goSrcs = testSrcs
+	case "exclude":
+		libSrcs := make([]fileInfo, 0, len(srcs.goSrcs))
+		for _, f := range srcs.goSrcs {
+			if !strings.HasSuffix(f.pkg, "_test") {
+				libSrcs = append(libSrcs, f)
+			}
+		}
+		srcs.goSrcs = libSrcs
+	default:
+		return fmt.Errorf("invalid test filter %q", testFilter)
+	}
+	return nil
 }
 
 // readFileInfo applies build constraints to an input file and returns whether
@@ -131,6 +164,8 @@ func readFileInfo(bctx build.Context, input string) (fileInfo, error) {
 			fi.ext = sExt
 		case ".h", ".hh", ".hpp", ".hxx":
 			fi.ext = hExt
+		case ".syso":
+			fi.ext = sysoExt
 		default:
 			return fileInfo{}, fmt.Errorf("unrecognized file extension: %s", ext)
 		}

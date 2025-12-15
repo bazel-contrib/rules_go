@@ -8,6 +8,7 @@ filegroup(
         "//go/tools/bzltestutil:all_files",
         "//go/tools/coverdata:all_files",
         "//go/tools/go_bin_runner:all_files",
+        "//go/tools/gopackagesdriver:all_files",
     ],
     visibility = ["//visibility:public"],
 )

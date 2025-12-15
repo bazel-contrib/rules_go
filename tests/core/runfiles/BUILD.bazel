@@ -6,7 +6,7 @@ test_suite(
     name = "runfiles_tests",
     tests = [
         ":local_test",
-        "@runfiles_remote_test//:remote_test",
+        "@runfiles_remote_test//remote_pkg:remote_test",
     ],
 )
 
@@ -34,9 +34,9 @@ go_library(
         "local_file.txt",
         ":local_bin",
         ":local_group",
-        "@runfiles_remote_test//:remote_bin",
-        "@runfiles_remote_test//:remote_file.txt",
-        "@runfiles_remote_test//:remote_group",
+        "@runfiles_remote_test//remote_pkg:remote_bin",
+        "@runfiles_remote_test//remote_pkg:remote_file.txt",
+        "@runfiles_remote_test//remote_pkg:remote_group",
     ],
     importpath = "github.com/bazelbuild/rules_go/tests/core/runfiles/check",
     deps = ["//go/tools/bazel:go_default_library"],

@@ -1,24 +1,50 @@
 ---
 matrix:
   platform:
-    - ubuntu2004
-    - macos
+    - ubuntu2404
+    - ubuntu2004_arm64
+    - macos_arm64
     - windows
+  # Only BCR tests use all Bazel versions. Others use the default.
+  bazel:
+    - 7.*
+    - 8.*
+    - 9.*
 
 tasks:
-  ubuntu1804_bazel400:
-    platform: ubuntu1804
-    bazel: 5.4.0 # test minimum supported version of bazel
-    shell_commands:
-      - tests/core/cgo/generate_imported_dylib.sh
+  debian11_bazel6:
+    platform: debian11
+    bazel: 7.2.1 # test minimum supported version of bazel that works with our bzlmod setup
     build_targets:
       - "//..."
+      - "-//tests/core/go_binary:goos_pure_bin"
+      - "-//tests/core/cross:go_cross_binary_test"
+    build_flags:
+      - "--per_file_copt=external/.*@-w"
+      - "--host_per_file_copt=external/.*@-w"
     test_targets:
       - "//..."
-  ubuntu2004:
+      # Nogo includes/excludes doesn't work before bazel 7
+      - "-//tests/core/nogo/includes_excludes:includes_exclude_test"
+      - "-//tests/core/nogo/bzlmod:includes_exclude_test"
+      # _repo_mapping is missing
+      - "-//tests/runfiles:runfiles_test"
+      # TODO: Investigate why this fails.
+      - "-//tests/core/starlark/cgo:missing_cc_toolchain_explicit_pure_off_test"
+      # TODO: Bzlmod setup requires at least Bazel 7.
+      - "-//tests/core/cross:proto_test"
+      - "-//tests/core/from_go_mod_file:from_go_mod_file_test"
+      - "-//tests/core/transition:hermeticity_test"
+      - "-//tests/integration/gazelle:gazelle_test"
+      # Requires https://github.com/bazelbuild/bazel/commit/ceddfb1ece1f8ed7ff81558fa1751e6526df031b.
+      - "-//tests/core/go_binary:configurable_attribute_good_test"
+      - "-//tests/core/go_binary:goos_pure_bin"
+      - "-//tests/core/cross:go_cross_binary_test"
+    test_flags:
+      - "--per_file_copt=external/.*@-w"
+      - "--host_per_file_copt=external/.*@-w"
+  ubuntu2404:
     # enable some unflipped incompatible flags on this platform to ensure we don't regress.
-    shell_commands:
-      - tests/core/cgo/generate_imported_dylib.sh
     build_flags:
       - "--config=incompatible"
     test_flags:
@@ -29,8 +55,6 @@ tasks:
       - "//..."
   debian11_zig_cc:
     platform: debian11
-    shell_commands:
-      - tests/core/cgo/generate_imported_dylib.sh
     build_flags:
       - "--config=incompatible"
       - "--extra_toolchains=@zig_sdk//toolchain:linux_amd64_gnu.2.31"
@@ -45,6 +69,7 @@ tasks:
   bcr_tests:
     name: BCR test module
     platform: ${{ platform }}
+    bazel: ${{ bazel }}
     working_directory: tests/bcr
     build_flags:
       - "--allow_yanked_versions=all"
@@ -55,31 +80,48 @@ tasks:
       - "@go_default_sdk//..."
     test_targets:
       - "//..."
-  macos:
-    shell_commands:
-      - tests/core/cgo/generate_imported_dylib.sh
+  bcr_tests_proto:
+    name: BCR test module (--incompatible_enable_proto_toolchain_resolution)
+    platform: ${{ platform }}
+    working_directory: tests/bcr
+    build_flags:
+      - "--allow_yanked_versions=all"
+      - "--incompatible_enable_proto_toolchain_resolution"
+    test_flags:
+      - "--allow_yanked_versions=all"
+      - "--incompatible_enable_proto_toolchain_resolution"
+    build_targets:
+      - "//..."
+      - "@go_default_sdk//..."
+    test_targets:
+      - "//..."
+  macos_arm64:
     build_flags:
       - "--apple_crosstool_top=@local_config_apple_cc//:toolchain"
       - "--crosstool_top=@local_config_apple_cc//:toolchain"
       - "--host_crosstool_top=@local_config_apple_cc//:toolchain"
     build_targets:
       - "//..."
+      - "--"
     test_flags:
       - "--apple_crosstool_top=@local_config_apple_cc//:toolchain"
       - "--crosstool_top=@local_config_apple_cc//:toolchain"
       - "--host_crosstool_top=@local_config_apple_cc//:toolchain"
     test_targets:
       - "//..."
-  rbe_ubuntu1604:
-    shell_commands:
-      - tests/core/cgo/generate_imported_dylib.sh
+  rbe_ubuntu2404:
+    build_flags:
+      - "--per_file_copt=external/.*@-w"
+      - "--host_per_file_copt=external/.*@-w"
     build_targets:
       - "//..."
     test_flags:
+      - "--per_file_copt=external/.*@-w"
+      - "--host_per_file_copt=external/.*@-w"
       # Some tests depend on this feature being disabled. However, because it's
-      # enabled by default in the rbe_ubuntu1604 platform, we cannot simply remove
+      # enabled by default in the rbe_ubuntu2404 platform, we cannot simply remove
       # this flag here, we have to explicitly override it with 0.
-      - "--action_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=0"
+      - "--repo_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=0"
       # go_bazel_test rules are marked local, since the executors don't have bazel
       # installed. It appears bazel is no longer in PATH on the host machines
       # in this configuration either.
@@ -88,160 +130,28 @@ tasks:
       - "--"
       - "//..."
       - "-//tests/core/stdlib:buildid_test"
+      # Source directories in runfiles are not supported with RBE.
+      - "-//tests/runfiles:runfiles_test"
   windows:
     build_flags:
       - '--action_env=PATH=C:\tools\msys64\usr\bin;C:\tools\msys64\bin;C:\tools\msys64\mingw64\bin;C:\python3\Scripts\;C:\python3;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0;C:\Windows\System32\OpenSSH;C:\ProgramData\GooGet;C:\Program Files\Google\Compute Engine\metadata_scripts;C:\Program Files (x86)\Google\Cloud SDK\google-cloud-sdk\bin;C:\Program Files\Google\Compute Engine\sysprep;C:\ProgramData\chocolatey\bin;C:\Program Files\Git\cmd;C:\tools\msys64\usr\bin;c:\openjdk\bin;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit\;C:\Program Files\CMake\bin;c:\ninja;c:\bazel;c:\buildkite'
     build_targets:
-      # BUG(bazelbuild/bazel#6485): Bazel 0.18.0 crashes when loading
-      # @com_google_protobuf//:protobuf. We have to exclude everything that
-      # transitively depends on it.
-      # TODO(#1787): There is a cc_import target in //tests/core/cgo that
-      # doesn't set the interface_library attribute. This causes an
-      # analysis failure.
-      # TODO(#1790): Tests that require data should use bazel.Runfile.
-      # TODO(#2516): Tests that require protoc fail when protoc is built with mingw-gcc.
-      - "--"
       - "//..."
-      - "-@com_github_golang_protobuf//ptypes:go_default_library_gen"
-      - "-@com_google_protobuf//:any_proto"
-      - "-@com_google_protobuf//:api_proto"
-      - "-@com_google_protobuf//:compiler_plugin_proto"
-      - "-@com_google_protobuf//:descriptor_proto"
-      - "-@com_google_protobuf//:duration_proto"
-      - "-@com_google_protobuf//:empty_proto"
-      - "-@com_google_protobuf//:field_mask_proto"
-      - "-@com_google_protobuf//:protobuf"
-      - "-@com_google_protobuf//:protoc"
-      - "-@com_google_protobuf//:protoc_lib"
-      - "-@com_google_protobuf//:source_context_proto"
-      - "-@com_google_protobuf//:struct_proto"
-      - "-@com_google_protobuf//:timestamp_proto"
-      - "-@com_google_protobuf//:type_proto"
-      - "-@com_google_protobuf//:wrappers_proto"
-      - "-@gogo_special_proto//github.com/gogo/protobuf/gogoproto:gogoproto"
-      - "-//go/tools/bazel:bazel_test"
-      - "-@io_bazel_rules_go//proto:gogofaster_proto"
-      - "-@io_bazel_rules_go//proto:go_grpc"
-      - "-@io_bazel_rules_go//proto:go_proto"
-      - "-@io_bazel_rules_go//proto:go_proto_bootstrap"
-      - "-@io_bazel_rules_go//proto:go_proto_validate"
-      - "-@org_golang_x_crypto//ed25519:ed25519_test"
-      - "-@org_golang_x_crypto//sha3:sha3_test"
-      - "-@org_golang_x_sys//windows/registry:registry_test"
-      - "-@org_golang_x_sys//windows/svc/eventlog:eventlog_test"
-      - "-@org_golang_x_sys//windows/svc:svc_test"
-      - "-@org_golang_x_text//language:language_test"
-      - "-//proto:combo_grpc"
-      - "-//proto:combo_proto"
-      - "-//proto:gofast_grpc"
-      - "-//proto:gofast_proto"
-      - "-//proto:gogofaster_grpc"
-      - "-//proto:gogofaster_proto"
-      - "-//proto:gogofast_grpc"
-      - "-//proto:gogofast_proto"
-      - "-//proto:gogo_grpc"
-      - "-//proto:gogo_proto"
-      - "-//proto:gogoslick_grpc"
-      - "-//proto:gogoslick_proto"
-      - "-//proto:gogotypes_grpc"
-      - "-//proto:gogotypes_proto"
-      - "-//proto:go_grpc"
-      - "-//proto:go_proto"
-      - "-//proto:go_proto_bootstrap"
-      - "-//proto:go_proto_validate"
-      - "-//proto:gostring_grpc"
-      - "-//proto:gostring_proto"
-      - "-//proto/wkt:any_go_proto"
-      - "-//proto/wkt:api_go_proto"
-      - "-//proto/wkt:compiler_plugin_go_proto"
-      - "-//proto/wkt:descriptor_go_proto"
-      - "-//proto/wkt:duration_go_proto"
-      - "-//proto/wkt:empty_go_proto"
-      - "-//proto/wkt:field_mask_go_proto"
-      - "-//proto/wkt:source_context_go_proto"
-      - "-//proto/wkt:struct_go_proto"
-      - "-//proto/wkt:timestamp_go_proto"
-      - "-//proto/wkt:type_go_proto"
-      - "-//proto/wkt:wrappers_go_proto"
-      - "-//tests:buildifier_test" # transitively requires proto, doesn't build in CI
-      - "-@test_chdir_remote//sub:go_default_test"
-      - "-//tests/core/cgo:dylib_client"
-      - "-//tests/core/cgo:dylib_test"
       - "-//tests/core/cgo:generated_dylib_client"
       - "-//tests/core/cgo:generated_dylib_test"
-      - "-//tests/core/cgo:versioned_dylib_client"
-      - "-//tests/core/cgo:versioned_dylib_test"
-      - "-//tests/core/cgo:generated_versioned_dylib_client"
       - "-//tests/core/cgo:generated_versioned_dylib_test"
-      - "-//tests/core/cross:proto_test"
-      - "-//tests/core/go_path:go_path"
-      - "-//tests/core/go_path:go_path_test"
-      - "-//tests/core/go_path:nodata_path"
-      - "-//tests/core/go_path:copy_path"
-      - "-//tests/core/go_path:archive_path"
-      - "-//tests/core/go_path/pkg/lib:vendored"
-      - "-//tests/core/go_path/pkg/lib:go_default_test"
-      - "-//tests/core/go_path/pkg/lib:go_default_library"
-      - "-//tests/core/go_path/pkg/lib:embed_test"
-      - "-//tests/core/go_path/pkg/lib:embed_lib"
-      - "-//tests/core/go_path/cmd/bin:cross"
-      - "-//tests/core/go_path/cmd/bin:bin"
-      - "-//tests/core/go_plugin:go_plugin"
-      - "-//tests/core/go_plugin:go_default_test"
-      - "-//tests/core/go_plugin:plugin"
-      - "-//tests/core/go_plugin_with_proto_library:go_plugin_with_proto_library"
-      - "-//tests/core/go_plugin_with_proto_library:go_default_test"
-      - "-//tests/core/go_plugin_with_proto_library:plugin"
-      - "-//tests/core/go_proto_library:all"
-      - "-//tests/core/go_proto_library_importmap:foo_go_proto"
-      - "-//tests/core/go_proto_library_importmap:foo_proto"
-      - "-//tests/core/go_proto_library_importmap:importmap_test"
-      - "-//tests/core/go_test:data_test"
-      - "-//tests/core/go_test:pwd_test"
-      - "-//tests/core/race:race_test"
-      - "-//tests/core/stdlib:buildid_test"
-      - "-//tests/examples/executable_name:executable_name"
-      - "-//tests/integration/googleapis:color_service"
-      - "-//tests/integration/googleapis:color_service_go_proto"
-      - "-//tests/integration/googleapis:color_service_proto"
-      - "-//tests/integration/googleapis:color_service_test"
-      - "-//tests/legacy/examples/cgo/example_command:example_command_test"
-      - "-//tests/legacy/examples/cgo/example_command:example_command_script"
-      - "-//tests/legacy/examples/cgo/example_command:example_command"
       - "-//tests/legacy/examples/cgo:generate_go_src"
       - "-//tests/legacy/examples/cgo:cgo_lib_test"
       - "-//tests/legacy/examples/cgo:go_default_library"
+      - "-//tests/legacy/examples/cgo:sub"
       - "-//tests/legacy/examples/cgo/cc_dependency:version"
       - "-//tests/legacy/examples/cgo/cc_dependency:c_version_so"
-      - "-//tests/legacy/examples/cgo:sub"
-      - "-//tests/legacy/examples/proto/dep:useful_go_proto"
-      - "-//tests/legacy/examples/proto/dep:useful_proto"
-      - "-//tests/legacy/examples/proto/embed:embed_go_proto"
-      - "-//tests/legacy/examples/proto/embed:embed_proto"
-      - "-//tests/legacy/examples/proto/embed:go_default_library"
-      - "-//tests/legacy/examples/proto:go_default_library"
-      - "-//tests/legacy/examples/proto/gogo:gogo_test"
-      - "-//tests/legacy/examples/proto/gogo:values_go_proto"
-      - "-//tests/legacy/examples/proto/gogo:values_proto"
-      - "-//tests/legacy/examples/proto/gostyle:gostyle_go_proto"
-      - "-//tests/legacy/examples/proto/gostyle:gostyle_proto"
-      - "-//tests/legacy/examples/proto/grpc:my_svc_go_proto"
-      - "-//tests/legacy/examples/proto/grpc:my_svc_proto"
-      - "-//tests/legacy/examples/proto/grpc:not_grpc"
-      - "-//tests/legacy/examples/proto/grpc:test_grpc"
-      - "-//tests/legacy/examples/proto/lib:lib_go_proto"
-      - "-//tests/legacy/examples/proto/lib:lib_proto"
-      - "-//tests/legacy/examples/proto:proto_pure_test"
-      - "-//tests/legacy/examples/proto:proto_test"
-      - "-//tests/legacy/extldflags_rpath:extldflags_rpath_test"
-      - "-//tests/legacy/info:info"
-      - "-//tests/legacy/proto_ignore_go_package_option:a_go_proto"
-      - "-//tests/legacy/proto_ignore_go_package_option:a_proto"
-      - "-//tests/legacy/proto_ignore_go_package_option:b_go_proto"
-      - "-//tests/legacy/proto_ignore_go_package_option:b_proto"
-      - "-//tests/legacy/test_chdir:go_default_test"
-      - "-//tests/legacy/test_rundir:go_default_test"
-      - "-//tests/legacy/transitive_data:go_default_test"
+      - "-//tests/legacy/examples/cgo/example_command:example_command"
+      - "-//tests/legacy/examples/cgo/example_command:example_command_script"
+      - "-//tests/legacy/examples/cgo/example_command:example_command_test"
+      # Plugins aren't supported on Windows.
+      - "-//tests/core/go_plugin/..."
+      - "-//tests/core/go_plugin_with_proto_library/..."
     test_flags:
       - '--action_env=PATH=C:\tools\msys64\usr\bin;C:\tools\msys64\bin;C:\tools\msys64\mingw64\bin;C:\python3\Scripts\;C:\python3;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0;C:\Windows\System32\OpenSSH;C:\ProgramData\GooGet;C:\Program Files\Google\Compute Engine\metadata_scripts;C:\Program Files (x86)\Google\Cloud SDK\google-cloud-sdk\bin;C:\Program Files\Google\Compute Engine\sysprep;C:\ProgramData\chocolatey\bin;C:\Program Files\Git\cmd;C:\tools\msys64\usr\bin;c:\openjdk\bin;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit\;C:\Program Files\CMake\bin;c:\ninja;c:\bazel;c:\buildkite'
       # On Windows CI, bazel (bazelisk) needs %LocalAppData% to find the cache directory.
@@ -251,107 +161,73 @@ tasks:
       - "--test_env=GO_BAZEL_TEST_BAZELFLAGS=--cpu=x64_windows --compiler=mingw-gcc --extra_toolchains=@local_config_cc//:cc-toolchain-x64_windows_mingw --action_env=PATH --host_platform=@io_bazel_rules_go//go/toolchain:windows_amd64_cgo --incompatible_enable_cc_toolchain_resolution"
       - "--test_env=PATH"
     test_targets:
-      - "--"
       - "//..."
-      - "-//go/tools/bazel:bazel_test"
-      - "-@org_golang_x_crypto//ed25519:ed25519_test"
-      - "-@org_golang_x_crypto//sha3:sha3_test"
-      - "-@org_golang_x_net//ipv4:ipv4_test"
-      - "-@org_golang_x_sys//windows/registry:registry_test"
-      - "-@org_golang_x_sys//windows/svc/eventlog:eventlog_test"
-      - "-@org_golang_x_sys//windows/svc:svc_test"
-      - "-@org_golang_x_text//language:language_test"
-      - "-@org_golang_x_tools//cmd/splitdwarf/internal/macho:macho_test"
-      - "-@test_chdir_remote//sub:go_default_test"
-      - "-//go/tools/builders:stdliblist_test" # fails on Windows due to #2491
-      - "-//tests:buildifier_test" # requires bash
-      - "-//tests/core/cgo:dylib_client"
-      - "-//tests/core/cgo:dylib_test"
+      - "-//go/tools/builders:stdliblist_test"
+      - "-//tests:buildifier_test"
       - "-//tests/core/cgo:generated_dylib_client"
       - "-//tests/core/cgo:generated_dylib_test"
-      - "-//tests/core/cgo:race_test" # fails on Windows due to upstream bug, see issue #2911
-      - "-//tests/core/cgo:versioned_dylib_client"
-      - "-//tests/core/cgo:versioned_dylib_test"
-      - "-//tests/core/cgo:generated_versioned_dylib_client"
       - "-//tests/core/cgo:generated_versioned_dylib_test"
       - "-//tests/core/coverage:coverage_test"
       - "-//tests/core/coverage:issue3017_test"
-      - "-//tests/core/cross:proto_test"
+      - "-//tests/core/coverage:issue4414_test"
+      - "-//tests/core/coverage:reassign_flag_commandline_test"
       - "-//tests/core/go_binary:go_default_test"
-      - "-//tests/core/go_path:go_path"
       - "-//tests/core/go_path:go_path_test"
-      - "-//tests/core/go_path/pkg/lib:embed_test"
-      - "-//tests/core/go_path/pkg/lib:go_default_test"
-      - "-//tests/core/go_plugin:go_plugin"
-      - "-//tests/core/go_plugin:go_default_test"
-      - "-//tests/core/go_plugin:plugin"
-      - "-//tests/core/go_plugin_with_proto_library:go_plugin_with_proto_library"
-      - "-//tests/core/go_plugin_with_proto_library:go_default_test"
-      - "-//tests/core/go_plugin_with_proto_library:plugin"
-      - "-//tests/core/go_proto_library:all"
-      - "-//tests/core/go_proto_library_importmap:importmap_test"
       - "-//tests/core/go_test:data_test"
       - "-//tests/core/go_test:pwd_test"
+      - "-//tests/core/nogo/coverage:coverage_cgo_test"
       - "-//tests/core/nogo/coverage:coverage_test"
       - "-//tests/core/nogo/coverage:gen_code_test"
-      - "-//tests/core/race:race_test" # fails on Windows due to upstream bug, see issue #2911
       - "-//tests/core/stdlib:buildid_test"
       - "-//tests/examples/executable_name:executable_name"
       - "-//tests/integration/gazelle:gazelle_test" # exceeds command line length limit
-      - "-//tests/integration/googleapis:color_service_test"
       - "-//tests/integration/reproducibility:reproducibility_test"
-      - "-//tests/legacy/cgo_pthread_flag:go_default_test" # fails without error, passes locally. Problem with CI msys2?
-      - "-//tests/legacy/examples/cgo/example_command:example_command_test"
-      - "-//tests/legacy/examples/cgo/example_command:example_command_script"
-      - "-//tests/legacy/examples/cgo/example_command:example_command"
       - "-//tests/legacy/examples/cgo:generate_go_src"
       - "-//tests/legacy/examples/cgo:cgo_lib_test"
       - "-//tests/legacy/examples/cgo:go_default_library"
+      - "-//tests/legacy/examples/cgo:sub"
       - "-//tests/legacy/examples/cgo/cc_dependency:version"
       - "-//tests/legacy/examples/cgo/cc_dependency:c_version_so"
-      - "-//tests/legacy/examples/proto/gogo:gogo_test"
-      - "-//tests/legacy/examples/proto:proto_pure_test"
-      - "-//tests/legacy/examples/proto:proto_test"
+      - "-//tests/legacy/examples/cgo/example_command:example_command"
+      - "-//tests/legacy/examples/cgo/example_command:example_command_script"
+      - "-//tests/legacy/examples/cgo/example_command:example_command_test"
       - "-//tests/legacy/extldflags_rpath:extldflags_rpath_test"
       - "-//tests/legacy/info:info"
       - "-//tests/legacy/test_chdir:go_default_test"
       - "-//tests/legacy/test_rundir:go_default_test"
       - "-//tests/legacy/transitive_data:go_default_test"
-      # Stardoc produces different line-endings on windows,
-      # so the documentation it generates doesn't match the checked in files.
-      # - Tracking issue https://github.com/bazelbuild/stardoc/issues/42.
+      - "-@org_golang_x_crypto//sha3:sha3_test"
+      - "-@org_golang_x_sys//windows/svc:svc_test"
+      - "-@org_golang_x_text//language:language_test"
+      - "-@org_golang_x_tools//cmd/splitdwarf/internal/macho:macho_test"
+      - "-@test_chdir_remote//sub:go_default_test"
+      # Plugins aren't supported on Windows.
+      - "-//tests/core/go_plugin/..."
+      - "-//tests/core/go_plugin_with_proto_library/..."
+      # TODO: Update stardoc for consistent line endings.
       - "-//docs:all"
   # The following configurations test a seperate WORKSPACE under the examples folder
-  ubuntu2004_examples:
-    name: Examples test on Ubuntu
-    platform: ubuntu2004
-    working_directory: examples/basic-gazelle
-    build_flags:
-      - "--config=incompatible"
-    test_flags:
-      - "--config=incompatible"
+  ubuntu_hello_example:
+    name: Hello example on Ubuntu
+    platform: ubuntu2404
+    working_directory: examples/hello
     build_targets:
       - "//..."
     test_targets:
       - "//..."
-  macos_examples:
-    name: Examples test on MacOS
-    platform: macos
-    working_directory: examples/basic-gazelle
-    build_flags:
-      - "--config=incompatible"
-    test_flags:
-      - "--config=incompatible"
+  macos_hello_example:
+    name: Hello example on macOS
+    platform: macos_arm64
+    working_directory: examples/hello
     build_targets:
       - "//..."
     test_targets:
       - "//..."
   windows_examples:
-    name: Examples test on Windows
+    name: Hello example on Windows
     platform: windows
-    working_directory: examples/basic-gazelle
+    working_directory: examples/hello
     build_flags:
-      - "--config=incompatible"
       # Go requires a C toolchain that accepts options and emits errors like
       # gcc or clang. The Go SDK does not support MSVC.
       - '--action_env=PATH=C:\tools\msys64\usr\bin;C:\tools\msys64\bin;C:\tools\msys64\mingw64\bin;C:\python3\Scripts\;C:\python3;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0;C:\Windows\System32\OpenSSH;C:\ProgramData\GooGet;C:\Program Files\Google\Compute Engine\metadata_scripts;C:\Program Files (x86)\Google\Cloud SDK\google-cloud-sdk\bin;C:\Program Files\Google\Compute Engine\sysprep;C:\ProgramData\chocolatey\bin;C:\Program Files\Git\cmd;C:\tools\msys64\usr\bin;c:\openjdk\bin;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit\;C:\Program Files\CMake\bin;c:\ninja;c:\bazel;c:\buildkite'
@@ -362,7 +238,44 @@ tasks:
     test_targets:
       - "//..."
     test_flags:
-      - "--config=incompatible"
+      - '--action_env=PATH=C:\tools\msys64\usr\bin;C:\tools\msys64\bin;C:\tools\msys64\mingw64\bin;C:\python3\Scripts\;C:\python3;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0;C:\Windows\System32\OpenSSH;C:\ProgramData\GooGet;C:\Program Files\Google\Compute Engine\metadata_scripts;C:\Program Files (x86)\Google\Cloud SDK\google-cloud-sdk\bin;C:\Program Files\Google\Compute Engine\sysprep;C:\ProgramData\chocolatey\bin;C:\Program Files\Git\cmd;C:\tools\msys64\usr\bin;c:\openjdk\bin;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit\;C:\Program Files\CMake\bin;c:\ninja;c:\bazel;c:\buildkite'
+      # On Windows CI, bazel (bazelisk) needs %LocalAppData% to find the cache directory.
+      # We invoke bazel in tests, so the tests need this, too.
+      - "--test_env=LOCALAPPDATA"
+      # go_bazel_test runs bazel in a test workspace. It needs the same flags as above.
+      - "--test_env=GO_BAZEL_TEST_BAZELFLAGS=--cpu=x64_windows --compiler=mingw-gcc --extra_toolchains=@local_config_cc//:cc-toolchain-x64_windows_mingw --action_env=PATH --host_platform=@io_bazel_rules_go//go/toolchain:windows_amd64_cgo --incompatible_enable_cc_toolchain_resolution"
+      - "--test_env=PATH"
+  ubuntu_basic_gazelle_example:
+    name: Basic Gazelle example on Ubuntu
+    platform: ubuntu2404
+    working_directory: examples/basic_gazelle
+    build_targets:
+      - "//..."
+    test_targets:
+      - "//..."
+  macos_basic_gazelle_example:
+    name: Basic Gazelle example on macOS
+    platform: macos_arm64
+    working_directory: examples/basic_gazelle
+    build_targets:
+      - "//..."
+    test_targets:
+      - "//..."
+  windows_basic_gazelle_example:
+    name: Basic Gazelle example on Windows
+    platform: windows
+    working_directory: examples/basic_gazelle
+    build_flags:
+      # Go requires a C toolchain that accepts options and emits errors like
+      # gcc or clang. The Go SDK does not support MSVC.
+      - '--action_env=PATH=C:\tools\msys64\usr\bin;C:\tools\msys64\bin;C:\tools\msys64\mingw64\bin;C:\python3\Scripts\;C:\python3;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0;C:\Windows\System32\OpenSSH;C:\ProgramData\GooGet;C:\Program Files\Google\Compute Engine\metadata_scripts;C:\Program Files (x86)\Google\Cloud SDK\google-cloud-sdk\bin;C:\Program Files\Google\Compute Engine\sysprep;C:\ProgramData\chocolatey\bin;C:\Program Files\Git\cmd;C:\tools\msys64\usr\bin;c:\openjdk\bin;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit\;C:\Program Files\CMake\bin;c:\ninja;c:\bazel;c:\buildkite'
+    # NOTE(bazelbuild/bazel#10529): bazel doesn't register the mingw toolchain automatically.
+    # We also need the host and target platforms to have the mingw constraint value.
+    build_targets:
+      - "//..."
+    test_targets:
+      - "//..."
+    test_flags:
       - '--action_env=PATH=C:\tools\msys64\usr\bin;C:\tools\msys64\bin;C:\tools\msys64\mingw64\bin;C:\python3\Scripts\;C:\python3;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0;C:\Windows\System32\OpenSSH;C:\ProgramData\GooGet;C:\Program Files\Google\Compute Engine\metadata_scripts;C:\Program Files (x86)\Google\Cloud SDK\google-cloud-sdk\bin;C:\Program Files\Google\Compute Engine\sysprep;C:\ProgramData\chocolatey\bin;C:\Program Files\Git\cmd;C:\tools\msys64\usr\bin;c:\openjdk\bin;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit\;C:\Program Files\CMake\bin;c:\ninja;c:\bazel;c:\buildkite'
       # On Windows CI, bazel (bazelisk) needs %LocalAppData% to find the cache directory.
       # We invoke bazel in tests, so the tests need this, too.

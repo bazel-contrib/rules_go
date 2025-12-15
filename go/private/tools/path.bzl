@@ -13,20 +13,14 @@
 # limitations under the License.
 
 load(
+    "@bazel_skylib//lib:paths.bzl",
+    "paths",
+)
+load(
     "//go/private:providers.bzl",
     "GoArchive",
     "GoPath",
     "effective_importpath_pkgpath",
-    "get_archive",
-)
-load(
-    "//go/private:common.bzl",
-    "as_iterable",
-    "as_list",
-)
-load(
-    "@bazel_skylib//lib:paths.bzl",
-    "paths",
 )
 
 def _go_path_impl(ctx):
@@ -35,10 +29,11 @@ def _go_path_impl(ctx):
     # package may also appear in different modes.
     mode_to_deps = {}
     for dep in ctx.attr.deps:
-        archive = get_archive(dep)
-        if archive.mode not in mode_to_deps:
-            mode_to_deps[archive.mode] = []
-        mode_to_deps[archive.mode].append(archive)
+        archive = dep[GoArchive]
+        mode = archive.source.mode
+        if mode not in mode_to_deps:
+            mode_to_deps[mode] = []
+        mode_to_deps[mode].append(archive)
     mode_to_archive = {}
     for mode, archives in mode_to_deps.items():
         direct = [a.data for a in archives]
@@ -50,22 +45,21 @@ def _go_path_impl(ctx):
     # Collect sources and data files from archives. Merge archives into packages.
     pkg_map = {}  # map from package path to structs
     for mode, archives in mode_to_archive.items():
-        for archive in as_iterable(archives):
+        for archive in archives.to_list():
             importpath, pkgpath = effective_importpath_pkgpath(archive)
             if importpath == "":
                 continue  # synthetic archive or inferred location
             pkg = struct(
                 importpath = importpath,
                 dir = "src/" + pkgpath,
-                srcs = as_list(archive.orig_srcs),
-                data = as_list(archive.data_files),
-                embedsrcs = as_list(archive._embedsrcs),
+                srcs = list(archive.srcs),
+                runfiles = archive.runfiles,
+                embedsrcs = list(archive._embedsrcs),
                 pkgs = {mode: archive.file},
             )
             if pkgpath in pkg_map:
-                _merge_pkg(pkg_map[pkgpath], pkg)
-            else:
-                pkg_map[pkgpath] = pkg
+                pkg = _merge_pkg(pkg_map[pkgpath], pkg)
+            pkg_map[pkgpath] = pkg
 
     # Build a manifest file that includes all files to copy/link/zip.
     inputs = []
@@ -95,7 +89,7 @@ def _go_path_impl(ctx):
                 _add_manifest_entry(manifest_entries, manifest_entry_map, inputs, f, dst)
     if ctx.attr.include_data:
         for pkg in pkg_map.values():
-            for f in pkg.data:
+            for f in pkg.runfiles.files.to_list():
                 parts = f.path.split("/")
                 if "testdata" in parts:
                     i = parts.index("testdata")
@@ -112,7 +106,7 @@ def _go_path_impl(ctx):
             f.basename,
         )
     manifest_file = ctx.actions.declare_file(ctx.label.name + "~manifest")
-    manifest_entries_json = [e.to_json() for e in manifest_entries]
+    manifest_entries_json = [json.encode(e) for e in manifest_entries]
     manifest_content = "[\n  " + ",\n  ".join(manifest_entries_json) + "\n]"
     ctx.actions.write(manifest_file, manifest_content)
     inputs.append(manifest_file)
@@ -261,12 +255,21 @@ go_path = rule(
 
 def _merge_pkg(x, y):
     x_srcs = {f.path: None for f in x.srcs}
-    x_data = {f.path: None for f in x.data}
     x_embedsrcs = {f.path: None for f in x.embedsrcs}
-    x.srcs.extend([f for f in y.srcs if f.path not in x_srcs])
-    x.data.extend([f for f in y.data if f.path not in x_data])
-    x.embedsrcs.extend([f for f in y.embedsrcs if f.path not in x_embedsrcs])
-    x.pkgs.update(y.pkgs)
+
+    # Not all bazel versions support `dict1 | dict2` yet.
+    pkgs = dict()
+    pkgs.update(x.pkgs)
+    pkgs.update(y.pkgs)
+
+    return struct(
+        importpath = x.importpath,
+        dir = x.dir,
+        srcs = x.srcs + [f for f in y.srcs if f.path not in x_srcs],
+        runfiles = x.runfiles.merge(y.runfiles),
+        embedsrcs = x.embedsrcs + [f for f in y.embedsrcs if f.path not in x_embedsrcs],
+        pkgs = pkgs,
+    )
 
 def _add_manifest_entry(entries, entry_map, inputs, src, dst):
     if dst in entry_map:

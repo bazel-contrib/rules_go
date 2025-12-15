@@ -1,6 +1,11 @@
 load("@io_bazel_rules_go//go/tools/bazel_testing:def.bzl", "go_bazel_test")
 
 go_bazel_test(
+    name = "coverage_cgo_test",
+    srcs = ["coverage_cgo_test.go"],
+)
+
+go_bazel_test(
     name = "coverage_test",
     srcs = ["coverage_test.go"],
 )

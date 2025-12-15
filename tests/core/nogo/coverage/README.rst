@@ -2,10 +2,18 @@ nogo test with coverage
 =======================
 
 .. _nogo: /go/nogo.rst
+.. _#3769: https://github.com/bazelbuild/rules_go/issues/3769
 .. _#1940: https://github.com/bazelbuild/rules_go/issues/1940
 .. _#2146: https://github.com/bazelbuild/rules_go/issues/2146
 
 Tests to ensure that `nogo`_ works with coverage.
+
+coverage_cgo_test
+-------------
+Checks that `nogo`_ works when both cgo and coverage are enabled. With coverage
+instrumentation modifying source files, and cgo compilation changing files paths,
+`nogo`_ should be running static analysis against original source files, instead
+of modified ones. Verifies `#3769`_.
 
 coverage_test
 -------------

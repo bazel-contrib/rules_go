@@ -4,3 +4,5 @@ alias(
     name = "nogo",
     actual = "{{nogo}}",
 )
+
+exports_files(["scope.bzl"])

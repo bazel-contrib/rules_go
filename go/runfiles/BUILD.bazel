@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "runfiles",
@@ -33,9 +33,29 @@ alias(
     visibility = ["//visibility:public"],
 )
 
+go_test(
+    name = "example_test",
+    srcs = [
+        "caller_repository_example_test.go",
+        "example_test.go",
+        "rlocationpath_xdefs_example_test.go",
+    ],
+    deps = [":runfiles"],
+)
+
 filegroup(
     name = "all_files",
     testonly = True,
     srcs = glob(["**"]),
     visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "runfiles_test",
+    srcs = [
+        "caller_repository_example_test.go",
+        "example_test.go",
+        "rlocationpath_xdefs_example_test.go",
+    ],
+    deps = [":runfiles"],
 )

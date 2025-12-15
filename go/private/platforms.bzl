@@ -22,17 +22,19 @@ BAZEL_GOOS_CONSTRAINTS = {
     "freebsd": "@platforms//os:freebsd",
     "ios": "@platforms//os:ios",
     "linux": "@platforms//os:linux",
+    "qnx": "@platforms//os:qnx",
     "windows": "@platforms//os:windows",
 }
 
 BAZEL_GOARCH_CONSTRAINTS = {
     "386": "@platforms//cpu:x86_32",
     "amd64": "@platforms//cpu:x86_64",
-    "arm": "@platforms//cpu:arm",
+    "arm": "@platforms//cpu:armv7",
     "arm64": "@platforms//cpu:aarch64",
     "ppc64": "@platforms//cpu:ppc",
-    "ppc64le": "@platforms//cpu:ppc",
+    "ppc64le": "@platforms//cpu:ppc64le",
     "s390x": "@platforms//cpu:s390x",
+    "riscv64": "@platforms//cpu:riscv64",
 }
 
 GOOS_GOARCH = (
@@ -77,10 +79,19 @@ GOOS_GOARCH = (
     ("openbsd", "amd64"),
     ("openbsd", "arm"),
     ("openbsd", "arm64"),
+    ("osx", "386"),
+    ("osx", "amd64"),
+    ("osx", "arm"),
+    ("osx", "arm64"),
+    ("qnx", "386"),
+    ("qnx", "amd64"),
+    ("qnx", "arm"),
+    ("qnx", "arm64"),
     ("plan9", "386"),
     ("plan9", "amd64"),
     ("plan9", "arm"),
     ("solaris", "amd64"),
+    ("wasip1", "wasm"),
     ("windows", "386"),
     ("windows", "amd64"),
     ("windows", "arm"),

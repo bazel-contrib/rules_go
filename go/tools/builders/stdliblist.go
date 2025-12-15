@@ -106,8 +106,16 @@ type goListPackage struct {
 	DepsErrors []*flatPackagesError // errors loading dependencies
 }
 
+var rulesGoStdlibPrefix string
+
+func init() {
+	if rulesGoStdlibPrefix == "" {
+		panic("rulesGoStdlibPrefix should have been set via -X")
+	}
+}
+
 func stdlibPackageID(importPath string) string {
-	return "@io_bazel_rules_go//stdlib:" + importPath
+	return rulesGoStdlibPrefix + importPath
 }
 
 // outputBasePath replace the cloneBase with output base label
@@ -158,7 +166,7 @@ func flatPackageForStd(cloneBase string, pkg *goListPackage, pathReplaceFn func(
 		ID:              stdlibPackageID(pkg.ImportPath),
 		Name:            pkg.Name,
 		PkgPath:         pkg.ImportPath,
-		ExportFile:      outputBasePath(cloneBase, pkg.Target),
+		ExportFile:      pathReplaceFn(pkg.Export),
 		Imports:         map[string]string{},
 		Standard:        pkg.Standard,
 		GoFiles:         goFiles,
@@ -195,10 +203,12 @@ func stdliblist(args []string) error {
 	goenv := envFlags(flags)
 	out := flags.String("out", "", "Path to output go list json")
 	cachePath := flags.String("cache", "", "Path to use for GOCACHE")
+	export := flags.Bool("export", false, "Should -export be passed to go list")
+
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
-	if err := goenv.checkFlags(); err != nil {
+	if err := goenv.checkFlagsAndSetGoroot(); err != nil {
 		return err
 	}
 
@@ -243,12 +253,15 @@ func stdliblist(args []string) error {
 
 	cgoEnabled := os.Getenv("CGO_ENABLED") == "1"
 	// Make sure we have an absolute path to the C compiler.
-	// TODO(#1357): also take absolute paths of includes and other paths in flags.
 	ccEnv, ok := os.LookupEnv("CC")
 	if cgoEnabled && !ok {
 		return fmt.Errorf("CC must be set")
 	}
 	os.Setenv("CC", quotePathIfNeeded(abs(ccEnv)))
+
+	if err := absCCCompiler(cgoEnvVars, cgoAbsEnvFlags); err != nil {
+		return fmt.Errorf("error modifying cgo environment to absolute path: %v", err)
+	}
 
 	// We want to keep the cache around so that the processed files can be used by other tools.
 	absCachePath := abs(*cachePath)
@@ -263,6 +276,10 @@ func stdliblist(args []string) error {
 
 	if cgoEnabled {
 		listArgs = append(listArgs, "-compiled=true")
+	}
+
+	if *export {
+		listArgs = append(listArgs, "-export")
 	}
 
 	listArgs = append(listArgs, "-json", "builtin", "std", "runtime/cgo")
@@ -280,7 +297,7 @@ func stdliblist(args []string) error {
 
 	encoder := json.NewEncoder(jsonFile)
 	decoder := json.NewDecoder(jsonData)
-	pathReplaceFn := func (s string) string {
+	pathReplaceFn := func(s string) string {
 		if strings.HasPrefix(s, absCachePath) {
 			return strings.Replace(s, absCachePath, filepath.Join("__BAZEL_EXECROOT__", *cachePath), 1)
 		}

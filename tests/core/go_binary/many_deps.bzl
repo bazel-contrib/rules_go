@@ -17,6 +17,10 @@ load(
     "go_binary",
     "go_context",
 )
+load(
+    "//go/private:context.bzl",
+    "new_go_info",
+)
 
 _PREFIX = "/".join(["abcdefgh"[i] * 100 for i in range(7)]) + "/"
 
@@ -24,12 +28,11 @@ def _gen_library_impl(ctx):
     go = go_context(ctx)
     src = go.actions.declare_file(ctx.label.name + ".go")
     go.actions.write(src, "package " + ctx.label.name + "\n")
-    library = go.new_library(go, srcs = [src])
-    source = go.library_to_source(go, ctx.attr, library, ctx.coverage_instrumented())
-    archive = go.archive(go, source)
+
+    go_info = new_go_info(go, ctx.attr, generated_srcs = [src])
+    archive = go.archive(go, go_info)
     return [
-        library,
-        source,
+        go_info,
         archive,
         DefaultInfo(files = depset([archive.data.file])),
     ]

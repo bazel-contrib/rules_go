@@ -22,25 +22,36 @@ def _rpath(go, library, executable = None):
     if not executable:
         return [paths.dirname(library.short_path)]
 
-    origin = go.mode.goos == "darwin" and "@loader_path" or "$ORIGIN"
+    origin = "@loader_path" if go.mode.goos == "darwin" else "$ORIGIN"
 
-    # Accomodate for two kinds of executable paths.
+    # Accommodate for three kinds of executable paths.
     rpaths = []
+    library_dir = paths.dirname(library.short_path)
+
+    # Based on the logic for Bazel's own C++ rules:
+    # https://github.com/bazelbuild/bazel/blob/51a4b8e5de225ba163d19ddcc330aff8860a1520/src/main/starlark/builtins_bzl/common/cc/link/collect_solib_dirs.bzl#L301
+    # with the bug fix https://github.com/bazelbuild/bazel/pull/27154.
+    # We ignore the cases for --experimental_sibling_repository_layout.
 
     # 1. Where the executable is inside its own .runfiles directory.
-    #  This is the case for generated libraries as well as remote builds.
+    # This covers the cases 1, 3, 4, 5, and 7 in the linked code above.
     #   a) go back to the workspace root from the executable file in .runfiles
     depth = executable.short_path.count("/")
     back_to_root = paths.join(*([".."] * depth))
 
     #   b) then walk back to the library's short path
-    rpaths.append(paths.join(origin, back_to_root, paths.dirname(library.short_path)))
+    rpaths.append(paths.join(origin, back_to_root, library_dir))
 
     # 2. Where the executable is outside the .runfiles directory:
-    #  This is the case for local pre-built libraries, as well as local
-    #  generated libraries.
+    # This covers the cases 2 and 6 in the linked code above.
     runfiles_dir = paths.basename(executable.short_path) + ".runfiles"
-    rpaths.append(paths.join(origin, runfiles_dir, go._ctx.workspace_name, paths.dirname(library.short_path)))
+    rpaths.append(paths.join(origin, runfiles_dir, go._ctx.workspace_name, library_dir))
+
+    # 3. Where the executable is from a different repo
+    # This covers the case 8 in the linked code above.
+    if executable.short_path.startswith("../"):
+        back_to_repo_root = paths.join(*([".."] * (depth - 1)))
+        rpaths.append(paths.join(origin, back_to_repo_root, go._ctx.workspace_name, library_dir))
 
     return rpaths
 

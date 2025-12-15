@@ -13,44 +13,45 @@
 # limitations under the License.
 
 load(
-    "//go/private:context.bzl",
-    "go_context",
+    "@bazel_skylib//lib:structs.bzl",
+    "structs",
 )
 load(
     "//go/private:common.bzl",
-    "as_list",
+    "GO_TOOLCHAIN",
+    "GO_TOOLCHAIN_LABEL",
+    "SUPPORTS_PATH_MAPPING_REQUIREMENT",
     "asm_exts",
     "cgo_exts",
     "go_exts",
-    "split_srcs",
+    "syso_exts",
 )
 load(
-    "//go/private:go_toolchain.bzl",
-    "GO_TOOLCHAIN",
-)
-load(
-    "//go/private/rules:binary.bzl",
-    "gc_linkopts",
-)
-load(
-    "//go/private:providers.bzl",
-    "GoArchive",
-    "GoLibrary",
-    "GoSource",
-    "INFERRED_PATH",
-    "get_archive",
-)
-load(
-    "//go/private/rules:transition.bzl",
-    "go_transition",
+    "//go/private:context.bzl",
+    "CGO_ATTRS",
+    "CGO_FRAGMENTS",
+    "CGO_TOOLCHAINS",
+    "go_context",
+    "new_go_info",
 )
 load(
     "//go/private:mode.bzl",
     "LINKMODES",
 )
 load(
-    "@bazel_skylib//lib:structs.bzl",
-    "structs",
+    "//go/private:providers.bzl",
+    "GoArchive",
+    "GoInfo",
+    "INFERRED_PATH",
+)
+load(
+    "//go/private/rules:binary.bzl",
+    "gc_linkopts",
+)
+load(
+    "//go/private/rules:transition.bzl",
+    "go_transition",
+    "non_go_transition",
 )
 
 def _go_test_impl(ctx):
@@ -59,38 +60,61 @@ def _go_test_impl(ctx):
     It emits an action to run the test generator, and then compiles the
     test into a binary."""
 
-    go = go_context(ctx)
+    go = go_context(
+        ctx,
+        include_deprecated_properties = False,
+        importpath = ctx.attr.importpath,
+        embed = ctx.attr.embed,
+        go_context_data = ctx.attr._go_context_data,
+        goos = ctx.attr.goos,
+        goarch = ctx.attr.goarch,
+    )
+
+    validation_outputs = []
+    nogo_diagnosticss = []
 
     # Compile the library to test with internal white box tests
-    internal_library = go.new_library(go, testfilter = "exclude")
-    internal_source = go.library_to_source(go, ctx.attr, internal_library, ctx.coverage_instrumented())
-    internal_archive = go.archive(go, internal_source)
-    go_srcs = split_srcs(internal_source.srcs).go
+    internal_go_info = new_go_info(
+        go,
+        ctx.attr,
+        testfilter = "exclude",
+    )
+    internal_archive = go.archive(go, internal_go_info)
+    if internal_archive.data._validation_output:
+        validation_outputs.append(internal_archive.data._validation_output)
+    if internal_archive.data._nogo_diagnostics:
+        nogo_diagnosticss.append(internal_archive.data._nogo_diagnostics)
+    go_srcs = [src for src in internal_go_info.srcs if src.extension == "go"]
 
     # Compile the library with the external black box tests
-    external_library = go.new_library(
+    external_go_info = new_go_info(
         go,
-        name = internal_library.name + "_test",
-        importpath = internal_library.importpath + "_test",
+        struct(
+            srcs = [struct(files = go_srcs)],
+            data = ctx.attr.data,
+            embedsrcs = [struct(files = internal_go_info.embedsrcs)],
+            deps = internal_archive.direct + [internal_archive],
+            x_defs = ctx.attr.x_defs,
+        ),
+        name = internal_go_info.name + "_test",
+        importpath = internal_go_info.importpath + "_test",
         testfilter = "only",
     )
-    external_source = go.library_to_source(go, struct(
-        srcs = [struct(files = go_srcs)],
-        embedsrcs = [struct(files = internal_source.embedsrcs)],
-        deps = internal_archive.direct + [internal_archive],
-        x_defs = ctx.attr.x_defs,
-    ), external_library, ctx.coverage_instrumented())
-    external_source, internal_archive = _recompile_external_deps(go, external_source, internal_archive, [t.label for t in ctx.attr.embed])
-    external_archive = go.archive(go, external_source)
+    external_go_info, internal_archive = _recompile_external_deps(go, external_go_info, internal_archive, [t.label for t in ctx.attr.embed])
+    external_archive = go.archive(go, external_go_info, is_external_pkg = True)
+    if external_archive.data._validation_output:
+        validation_outputs.append(external_archive.data._validation_output)
+    if external_archive.data._nogo_diagnostics:
+        nogo_diagnosticss.append(external_archive.data._nogo_diagnostics)
 
     # now generate the main function
     repo_relative_rundir = ctx.attr.rundir or ctx.label.package or "."
-    if ctx.label.workspace_name:
-        # The test is contained in an external repository (Label.workspace_name is always the empty
+    if ctx.label.repo_name:
+        # The test is contained in an external repository (Label.repo_name is always the empty
         # string for the main repository, which is the canonical repository name of this repo).
         # The test runner cd's into the directory corresponding to the main repository, so walk up
         # and then down.
-        run_dir = "../" + ctx.label.workspace_name + "/" + repo_relative_rundir
+        run_dir = "../" + ctx.label.repo_name + "/" + repo_relative_rundir
     else:
         run_dir = repo_relative_rundir
 
@@ -98,33 +122,36 @@ def _go_test_impl(ctx):
     arguments = go.builder_args(go, "gentestmain")
     arguments.add("-output", main_go)
     if go.coverage_enabled:
-        if go.mode.race:
-            arguments.add("-cover_mode", "atomic")
-        else:
-            arguments.add("-cover_mode", "set")
-        arguments.add("-cover_format", go.cover_format)
+        # Always use atomic mode as the "runtime/coverage" APIs require it
+        # and test behavior should follow non-test behavior.
+        arguments.add("-cover_mode", "atomic")
+        arguments.add("-cover_format", go.mode.cover_format)
     arguments.add(
         # the l is the alias for the package under test, the l_test must be the
         # same with the test suffix
         "-import",
-        "l=" + internal_source.library.importpath,
+        "l=" + internal_go_info.importpath,
     )
     arguments.add(
         "-import",
-        "l_test=" + external_source.library.importpath,
+        "l_test=" + external_go_info.importpath,
     )
-    arguments.add("-pkgname", internal_source.library.importpath)
+    arguments.add("-pkgname", internal_go_info.importpath)
     arguments.add_all(go_srcs, before_each = "-src", format_each = "l=%s")
+
     ctx.actions.run(
         inputs = go_srcs,
         outputs = [main_go],
         mnemonic = "GoTestGenTest",
         executable = go.toolchain._builder,
         arguments = [arguments],
+        toolchain = GO_TOOLCHAIN_LABEL,
+        env = go.env_for_path_mapping,
+        execution_requirements = SUPPORTS_PATH_MAPPING_REQUIREMENT,
     )
 
     test_gc_linkopts = gc_linkopts(ctx)
-    if not go.mode.debug:
+    if not go.mode.debug and go.mode.strip:
         # Disable symbol table and DWARF generation for test binaries.
         test_gc_linkopts.extend(["-s", "-w"])
 
@@ -134,37 +161,47 @@ def _go_test_impl(ctx):
     # in bzltestutil/init.go.
     test_gc_linkopts.extend(["-X", "+initfirst/github.com/bazelbuild/rules_go/go/tools/bzltestutil/chdir.RunDir=" + run_dir])
 
+    # This is needed for the testing.Testing() function to work in go
+    # 1.21+.  See
+    # https://cs.opensource.google/go/go/+/refs/tags/go1.21.0:src/testing/testing.go;l=647-661
+    # for more details.
+    test_gc_linkopts.extend(["-X", "testing.testBinary=1"])
+
     # Now compile the test binary itself
-    test_library = GoLibrary(
+    test_deps = external_archive.direct + [external_archive] + ctx.attr._testmain_additional_deps
+    if go.coverage_enabled:
+        test_deps.append(go.coverdata)
+    test_go_info = new_go_info(
+        go,
+        struct(
+            deps = test_deps,
+        ),
         name = go.label.name + "~testmain",
-        label = go.label,
         importpath = "testmain",
-        importmap = "testmain",
-        importpath_aliases = (),
         pathtype = INFERRED_PATH,
         is_main = True,
-        resolve = None,
+        generated_srcs = [main_go],
+        coverage_instrumented = False,
     )
-    test_deps = external_archive.direct + [external_archive] + ctx.attr._testmain_additional_deps
-    if ctx.configuration.coverage_enabled:
-        test_deps.append(go.coverdata)
-    test_source = go.library_to_source(go, struct(
-        srcs = [struct(files = [main_go])],
-        deps = test_deps,
-    ), test_library, False)
     test_archive, executable, runfiles = go.binary(
         go,
         name = ctx.label.name,
-        source = test_source,
+        source = test_go_info,
         test_archives = [internal_archive.data],
         gc_linkopts = test_gc_linkopts,
         version_file = ctx.version_file,
         info_file = ctx.info_file,
     )
 
-    env = {}
+    env = {
+        # The test binary uses this to decide
+        # whether it was invoked by Bazel or directly.
+        # If invoked directly, it will not change its working directory
+        # to run_dir configured above.
+        "GO_TEST_RUN_FROM_BAZEL": "1",
+    }
     for k, v in ctx.attr.env.items():
-        env[k] = ctx.expand_location(v, ctx.attr.data)
+        env[k] = ctx.expand_location(v, ctx.attr.data) if "$" in v else v
 
     run_environment_info = RunEnvironmentInfo(env, ctx.attr.env_inherit)
 
@@ -181,7 +218,12 @@ def _go_test_impl(ctx):
             executable = executable,
         ),
         OutputGroupInfo(
-            compilation_outputs = [internal_archive.data.file],
+            compilation_outputs = [
+                internal_archive.data.file,
+                external_archive.data.file,
+            ],
+            nogo_fix = nogo_diagnosticss,
+            _validation = validation_outputs,
         ),
         coverage_common.instrumented_files_info(
             ctx,
@@ -193,10 +235,12 @@ def _go_test_impl(ctx):
     ]
 
 _go_test_kwargs = {
+    "cfg": go_transition,
     "implementation": _go_test_impl,
     "attrs": {
         "data": attr.label_list(
             allow_files = True,
+            cfg = non_go_transition,
             doc = """List of files needed by this rule at run-time. This may include data files
             needed or other programs that may be executed. The [bazel] package may be
             used to locate run files; they may appear in different places depending on the
@@ -205,9 +249,10 @@ _go_test_kwargs = {
             """,
         ),
         "srcs": attr.label_list(
-            allow_files = go_exts + asm_exts + cgo_exts,
+            allow_files = go_exts + asm_exts + cgo_exts + syso_exts,
+            cfg = non_go_transition,
             doc = """The list of Go source files that are compiled to create the package.
-            Only `.go` and `.s` files are permitted, unless the `cgo`
+            Only `.go`, `.s`, and `.syso` files are permitted, unless the `cgo`
             attribute is set, in which case,
             `.c .cc .cpp .cxx .h .hh .hpp .hxx .inc .m .mm`
             files are also permitted. Files may be filtered at build time
@@ -215,26 +260,25 @@ _go_test_kwargs = {
             """,
         ),
         "deps": attr.label_list(
-            providers = [GoLibrary],
+            providers = [GoInfo],
             doc = """List of Go libraries this test imports directly.
-            These may be go_library rules or compatible rules with the [GoLibrary] provider.
+            These may be go_library rules or compatible rules with the [GoInfo] provider.
             """,
-            cfg = go_transition,
         ),
         "embed": attr.label_list(
-            providers = [GoLibrary],
+            providers = [GoInfo],
             doc = """List of Go libraries whose sources should be compiled together with this
             package's sources. Labels listed here must name `go_library`,
-            `go_proto_library`, or other compatible targets with the [GoLibrary] and
-            [GoSource] providers. Embedded libraries must have the same `importpath` as
+            `go_proto_library`, or other compatible targets with the
+            [GoInfo] provider. Embedded libraries must have the same `importpath` as
             the embedding library. At most one embedded library may have `cgo = True`,
             and the embedding library may not also have `cgo = True`. See [Embedding]
             for more information.
             """,
-            cfg = go_transition,
         ),
         "embedsrcs": attr.label_list(
             allow_files = True,
+            cfg = non_go_transition,
             doc = """The list of files that may be embedded into the compiled package using
             `//go:embed` directives. All files must be in the same logical directory
             or a subdirectory as source files. All source files containing `//go:embed`
@@ -301,7 +345,7 @@ _go_test_kwargs = {
             the same values as `go build -buildmode` and works the same way.
             <br><br>
             <ul>
-            <li>`auto` (default): Controlled by `//go/config:linkmode`, which defaults to `normal`.</li>
+            <li>`auto` (default): Controlled by `//go/config:linkmode`, which defaults to `pie` on supported platforms and `normal` elsewhere.</li>
             <li>`normal`: Builds a normal executable with position-dependent code.</li>
             <li>`pie`: Builds a position-independent executable.</li>
             <li>`plugin`: Builds a shared library that can be loaded as a Go plugin. Only supported on platforms that support plugins.</li>
@@ -321,6 +365,7 @@ _go_test_kwargs = {
             """,
         ),
         "cdeps": attr.label_list(
+            cfg = non_go_transition,
             doc = """The list of other libraries that the c code depends on.
             This can be anything that would be allowed in [cc_library deps]
             Only valid if `cgo` = `True`.
@@ -415,11 +460,10 @@ _go_test_kwargs = {
             See [Cross compilation] for more information.
             """,
         ),
-        "_go_context_data": attr.label(default = "//:go_context_data", cfg = go_transition),
+        "_go_context_data": attr.label(default = "//:go_context_data"),
         "_testmain_additional_deps": attr.label_list(
-            providers = [GoLibrary],
+            providers = [GoInfo],
             default = ["//go/tools/bzltestutil"],
-            cfg = go_transition,
         ),
         # Required for Bazel to collect coverage of instrumented C/C++ binaries
         # executed by go_test.
@@ -440,10 +484,11 @@ _go_test_kwargs = {
         "_allowlist_function_transition": attr.label(
             default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
         ),
-    },
+    } | CGO_ATTRS,
     "executable": True,
     "test": True,
-    "toolchains": [GO_TOOLCHAIN],
+    "fragments": CGO_FRAGMENTS,
+    "toolchains": [GO_TOOLCHAIN] + CGO_TOOLCHAINS,
     "doc": """This builds a set of tests that can be run with `bazel test`.<br><br>
     To run all tests in the workspace, and print output on failure (the
     equivalent of `go test ./...`), run<br>
@@ -459,7 +504,7 @@ _go_test_kwargs = {
     `--test_arg=arg <test_arg_>` arguments to Bazel, and you can set environment
     variables in the test environment by passing
     `--test_env=VAR=value <test_env_>`. You can terminate test execution after the first
-    failure by passing the `--test_runner_fast_fast <test_runner_fail_fast_>` argument
+    failure by passing the `--test_runner_fail_fast <test_runner_fail_fast_>` argument
     to Bazel. This is equivalent to passing `--test_arg=-failfast <test_arg_>`.<br><br>
     To write structured testlog information to Bazel's `XML_OUTPUT_FILE`, tests
     ran with `bazel test` execute using a wrapper. This functionality can be
@@ -478,7 +523,7 @@ _go_test_kwargs = {
 
 go_test = rule(**_go_test_kwargs)
 
-def _recompile_external_deps(go, external_source, internal_archive, library_labels):
+def _recompile_external_deps(go, external_go_info, internal_archive, library_labels):
     """Recompiles some archives in order to split internal and external tests.
 
     go_test, like 'go test', splits tests into two separate archives: an
@@ -501,29 +546,29 @@ def _recompile_external_deps(go, external_source, internal_archive, library_labe
 
     Args:
         go: go object returned by go_context.
-        external_source: GoSource for the external archive.
+        external_go_info: GoInfo for the external archive.
         internal_archive: GoArchive for the internal archive.
         library_labels: labels for embedded libraries under test.
 
     Returns:
-        external_soruce: recompiled GoSource for the external archive. If no
-            recompilation is needed, the original GoSource is returned.
+        external_source: recompiled GoInfo for the external archive. If no
+            recompilation is needed, the original GoInfo is returned.
         internal_archive: recompiled GoArchive for the internal archive. If no
-            recompilation is needed, the original GoSource is returned.
+            recompilation is needed, the original GoInfo is returned.
     """
 
     # If no libraries are embedded in the internal archive, then nothing needs
     # to be recompiled.
     if not library_labels:
-        return external_source, internal_archive
+        return external_go_info, internal_archive
 
     # Build a map from labels to GoArchiveData.
     # If none of the librares embedded in the internal archive are in the
     # dependency graph, then nothing needs to be recompiled.
-    arc_data_list = depset(transitive = [get_archive(dep).transitive for dep in external_source.deps]).to_list()
+    arc_data_list = depset(transitive = [archive.transitive for archive in external_go_info.deps]).to_list()
     label_to_arc_data = {a.label: a for a in arc_data_list}
     if all([l not in label_to_arc_data for l in library_labels]):
-        return external_source, internal_archive
+        return external_go_info, internal_archive
 
     # Build a depth-first post-order list of dependencies starting with the
     # external archive. Each archive appears after its dependencies and before
@@ -538,7 +583,7 @@ def _recompile_external_deps(go, external_source, internal_archive, library_labe
     dep_list = []
 
     # stack is a stack of targets to process. We're done when it's empty.
-    stack = [get_archive(dep).data.label for dep in external_source.deps]
+    stack = [archive.data.label for archive in external_go_info.deps]
 
     # deps_pushed tracks the status of each target.
     # DEPS_UNPROCESSED means the target is on the stack, but its dependencies
@@ -610,34 +655,33 @@ def _recompile_external_deps(go, external_source, internal_archive, library_labe
     # recompilation. This breaks a cycle which occurs because the deps list
     # is shared between the internal and external archive. The internal archive
     # can't import anything that imports itself.
-    internal_source = internal_archive.source
+    internal_go_info = internal_archive.source
 
     internal_deps = []
 
     # Pass internal dependencies that need to be recompiled down to the builder to check if the internal archive
     # tries to import any of the dependencies. If there is, that means that there is a dependency cycle.
     need_recompile_deps = []
-    for dep in internal_source.deps:
-        dep_data = get_archive(dep).data
+    for archive in internal_go_info.deps:
+        dep_data = archive.data
         if not need_recompile[dep_data.label]:
-            internal_deps.append(dep)
+            internal_deps.append(archive)
         else:
             need_recompile_deps.append(dep_data.importpath)
 
-    x_defs = dict(internal_source.x_defs)
+    x_defs = dict(internal_go_info.x_defs)
     x_defs.update(internal_archive.x_defs)
-    attrs = structs.to_dict(internal_source)
+    attrs = structs.to_dict(internal_go_info)
     attrs["deps"] = internal_deps
     attrs["x_defs"] = x_defs
-    internal_source = GoSource(**attrs)
-    internal_archive = go.archive(go, internal_source, _recompile_suffix = ".recompileinternal", recompile_internal_deps = need_recompile_deps)
+    internal_go_info = GoInfo(**attrs)
+    internal_archive = go.archive(go, internal_go_info, _recompile_suffix = ".recompileinternal", recompile_internal_deps = need_recompile_deps)
 
     # Build a map from labels to possibly recompiled GoArchives.
     label_to_archive = {}
     i = 0
     for label in dep_list:
         i += 1
-        recompile_suffix = ".recompile%d" % i
 
         # If this library is the internal archive, use the recompiled version.
         if label == internal_archive.data.label:
@@ -650,63 +694,57 @@ def _recompile_external_deps(go, external_source, internal_archive, library_labe
             label_to_archive[label] = internal_archive
             continue
 
-        # Create a stub GoLibrary and GoSource from the archive data.
+        # Create a stub GoInfo from the archive data.
         arc_data = label_to_arc_data[label]
-        library = GoLibrary(
+        deps = [label_to_archive[d] for d in arc_data._dep_labels]
+        go_info = GoInfo(
             name = arc_data.name,
             label = arc_data.label,
             importpath = arc_data.importpath,
             importmap = arc_data.importmap,
             importpath_aliases = arc_data.importpath_aliases,
             pathtype = arc_data.pathtype,
-            resolve = None,
             testfilter = None,
             is_main = False,
-        )
-        deps = [label_to_archive[d] for d in arc_data._dep_labels]
-        source = GoSource(
-            library = library,
             mode = go.mode,
-            srcs = as_list(arc_data.srcs),
-            orig_srcs = as_list(arc_data.orig_srcs),
-            orig_src_map = dict(zip(arc_data.srcs, arc_data._orig_src_map)),
+            srcs = list(arc_data.srcs),
             cover = arc_data._cover,
-            embedsrcs = as_list(arc_data._embedsrcs),
+            embedsrcs = list(arc_data._embedsrcs),
             x_defs = dict(arc_data._x_defs),
             deps = deps,
-            gc_goopts = as_list(arc_data._gc_goopts),
-            runfiles = go._ctx.runfiles(files = arc_data.data_files),
+            gc_goopts = list(arc_data._gc_goopts),
+            runfiles = arc_data.runfiles,
             cgo = arc_data._cgo,
-            cdeps = as_list(arc_data._cdeps),
-            cppopts = as_list(arc_data._cppopts),
-            copts = as_list(arc_data._copts),
-            cxxopts = as_list(arc_data._cxxopts),
-            clinkopts = as_list(arc_data._clinkopts),
-            cgo_exports = as_list(arc_data._cgo_exports),
+            cdeps = list(arc_data._cdeps),
+            cppopts = list(arc_data._cppopts),
+            copts = list(arc_data._copts),
+            cxxopts = list(arc_data._cxxopts),
+            clinkopts = list(arc_data._clinkopts),
         )
 
         # If this archive needs to be recompiled, use go.archive.
         # Otherwise, create a stub GoArchive, using the original file.
         if need_recompile[label]:
             recompile_suffix = ".recompile%d" % i
-            archive = go.archive(go, source, _recompile_suffix = recompile_suffix)
+            archive = go.archive(go, go_info, _recompile_suffix = recompile_suffix)
         else:
             archive = GoArchive(
-                source = source,
+                source = go_info,
                 data = arc_data,
                 direct = deps,
                 libs = depset(direct = [arc_data.file], transitive = [a.libs for a in deps]),
                 transitive = depset(direct = [arc_data], transitive = [a.transitive for a in deps]),
-                x_defs = source.x_defs,
-                cgo_deps = depset(direct = arc_data._cgo_deps, transitive = [a.cgo_deps for a in deps]),
-                cgo_exports = depset(direct = list(source.cgo_exports), transitive = [a.cgo_exports for a in deps]),
-                runfiles = source.runfiles,
+                x_defs = go_info.x_defs,
+                cgo_deps = depset(transitive = [arc_data._cgo_deps] + [a.cgo_deps for a in deps]),
+                cgo_exports = depset(transitive = [a.cgo_exports for a in deps]),
+                runfiles = go_info.runfiles,
                 mode = go.mode,
+                _headers = internal_archive._headers,
             )
         label_to_archive[label] = archive
 
-    # Finally, we need to replace external_source.deps with the recompiled
+    # Finally, we need to replace external_go_info.deps with the recompiled
     # archives.
-    attrs = structs.to_dict(external_source)
-    attrs["deps"] = [label_to_archive[get_archive(dep).data.label] for dep in external_source.deps]
-    return GoSource(**attrs), internal_archive
+    attrs = structs.to_dict(external_go_info)
+    attrs["deps"] = [label_to_archive[archive.data.label] for archive in external_go_info.deps]
+    return GoInfo(**attrs), internal_archive

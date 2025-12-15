@@ -1,6 +1,12 @@
 load(":common_tests.bzl", "common_test_suite")
+load(":context_tests.bzl", "context_test_suite")
+load(":provider_tests.bzl", "provider_test_suite")
 load(":sdk_tests.bzl", "sdk_test_suite")
 
 common_test_suite()
+
+context_test_suite()
+
+provider_test_suite()
 
 sdk_test_suite()

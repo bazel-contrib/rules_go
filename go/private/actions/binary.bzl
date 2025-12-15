@@ -13,15 +13,17 @@
 # limitations under the License.
 
 load(
+    "//go/private:common.bzl",
+    "ARCHIVE_EXTENSION",
+    "goos_to_extension",
+    "goos_to_shared_extension",
+    "has_shared_lib_extension",
+)
+load(
     "//go/private:mode.bzl",
     "LINKMODE_C_ARCHIVE",
     "LINKMODE_C_SHARED",
     "LINKMODE_PLUGIN",
-)
-load(
-    "//go/private:common.bzl",
-    "ARCHIVE_EXTENSION",
-    "has_shared_lib_extension",
 )
 
 def emit_binary(
@@ -40,14 +42,16 @@ def emit_binary(
 
     archive = go.archive(go, source)
     if not executable:
-        extension = go.exe_extension
-        if go.mode.link == LINKMODE_C_SHARED:
-            name = "lib" + name  # shared libraries need a "lib" prefix in their name
-            extension = go.shared_extension
-        elif go.mode.link == LINKMODE_C_ARCHIVE:
+        if go.mode.linkmode == LINKMODE_C_SHARED:
+            if go.mode.goos != "wasip1":
+                name = "lib" + name  # shared libraries need a "lib" prefix in their name
+            extension = goos_to_shared_extension(go.mode.goos)
+        elif go.mode.linkmode == LINKMODE_C_ARCHIVE:
             extension = ARCHIVE_EXTENSION
-        elif go.mode.link == LINKMODE_PLUGIN:
-            extension = go.shared_extension
+        elif go.mode.linkmode == LINKMODE_PLUGIN:
+            extension = goos_to_shared_extension(go.mode.goos)
+        else:
+            extension = goos_to_extension(go.mode.goos)
         executable = go.declare_file(go, path = name, ext = extension)
     go.link(
         go,

@@ -23,6 +23,11 @@ func parseNolint(text string) (map[string]bool, bool) {
 	if !strings.HasPrefix(text, "nolint") {
 		return nil, false
 	}
+
+	// strip explanation comments
+	split := strings.Split(text, "//")
+	text = strings.TrimSpace(split[0])
+
 	parts := strings.Split(text, ":")
 	if len(parts) == 1 {
 		return nil, true

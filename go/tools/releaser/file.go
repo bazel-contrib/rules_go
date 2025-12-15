@@ -122,6 +122,9 @@ func extractZip(zf *os.File, name, dir, stripPrefix string) (err error) {
 		if err != nil {
 			return err
 		}
+		if outPath == "" {
+			return nil
+		}
 		if strings.HasSuffix(f.Name, "/") {
 			return os.MkdirAll(outPath, 0777)
 		}
@@ -169,6 +172,9 @@ func extractTar(r io.Reader, name, dir, stripPrefix string) (err error) {
 		if err != nil {
 			return err
 		}
+		if outPath == "" {
+			return nil
+		}
 		switch hdr.Typeflag {
 		case tar.TypeDir:
 			return os.MkdirAll(outPath, 0777)
@@ -209,7 +215,8 @@ func extractTar(r io.Reader, name, dir, stripPrefix string) (err error) {
 // point outside dir.
 func extractedPath(dir, stripPrefix, entryName string) (string, error) {
 	if !strings.HasPrefix(entryName, stripPrefix) {
-		return "", fmt.Errorf("entry does not start with prefix %s: %q", stripPrefix, entryName)
+		// Skip the file.
+		return "", nil
 	}
 	entryName = entryName[len(stripPrefix):]
 	if entryName == "" {

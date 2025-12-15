@@ -32,8 +32,8 @@ http_archive(
     name = "io_bazel_rules_go",
     sha256 = "%[2]s",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/%[1]s/rules_go-%[1]s.zip",
-        "https://github.com/bazelbuild/rules_go/releases/download/%[1]s/rules_go-%[1]s.zip",
+        "https://mirror.bazel.build/github.com/bazel-contrib/rules_go/releases/download/%[1]s/rules_go-%[1]s.zip",
+        "https://github.com/bazel-contrib/rules_go/releases/download/%[1]s/rules_go-%[1]s.zip",
     ],
 )
 
@@ -41,7 +41,17 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_depe
 
 go_rules_dependencies()
 
-go_register_toolchains(version = "%[3]s")`, version, shasum, goVersion)
+go_register_toolchains(version = "%[3]s")
+
+# Create the host platform repository transitively required by rules_go.
+load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
+load("@platforms//host:extension.bzl", "host_platform_repo")
+
+maybe(
+	host_platform_repo,
+	name = "host_platform",
+)
+`, version, shasum, goVersion)
 }
 
 func findLatestGoVersion() (v string, err error) {

@@ -5,10 +5,20 @@
       "email": "fabian@meumertzhe.im",
       "github": "fmeum",
       "name": "Fabian Meumertzheim"
+    },
+    {
+      "email": "zplin@uber.com",
+      "github": "linzhp",
+      "name": "Zhongpeng Lin"
+    },
+    {
+      "email": "tfrench@uber.com",
+      "github": "tyler-french",
+      "name": "Tyler French"
     }
   ],
   "repository": [
-    "github:bazelbuild/rules_go"
+    "github:bazel-contrib/rules_go"
   ],
   "versions": [],
   "yanked_versions": {}

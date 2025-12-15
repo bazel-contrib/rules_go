@@ -1,6 +1,8 @@
 # gazelle:exclude
 
+load("@io_bazel_rules_go_bazel_features//:features.bzl", "bazel_features")
 load("//go:def.bzl", "go_binary", "go_library")
+load("//go/private:common.bzl", "RULES_GO_IS_BZLMOD_REPO")
 load("//go/private/rules:go_bin_for_host.bzl", "go_bin_for_host")
 
 go_bin_for_host(
@@ -12,7 +14,6 @@ go_library(
     name = "go_bin_runner_lib",
     srcs = [
         "main.go",
-        "process.go",
     ],
     importpath = "github.com/bazelbuild/rules_go/go/tools/go_bin_runner",
     visibility = ["//visibility:private"],
@@ -23,11 +24,20 @@ go_library(
 
 go_binary(
     name = "go_bin_runner",
-    data = [":go_bin_for_host"],
+    # Make this binary usable as a drop-in replacement for the actual go binary with external tools.
+    out = select({
+        "@platforms//os:windows": "bin/go.exe",
+        "//conditions:default": "bin/go",
+    }),
+    data = [":go_bin_for_host"] + (
+        ["@bazel_gazelle_go_repository_config//:config.json"] if RULES_GO_IS_BZLMOD_REPO else []
+    ),
     embed = [":go_bin_runner_lib"],
     visibility = ["//go:__pkg__"],
     x_defs = {
         "GoBinRlocationPath": "$(rlocationpath :go_bin_for_host)",
+        "ConfigRlocationPath": "$(rlocationpath @bazel_gazelle_go_repository_config//:config.json)" if RULES_GO_IS_BZLMOD_REPO else "WORKSPACE",
+        "HasBazelModTidy": str(bazel_features.external_deps.bazel_mod_tidy),
     },
 )
 

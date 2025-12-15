@@ -3,11 +3,12 @@
 
 .. _nogo: nogo.rst#nogo
 .. _configuring-analyzers: nogo.rst#configuring-analyzers
+.. _validation action: https://bazel.build/extending/rules#validation_actions
+.. _Bzlmod: /docs/go/core/bzlmod.md#configuring-nogo
 .. _go_library: /docs/go/core/rules.md#go_library
 .. _analysis: https://godoc.org/golang.org/x/tools/go/analysis
 .. _Analyzer: https://godoc.org/golang.org/x/tools/go/analysis#Analyzer
-.. _GoLibrary: providers.rst#GoLibrary
-.. _GoSource: providers.rst#GoSource
+.. _GoInfo: providers.rst#GoInfo
 .. _GoArchive: providers.rst#GoArchive
 .. _vet: https://golang.org/cmd/vet/
 .. _golangci-lint: https://github.com/golangci/golangci-lint
@@ -22,14 +23,9 @@
 .. footer:: The ``nogo`` logo was derived from the Go gopher, which was designed by Renee French. (http://reneefrench.blogspot.com/) The design is licensed under the Creative Commons 3.0 Attributions license. Read this article for more details: http://blog.golang.org/gopher
 
 
-**WARNING**: This functionality is experimental, so its API might change.
-Please do not rely on it for production use, but feel free to use it and file
-issues.
-
 ``nogo`` is a tool that analyzes the source code of Go programs. It runs
-alongside the Go compiler in the Bazel Go rules and rejects programs that
-contain disallowed coding patterns. In addition, ``nogo`` may report
-compiler-like errors.
+in an action after the Go compiler in the Bazel Go rules and rejects sources that
+contain disallowed coding patterns from the configured analyzers.
 
 ``nogo`` is a powerful tool for preventing bugs and code anti-patterns early
 in the development process. It may be used to run the same analyses as `vet`_,
@@ -70,17 +66,24 @@ want to run.
         visibility = ["//visibility:public"],
     )
 
-Pass a label for your `nogo`_ target to ``go_register_toolchains`` in your
-``WORKSPACE`` file.
+Pass a label for your `nogo`_ target to ``go_register_nogo`` in your
+``WORKSPACE`` file. When using ``MODULE.bazel``, see the Bzlmod_ documentation
+instead.
 
 .. code:: bzl
 
-    load("@io_bazel_rules_go//go:deps.bzl", "go_rules_dependencies", "go_register_toolchains")
+    load("@io_bazel_rules_go//go:deps.bzl", "go_rules_dependencies", "go_register_nogo")
     go_rules_dependencies()
-    go_register_toolchains(nogo = "@//:my_nogo") # my_nogo is in the top-level BUILD file of this workspace
+    go_register_toolchains(version = "1.23.1")
+    go_register_nogo(
+      nogo = "@//:my_nogo"  # my_nogo is in the top-level BUILD file of this workspace
+      includes = ["@//:__subpackages__"],  # Labels to lint. By default only lints code in workspace.
+      excludes = ["@//generated:__subpackages__"],  # Labels to exclude.
+    )
 
 **NOTE**: You must include ``"@//"`` prefix when referring to targets in the local
-workspace.
+workspace. Also note that you cannot use this to refer to bzlmod repos, as the labels
+don't go though repo mapping.
 
 The `nogo`_ rule will generate a program that executes all the supplied
 analyzers at build-time. The generated ``nogo`` program will run alongside the
@@ -125,12 +128,41 @@ Usage
 ---------------------------------
 
 ``nogo``, upon configured, will be invoked automatically when building any Go target in your
-workspace.  If any of the analyzers reject the program, the build will fail.
+workspace.  If any of the analyzers reject the program, the build will fail. However, since
+``nogo`` runs in a `validation action`_ that is separate from compilation, you can use
+``--keep_going`` to have compilation continue and see all ``nogo`` findings, not just those
+from the first failing target. You can also specify ``--norun_validations`` to disable all
+validations, including ``nogo``.
+
+Note: Since the action that runs ``nogo`` doesn't fail if ``nogo`` produces findings, it
+is not possible to debug it with ``--sandbox_debug``. If necessary, set the ``debug``
+attribute of the ``nogo`` rule to ``True`` to have ``nogo`` fail in this case.
 
 ``nogo`` will run on all Go targets in your workspace, including tests and binary targets.
-It will also run on targets that are imported from other workspaces by default. You could
-exclude the external repositories from ``nogo`` by using the `exclude_files` regex in
-`configuring-analyzers`_.
+When using WORKSPACE, it will also run on targets that are imported from other workspaces
+by default. You could exclude the external repositories from ``nogo`` by using the
+`exclude_files` regex in `configuring-analyzers`_. With Bzlmod, external repositories are
+not validated with ``nogo`` by default. See the Bzlmod_ guide for more information
+on how to configure the ``nogo`` scope in this case.
+
+You can prevent ``nogo`` from running for a particular target by adding ``"no-nogo"`` to
+``tags``. This can be useful for generated code, which is often large but not interesting
+for static analysis.
+
+Fixes
+--------------------------------
+
+Some analyzers generate fixes for the issues they detect. ``nogo`` prints these fixes and
+a command to apply them by default. If you want to collect and apply all the fixes at once,
+you can use the following commands:
+
+.. code:: shell
+
+    # Only run nogo, no compilation actions, and don't fail on findings.
+    bazel build //... --norun_validations --output_groups nogo_fix --remote_download_regex='.*/nogo.patch$'
+    # Apply all fixes.
+    bazel cquery //... --norun_validations --output_groups nogo_fix --remote_download_regex='.*/nogo.patch$' --output=files \
+      | xargs -I{} sh -c '[[ ! -e {}/nogo.patch ]] || patch -p1 -N --reject-file /dev/null < {}/nogo.patch'
 
 Relationship with other linters
 ~~~~~~~~~~~~~~~~~~~~~

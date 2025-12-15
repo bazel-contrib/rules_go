@@ -32,6 +32,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"sort"
@@ -56,47 +57,113 @@ var typesSizes = types.SizesFor("gc", os.Getenv("GOARCH"))
 func main() {
 	log.SetFlags(0) // no timestamp
 	log.SetPrefix("nogo: ")
-	if err := run(os.Args[1:]); err != nil {
-		log.Fatal(err)
+	if err, exitCode := run(os.Args[1:]); err != nil {
+		log.Print(err)
+		os.Exit(exitCode)
 	}
 }
 
 // run returns an error if there is a problem loading the package or if any
 // analysis fails.
-func run(args []string) error {
+func run(args []string) (error, int) {
 	args, _, err := expandParamsFiles(args)
 	if err != nil {
-		return fmt.Errorf("error reading paramfiles: %v", err)
+		return fmt.Errorf("error reading paramfiles: %v", err), nogoError
 	}
 
 	factMap := factMultiFlag{}
 	flags := flag.NewFlagSet("nogo", flag.ExitOnError)
 	flags.Var(&factMap, "fact", "Import path and file containing facts for that library, separated by '=' (may be repeated)'")
+	factsOnly := flags.Bool("facts_only", false, "If true, only facts are emitted, no analyzers are run")
 	importcfg := flags.String("importcfg", "", "The import configuration file")
 	packagePath := flags.String("p", "", "The package path (importmap) of the package being compiled")
 	xPath := flags.String("x", "", "The archive file where serialized facts should be written")
+	nogoFixDir := flags.String("fix_dir", "", "The path of the directory to store the nogo fixes in")
+	var ignores multiFlag
+	flags.Var(&ignores, "ignore", "Names of files to ignore")
 	flags.Parse(args)
 	srcs := flags.Args()
 
 	packageFile, importMap, err := readImportCfg(*importcfg)
 	if err != nil {
-		return fmt.Errorf("error parsing importcfg: %v", err)
+		return fmt.Errorf("error parsing importcfg: %v", err), nogoError
 	}
 
-	diagnostics, facts, err := checkPackage(analyzers, *packagePath, packageFile, importMap, factMap, srcs)
+	diagnostics, pkg, err := checkPackage(analyzers, *packagePath, packageFile, importMap, factMap, *factsOnly, srcs, ignores)
 	if err != nil {
-		return fmt.Errorf("error running analyzers: %v", err)
+		return fmt.Errorf("error running analyzers: %v", err), nogoError
 	}
-	if diagnostics != "" {
-		return fmt.Errorf("errors found by nogo during build-time code analysis:\n%s\n", diagnostics)
-	}
+
+	// Write the facts file for downstream consumers before failing due to diagnostics.
 	if *xPath != "" {
-		if err := ioutil.WriteFile(abs(*xPath), facts, 0o666); err != nil {
-			return fmt.Errorf("error writing facts: %v", err)
+		var factsContent []byte
+		if pkg != nil {
+			factsContent = pkg.facts.Encode()
+		}
+
+		if err := os.WriteFile(abs(*xPath), factsContent, 0o666); err != nil {
+			return fmt.Errorf("error writing facts: %v", err), nogoError
 		}
 	}
 
-	return nil
+	var fset *token.FileSet
+	if pkg != nil {
+		fset = pkg.fset
+	} else if len(diagnostics) > 0 {
+		return fmt.Errorf("pkg should not be nil with diagnostics"), nogoError
+	}
+
+	exitCode := nogoSuccess
+	var errMsg bytes.Buffer
+	if len(diagnostics) > 0 {
+		// debugMode is defined by the template in generate_nogo_main.go.
+		exitCode = nogoViolation
+		if debugMode {
+			// Force actions running nogo to fail to help debug issues.
+			exitCode = nogoError
+		}
+		errMsg.WriteString("errors found by nogo during build-time code analysis:")
+		for _, d := range diagnostics {
+			fmt.Fprintf(&errMsg, "\n%s: %s (%s)", fset.Position(d.Pos), d.Message, d.analyzerName)
+		}
+	}
+
+	if errs := saveSuggestedFixes(*nogoFixDir, diagnostics, fset); len(errs) > 0 {
+		errMsg.WriteString("\nsaving suggested fixes:")
+		for _, err := range errs {
+			fmt.Fprintf(&errMsg, "\n%v", err)
+		}
+	}
+
+	if errMsg.Len() > 0 {
+		return errors.New(errMsg.String()), exitCode
+	}
+	return nil, exitCode
+}
+
+func saveSuggestedFixes(nogoFixDir string, diagnostics []diagnosticEntry, fset *token.FileSet) []error {
+	if nogoFixDir == "" {
+		return nil
+	}
+	var errs []error
+	fixes, err := getFixes(diagnostics, fset)
+	if err != nil {
+		errs = append(errs, err)
+	}
+	if len(fixes) == 0 {
+		return errs
+	}
+	patchFilePath := filepath.Join(nogoFixDir, nogoFixBasename)
+	patchFile, err := os.Create(patchFilePath)
+	if err != nil {
+		errs = append(errs, fmt.Errorf("creating %q: %w", patchFilePath, err))
+		return errs
+	}
+	defer patchFile.Close()
+	if err := writePatch(patchFile, fixes); err != nil {
+		errs = append(errs, err)
+	}
+	return errs
 }
 
 // Adapted from go/src/cmd/compile/internal/gc/main.go. Keep in sync.
@@ -142,12 +209,27 @@ func readImportCfg(file string) (packageFile map[string]string, importMap map[st
 	return packageFile, importMap, nil
 }
 
+func setAnalyzerFlags(a *analysis.Analyzer, flags map[string]string) error {
+	for flagKey, flagVal := range flags {
+		if strings.HasPrefix(flagKey, "-") {
+			return fmt.Errorf("%s: flag should not begin with '-': %s", a.Name, flagKey)
+		}
+		if flag := a.Flags.Lookup(flagKey); flag == nil {
+			return fmt.Errorf("%s: unrecognized flag: %s", a.Name, flagKey)
+		}
+		if err := a.Flags.Set(flagKey, flagVal); err != nil {
+			return fmt.Errorf("%s: invalid value for flag: %s=%s: %w", a.Name, flagKey, flagVal, err)
+		}
+	}
+	return nil
+}
+
 // checkPackage runs all the given analyzers on the specified package and
 // returns the source code diagnostics that the must be printed in the build log.
 // It returns an empty string if no source code diagnostics need to be printed.
 //
 // This implementation was adapted from that of golang.org/x/tools/go/checker/internal/checker.
-func checkPackage(analyzers []*analysis.Analyzer, packagePath string, packageFile, importMap map[string]string, factMap map[string]string, filenames []string) (string, []byte, error) {
+func checkPackage(analyzers []*analysis.Analyzer, packagePath string, packageFile, importMap, factMap map[string]string, factsOnly bool, filenames, ignoreFiles []string) ([]diagnosticEntry, *goPackage, error) {
 	// Register fact types and establish dependencies between analyzers.
 	actions := make(map[*analysis.Analyzer]*action)
 	var visit func(a *analysis.Analyzer) *action
@@ -172,38 +254,61 @@ func checkPackage(analyzers []*analysis.Analyzer, packagePath string, packageFil
 		return act
 	}
 
-	roots := make([]*action, 0, len(analyzers))
+	// We populate flags for analyzers and their subanalyzers to depth of one. Some analyzers require to provide
+	// flags to their dependencies e.g. nilaway has specific nilaway_config subanalyzer.
 	for _, a := range analyzers {
 		if cfg, ok := configs[a.Name]; ok {
-			for flagKey, flagVal := range cfg.analyzerFlags {
-				if strings.HasPrefix(flagKey, "-") {
-					return "", nil, fmt.Errorf(
-						"%s: flag should not begin with '-': %s", a.Name, flagKey)
-				}
-				if flag := a.Flags.Lookup(flagKey); flag == nil {
-					return "", nil, fmt.Errorf("%s: unrecognized flag: %s", a.Name, flagKey)
-				}
-				if err := a.Flags.Set(flagKey, flagVal); err != nil {
-					return "", nil, fmt.Errorf(
-						"%s: invalid value for flag: %s=%s: %w", a.Name, flagKey, flagVal, err)
+			if err := setAnalyzerFlags(a, cfg.analyzerFlags); err != nil {
+				return nil, nil, err
+			}
+		}
+		for _, ra := range a.Requires {
+			if cfg, ok := configs[ra.Name]; ok {
+				if err := setAnalyzerFlags(ra, cfg.analyzerFlags); err != nil {
+					return nil, nil, err
 				}
 			}
 		}
-		roots = append(roots, visit(a))
+	}
+
+	roots := make([]*action, 0, len(analyzers))
+	for _, a := range analyzers {
+		if !factsOnly || len(a.FactTypes) > 0 {
+			roots = append(roots, visit(a))
+		}
+	}
+	if len(roots) == 0 {
+		// No analyzers to run, return early.
+		return nil, nil, nil
 	}
 
 	// Load the package, including AST, types, and facts.
 	imp := newImporter(importMap, packageFile, factMap)
 	pkg, err := load(packagePath, imp, filenames)
 	if err != nil {
-		return "", nil, fmt.Errorf("error loading package: %v", err)
+		return nil, nil, fmt.Errorf("error loading package: %v", err)
 	}
+
 	for _, act := range actions {
 		act.pkg = pkg
 	}
 
+	ignoreFilesSet := map[string]struct{}{}
+	for _, ignore := range ignoreFiles {
+		ignoreFilesSet[ignore] = struct{}{}
+	}
 	// Process nolint directives similar to golangci-lint.
+	// Also skip over fully ignored files.
 	for _, f := range pkg.syntax {
+		if _, ok := ignoreFilesSet[pkg.fset.Position(f.Pos()).Filename]; ok {
+			for _, act := range actions {
+				act.nolint = append(act.nolint, &Range{
+					from: pkg.fset.Position(f.Pos()),
+					to:   pkg.fset.Position(f.End()).Line,
+				})
+			}
+			continue
+		}
 		// CommentMap will correctly associate comments to the largest node group
 		// applicable. This handles inline comments that might trail a large
 		// assignment and will apply the comment to the entire assignment.
@@ -232,10 +337,8 @@ func checkPackage(analyzers []*analysis.Analyzer, packagePath string, packageFil
 	// Execute the analyzers.
 	execAll(roots)
 
-	// Process diagnostics and encode facts for importers of this package.
-	diagnostics := checkAnalysisResults(roots, pkg)
-	facts := pkg.facts.Encode()
-	return diagnostics, facts, nil
+	diagnostics, err := checkAnalysisResults(roots, pkg)
+	return diagnostics, pkg, err
 }
 
 type Range struct {
@@ -347,9 +450,13 @@ func (act *action) execOnce() {
 	act.pass = pass
 
 	var err error
-	if act.pkg.illTyped && !pass.Analyzer.RunDespiteErrors {
-		err = fmt.Errorf("analysis skipped due to type-checking error: %v", act.pkg.typeCheckError)
-	} else {
+	defer func() {
+		if r := recover(); r != nil {
+			// If the analyzer panics, we catch it here and return an error.
+			act.err = fmt.Errorf("panic: %v", r)
+		}
+	}()
+	if !act.pkg.illTyped || pass.Analyzer.RunDespiteErrors {
 		act.result, err = pass.Analyzer.Run(pass)
 		if err == nil {
 			if got, want := reflect.TypeOf(act.result), pass.Analyzer.ResultType; got != want {
@@ -435,14 +542,20 @@ func (g *goPackage) String() string {
 // checkAnalysisResults checks the analysis diagnostics in the given actions
 // and returns a string containing all the diagnostics that should be printed
 // to the build log.
-func checkAnalysisResults(actions []*action, pkg *goPackage) string {
-	type entry struct {
-		analysis.Diagnostic
-		*analysis.Analyzer
-	}
-	var diagnostics []entry
+func checkAnalysisResults(actions []*action, pkg *goPackage) ([]diagnosticEntry, error) {
+	var diagnostics []diagnosticEntry
 	var errs []error
+	cwd, err := os.Getwd()
+	if cwd == "" || err != nil {
+		errs = append(errs, fmt.Errorf("nogo failed to get CWD: %w", err))
+	}
+	numSkipped := 0
 	for _, act := range actions {
+		if act.pkg.illTyped && !act.a.RunDespiteErrors {
+			// Don't report type-checking errors once per analyzer.
+			numSkipped++
+			continue
+		}
 		if act.err != nil {
 			// Analyzer failed.
 			errs = append(errs, fmt.Errorf("analyzer %q failed: %v", act.a.Name, act.err))
@@ -472,7 +585,7 @@ func checkAnalysisResults(actions []*action, pkg *goPackage) string {
 
 		if currentConfig.onlyFiles == nil && currentConfig.excludeFiles == nil {
 			for _, diag := range act.diagnostics {
-				diagnostics = append(diagnostics, entry{Diagnostic: diag, Analyzer: act.a})
+				diagnostics = append(diagnostics, diagnosticEntry{Diagnostic: diag, analyzerName: act.a.Name})
 			}
 			continue
 		}
@@ -484,6 +597,11 @@ func checkAnalysisResults(actions []*action, pkg *goPackage) string {
 			filename := "-"
 			if p.IsValid() {
 				filename = p.Filename
+			}
+			if cwd != "" {
+				if relname, err := filepath.Rel(cwd, filename); err == nil {
+					filename = relname
+				}
 			}
 			include := true
 			if len(currentConfig.onlyFiles) > 0 {
@@ -505,17 +623,21 @@ func checkAnalysisResults(actions []*action, pkg *goPackage) string {
 				}
 			}
 			if include {
-				diagnostics = append(diagnostics, entry{Diagnostic: d, Analyzer: act.a})
+				diagnostics = append(diagnostics, diagnosticEntry{Diagnostic: d, analyzerName: act.a.Name})
 			}
 		}
 	}
-	if len(diagnostics) == 0 && len(errs) == 0 {
-		return ""
+	if numSkipped > 0 {
+		errs = append(errs, fmt.Errorf("%d analyzers skipped due to type-checking error: %v", numSkipped, pkg.typeCheckError))
 	}
-
 	sort.Slice(diagnostics, func(i, j int) bool {
 		return diagnostics[i].Pos < diagnostics[j].Pos
 	})
+
+	if len(errs) == 0 {
+		return diagnostics, nil
+	}
+
 	errMsg := &bytes.Buffer{}
 	sep := ""
 	for _, err := range errs {
@@ -523,12 +645,7 @@ func checkAnalysisResults(actions []*action, pkg *goPackage) string {
 		sep = "\n"
 		errMsg.WriteString(err.Error())
 	}
-	for _, d := range diagnostics {
-		errMsg.WriteString(sep)
-		sep = "\n"
-		fmt.Fprintf(errMsg, "%s: %s (%s)", pkg.fset.Position(d.Pos), d.Message, d.Name)
-	}
-	return errMsg.String()
+	return diagnostics, errors.New(errMsg.String())
 }
 
 // config determines which source files an analyzer will emit diagnostics for.
@@ -609,9 +726,9 @@ func (i *importer) Import(path string) (*types.Package, error) {
 	return gcexportdata.Read(r, i.fset, i.packageCache, path)
 }
 
-func (i *importer) readFacts(pkg *types.Package) ([]byte, error) {
-	archive := i.factMap[pkg.Path()]
-	if archive == "" {
+func (i *importer) readFacts(pkgPath string) ([]byte, error) {
+	facts := i.factMap[pkgPath]
+	if facts == "" {
 		// Packages that were not built with the nogo toolchain will not be
 		// analyzed, so there's no opportunity to store facts. This includes
 		// packages in the standard library and packages built with go_tool_library,
@@ -621,18 +738,7 @@ func (i *importer) readFacts(pkg *types.Package) ([]byte, error) {
 		// fmt.Printf accepts a format string.
 		return nil, nil
 	}
-	factReader, err := readFileInArchive(nogoFact, archive)
-	if os.IsNotExist(err) {
-		// Packages that were not built with the nogo toolchain will not be
-		// analyzed, so there's no opportunity to store facts. This includes
-		// packages in the standard library and packages built with go_tool_library,
-		// such as coverdata.
-		return nil, nil
-	} else if err != nil {
-		return nil, err
-	}
-	defer factReader.Close()
-	return ioutil.ReadAll(factReader)
+	return os.ReadFile(facts)
 }
 
 type factMultiFlag map[string]string

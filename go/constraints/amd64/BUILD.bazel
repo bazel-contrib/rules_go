@@ -5,7 +5,7 @@ package(
 # Represents the level of support for the particular microarchitecture of a
 # target platform based on the general amd64 architecture.
 # GOAMD64 is set based on the chosen constraint_value.
-# See https://github.com/golang/go/wiki/MinimumRequirements#amd64
+# See https://go.dev/wiki/MinimumRequirements#amd64
 constraint_setting(
     name = "amd64",
 )

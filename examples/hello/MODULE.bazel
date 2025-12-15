@@ -1,0 +1,17 @@
+# A MODULE.bazel marks the root directory of a Bazel workspace.
+#
+# Its main purpose is to declare external dependencies on other
+# Bazel modules (by default, from registry.bazel.build).
+
+module(name = "hello")
+
+# A bazel_dep declaration is needed for each direct dependency
+# of this module. We need rules_go since it's not built into Bazel.
+bazel_dep(name = "rules_go", version = "0.52.0")
+
+# We use rules_go's go_sdk module extension to download and configure
+# the Go toolchain and standard library. To ensure a deterministic build,
+# Bazel typically uses the Go toolchain downloaded here instead of
+# one installed on the host machine.
+go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
+go_sdk.download(version = "1.23.4")

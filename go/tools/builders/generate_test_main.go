@@ -70,6 +70,7 @@ type Cases struct {
 	Examples    []Example
 	TestMain    string
 	CoverMode   string
+	Covered     string
 	CoverFormat string
 	Pkgname     string
 }
@@ -96,6 +97,9 @@ import "github.com/bazelbuild/rules_go/go/tools/bzltestutil"
 import (
 	"flag"
 	"log"
+{{if eq .CoverFormat "lcov"}}
+	"io"
+{{end}}
 	"os"
 	"os/exec"
 {{if .TestMain}}
@@ -107,7 +111,7 @@ import (
 	"testing/internal/testdeps"
 
 {{if ne .CoverMode ""}}
-	"github.com/bazelbuild/rules_go/go/tools/coverdata"
+	"internal/coverage/cfile"
 {{end}}
 
 {{range $p := .Imports}}
@@ -165,28 +169,46 @@ func testsInShard() []testing.InternalTest {
 }
 
 func main() {
+	// When the test process is originally spawned by Bazel,
+	// it should run in a test directory.
+	// However, if the test process is re-spawned by the test,
+	// it should run wherever that process is set to run.
+	//
+	// Clearing this environment variable will opt the child process
+	// out of the Chdir behavior.
+	_ = os.Unsetenv("GO_TEST_RUN_FROM_BAZEL")
+
 	if bzltestutil.ShouldWrap() {
 		err := bzltestutil.Wrap("{{.Pkgname}}")
+		exitCode := 0
 		if xerr, ok := err.(*exec.ExitError); ok {
-			os.Exit(xerr.ExitCode())
+			exitCode = xerr.ExitCode()
 		} else if err != nil {
 			log.Print(err)
-			os.Exit(bzltestutil.TestWrapperAbnormalExit)
-		} else {
-			os.Exit(0)
+			exitCode = bzltestutil.TestWrapperAbnormalExit
 		}
+		os.Exit(exitCode)
 	}
 
-	testDeps :=
-  {{if eq .CoverFormat "lcov"}}
-		bzltestutil.LcovTestDeps{TestDeps: testdeps.TestDeps{}}
-  {{else}}
-		testdeps.TestDeps{}
-  {{end}}
+	{{if ne .CoverMode ""}}
+		testdeps.CoverMode = "{{ .CoverMode }}"
+		testdeps.Covered = "{{ .Covered }}"
+		testdeps.CoverSnapshotFunc = cfile.Snapshot
+  		{{if eq .CoverFormat "lcov"}}
+			testdeps.CoverProcessTestDirFunc = func(dir string, covfile string, cm string, cpkg string, w io.Writer, selpkgs []string) error {
+				cfile.ProcessCoverTestDir(dir, covfile, cm, cpkg, w, selpkgs)
+				return bzltestutil.ConvertCoverToLcov()
+			}
+		{{ else }}
+			testdeps.CoverProcessTestDirFunc = cfile.ProcessCoverTestDir
+		{{ end }}
+		testdeps.CoverMarkProfileEmittedFunc = cfile.MarkProfileEmitted
+	{{end}}
+
   {{if .Version "go1.18"}}
-	m := testing.MainStart(testDeps, testsInShard(), benchmarks, fuzzTargets, examples)
+	m := testing.MainStart(testdeps.TestDeps{}, testsInShard(), benchmarks, fuzzTargets, examples)
   {{else}}
-	m := testing.MainStart(testDeps, testsInShard(), benchmarks, examples)
+	m := testing.MainStart(testdeps.TestDeps{}, testsInShard(), benchmarks, examples)
   {{end}}
 
 	if filter := os.Getenv("TESTBRIDGE_TEST_ONLY"); filter != "" {
@@ -212,29 +234,21 @@ func main() {
 	if failfast := os.Getenv("TESTBRIDGE_TEST_RUNNER_FAIL_FAST"); failfast != "" {
 		flag.Lookup("test.failfast").Value.Set("true")
 	}
-{{if eq .CoverFormat "lcov"}}
-	panicOnExit0Flag := flag.Lookup("test.paniconexit0").Value
-	testDeps.OriginalPanicOnExit = panicOnExit0Flag.(flag.Getter).Get().(bool)
-	// Setting this flag provides a way to run hooks right before testing.M.Run() returns.
-	panicOnExit0Flag.Set("true")
-{{end}}
 {{if ne .CoverMode ""}}
-	if len(coverdata.Counters) > 0 {
-		testing.RegisterCover(testing.Cover{
-			Mode: "{{ .CoverMode }}",
-			Counters: coverdata.Counters,
-			Blocks: coverdata.Blocks,
-		})
-
-		if coverageDat, ok := os.LookupEnv("COVERAGE_OUTPUT_FILE"); ok {
-			{{if eq .CoverFormat "lcov"}}
-			flag.Lookup("test.coverprofile").Value.Set(coverageDat+".cover")
-			{{else}}
-			flag.Lookup("test.coverprofile").Value.Set(coverageDat)
-			{{end}}
-		}
+	if coverageDat, ok := os.LookupEnv("COVERAGE_OUTPUT_FILE"); ok {
+		{{if eq .CoverFormat "lcov"}}
+		flag.Lookup("test.coverprofile").Value.Set(coverageDat+".cover")
+		{{else}}
+		flag.Lookup("test.coverprofile").Value.Set(coverageDat)
+		{{end}}
 	}
 	{{end}}
+
+	testTimeout := os.Getenv("TEST_TIMEOUT")
+	if testTimeout != "" {
+		flag.Lookup("test.timeout").Value.Set(testTimeout+"s")
+		bzltestutil.RegisterTimeoutHandler()
+	}
 
 	{{if not .TestMain}}
 	res := m.Run()
@@ -266,7 +280,7 @@ func genTestMain(args []string) error {
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
-	if err := goenv.checkFlags(); err != nil {
+	if err := goenv.checkFlagsAndSetGoroot(); err != nil {
 		return err
 	}
 	// Process import args

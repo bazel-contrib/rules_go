@@ -84,6 +84,8 @@ var configs = map[string]config{
 	},
 {{- end}}
 }
+
+const debugMode = {{ .Debug }}
 `
 
 func genNogoMain(args []string) error {
@@ -92,6 +94,7 @@ func genNogoMain(args []string) error {
 	out := flags.String("output", "", "output file to write (defaults to stdout)")
 	flags.Var(&analyzerImportPaths, "analyzer_importpath", "import path of an analyzer library")
 	configFile := flags.String("config", "", "nogo config file")
+	debug := flags.Bool("debug", false, "enable debug mode")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
@@ -135,9 +138,11 @@ func genNogoMain(args []string) error {
 		Imports    []Import
 		Configs    Configs
 		NeedRegexp bool
+		Debug      bool
 	}{
 		Imports: imports,
 		Configs: config,
+		Debug:   *debug,
 	}
 	for _, c := range config {
 		if len(c.OnlyFiles) > 0 || len(c.ExcludeFiles) > 0 {

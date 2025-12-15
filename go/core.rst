@@ -5,14 +5,13 @@ Core Go rules
 .. _Bourne shell tokenization: https://docs.bazel.build/versions/master/be/common-definitions.html#sh-tokenization
 .. _Gazelle: https://github.com/bazelbuild/bazel-gazelle
 .. _GoArchive: providers.rst#GoArchive
-.. _GoLibrary: providers.rst#GoLibrary
 .. _GoPath: providers.rst#GoPath
-.. _GoSource: providers.rst#GoSource
+.. _GoInfo: providers.rst#GoInfo
 .. _build constraints: https://golang.org/pkg/go/build/#hdr-Build_Constraints
 .. _cc_library deps: https://docs.bazel.build/versions/master/be/c-cpp.html#cc_library.deps
 .. _cgo: http://golang.org/cmd/cgo/
 .. _config_setting: https://docs.bazel.build/versions/master/be/general.html#config_setting
-.. _data dependencies: https://docs.bazel.build/versions/master/build-ref.html#data
+.. _data dependencies: https://bazel.build/concepts/dependencies#data-dependencies
 .. _goarch: modes.rst#goarch
 .. _goos: modes.rst#goos
 .. _mode attributes: modes.rst#mode-attributes
@@ -27,7 +26,7 @@ Core Go rules
 .. _test_filter: https://docs.bazel.build/versions/master/user-manual.html#flag--test_filter
 .. _test_env: https://docs.bazel.build/versions/master/user-manual.html#flag--test_env
 .. _test_runner_fail_fast: https://docs.bazel.build/versions/master/command-line-reference.html#flag--test_runner_fail_fast
-.. _write a CROSSTOOL file: https://github.com/bazelbuild/bazel/wiki/Yet-Another-CROSSTOOL-Writing-Tutorial
+.. _define and register a C/C++ toolchain and platforms: https://bazel.build/extending/toolchains#toolchain-definitions
 .. _bazel: https://pkg.go.dev/github.com/bazelbuild/rules_go/go/tools/bazel?tab=doc
 .. _introduction: /docs/go/core/rules.md#introduction
 .. _rules: /docs/go/core/rules.md#rules

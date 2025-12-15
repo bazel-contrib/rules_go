@@ -45,8 +45,9 @@ var upgradeDepCmd = command{
 
 upgrade-dep upgrades one or more rules_go dependencies in WORKSPACE or
 go/private/repositories.bzl. Dependency names (matching the name attributes)
-can be specified with positional arguments. "all" may be specified to upgrade
-all upgradeable dependencies.
+can be specified with positional arguments. They may have a suffix of the form
+'@version' to request update to a specific version.
+"all" may be specified to upgrade all upgradeable dependencies.
 
 For each dependency, upgrade-dep finds the highest version available in the
 upstream repository. If no version is available, upgrade-dep uses the commit
@@ -78,6 +79,18 @@ previous patches applied.
 func init() {
 	// break init cycle
 	upgradeDepCmd.run = runUpgradeDep
+}
+
+// parseDepArg parses a dependency argument like org_golang_x_sys@v0.30.0
+// into the dependency name and version.
+// If there is no @, the arg will be returned unchanged and the version
+// will be an empty string.
+func parseDepArg(arg string) (string, string) {
+	i := strings.Index(arg, "@")
+	if i < 0 {
+		return arg, ""
+	}
+	return arg[:i], arg[i+1:]
 }
 
 func runUpgradeDep(ctx context.Context, stderr io.Writer, args []string) error {
@@ -206,23 +219,24 @@ func runUpgradeDep(ctx context.Context, stderr io.Writer, args []string) error {
 	if upgradeAll {
 		for name := range depIndex {
 			name := name
-			if _, _, err := parseUpgradeDepDirective(depIndex[name]); err != nil {
+			if _, _, _, err := parseUpgradeDepDirective(depIndex[name]); err != nil {
 				continue
 			}
 			eg.Go(func() error {
-				return upgradeDepDecl(egctx, gh, workDir, name, depIndex[name], uploadToMirror)
+				return upgradeDepDecl(egctx, gh, workDir, name, "", depIndex[name], uploadToMirror)
 			})
 		}
 	} else {
 		for _, arg := range flags.Args() {
-			if depIndex[arg] == nil {
+			dep, _ := parseDepArg(arg)
+			if depIndex[dep] == nil {
 				return fmt.Errorf("could not find dependency %s", arg)
 			}
 		}
 		for _, arg := range flags.Args() {
-			arg := arg
+			arg, ver := parseDepArg(arg)
 			eg.Go(func() error {
-				return upgradeDepDecl(egctx, gh, workDir, arg, depIndex[arg], uploadToMirror)
+				return upgradeDepDecl(egctx, gh, workDir, arg, ver, depIndex[arg], uploadToMirror)
 			})
 		}
 	}
@@ -240,7 +254,7 @@ func runUpgradeDep(ctx context.Context, stderr io.Writer, args []string) error {
 }
 
 // upgradeDepDecl upgrades a specific dependency.
-func upgradeDepDecl(ctx context.Context, gh *githubClient, workDir, name string, call *bzl.CallExpr, uploadToMirror bool) (err error) {
+func upgradeDepDecl(ctx context.Context, gh *githubClient, workDir, name, version string, call *bzl.CallExpr, uploadToMirror bool) (err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("upgrading %s: %w", name, err)
@@ -250,7 +264,7 @@ func upgradeDepDecl(ctx context.Context, gh *githubClient, workDir, name string,
 	// Find a '# releaser:upgrade-dep org repo' comment. We could probably
 	// figure this out from URLs but this also serves to mark a dependency as
 	// being automatically upgradeable.
-	orgName, repoName, err := parseUpgradeDepDirective(call)
+	orgName, repoName, relPath, err := parseUpgradeDepDirective(call)
 	if err != nil {
 		return err
 	}
@@ -297,7 +311,18 @@ func upgradeDepDecl(ctx context.Context, gh *githubClient, workDir, name string,
 		return err
 	}
 
+	if relPath != "" {
+		var filteredTags []*github.RepositoryTag
+		for _, tag := range tags {
+			if strings.HasPrefix(*tag.Name, relPath+"/") {
+				filteredTags = append(filteredTags, tag)
+			}
+		}
+		tags = filteredTags
+	}
+
 	vname := func(name string) string {
+		name = strings.TrimPrefix(name, relPath+"/")
 		if !strings.HasPrefix(name, "v") {
 			return "v" + name
 		}
@@ -310,6 +335,10 @@ func upgradeDepDecl(ctx context.Context, gh *githubClient, workDir, name string,
 		if name != semver.Canonical(name) {
 			continue
 		}
+		// Only use pre-release tags if specifically requested.
+		if semver.Prerelease(name) != "" && (version == "" || semver.Prerelease(version) == "") {
+			continue
+		}
 		tags[w] = tags[r]
 		w++
 	}
@@ -319,6 +348,11 @@ func upgradeDepDecl(ctx context.Context, gh *githubClient, workDir, name string,
 	var highestVname string
 	for _, tag := range tags {
 		name := vname(*tag.Name)
+		if version != "" && name == version {
+			highestTag = tag
+			highestVname = name
+			break
+		}
 		if highestTag == nil || semver.Compare(name, highestVname) > 0 {
 			highestTag = tag
 			highestVname = name
@@ -328,6 +362,11 @@ func upgradeDepDecl(ctx context.Context, gh *githubClient, workDir, name string,
 	var ghURL, stripPrefix, urlComment string
 	date := time.Now().Format("2006-01-02")
 	if highestTag != nil {
+		// Check that this is the tag that was requested.
+		if version != "" && highestVname != version {
+			err = fmt.Errorf("version %s not found, latest is %s", version, *highestTag.Name)
+			return err
+		}
 		// If the tag is part of a release, check whether there is a release
 		// artifact we should use.
 		release, _, err := gh.Repositories.GetReleaseByTag(ctx, orgName, repoName, *highestTag.Name)
@@ -350,24 +389,54 @@ func upgradeDepDecl(ctx context.Context, gh *githubClient, workDir, name string,
 		if ghURL == "" {
 			ghURL = fmt.Sprintf("https://github.com/%s/%s/archive/refs/tags/%s.zip", orgName, repoName, *highestTag.Name)
 			stripPrefix = repoName + "-" + strings.TrimPrefix(*highestTag.Name, "v")
+			stripPrefix = strings.ReplaceAll(stripPrefix, "/", "-")
+			if relPath != "" {
+				stripPrefix += "/" + relPath
+			}
 		}
-		urlComment = fmt.Sprintf("%s, latest as of %s", *highestTag.Name, date)
+
+		if version != "" {
+			// This tag is not necessarily latest as of today, so get the commit
+			// so we can report the actual date.
+			commit, _, _ := gh.Repositories.GetCommit(ctx, orgName, repoName, *highestTag.Commit.SHA)
+			if commit := commit.GetCommit(); commit != nil {
+				if d := commit.Committer.GetDate(); !d.IsZero() {
+					date = d.Format("2006-01-02")
+				} else if d := commit.Author.GetDate(); !d.IsZero() {
+					date = d.Format("2006-01-02")
+				}
+			}
+			urlComment = fmt.Sprintf("%s, from %s", *highestTag.Name, date)
+		} else {
+			urlComment = fmt.Sprintf("%s, latest as of %s", *highestTag.Name, date)
+		}
 	} else {
-		repo, _, err := gh.Repositories.Get(ctx, orgName, repoName)
-		if err != nil {
-			return err
+		var commit *github.RepositoryCommit
+		if version != "" {
+			commit, _, err = gh.Repositories.GetCommit(ctx, orgName, repoName, version)
+			if err != nil {
+				return err
+			}
+			date = commit.GetCommit().Committer.GetDate().Format("2006-01-02")
+			urlComment = fmt.Sprintf("from %s", date)
+		} else {
+			repo, _, err := gh.Repositories.Get(ctx, orgName, repoName)
+			if err != nil {
+				return err
+			}
+			defaultBranchName := "main"
+			if repo.DefaultBranch != nil {
+				defaultBranchName = *repo.DefaultBranch
+			}
+			branch, _, err := gh.Repositories.GetBranch(ctx, orgName, repoName, defaultBranchName)
+			if err != nil {
+				return err
+			}
+			commit = branch.Commit
+			urlComment = fmt.Sprintf("%s, as of %s", defaultBranchName, date)
 		}
-		defaultBranchName := "main"
-		if repo.DefaultBranch != nil {
-			defaultBranchName = *repo.DefaultBranch
-		}
-		branch, _, err := gh.Repositories.GetBranch(ctx, orgName, repoName, defaultBranchName)
-		if err != nil {
-			return err
-		}
-		ghURL = fmt.Sprintf("https://github.com/%s/%s/archive/%s.zip", orgName, repoName, *branch.Commit.SHA)
-		stripPrefix = repoName + "-" + *branch.Commit.SHA
-		urlComment = fmt.Sprintf("%s, as of %s", defaultBranchName, date)
+		ghURL = fmt.Sprintf("https://github.com/%s/%s/archive/%s.zip", orgName, repoName, *commit.SHA)
+		stripPrefix = repoName + "-" + *commit.SHA
 	}
 	ghURLWithoutScheme := ghURL[len("https://"):]
 	mirrorURL := "https://mirror.bazel.build/" + ghURLWithoutScheme
@@ -443,8 +512,8 @@ func upgradeDepDecl(ctx context.Context, gh *githubClient, workDir, name string,
 			}
 			patchName := patchLabelValue[len("//third_party:"):]
 			patchPath := filepath.Join(rootDir, "third_party", patchName)
-			prevDir := filepath.Join(workDir, name, string('a'+patchIndex))
-			patchDir := filepath.Join(workDir, name, string('a'+patchIndex+1))
+			prevDir := filepath.Join(workDir, name, string(rune('a'+patchIndex)))
+			patchDir := filepath.Join(workDir, name, string(rune('a'+patchIndex+1)))
 			var patchCmd []string
 			for _, c := range comments.Before {
 				words := strings.Fields(strings.TrimPrefix(c.Token, "#"))
@@ -466,7 +535,7 @@ func upgradeDepDecl(ctx context.Context, gh *githubClient, workDir, name string,
 					return err
 				}
 			}
-			patch, _ := runForOutput(ctx, filepath.Join(workDir, name), "diff", "-urN", string('a'+patchIndex), string('a'+patchIndex+1))
+			patch, _ := runForOutput(ctx, filepath.Join(workDir, name), "diff", "-urN", filepath.Base(prevDir), filepath.Base(patchDir))
 			patch = sanitizePatch(patch)
 			if err := os.WriteFile(patchPath, patch, 0666); err != nil {
 				return err
@@ -520,7 +589,7 @@ func parsePatchesItem(patchLabelExpr bzl.Expr) (value string, comments *bzl.Comm
 // parseUpgradeDepDirective parses a '# releaser:upgrade-dep org repo' directive
 // and returns the organization and repository name or an error if the directive
 // was not found or malformed.
-func parseUpgradeDepDirective(call *bzl.CallExpr) (orgName, repoName string, err error) {
+func parseUpgradeDepDirective(call *bzl.CallExpr) (orgName, repoName, relPath string, err error) {
 	// TODO: support other upgrade strategies. For example, support git_repository
 	// and go_repository (possibly wrapped in _maybe).
 	for _, c := range call.Comment().Before {
@@ -528,12 +597,15 @@ func parseUpgradeDepDirective(call *bzl.CallExpr) (orgName, repoName string, err
 		if len(words) == 0 || words[0] != "releaser:upgrade-dep" {
 			continue
 		}
-		if len(words) != 3 {
-			return "", "", errors.New("invalid upgrade-dep directive; expected org, and name fields")
+		if len(words) == 3 {
+			return words[1], words[2], "", nil
 		}
-		return words[1], words[2], nil
+		if len(words) == 4 {
+			return words[1], words[2], words[3], nil
+		}
+		return "", "", "", errors.New("invalid upgrade-dep directive; expected org, and name fields with optional rel_path field")
 	}
-	return "", "", errors.New("releaser:upgrade-dep directive not found")
+	return "", "", "", errors.New("releaser:upgrade-dep directive not found")
 }
 
 // sanitizePatch sets all of the non-zero patch dates to the same value. This

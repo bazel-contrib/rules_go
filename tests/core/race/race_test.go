@@ -94,6 +94,12 @@ go_test(
 		embed = [":coverrace"],
     race = "on",
 )
+
+go_test(
+    name = "timeout_test",
+    srcs = ["timeout_test.go"],
+    race = "on",
+)
 -- race_off.go --
 // +build !race
 
@@ -193,8 +199,39 @@ func TestCoverRace(t *testing.T) {
 		t.Errorf("got %d, want %d", got, 100)
 	}
 }
+
+-- timeout_test.go --
+package main
+
+import (
+	"testing"
+	"time"
+)
+
+func TestTimeout(t *testing.T) {
+	time.Sleep(10*time.Second)
+}
 `,
 	})
+}
+
+func TestTimeout(t *testing.T) {
+	cmd := bazel_testing.BazelCmd("test", "//:timeout_test", "--test_timeout=1", "--test_output=all")
+	stdout := &bytes.Buffer{}
+	cmd.Stdout = stdout
+	t.Logf("running: %s", strings.Join(cmd.Args, " "))
+	err := cmd.Run()
+	t.Log(stdout.String())
+	if err == nil {
+		t.Fatalf("expected bazel test to fail")
+	}
+	var xerr *exec.ExitError
+	if !errors.As(err, &xerr) || xerr.ExitCode() != bazel_testing.TESTS_FAILED {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if bytes.Contains(stdout.Bytes(), []byte("WARNING: DATA RACE")) {
+		t.Fatalf("unexpected data race; command failed with: %v\nstdout:\n%s", err, stdout.Bytes())
+	}
 }
 
 func Test(t *testing.T) {

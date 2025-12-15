@@ -25,15 +25,22 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"testing/internal/testdeps"
+
+	"github.com/bazelbuild/rules_go/go/tools/coverdata"
 )
+
+// Lock in the COVERAGE_DIR during test setup in case the test uses e.g. os.Clearenv.
+var coverageDir = os.Getenv("COVERAGE_DIR")
+
+// Also lock in the test flag set in case test overwrites it.
+var testFlags = flag.CommandLine
 
 // ConvertCoverToLcov converts the go coverprofile file coverage.dat.cover to
 // the expectedLcov format and stores it in coverage.dat, where it is picked up by
 // Bazel.
 // The conversion emits line and branch coverage, but not function coverage.
 func ConvertCoverToLcov() error {
-	inPath := flag.Lookup("test.coverprofile").Value.String()
+	inPath := testFlags.Lookup("test.coverprofile").Value.String()
 	in, err := os.Open(inPath)
 	if err != nil {
 		// This can happen if there are no tests and should not be an error.
@@ -42,8 +49,16 @@ func ConvertCoverToLcov() error {
 	}
 	defer in.Close()
 
+	return ConvertCoverFromReaderToLcov(in)
+}
+
+func ConvertCoverFromReaderToLcov(in io.Reader) error {
+	if coverageDir == "" {
+		log.Printf("Not collecting coverage: COVERAGE_DIR is not set")
+		return nil
+	}
 	// All *.dat files in $COVERAGE_DIR will be merged by Bazel's lcov_merger tool.
-	out, err := os.CreateTemp(os.Getenv("COVERAGE_DIR"), "go_coverage.*.dat")
+	out, err := os.CreateTemp(coverageDir, "go_coverage.*.dat")
 	if err != nil {
 		return err
 	}
@@ -115,7 +130,11 @@ func convertCoverToLcov(coverReader io.Reader, lcovWriter io.Writer) error {
 }
 
 func emitLcovLines(lcov io.StringWriter, path string, lineCounts map[uint32]uint32) error {
-	_, err := lcov.WriteString(fmt.Sprintf("SF:%s\n", path))
+	srcName, ok := coverdata.SrcPathMapping[path]
+	if !ok {
+		srcName = path
+	}
+	_, err := lcov.WriteString(fmt.Sprintf("SF:%s\n", srcName))
 	if err != nil {
 		return err
 	}
@@ -143,36 +162,4 @@ func emitLcovLines(lcov io.StringWriter, path string, lineCounts map[uint32]uint
 		return err
 	}
 	return nil
-}
-
-// LcovTestDeps is a patched version of testdeps.TestDeps that allows to
-// hook into the SetPanicOnExit0 call happening right before testing.M.Run
-// returns.
-// This trick relies on the testDeps interface defined in this package being
-// identical to the actual testing.testDeps interface, which differs between
-// major versions of Go.
-type LcovTestDeps struct {
-	testdeps.TestDeps
-	OriginalPanicOnExit bool
-}
-
-// SetPanicOnExit0 is called with true by m.Run() before running all tests,
-// and with false right before returning -- after writing all coverage
-// profiles.
-// https://cs.opensource.google/go/go/+/refs/tags/go1.18.1:src/testing/testing.go;l=1921-1931;drc=refs%2Ftags%2Fgo1.18.1
-//
-// This gives us a good place to intercept the os.Exit(m.Run()) with coverage
-// data already available.
-func (ltd LcovTestDeps) SetPanicOnExit0(panicOnExit bool) {
-	if !panicOnExit {
-		lcovAtExitHook()
-	}
-	ltd.TestDeps.SetPanicOnExit0(ltd.OriginalPanicOnExit)
-}
-
-func lcovAtExitHook() {
-	if err := ConvertCoverToLcov(); err != nil {
-		log.Printf("Failed to collect coverage: %s", err)
-		os.Exit(TestWrapperAbnormalExit)
-	}
 }

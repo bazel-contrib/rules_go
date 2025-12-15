@@ -25,6 +25,7 @@ import (
 
 func TestMain(m *testing.M) {
 	bazel_testing.TestMain(m, bazel_testing.Args{
+		Nogo: "@//:nogo",
 		Main: `
 -- BUILD.bazel --
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_tool_library", "nogo")
@@ -156,11 +157,6 @@ var V = struct {
 }
 
 func Test(t *testing.T) {
-	customRegister := `go_register_toolchains(nogo = "@//:nogo")`
-	if err := replaceInFile("WORKSPACE", "go_register_toolchains()", customRegister); err != nil {
-		t.Fatal(err)
-	}
-
 	tests := []struct {
 		Name     string
 		Target   string

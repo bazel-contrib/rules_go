@@ -4,10 +4,6 @@ load(
     "string_flag",
     "string_list_flag",
 )
-load(
-    "//go/private:mode.bzl",
-    "LINKMODE_NORMAL",
-)
 
 bool_flag(
     name = "static",
@@ -39,9 +35,15 @@ bool_flag(
     visibility = ["//visibility:public"],
 )
 
+bool_flag(
+    name = "experimental_use_sh_toolchain",
+    build_setting_default = False,
+    visibility = ["//visibility:public"],
+)
+
 string_flag(
     name = "linkmode",
-    build_setting_default = LINKMODE_NORMAL,
+    build_setting_default = "auto",
     visibility = ["//visibility:public"],
 )
 
@@ -88,5 +90,11 @@ label_flag(
 
 filegroup(
     name = "empty",
+    visibility = ["//visibility:public"],
+)
+
+bool_flag(
+    name = "export_stdlib",
+    build_setting_default = False,
     visibility = ["//visibility:public"],
 )

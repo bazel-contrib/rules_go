@@ -15,41 +15,44 @@
 Toolchain rules used by go.
 """
 
+load("@bazel_skylib//lib:selects.bzl", "selects")
+load("//go/private:common.bzl", "GO_TOOLCHAIN")
 load("//go/private:platforms.bzl", "PLATFORMS")
 load("//go/private:providers.bzl", "GoSDK")
 load("//go/private/actions:archive.bzl", "emit_archive")
 load("//go/private/actions:binary.bzl", "emit_binary")
 load("//go/private/actions:link.bzl", "emit_link")
 load("//go/private/actions:stdlib.bzl", "emit_stdlib")
-load("@bazel_skylib//lib:selects.bzl", "selects")
-
-GO_TOOLCHAIN = "@io_bazel_rules_go//go:toolchain"
 
 def _go_toolchain_impl(ctx):
     sdk = ctx.attr.sdk[GoSDK]
     cross_compile = ctx.attr.goos != sdk.goos or ctx.attr.goarch != sdk.goarch
-    return [platform_common.ToolchainInfo(
-        # Public fields
-        name = ctx.label.name,
-        cross_compile = cross_compile,
-        default_goos = ctx.attr.goos,
-        default_goarch = ctx.attr.goarch,
-        actions = struct(
-            archive = emit_archive,
-            binary = emit_binary,
-            link = emit_link,
-            stdlib = emit_stdlib,
-        ),
-        flags = struct(
-            compile = (),
-            link = ctx.attr.link_flags,
-            link_cgo = ctx.attr.cgo_link_flags,
-        ),
-        sdk = sdk,
+    return [
+        ctx.attr.sdk[DefaultInfo],
+        platform_common.ToolchainInfo(
+            # Public fields
+            name = ctx.label.name,
+            cross_compile = cross_compile,
+            default_goos = ctx.attr.goos,
+            default_goarch = ctx.attr.goarch,
+            actions = struct(
+                archive = emit_archive,
+                binary = emit_binary,
+                link = emit_link,
+                stdlib = emit_stdlib,
+            ),
+            flags = struct(
+                compile = (),
+                link = ctx.attr.link_flags,
+                link_cgo = ctx.attr.cgo_link_flags,
+            ),
+            sdk = sdk,
 
-        # Internal fields -- may be read by emit functions.
-        _builder = ctx.executable.builder,
-    )]
+            # Internal fields -- may be read by emit functions.
+            _builder = ctx.executable.builder,
+            _pack = ctx.executable.pack,
+        ),
+    ]
 
 go_toolchain = rule(
     _go_toolchain_impl,
@@ -60,6 +63,12 @@ go_toolchain = rule(
             cfg = "exec",
             executable = True,
             doc = "Tool used to execute most Go actions",
+        ),
+        "pack": attr.label(
+            mandatory = True,
+            cfg = "exec",
+            executable = True,
+            doc = "Tool used to pack object files into archives",
         ),
         "goos": attr.string(
             mandatory = True,
@@ -87,7 +96,7 @@ go_toolchain = rule(
     provides = [platform_common.ToolchainInfo],
 )
 
-def declare_go_toolchains(host_goos, sdk, builder):
+def declare_go_toolchains(exec_goos, sdk, builder, pack):
     """Declares go_toolchain targets for each platform."""
     for p in PLATFORMS:
         if p.cgo:
@@ -98,9 +107,9 @@ def declare_go_toolchains(host_goos, sdk, builder):
 
         link_flags = []
         cgo_link_flags = []
-        if host_goos == "darwin":
+        if exec_goos == "darwin":
             cgo_link_flags.extend(["-shared", "-Wl,-all_load"])
-        if host_goos == "linux":
+        elif exec_goos == "linux":
             cgo_link_flags.append("-Wl,-whole-archive")
 
         go_toolchain(
@@ -109,6 +118,7 @@ def declare_go_toolchains(host_goos, sdk, builder):
             goarch = p.goarch,
             sdk = sdk,
             builder = builder,
+            pack = pack,
             link_flags = link_flags,
             cgo_link_flags = cgo_link_flags,
             tags = ["manual"],
@@ -118,12 +128,13 @@ def declare_go_toolchains(host_goos, sdk, builder):
 def declare_bazel_toolchains(
         *,
         go_toolchain_repo,
-        host_goarch,
-        host_goos,
+        exec_goarch,
+        exec_goos,
         major,
         minor,
         patch,
         prerelease,
+        sdk_name,
         sdk_type,
         prefix = ""):
     """Declares toolchain targets for each platform."""
@@ -172,6 +183,14 @@ def declare_bazel_toolchains(
     )
 
     native.config_setting(
+        name = prefix + "match_minor_release_candidate",
+        flag_values = {
+            sdk_version_label: major + "." + minor + prerelease,
+        },
+        visibility = ["//visibility:private"],
+    )
+
+    native.config_setting(
         name = prefix + "match_sdk_type",
         flag_values = {
             sdk_version_label: sdk_type,
@@ -187,7 +206,38 @@ def declare_bazel_toolchains(
             ":" + prefix + "match_major_minor_version",
             ":" + prefix + "match_patch_version",
             ":" + prefix + "match_prerelease_version",
+            ":" + prefix + "match_minor_release_candidate",
             ":" + prefix + "match_sdk_type",
+        ],
+        visibility = ["//visibility:private"],
+    )
+
+    # use Label constructor to resolve the label relative to the package this bzl file
+    # is located, instead of the context of the caller of declare_bazel_toolchains.
+    # See https://bazel.build/rules/lib/builtins/Label#Label for details.
+    sdk_name_label = Label("//go/toolchain:sdk_name")
+
+    native.config_setting(
+        name = prefix + "match_sdk_name",
+        flag_values = {
+            sdk_name_label: sdk_name,
+        },
+        visibility = ["//visibility:private"],
+    )
+
+    native.config_setting(
+        name = prefix + "match_all_sdks",
+        flag_values = {
+            sdk_name_label: "",
+        },
+        visibility = ["//visibility:private"],
+    )
+
+    selects.config_setting_group(
+        name = prefix + "sdk_name_setting",
+        match_any = [
+            ":" + prefix + "match_all_sdks",
+            ":" + prefix + "match_sdk_name",
         ],
         visibility = ["//visibility:private"],
     )
@@ -210,10 +260,13 @@ def declare_bazel_toolchains(
             name = prefix + "go_" + p.name,
             toolchain_type = GO_TOOLCHAIN,
             exec_compatible_with = [
-                "@io_bazel_rules_go//go/toolchain:" + host_goos,
-                "@io_bazel_rules_go//go/toolchain:" + host_goarch,
+                "@io_bazel_rules_go//go/toolchain:" + exec_goos,
+                "@io_bazel_rules_go//go/toolchain:" + exec_goarch,
             ],
             target_compatible_with = constraints,
-            target_settings = [":" + prefix + "sdk_version_setting"],
+            target_settings = [
+                ":" + prefix + "sdk_name_setting",
+                ":" + prefix + "sdk_version_setting",
+            ],
             toolchain = go_toolchain_repo + "//:go_" + p.name + "-impl",
         )

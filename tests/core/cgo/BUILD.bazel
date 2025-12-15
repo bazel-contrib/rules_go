@@ -1,5 +1,13 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
 load("@io_bazel_rules_go//go/tools/bazel_testing:def.bzl", "go_bazel_test")
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+load("@rules_cc//cc:cc_import.bzl", "cc_import")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
+package(
+    # go_* rules do not emit module maps.
+    features = ["-layering_check"],
+)
 
 go_test(
     name = "opts_test",
@@ -94,16 +102,44 @@ go_library(
     tags = ["manual"],
 )
 
+genrule(
+    name = "generate_imported_dylib_linux",
+    srcs = ["imported.c"],
+    outs = [
+        "libimported.so",
+        "libversioned.so.2",
+    ],
+    cmd = "$(location generate_imported_dylib.sh) $(location imported.c) $(@D)",
+    target_compatible_with = ["@platforms//os:linux"],
+    tools = ["generate_imported_dylib.sh"],
+)
+
+genrule(
+    name = "generate_imported_dylib_darwin",
+    srcs = ["imported.c"],
+    outs = [
+        "libimported.dylib",
+        "libversioned.2.dylib",
+        "libversioned.dylib.2",
+        "libversioned.dylib",
+    ],
+    cmd = "$(location generate_imported_dylib.sh) $(location imported.c) $(@D)",
+    target_compatible_with = ["@platforms//os:macos"],
+    tools = ["generate_imported_dylib.sh"],
+)
+
 cc_import(
     name = "darwin_imported_dylib",
     shared_library = "libimported.dylib",
     tags = ["manual"],
+    target_compatible_with = ["@platforms//os:macos"],
 )
 
 cc_import(
     name = "linux_imported_dylib",
-    shared_library = ":libimported.so",
+    shared_library = "libimported.so",
     tags = ["manual"],
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 go_test(
@@ -182,12 +218,14 @@ cc_import(
     name = "linux_imported_versioned_dylib",
     shared_library = "libversioned.so.2",
     tags = ["manual"],
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 cc_import(
     name = "darwin_imported_versioned_dylib",
     shared_library = "libversioned.2.dylib",
     tags = ["manual"],
+    target_compatible_with = ["@platforms//os:macos"],
 )
 
 go_test(
@@ -207,7 +245,6 @@ go_library(
     target_compatible_with = ["@platforms//os:macos"],
 )
 
-# //tests/core/cgo:generate_imported_dylib.sh must be run first
 cc_library(
     name = "oracle_convention_darwin_dylib",
     srcs = [
@@ -297,6 +334,30 @@ go_binary(
     cgo = True,
 )
 
+LARGE_EXT_LDFLAGS = [
+    flag
+    for i in range(10000)
+    for flag in [
+        "-extldflags",
+        "-Wl,-rpath,pathtolib{}".format(i),
+    ]
+]
+
+go_binary(
+    name = "binary_with_rpath",
+    srcs = [
+        "bar.cc",
+        "bar.go",
+    ],
+    out = "binary_with_rpath",
+    cgo = True,
+    gc_linkopts = LARGE_EXT_LDFLAGS,
+    target_compatible_with = [
+        "@platforms//os:linux",
+        "@platforms//os:macos",
+    ],
+)
+
 go_binary(
     name = "cc_deps",
     srcs = ["bar.go"],
@@ -363,6 +424,11 @@ go_test(
     ],
     cdeps = [":cgo_link_dep"],
     cgo = True,
+)
+
+go_bazel_test(
+    name = "cgo_abs_paths_test",
+    srcs = ["cgo_abs_paths_test.go"],
 )
 
 cc_library(
@@ -471,4 +537,22 @@ cc_binary(
     name = "use_c_symbol_through_go",
     srcs = ["use_c_symbol_through_go.c"],
     deps = [":use_transitive_symbol"],
+)
+
+go_test(
+    name = "cgo_required",
+    srcs = ["cgo_required_test.go"],
+    pure = "on",
+)
+
+go_bazel_test(
+    name = "wrapped_cgo_test",
+    srcs = ["wrapped_cgo_test.go"],
+    target_compatible_with = select({
+        # TODO: Try to enable this test on macOS when the minimum version
+        # version of Bazel sets the correct install_name.
+        # "@platforms//os:macos": [],
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )

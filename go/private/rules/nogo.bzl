@@ -13,19 +13,21 @@
 # limitations under the License.
 
 load(
-    "//go/private:context.bzl",
-    "go_context",
+    "//go/private:common.bzl",
+    "GO_TOOLCHAIN",
 )
 load(
-    "//go/private:go_toolchain.bzl",
-    "GO_TOOLCHAIN",
+    "//go/private:context.bzl",
+    "CGO_ATTRS",
+    "CGO_FRAGMENTS",
+    "CGO_TOOLCHAINS",
+    "go_context",
+    "new_go_info",
 )
 load(
     "//go/private:providers.bzl",
     "EXPORT_PATH",
     "GoArchive",
-    "GoLibrary",
-    "get_archive",
 )
 load(
     "//go/private/rules:transition.bzl",
@@ -39,13 +41,15 @@ def _nogo_impl(ctx):
         return None
 
     # Generate the source for the nogo binary.
-    go = go_context(ctx)
+    go = go_context(ctx, include_deprecated_properties = False)
     nogo_main = go.declare_file(go, path = "nogo_main.go")
     nogo_args = ctx.actions.args()
     nogo_args.add("gennogomain")
     nogo_args.add("-output", nogo_main)
+    if ctx.attr.debug:
+        nogo_args.add("-debug")
     nogo_inputs = []
-    analyzer_archives = [get_archive(dep) for dep in ctx.attr.deps]
+    analyzer_archives = [dep[GoArchive] for dep in ctx.attr.deps]
     analyzer_importpaths = [archive.data.importpath for archive in analyzer_archives]
     nogo_args.add_all(analyzer_importpaths, before_each = "-analyzer_importpath")
     if ctx.file.config:
@@ -56,30 +60,28 @@ def _nogo_impl(ctx):
         outputs = [nogo_main],
         mnemonic = "GoGenNogo",
         executable = go.toolchain._builder,
+        toolchain = GO_TOOLCHAIN,
         arguments = [nogo_args],
     )
 
     # Compile the nogo binary itself.
-    nogo_library = GoLibrary(
+    nogo_info = new_go_info(
+        go,
+        struct(
+            embed = [ctx.attr._nogo_srcs],
+            deps = analyzer_archives + [ctx.attr._go_difflib[GoArchive]],
+        ),
+        generated_srcs = [nogo_main],
         name = go.label.name + "~nogo",
-        label = go.label,
         importpath = "nogomain",
-        importmap = "nogomain",
-        importpath_aliases = (),
         pathtype = EXPORT_PATH,
         is_main = True,
-        resolve = None,
+        coverage_instrumented = False,
     )
-
-    nogo_source = go.library_to_source(go, struct(
-        srcs = [struct(files = [nogo_main])],
-        embed = [ctx.attr._nogo_srcs],
-        deps = analyzer_archives,
-    ), nogo_library, False)
     _, executable, runfiles = go.binary(
         go,
         name = ctx.label.name,
-        source = nogo_source,
+        source = nogo_info,
     )
     return [DefaultInfo(
         files = depset([executable]),
@@ -96,17 +98,22 @@ _nogo = rule(
         "config": attr.label(
             allow_single_file = True,
         ),
+        "debug": attr.bool(
+            default = False,
+        ),
         "_nogo_srcs": attr.label(
             default = "//go/tools/builders:nogo_srcs",
         ),
         "_cgo_context_data": attr.label(default = "//:cgo_context_data_proxy"),
         "_go_config": attr.label(default = "//:go_config"),
+        "_go_difflib": attr.label(default = "@com_github_pmezard_go_difflib//difflib:go_default_library"),
         "_stdlib": attr.label(default = "//:stdlib"),
         "_allowlist_function_transition": attr.label(
             default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
         ),
-    },
-    toolchains = [GO_TOOLCHAIN],
+    } | CGO_ATTRS,
+    fragments = CGO_FRAGMENTS,
+    toolchains = [GO_TOOLCHAIN] + CGO_TOOLCHAINS,
     cfg = go_tool_transition,
 )
 
@@ -115,7 +122,7 @@ def nogo(name, visibility = None, **kwargs):
     native.alias(
         name = name,
         actual = select({
-            "@io_bazel_rules_go//go/private:nogo_active": actual_name,
+            str(Label("//go/private:nogo_active")): actual_name,
             "//conditions:default": Label("//:default_nogo"),
         }),
         visibility = visibility,
@@ -140,11 +147,11 @@ def nogo(name, visibility = None, **kwargs):
 def nogo_wrapper(**kwargs):
     if kwargs.get("vet"):
         kwargs["deps"] = kwargs.get("deps", []) + [
-            "@org_golang_x_tools//go/analysis/passes/atomic:go_default_library",
-            "@org_golang_x_tools//go/analysis/passes/bools:go_default_library",
-            "@org_golang_x_tools//go/analysis/passes/buildtag:go_default_library",
-            "@org_golang_x_tools//go/analysis/passes/nilfunc:go_default_library",
-            "@org_golang_x_tools//go/analysis/passes/printf:go_default_library",
+            Label("@org_golang_x_tools//go/analysis/passes/atomic:go_default_library"),
+            Label("@org_golang_x_tools//go/analysis/passes/bools:go_default_library"),
+            Label("@org_golang_x_tools//go/analysis/passes/buildtag:go_default_library"),
+            Label("@org_golang_x_tools//go/analysis/passes/nilfunc:go_default_library"),
+            Label("@org_golang_x_tools//go/analysis/passes/printf:go_default_library"),
         ]
         kwargs = {k: v for k, v in kwargs.items() if k != "vet"}
     nogo(**kwargs)

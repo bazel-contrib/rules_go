@@ -17,28 +17,54 @@ package main
 import (
 	"fmt"
 	"strings"
+
+	"golang.org/x/tools/go/packages"
 )
 
 type PackageRegistry struct {
-	packagesByID map[string]*FlatPackage
-	stdlib       map[string]string
+	packagesByID map[string]*packages.Package
+	stdlib       map[string]*packages.Package
+	bazelVersion bazelVersion
 }
 
-func NewPackageRegistry(pkgs ...*FlatPackage) *PackageRegistry {
+func NewPackageRegistry(bazelVersion bazelVersion, pkgs ...*FlatPackage) *PackageRegistry {
 	pr := &PackageRegistry{
-		packagesByID: map[string]*FlatPackage{},
-		stdlib:       map[string]string{},
+		packagesByID: map[string]*packages.Package{},
+		stdlib:       map[string]*packages.Package{},
+		bazelVersion: bazelVersion,
 	}
 	pr.Add(pkgs...)
 	return pr
 }
 
 func (pr *PackageRegistry) Add(pkgs ...*FlatPackage) *PackageRegistry {
-	for _, pkg := range pkgs {
+	for _, flatPkg := range pkgs {
+		imports := make(map[string]*packages.Package)
+		for impKey, imp := range flatPkg.Imports {
+			imports[impKey] = &packages.Package{
+				ID: imp,
+			}
+		}
+
+		pkg := &packages.Package{
+			ID:              flatPkg.ID,
+			Name:            flatPkg.Name,
+			PkgPath:         flatPkg.PkgPath,
+			GoFiles:         flatPkg.GoFiles,
+			CompiledGoFiles: flatPkg.CompiledGoFiles,
+			OtherFiles:      flatPkg.OtherFiles,
+			ExportFile:      flatPkg.ExportFile,
+			Imports:         imports,
+		}
+
+		if len(pkg.CompiledGoFiles) <= 0 {
+			pkg.CompiledGoFiles = pkg.GoFiles
+		}
+
 		pr.packagesByID[pkg.ID] = pkg
 
-		if pkg.IsStdlib() {
-			pr.stdlib[pkg.PkgPath] = pkg.ID
+		if flatPkg.IsStdlib() {
+			pr.stdlib[pkg.PkgPath] = pkg
 		}
 	}
 	return pr
@@ -46,8 +72,8 @@ func (pr *PackageRegistry) Add(pkgs ...*FlatPackage) *PackageRegistry {
 
 func (pr *PackageRegistry) ResolvePaths(prf PathResolverFunc) error {
 	for _, pkg := range pr.packagesByID {
-		pkg.ResolvePaths(prf)
-		pkg.FilterFilesForBuildTags()
+		ResolvePaths(pkg, prf)
+		FilterFilesForBuildTags(pkg)
 	}
 	return nil
 }
@@ -55,64 +81,84 @@ func (pr *PackageRegistry) ResolvePaths(prf PathResolverFunc) error {
 // ResolveImports adds stdlib imports to packages. This is required because
 // stdlib packages are not part of the JSON file exports as bazel is unaware of
 // them.
-func (pr *PackageRegistry) ResolveImports() error {
-	resolve := func(importPath string) string {
-		if pkgID, ok := pr.stdlib[importPath]; ok {
-			return pkgID
+func (pr *PackageRegistry) ResolveImports(overlays map[string][]byte) error {
+	resolve := func(importPath string) *packages.Package {
+		if pkg, ok := pr.stdlib[importPath]; ok {
+			return pkg
 		}
 
-		return ""
+		return nil
 	}
 
 	for _, pkg := range pr.packagesByID {
-		if err := pkg.ResolveImports(resolve); err != nil {
+		if err := ResolveImports(pkg, resolve, overlays); err != nil {
 			return err
+		}
+
+		testPkg := MoveTestFiles(pkg)
+		if testPkg != nil {
+			pr.packagesByID[testPkg.ID] = testPkg
 		}
 	}
 
 	return nil
 }
 
-func (pr *PackageRegistry) walk(acc map[string]*FlatPackage, root string) {
+func (pr *PackageRegistry) walk(acc map[string]*packages.Package, root string) {
 	pkg := pr.packagesByID[root]
 
+	if pkg == nil {
+		return
+	}
+
 	acc[pkg.ID] = pkg
-	for _, pkgID := range pkg.Imports {
-		if _, ok := acc[pkgID]; !ok {
-			pr.walk(acc, pkgID)
+	for _, pkgI := range pkg.Imports {
+		if _, ok := acc[pkgI.ID]; !ok {
+			pr.walk(acc, pkgI.ID)
 		}
 	}
 }
 
-func (pr *PackageRegistry) Match(labels []string) ([]string, []*FlatPackage) {
+func (pr *PackageRegistry) Match(labels []string) ([]string, []*packages.Package) {
 	roots := map[string]struct{}{}
 
 	for _, label := range labels {
-		if !strings.HasPrefix(label, "@") {
+		// When packagesdriver is ran from rules go, rulesGoRepositoryName will just be @
+		if pr.bazelVersion.isAtLeast(bazelVersion{6, 0, 0}) &&
+			!strings.HasPrefix(label, "@") {
+			// Canonical labels is only since Bazel 6.0.0
 			label = fmt.Sprintf("@%s", label)
 		}
 
 		if label == RulesGoStdlibLabel {
 			// For stdlib, we need to append all the subpackages as roots
 			// since RulesGoStdLibLabel doesn't actually show up in the stdlib pkg.json
-			for _, pkg := range pr.packagesByID {
-				if pkg.Standard {
-					roots[pkg.ID] = struct{}{}
-				}
+			for _, pkg := range pr.stdlib {
+				roots[pkg.ID] = struct{}{}
+			}
+		} else if _, ok := pr.packagesByID[label]; ok {
+			roots[label] = struct{}{}
+			// If an xtest package exists for this package add it to the roots
+			if _, ok := pr.packagesByID[label+"_xtest"]; ok {
+				roots[label+"_xtest"] = struct{}{}
 			}
 		} else {
-			roots[label] = struct{}{}
+			// Skip a package if we don't have .pkg.json for it.
+			// This happens if 'bazel query' matches the target, but 'bazel build'
+			// can't analyze it, for example, if target_compatible_with is set
+			// with contraints not compatible with the host platform.
+			continue
 		}
 	}
 
-	walkedPackages := map[string]*FlatPackage{}
+	walkedPackages := map[string]*packages.Package{}
 	retRoots := make([]string, 0, len(roots))
 	for rootPkg := range roots {
 		retRoots = append(retRoots, rootPkg)
 		pr.walk(walkedPackages, rootPkg)
 	}
 
-	retPkgs := make([]*FlatPackage, 0, len(walkedPackages))
+	retPkgs := make([]*packages.Package, 0, len(walkedPackages))
 	for _, pkg := range walkedPackages {
 		retPkgs = append(retPkgs, pkg)
 	}

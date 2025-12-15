@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+GO_TOOLCHAIN = "@io_bazel_rules_go//go:toolchain"
+GO_TOOLCHAIN_LABEL = Label(GO_TOOLCHAIN)
+
 go_exts = [
     ".go",
 ]
@@ -69,41 +72,9 @@ cgo_exts = [
     ".mm",
 ]
 
-def split_srcs(srcs):
-    """Returns a struct of sources, divided by extension."""
-    sources = struct(
-        go = [],
-        asm = [],
-        headers = [],
-        c = [],
-        cxx = [],
-        objc = [],
-    )
-    ext_pairs = (
-        (sources.go, go_exts),
-        (sources.headers, hdr_exts),
-        (sources.asm, asm_exts),
-        (sources.c, c_exts),
-        (sources.cxx, cxx_exts),
-        (sources.objc, objc_exts),
-    )
-    extmap = {}
-    for outs, exts in ext_pairs:
-        for ext in exts:
-            ext = ext[1:]  # strip the dot
-            if ext in extmap:
-                break
-            extmap[ext] = outs
-    for src in as_iterable(srcs):
-        extouts = extmap.get(src.extension)
-        if extouts == None:
-            fail("Unknown source type {0}".format(src.basename))
-        extouts.append(src)
-    return sources
-
-def join_srcs(source):
-    """Combines source from a split_srcs struct into a single list."""
-    return source.go + source.headers + source.asm + source.c + source.cxx + source.objc
+syso_exts = [
+    ".syso",
+]
 
 def os_path(ctx, path):
     path = str(path)  # maybe convert from path type
@@ -130,12 +101,13 @@ def goos_to_extension(goos):
 
 ARCHIVE_EXTENSION = ".a"
 
-SHARED_LIB_EXTENSIONS = [".dll", ".dylib", ".so"]
+SHARED_LIB_EXTENSIONS = [".dll", ".dylib", ".so", ".wasm"]
 
 def goos_to_shared_extension(goos):
     return {
         "windows": ".dll",
         "darwin": ".dylib",
+        "wasip1": ".wasm",
     }.get(goos, ".so")
 
 def has_shared_lib_extension(path):
@@ -151,15 +123,27 @@ def has_simple_shared_lib_extension(path):
     """
     return any([path.endswith(ext) for ext in SHARED_LIB_EXTENSIONS])
 
+def is_valid_shared_lib_version_part(part):
+    """
+    Checks if the version part is valid. Matches the same check from
+    //src/main/java/com/google/devtools/build/lib/rules/cpp:CppFileTypes.java
+    """
+    if not part[:1].isdigit():
+        return False
+    for c in part[1:].elems():
+        if c != "_" and not c.isalnum():
+            return False
+    return True
+
 def get_versioned_shared_lib_extension(path):
     """If appears to be an versioned .so or .dylib file, return the extension; otherwise empty"""
     parts = path.split("/")[-1].split(".")
-    if not parts[-1].isdigit():
+    if not is_valid_shared_lib_version_part(parts[-1]):
         return ""
 
     # only iterating to 1 because parts[0] has to be the lib name
     for i in range(len(parts) - 1, 0, -1):
-        if not parts[i].isdigit():
+        if not is_valid_shared_lib_version_part(parts[i]):
             if parts[i] == "dylib" or parts[i] == "so":
                 return ".".join(parts[i:])
 
@@ -169,17 +153,7 @@ def get_versioned_shared_lib_extension(path):
     # something like 1.2.3, or so.1.2, or dylib.1.2, or foo.1.2
     return ""
 
-MINIMUM_BAZEL_VERSION = "5.4.0"
-
-def as_list(v):
-    """Returns a list, tuple, or depset as a list."""
-    if type(v) == "list":
-        return v
-    if type(v) == "tuple":
-        return list(v)
-    if type(v) == "depset":
-        return v.to_list()
-    fail("as_list failed on {}".format(v))
+MINIMUM_BAZEL_VERSION = "6.5.0"
 
 def as_iterable(v):
     """Returns a list, tuple, or depset as something iterable."""
@@ -190,32 +164,6 @@ def as_iterable(v):
     if type(v) == "depset":
         return v.to_list()
     fail("as_iterator failed on {}".format(v))
-
-def as_tuple(v):
-    """Returns a list, tuple, or depset as a tuple."""
-    if type(v) == "tuple":
-        return v
-    if type(v) == "list":
-        return tuple(v)
-    if type(v) == "depset":
-        return tuple(v.to_list())
-    fail("as_tuple failed on {}".format(v))
-
-def as_set(v):
-    """Returns a list, tuple, or depset as a depset."""
-    if type(v) == "depset":
-        return v
-    if type(v) == "list":
-        return depset(v)
-    if type(v) == "tuple":
-        return depset(v)
-    fail("as_tuple failed on {}".format(v))
-
-_STRUCT_TYPE = type(struct())
-
-def is_struct(v):
-    """Returns true if v is a struct."""
-    return type(v) == _STRUCT_TYPE
 
 def count_group_matches(v, prefix, suffix):
     """Counts reluctant substring matches between prefix and suffix.
@@ -252,3 +200,13 @@ COVERAGE_OPTIONS_DENYLIST = {
     "-fprofile-instr-generate": None,
     "-fcoverage-mapping": None,
 }
+
+RULES_GO_REPO_NAME = str(Label("//:unused"))[:-len("//:unused")]
+RULES_GO_STDLIB_PREFIX = RULES_GO_REPO_NAME + "//stdlib:"
+
+# TODO: Remove the "and" once the rules_go repo itself uses Bzlmod.
+RULES_GO_IS_BZLMOD_REPO = RULES_GO_REPO_NAME.lstrip("@") != "io_bazel_rules_go" and RULES_GO_REPO_NAME.lstrip("@")
+
+# Marks an action as supporting path mapping (--experimental_output_paths=strip).
+# See https://www.youtube.com/watch?v=Et1rjb7ixUU for more details.
+SUPPORTS_PATH_MAPPING_REQUIREMENT = {"supports-path-mapping": "1"}

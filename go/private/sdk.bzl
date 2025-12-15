@@ -12,18 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load(
-    "//go/private:common.bzl",
-    "executable_path",
-)
-load(
-    "//go/private:nogo.bzl",
-    "go_register_nogo",
-)
-load(
-    "//go/private/skylib/lib:versions.bzl",
-    "versions",
-)
+load("@bazel_tools//tools/build_defs/repo:utils.bzl", "patch", "read_user_netrc", "use_netrc")
+load("//go/private:common.bzl", "executable_path")
+load("//go/private:nogo.bzl", "go_register_nogo")
+load("//go/private:platforms.bzl", "GOARCH_CONSTRAINTS", "GOOS_CONSTRAINTS")
 
 MIN_SUPPORTED_VERSION = (1, 14, 0)
 
@@ -75,6 +67,10 @@ def _go_download_sdk_impl(ctx):
     version = ctx.attr.version
     sdks = ctx.attr.sdks
 
+    if not version:
+        if ctx.attr.patches:
+            fail("a single version must be specified to apply patches")
+
     if not sdks:
         # If sdks was unspecified, download a full list of files.
         # If version was unspecified, pick the latest version.
@@ -85,16 +81,7 @@ def _go_download_sdk_impl(ctx):
             ctx.report_progress("Finding latest Go version")
         else:
             ctx.report_progress("Finding Go SHA-256 sums")
-        ctx.download(
-            url = [
-                "https://go.dev/dl/?mode=json&include=all",
-                "https://golang.google.cn/dl/?mode=json&include=all",
-            ],
-            output = "versions.json",
-        )
-
-        data = ctx.read("versions.json")
-        sdks_by_version = _parse_versions_json(data)
+        sdks_by_version = fetch_sdks_by_version(ctx)
 
         if not version:
             highest_version = None
@@ -115,7 +102,9 @@ def _go_download_sdk_impl(ctx):
     if platform not in sdks:
         fail("unsupported platform {}".format(platform))
     filename, sha256 = sdks[platform]
+
     _remote_sdk(ctx, [url.format(filename) for url in ctx.attr.urls], ctx.attr.strip_prefix, sha256)
+    patch(ctx, patch_args = _get_patch_args(ctx.attr.patch_strip))
 
     detected_version = _detect_sdk_version(ctx, ".")
     _sdk_build_file(ctx, platform, detected_version, experiments = ctx.attr.experiments)
@@ -146,6 +135,13 @@ go_download_sdk_rule = repository_rule(
         "urls": attr.string_list(default = ["https://dl.google.com/go/{}"]),
         "version": attr.string(),
         "strip_prefix": attr.string(default = "go"),
+        "patches": attr.label_list(
+            doc = "A list of patches to apply to the SDK after downloading it",
+        ),
+        "patch_strip": attr.int(
+            default = 0,
+            doc = "The number of leading path segments to be stripped from the file name in the patches.",
+        ),
         "_sdk_build_file": attr.label(
             default = Label("//go/private:BUILD.sdk.bazel"),
         ),
@@ -174,6 +170,11 @@ def _define_version_constants(version, prefix = ""):
 def _to_constant_name(s):
     # Prefix with _ as identifiers are not allowed to start with numbers.
     return "_" + "".join([c if c.isalnum() else "_" for c in s.elems()]).upper()
+
+def _get_patch_args(patch_strip):
+    if patch_strip:
+        return ["-p{}".format(patch_strip)]
+    return []
 
 def go_toolchains_single_definition(ctx, *, prefix, goos, goarch, sdk_repo, sdk_type, sdk_version):
     if not goos and not goarch:
@@ -210,12 +211,13 @@ def go_toolchains_single_definition(ctx, *, prefix, goos, goarch, sdk_repo, sdk_
     chunks.append("""declare_bazel_toolchains(
     prefix = "{prefix}",
     go_toolchain_repo = "@{sdk_repo}",
-    host_goarch = "{goarch}",
-    host_goos = "{goos}",
+    exec_goarch = "{goarch}",
+    exec_goos = "{goos}",
     major = {identifier_prefix}MAJOR_VERSION,
     minor = {identifier_prefix}MINOR_VERSION,
     patch = {identifier_prefix}PATCH_VERSION,
     prerelease = {identifier_prefix}PRERELEASE_SUFFIX,
+    sdk_name = "{sdk_repo}",
     sdk_type = "{sdk_type}",
 )
 """.format(
@@ -369,14 +371,20 @@ def _go_wrap_sdk_impl(ctx):
     _sdk_build_file(ctx, platform, version, ctx.attr.experiments)
     _local_sdk(ctx, goroot)
 
-_go_wrap_sdk = repository_rule(
+# string_keyed_label_dict was added in 8.0.0
+_maybe_string_keyed_label_dict = getattr(
+    attr,
+    "string_keyed_label_dict",
+    attr.string_dict,
+)
+go_wrap_sdk_rule = repository_rule(
     implementation = _go_wrap_sdk_impl,
     attrs = {
         "root_file": attr.label(
             mandatory = False,
             doc = "A file in the SDK root direcotry. Used to determine GOROOT.",
         ),
-        "root_files": attr.string_dict(
+        "root_files": _maybe_string_keyed_label_dict(
             mandatory = False,
             doc = "A set of mappings from the host platform to a file in the SDK's root directory",
         ),
@@ -391,14 +399,16 @@ _go_wrap_sdk = repository_rule(
 )
 
 def go_wrap_sdk(name, register_toolchains = True, **kwargs):
-    _go_wrap_sdk(name = name, **kwargs)
+    goos = kwargs.pop("goos", None)
+    goarch = kwargs.pop("goarch", None)
+    go_wrap_sdk_rule(name = name, **kwargs)
     _go_toolchains(
         name = name + "_toolchains",
         sdk_repo = name,
         sdk_type = "remote",
         sdk_version = kwargs.get("version"),
-        goos = kwargs.get("goos"),
-        goarch = kwargs.get("goarch"),
+        goos = goos,
+        goarch = goarch,
     )
     if register_toolchains:
         _register_toolchains(name)
@@ -409,74 +419,25 @@ def _register_toolchains(repo):
 def _remote_sdk(ctx, urls, strip_prefix, sha256):
     if len(urls) == 0:
         fail("no urls specified")
-    host_goos, _ = detect_host_platform(ctx)
-
     ctx.report_progress("Downloading and extracting Go toolchain")
 
-    # TODO(#2771): After bazelbuild/bazel#18448 is merged and available in
-    # the minimum supported version of Bazel, remove the workarounds below.
-    #
-    # Go ships archives containing some non-ASCII file names, used in
-    # test cases for Go's build system. Bazel has a bug extracting these
-    # archives on certain file systems (macOS AFS at least, possibly also
-    # Docker on macOS with a bind mount).
-    #
-    # For .tar.gz files (available for most platforms), we work around this bug
-    # by using the system tar instead of ctx.download_and_extract.
-    #
-    # For .zip files, we use ctx.download_and_extract but with rename_files,
-    # changing certain paths that trigger the bug. This is only available
-    # in Bazel 6.0.0+ (bazelbuild/bazel#16052). The only situation where
-    # .zip files are needed seems to be a macOS host using a Windows toolchain
-    # for remote execution.
-    if urls[0].endswith(".tar.gz"):
-        if strip_prefix != "go":
-            fail("strip_prefix not supported")
-        ctx.download(
-            url = urls,
-            sha256 = sha256,
-            output = "go_sdk.tar.gz",
-        )
-        res = ctx.execute(["tar", "-xf", "go_sdk.tar.gz", "--strip-components=1"])
-        if res.return_code:
-            fail("error extracting Go SDK:\n" + res.stdout + res.stderr)
-        ctx.delete("go_sdk.tar.gz")
-    elif (urls[0].endswith(".zip") and
-          host_goos != "windows" and
-          # Development versions of Bazel have an empty version string. We assume that they are
-          # more recent than the version that introduced rename_files.
-          versions.is_at_least("6.0.0", versions.get() or "6.0.0")):
-        ctx.download_and_extract(
-            url = urls,
-            stripPrefix = strip_prefix,
-            sha256 = sha256,
-            rename_files = {
-                "go/test/fixedbugs/issue27836.dir/\336foo.go": "go/test/fixedbugs/issue27836.dir/thfoo.go",
-                "go/test/fixedbugs/issue27836.dir/\336main.go": "go/test/fixedbugs/issue27836.dir/thmain.go",
-            },
-        )
-    else:
-        ctx.download_and_extract(
-            url = urls,
-            stripPrefix = strip_prefix,
-            sha256 = sha256,
-        )
+    auth = use_netrc(read_user_netrc(ctx), urls, {})
+    ctx.download_and_extract(
+        url = urls,
+        stripPrefix = strip_prefix,
+        sha256 = sha256,
+        auth = auth,
+    )
 
 def _local_sdk(ctx, path):
-    for entry in ["src", "pkg", "bin", "lib", "misc"]:
-        ctx.symlink(path + "/" + entry, entry)
+    for entry in ctx.path(path).readdir():
+        if ctx.path(entry.basename).exists:
+            continue
+        ctx.symlink(entry, entry.basename)
 
 def _sdk_build_file(ctx, platform, version, experiments):
     ctx.file("ROOT")
     goos, _, goarch = platform.partition("_")
-
-    pv = parse_version(version)
-    if pv != None and pv[1] >= 20:
-        # Turn off coverageredesign GOEXPERIMENT on 1.20+
-        # until rules_go is updated to work with the
-        # coverage redesign.
-        if not "nocoverageredesign" in experiments and not "coverageredesign" in experiments:
-            experiments = experiments + ["nocoverageredesign"]
 
     ctx.template(
         "BUILD.bazel",
@@ -488,6 +449,10 @@ def _sdk_build_file(ctx, platform, version, experiments):
             "{exe}": ".exe" if goos == "windows" else "",
             "{version}": version,
             "{experiments}": repr(experiments),
+            "{exec_compatible_with}": repr([
+                GOARCH_CONSTRAINTS[goarch],
+                GOOS_CONSTRAINTS[goos],
+            ]),
         },
     )
 
@@ -513,7 +478,6 @@ def detect_host_platform(ctx):
     return goos, goarch
 
 def _detect_host_sdk(ctx):
-    root = "@invalid@"
     if "GOROOT" in ctx.os.environ:
         return ctx.os.environ["GOROOT"]
     res = ctx.execute([executable_path(ctx, "go"), "env", "GOROOT"])
@@ -606,6 +570,31 @@ def _parse_versions_json(data):
         for sdk in sdks
     }
 
+def fetch_sdks_by_version(ctx, allow_fail = False):
+    result = ctx.download(
+        url = [
+            "https://go.dev/dl/?mode=json&include=all",
+            "https://golang.google.cn/dl/?mode=json&include=all",
+        ],
+        output = "versions.json",
+        allow_fail = allow_fail,
+    )
+    if not result.success:
+        return None
+    data = ctx.read("versions.json")
+
+    # If the download is redirected through a proxy such as Artifactory, it may
+    # drop the query parameters and return an HTML page instead. In that case,
+    # just return an empty map if allow_fail is set. It is unfortunately not
+    # possible to attempt parsing as JSON and catch the error.
+    if (not data or data[0] != "[") and allow_fail:
+        return None
+
+    # module_ctx doesn't have delete, but its files are temporary anyway.
+    if hasattr(ctx, "delete"):
+        ctx.delete("versions.json")
+    return _parse_versions_json(data)
+
 def parse_version(version):
     """Parses a version string like "1.15.5" and returns a tuple of numbers or None"""
     l, r = 0, 0
@@ -658,8 +647,6 @@ def _version_less(a, b):
 
 def _version_string(v):
     suffix = v[3] if _version_is_prerelease(v) else ""
-    if v[-1] == 0:
-        v = v[:-1]
     return ".".join([str(n) for n in v]) + suffix
 
 def _have_same_length(*lists):
@@ -672,7 +659,7 @@ def go_register_toolchains(version = None, nogo = None, go_version = None, exper
     if not version:
         version = go_version  # old name
 
-    sdk_kinds = ("go_download_sdk_rule", "go_host_sdk_rule", "_go_local_sdk", "_go_wrap_sdk")
+    sdk_kinds = ("go_download_sdk_rule", "go_host_sdk_rule", "_go_local_sdk", "go_wrap_sdk_rule")
     existing_rules = native.existing_rules()
     sdk_rules = [r for r in existing_rules.values() if r["kind"] in sdk_kinds]
     if len(sdk_rules) == 0 and "go_sdk" in existing_rules:

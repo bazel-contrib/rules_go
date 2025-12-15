@@ -45,6 +45,7 @@ PROTO_RUNTIME_DEPS = [
     "@com_github_golang_protobuf//proto:go_default_library",
     "@org_golang_google_protobuf//proto:go_default_library",
     "@org_golang_google_protobuf//reflect/protoreflect:go_default_library",
+    "@org_golang_google_protobuf//reflect/protoregistry:go_default_library",
     "@org_golang_google_protobuf//runtime/protoiface:go_default_library",
     "@org_golang_google_protobuf//runtime/protoimpl:go_default_library",
 ]
@@ -58,6 +59,7 @@ PROTO_RUNTIME_DEPS = [
 # on the APIv1 packages.
 WELL_KNOWN_TYPES_APIV2 = [
     "@org_golang_google_protobuf//types/descriptorpb",
+    "@org_golang_google_protobuf//types/gofeaturespb",
     "@org_golang_google_protobuf//types/known/anypb",
     "@org_golang_google_protobuf//types/known/apipb",
     "@org_golang_google_protobuf//types/known/durationpb",

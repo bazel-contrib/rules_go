@@ -26,22 +26,23 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"os/signal"
-	"path"
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"sort"
 	"strings"
 	"testing"
 	"text/template"
 
+	"github.com/bazelbuild/rules_go/go/runfiles"
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/bazelbuild/rules_go/go/tools/internal/txtar"
 )
+
+// Set via x_defs.
+var goRootFile string
 
 const (
 	// Standard Bazel exit codes.
@@ -71,9 +72,24 @@ type Args struct {
 	// nogo is not used.
 	Nogo string
 
+	// NogoIncludes is the list of targets to include for Nogo linting.
+	NogoIncludes []string
+
+	// NogoExcludes is the list of targets to include for Nogo linting.
+	NogoExcludes []string
+
+	// WorkspacePrefix is a string that should be inserted at the beginning
+	// of the default generated WORKSPACE file.
+	WorkspacePrefix string
+
 	// WorkspaceSuffix is a string that should be appended to the end
 	// of the default generated WORKSPACE file.
 	WorkspaceSuffix string
+
+	// ModuleFileSuffix is a string that should be appended to the end of a
+	// default generated MODULE.bazel file. If this is empty, no such file is
+	// generated.
+	ModuleFileSuffix string
 
 	// SetUp is a function that is executed inside the context of the testing
 	// workspace. It is executed once and only once before the beginning of
@@ -124,7 +140,7 @@ func TestMain(m *testing.M, args Args) {
 	workspaceDir, cleanup, err := setupWorkspace(args, files)
 	defer func() {
 		if err := cleanup(); err != nil {
-			fmt.Fprintf(os.Stderr, "cleanup error: %v\n", err)
+			fmt.Fprintf(os.Stderr, "cleanup warning: %v\n", err)
 			// Don't fail the test on a cleanup error.
 			// Some operating systems (windows, maybe also darwin) can't reliably
 			// delete executable files after they're run.
@@ -137,7 +153,7 @@ func TestMain(m *testing.M, args Args) {
 
 	if debug {
 		fmt.Fprintf(os.Stderr, "test setup in %s\n", workspaceDir)
-		interrupted := make(chan os.Signal)
+		interrupted := make(chan os.Signal, 1)
 		signal.Notify(interrupted, os.Interrupt)
 		<-interrupted
 		return
@@ -164,13 +180,10 @@ func TestMain(m *testing.M, args Args) {
 // hide that this code is executing inside a bazel test.
 func BazelCmd(args ...string) *exec.Cmd {
 	cmd := exec.Command("bazel")
-	if outputUserRoot != "" {
-		cmd.Args = append(cmd.Args,
-			"--output_user_root="+outputUserRoot,
-			"--nosystem_rc",
-			"--nohome_rc",
-		)
-	}
+	// --nosystem_rc isn't used here because Bazel may need essential flags set in
+	// system rc to be able to work correctly
+	// See https://github.com/bazelbuild/rules_go/pull/3969#issuecomment-2220405416
+	cmd.Args = append(cmd.Args, "--nohome_rc")
 	cmd.Args = append(cmd.Args, args...)
 	for _, e := range os.Environ() {
 		// Filter environment variables set by the bazel test wrapper script.
@@ -191,7 +204,7 @@ func RunBazel(args ...string) error {
 	cmd := BazelCmd(args...)
 
 	buf := &bytes.Buffer{}
-	cmd.Stderr = buf
+	cmd.Stderr = io.MultiWriter(os.Stderr, buf)
 	err := cmd.Run()
 	if eErr, ok := err.(*exec.ExitError); ok {
 		eErr.Stderr = buf.Bytes()
@@ -206,17 +219,30 @@ func RunBazel(args ...string) error {
 // If the command starts but exits with a non-zero status, a *StderrExitError
 // will be returned which wraps the original *exec.ExitError.
 func BazelOutput(args ...string) ([]byte, error) {
+	stdout, _, err := BazelOutputWithInput(nil, args...)
+	return stdout, err
+}
+
+// BazelOutputWithInput invokes a bazel command with a list of arguments and
+// an input stream and returns the content of stdout.
+//
+// If the command starts but exits with a non-zero status, a *StderrExitError
+// will be returned which wraps the original *exec.ExitError.
+func BazelOutputWithInput(stdin io.Reader, args ...string) ([]byte, []byte, error) {
 	cmd := BazelCmd(args...)
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	cmd.Stdout = stdout
-	cmd.Stderr = stderr
+	cmd.Stderr = io.MultiWriter(os.Stderr, stderr)
+	if stdin != nil {
+		cmd.Stdin = stdin
+	}
 	err := cmd.Run()
 	if eErr, ok := err.(*exec.ExitError); ok {
 		eErr.Stderr = stderr.Bytes()
 		err = &StderrExitError{Err: eErr}
 	}
-	return stdout.Bytes(), err
+	return stdout.Bytes(), stderr.Bytes(), err
 }
 
 // StderrExitError wraps *exec.ExitError and prints the complete stderr output
@@ -267,7 +293,11 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 		tmpDir = filepath.Clean(tmpDir)
 		if i := strings.Index(tmpDir, string(os.PathSeparator)+"execroot"+string(os.PathSeparator)); i >= 0 {
 			outBaseDir = tmpDir[:i]
-			outputUserRoot = filepath.Dir(outBaseDir)
+			if dir, err := filepath.Abs(filepath.Dir(outBaseDir)); err == nil {
+				// Use forward slashes, even on Windows. Bazel's rc file parser
+				// reports an error if there are backslashes.
+				outputUserRoot = strings.ReplaceAll(dir, `\`, `/`)
+			}
 			cacheDir = filepath.Join(outBaseDir, "bazel_testing")
 		} else {
 			cacheDir = filepath.Join(tmpDir, "bazel_testing")
@@ -288,91 +318,77 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 	}
 	cleanups = append(cleanups, func() error { return os.RemoveAll(execDir) })
 
+	// Copy or link the files for the tested repository.
+	testedRepoDir := filepath.Join(execDir, "tested_repo")
+	var singleRepoName string
+	for _, f := range files {
+		repoName, _, _ := strings.Cut(f, "/")
+		if singleRepoName == "" {
+			singleRepoName = repoName
+		} else if repoName != singleRepoName {
+			return "", cleanup, fmt.Errorf("data files from more than one repo are unsupported, got %s and %s", singleRepoName, repoName)
+		}
+		srcPath, err := runfiles.Rlocation(f)
+		if err != nil {
+			return "", cleanup, fmt.Errorf("unknown runfile %s: %v", f, err)
+		}
+		dstPath := filepath.Join(testedRepoDir, strings.TrimPrefix(f, singleRepoName+"/"))
+		if err := copyOrLink(dstPath, srcPath); err != nil {
+			return "", cleanup, fmt.Errorf("copying %s to %s: %v", srcPath, dstPath, err)
+		}
+	}
+	testedRepoModulePath := filepath.Join(testedRepoDir, "MODULE.bazel")
+	var testedModuleName string
+	if _, err := os.Stat(testedRepoModulePath); err == nil {
+		testedModuleName, err = loadName(testedRepoModulePath)
+		if err != nil {
+			return "", cleanup, fmt.Errorf("loading module name: %v", err)
+		}
+	}
+	testedRepoWorkspacePath := filepath.Join(testedRepoDir, "WORKSPACE")
+	testedModuleRepoName := testedModuleName
+	if _, err = os.Stat(testedRepoWorkspacePath); err == nil {
+		testedModuleRepoName, err = loadName(testedRepoWorkspacePath)
+		if err != nil {
+			return "", cleanup, fmt.Errorf("loading workspace name: %v", err)
+		}
+	}
+
 	// Create the workspace directory.
 	mainDir := filepath.Join(execDir, "main")
 	if err := os.MkdirAll(mainDir, 0777); err != nil {
 		return "", cleanup, err
 	}
 
-	// Create a .bazelrc file if GO_BAZEL_TEST_BAZELFLAGS is set.
+	// Create a .bazelrc file with the contents of GO_BAZEL_TEST_BAZELFLAGS is set.
 	// The test can override this with its own .bazelrc or with flags in commands.
+	bazelrcPath := filepath.Join(mainDir, ".bazelrc")
+	bazelrcBuf := &bytes.Buffer{}
+	if args.ModuleFileSuffix == "" {
+		fmt.Fprintf(bazelrcBuf, "common --noenable_bzlmod\n")
+	} else {
+		fmt.Fprintf(bazelrcBuf, "common --enable_bzlmod\n")
+	}
+	if outputUserRoot != "" {
+		fmt.Fprintf(bazelrcBuf, "startup --output_user_root=%s\n", outputUserRoot)
+	}
 	if flags := os.Getenv("GO_BAZEL_TEST_BAZELFLAGS"); flags != "" {
-		bazelrcPath := filepath.Join(mainDir, ".bazelrc")
-		content := "build " + flags
-		if err := ioutil.WriteFile(bazelrcPath, []byte(content), 0666); err != nil {
-			return "", cleanup, err
-		}
+		fmt.Fprintf(bazelrcBuf, "common %s\n", flags)
+	}
+	if err := os.WriteFile(bazelrcPath, bazelrcBuf.Bytes(), 0666); err != nil {
+		return "", cleanup, err
 	}
 
-	// Extract test files for the main workspace.
+	// Extract test files for the main repository.
 	if err := extractTxtar(mainDir, args.Main); err != nil {
 		return "", cleanup, fmt.Errorf("building main workspace: %v", err)
 	}
 
-	// If some of the path arguments are missing an explicit workspace,
-	// read the workspace name from WORKSPACE. We need this to map arguments
-	// to runfiles in specific workspaces.
-	haveDefaultWorkspace := false
-	var defaultWorkspaceName string
-	for _, argPath := range files {
-		workspace, _, err := parseLocationArg(argPath)
-		if err == nil && workspace == "" {
-			haveDefaultWorkspace = true
-			cleanPath := path.Clean(argPath)
-			if cleanPath == "WORKSPACE" {
-				defaultWorkspaceName, err = loadWorkspaceName(cleanPath)
-				if err != nil {
-					return "", cleanup, fmt.Errorf("could not load default workspace name: %v", err)
-				}
-				break
-			}
-		}
-	}
-	if haveDefaultWorkspace && defaultWorkspaceName == "" {
-		return "", cleanup, fmt.Errorf("found files from default workspace, but not WORKSPACE")
-	}
-
-	// Index runfiles by workspace and short path. We need this to determine
-	// destination paths when we copy or link files.
-	runfiles, err := bazel.ListRunfiles()
-	if err != nil {
-		return "", cleanup, err
-	}
-
-	type runfileKey struct{ workspace, short string }
-	runfileMap := make(map[runfileKey]string)
-	for _, rf := range runfiles {
-		runfileMap[runfileKey{rf.Workspace, rf.ShortPath}] = rf.Path
-	}
-
-	// Copy or link file arguments from runfiles into fake workspace dirctories.
-	// Keep track of the workspace names we see, since we'll generate a WORKSPACE
-	// with local_repository rules later.
-	workspaceNames := make(map[string]bool)
-	for _, argPath := range files {
-		workspace, shortPath, err := parseLocationArg(argPath)
-		if err != nil {
-			return "", cleanup, err
-		}
-		if workspace == "" {
-			workspace = defaultWorkspaceName
-		}
-		workspaceNames[workspace] = true
-
-		srcPath, ok := runfileMap[runfileKey{workspace, shortPath}]
-		if !ok {
-			return "", cleanup, fmt.Errorf("unknown runfile: %s", argPath)
-		}
-		dstPath := filepath.Join(execDir, workspace, shortPath)
-		if err := copyOrLink(dstPath, srcPath); err != nil {
-			return "", cleanup, err
-		}
-	}
-
 	// If there's no WORKSPACE file, create one.
 	workspacePath := filepath.Join(mainDir, "WORKSPACE")
-	if _, err := os.Stat(workspacePath); os.IsNotExist(err) {
-		w, err := os.Create(workspacePath)
+	if _, err = os.Stat(workspacePath); os.IsNotExist(err) {
+		var w *os.File
+		w, err = os.Create(workspacePath)
 		if err != nil {
 			return "", cleanup, err
 		}
@@ -381,24 +397,53 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 				err = cerr
 			}
 		}()
+		goRootFilePath, err := runfiles.Rlocation(goRootFile)
+		if err != nil {
+			return "", cleanup, fmt.Errorf("unknown runfile %s: %v", goRootFile, err)
+		}
+		// TODO: This is only necessary because of https://github.com/golang/go/issues/59924.
+		goRootFileRealPath, err := filepath.EvalSymlinks(goRootFilePath)
+		if err != nil {
+			return "", cleanup, fmt.Errorf("unknown runfile %s: %v", goRootFile, err)
+		}
 		info := workspaceTemplateInfo{
-			Suffix: args.WorkspaceSuffix,
-			Nogo:   args.Nogo,
-		}
-		for name := range workspaceNames {
-			info.WorkspaceNames = append(info.WorkspaceNames, name)
-		}
-		sort.Strings(info.WorkspaceNames)
-		if outBaseDir != "" {
-			goSDKPath := filepath.Join(outBaseDir, "external", "go_sdk")
-			rel, err := filepath.Rel(mainDir, goSDKPath)
-			if err != nil {
-				return "", cleanup, fmt.Errorf("could not find relative path from %q to %q for go_sdk", mainDir, goSDKPath)
-			}
-			rel = filepath.ToSlash(rel)
-			info.GoSDKPath = rel
+			TestedModuleRepoName: testedModuleRepoName,
+			TestedModulePath:     strings.ReplaceAll(testedRepoDir, "\\", "\\\\"),
+			Prefix:               args.WorkspacePrefix,
+			Suffix:               args.WorkspaceSuffix,
+			Nogo:                 args.Nogo,
+			NogoIncludes:         args.NogoIncludes,
+			NogoExcludes:         args.NogoExcludes,
+			GoSDKPath:            strings.ReplaceAll(filepath.Dir(goRootFileRealPath), "\\", "\\\\"),
 		}
 		if err := defaultWorkspaceTpl.Execute(w, info); err != nil {
+			return "", cleanup, err
+		}
+	}
+
+	// If a MODULE.bazel file is requested, create one.
+	if args.ModuleFileSuffix != "" {
+		moduleBazelPath := filepath.Join(mainDir, "MODULE.bazel")
+		if _, err = os.Stat(moduleBazelPath); err == nil {
+			return "", cleanup, fmt.Errorf("ModuleFileSuffix set but MODULE.bazel exists")
+		}
+		var w *os.File
+		w, err = os.Create(moduleBazelPath)
+		if err != nil {
+			return "", cleanup, err
+		}
+		defer func() {
+			if cerr := w.Close(); err == nil && cerr != nil {
+				err = cerr
+			}
+		}()
+		info := moduleFileTemplateInfo{
+			TestedModuleName:     testedModuleName,
+			TestedModuleRepoName: testedModuleRepoName,
+			TestedModulePath:     strings.ReplaceAll(testedRepoDir, "\\", "\\\\"),
+			Suffix:               args.ModuleFileSuffix,
+		}
+		if err := defaultModuleBazelTpl.Execute(w, info); err != nil {
 			return "", cleanup, err
 		}
 	}
@@ -414,77 +459,58 @@ func extractTxtar(dir, txt string) error {
 				return err
 			}
 		}
-		if err := ioutil.WriteFile(filepath.Join(dir, f.Name), f.Data, 0666); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, f.Name), f.Data, 0666); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func parseLocationArg(arg string) (workspace, shortPath string, err error) {
-	cleanPath := path.Clean(arg)
-	if !strings.HasPrefix(cleanPath, "external/") {
-		return "", cleanPath, nil
-	}
-	i := strings.IndexByte(arg[len("external/"):], '/')
-	if i < 0 {
-		return "", "", fmt.Errorf("unexpected file (missing / after external/): %s", arg)
-	}
-	i += len("external/")
-	workspace = cleanPath[len("external/"):i]
-	shortPath = cleanPath[i+1:]
-	return workspace, shortPath, nil
-}
+// Picks out the first "name = ..." attribute in a WORKSPACE or MODULE.bazel file.
+var nameRe = regexp.MustCompile(`(?m)^(?:\s*|workspace\(|module\()name\s*=\s*("[^"]*"|'[^']*')\s*,?\s*\)?\s*$`)
 
-func loadWorkspaceName(workspacePath string) (string, error) {
-	runfilePath, err := bazel.Runfile(workspacePath)
-	if err == nil {
-		workspacePath = runfilePath
-	}
-	workspaceData, err := ioutil.ReadFile(workspacePath)
+func loadName(bazelFilePath string) (string, error) {
+	content, err := os.ReadFile(bazelFilePath)
 	if err != nil {
 		return "", err
 	}
-	nameRe := regexp.MustCompile(`(?m)^workspace\(\s*name\s*=\s*("[^"]*"|'[^']*')\s*,?\s*\)\s*$`)
-	match := nameRe.FindSubmatchIndex(workspaceData)
+	match := nameRe.FindSubmatchIndex(content)
 	if match == nil {
-		return "", fmt.Errorf("%s: workspace name not set", workspacePath)
+		return "", fmt.Errorf("%s: name not set", bazelFilePath)
 	}
-	name := string(workspaceData[match[2]+1 : match[3]-1])
+	name := string(content[match[2]+1 : match[3]-1])
 	if name == "" {
-		return "", fmt.Errorf("%s: workspace name is empty", workspacePath)
+		return "", fmt.Errorf("%s: name is empty", bazelFilePath)
 	}
 	return name, nil
 }
 
 type workspaceTemplateInfo struct {
-	WorkspaceNames []string
-	GoSDKPath      string
-	Nogo           string
-	Suffix         string
+	TestedModuleRepoName string
+	TestedModulePath     string
+	GoSDKPath            string
+	Nogo                 string
+	NogoIncludes         []string
+	NogoExcludes         []string
+	Prefix               string
+	Suffix               string
 }
 
 var defaultWorkspaceTpl = template.Must(template.New("").Parse(`
-{{range .WorkspaceNames}}
 local_repository(
-    name = "{{.}}",
-    path = "../{{.}}",
+    name = "{{.TestedModuleRepoName}}",
+    path = "{{.TestedModulePath}}",
 )
-{{end}}
 
-{{if not .GoSDKPath}}
-load("@io_bazel_rules_go//go:deps.bzl", "go_rules_dependencies", "go_register_toolchains")
+{{.Prefix}}
 
-go_rules_dependencies()
-
-go_register_toolchains(go_version = "host")
-{{else}}
-local_repository(
+new_local_repository(
     name = "local_go_sdk",
     path = "{{.GoSDKPath}}",
+    build_file_content = "",
 )
 
-load("@io_bazel_rules_go//go:deps.bzl", "go_rules_dependencies", "go_register_toolchains", "go_wrap_sdk")
+load("@io_bazel_rules_go//go:deps.bzl", "go_rules_dependencies", "go_register_toolchains", "go_wrap_sdk", "go_register_nogo")
 
 go_rules_dependencies()
 
@@ -493,8 +519,56 @@ go_wrap_sdk(
     root_file = "@local_go_sdk//:ROOT",
 )
 
-go_register_toolchains({{if .Nogo}}nogo = "{{.Nogo}}"{{end}})
+go_register_toolchains()
+
+{{if .Nogo}}
+go_register_nogo(
+	nogo = "{{.Nogo}}",
+	{{ if .NogoIncludes }}
+	includes = [
+	{{range .NogoIncludes }}
+		"{{ . }}",
+	{{ end }}
+	],
+	{{ end}}
+	{{ if .NogoExcludes }}
+	excludes = [
+	{{range .NogoExcludes }}
+		"{{ . }}",
+	{{ end }}
+	],
+	{{ else }}
+	excludes = None,
+	{{ end}}
+)
 {{end}}
+
+# Create the host platform repository transitively required by rules_go.
+load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
+load("@platforms//host:extension.bzl", "host_platform_repo")
+
+maybe(
+	host_platform_repo,
+	name = "host_platform",
+)
+
+{{.Suffix}}
+`))
+
+type moduleFileTemplateInfo struct {
+	TestedModuleName     string
+	TestedModuleRepoName string
+	TestedModulePath     string
+	Suffix               string
+}
+
+// TODO: Also reuse the current Go SDK as in the WORKSPACE file.
+var defaultModuleBazelTpl = template.Must(template.New("").Parse(`
+bazel_dep(name = "{{.TestedModuleName}}", repo_name = "{{.TestedModuleRepoName}}")
+local_path_override(
+    module_name = "{{.TestedModuleName}}",
+    path = "{{.TestedModulePath}}",
+)
 {{.Suffix}}
 `))
 

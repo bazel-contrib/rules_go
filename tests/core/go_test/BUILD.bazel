@@ -106,6 +106,12 @@ go_test(
 )
 
 go_test(
+    name = "testmain_pwd_test",
+    size = "small",
+    srcs = ["testmain_pwd_test.go"],
+)
+
+go_test(
     name = "data_test",
     size = "small",
     embed = [":data_test_lib"],
@@ -208,6 +214,12 @@ test_suite(
     tests = ["same_package_{}_test".format(i) for i in range(1, 80)],
 )
 
+# Verifies that testing.Testing() is true in a `go_test`.
+go_test(
+    name = "testing_testing_test",
+    srcs = ["testing_testing_test.go"],
+)
+
 go_bazel_test(
     name = "testmain_without_exit_test",
     srcs = ["testmain_without_exit_test.go"],
@@ -237,10 +249,10 @@ go_test(
     srcs = ["env_test.go"],
     data = ["@go_sdk//:lib/time/zoneinfo.zip"],
     env = {
-        "ZONEINFO": "$(execpath @go_sdk//:lib/time/zoneinfo.zip)",
+        "ZONEINFO": "$(rlocationpath @go_sdk//:lib/time/zoneinfo.zip)",
     },
     deps = [
-        "@io_bazel_rules_go//go/tools/bazel",
+        "//go/runfiles",
     ],
 )
 
@@ -248,6 +260,15 @@ go_test(
     name = "sharding_test",
     srcs = ["sharding_test.go"],
     shard_count = 2,
+)
+
+go_test(
+    name = "sigterm_handler_test",
+    srcs = ["sigterm_handler_test.go"],
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
 )
 
 go_bazel_test(
@@ -263,4 +284,29 @@ go_bazel_test(
 go_bazel_test(
     name = "filter_test_cases_test",
     srcs = ["filter_test_cases_test.go"],
+)
+
+go_bazel_test(
+    name = "timeout_test",
+    srcs = ["timeout_test.go"],
+)
+
+go_bazel_test(
+    name = "xml_panic_test",
+    srcs = ["xml_panic_test.go"],
+)
+
+# Tests using .syso files in go_binary both transitively and directly.
+go_test(
+    name = "syso_transitive_test",
+    srcs = ["syso_transitive_test.go"],
+    deps = ["//tests/core/go_library:use_syso_lib"],
+)
+
+go_test(
+    name = "syso_direct_test",
+    srcs = [
+        "syso_direct_test.go",
+        "//tests/core/go_library:use_syso_srcs",
+    ],
 )

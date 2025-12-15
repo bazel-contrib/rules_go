@@ -35,10 +35,8 @@ gazelle(
 -- hello.go --
 package hello
 `,
-		WorkspaceSuffix: `
-load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
-
-gazelle_dependencies()
+		ModuleFileSuffix: `
+bazel_dep(name = "gazelle", version = "0.41.0", repo_name = "bazel_gazelle")
 `,
 	})
 }
@@ -53,8 +51,8 @@ func TestUpdate(t *testing.T) {
 	}
 	got := strings.TrimSpace(string(data))
 	want := strings.TrimSpace(`
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
 load("@bazel_gazelle//:def.bzl", "gazelle")
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 # gazelle:prefix example.com/hello
 gazelle(

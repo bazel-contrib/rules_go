@@ -11,12 +11,23 @@ import (
 
 var BinGo = "not set"
 
+var DataDep = "not set"
+
 func TestLibGoPath(t *testing.T) {
 	libGoPath, err := runfiles.Rlocation(x_defs_lib.LibGo)
 	if err != nil {
 		t.Fatal(err)
 	}
 	_, err = os.Stat(libGoPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dataPath, err := runfiles.Rlocation(x_defs_lib.DataDep)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = os.Stat(dataPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,6 +39,15 @@ func TestBinGoPath(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err = os.Stat(binGoPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dataPath, err := runfiles.Rlocation(DataDep)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = os.Stat(dataPath)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -29,8 +29,7 @@ load(
 load(
     "//go/private:providers.bzl",
     "GoArchive",
-    "GoLibrary",
-    "GoSource",
+    "GoInfo",
 )
 
 # A list of rules_go settings that are possibly set by go_transition.
@@ -66,7 +65,7 @@ def _go_transition_impl(settings, attr):
     #
     # NOTE(bazelbuild/bazel#11409): Calling fail here for invalid combinations
     # of flags reports an error but does not stop the build.
-    # In any case, get_mode should mainly be responsible for reporting
+    # In any case, validate_mode should mainly be responsible for reporting
     # invalid modes, since it also takes --features flags into account.
 
     original_settings = settings
@@ -87,9 +86,7 @@ def _go_transition_impl(settings, attr):
         pure = "off"
         settings["//go/config:pure"] = False
     if pure == "on":
-        race = "off"
         settings["//go/config:race"] = False
-        msan = "off"
         settings["//go/config:msan"] = False
     cgo = pure == "off"
 
@@ -131,6 +128,9 @@ def _go_transition_impl(settings, attr):
         # real setting can be reset to this value before the new configuration
         # would cross a non-deps dependency edge.
         if value != old_value:
+            if original_settings.get(original_key):
+                fail("go_transition can't be nested")
+
             # Encoding as JSON makes it possible to embed settings of arbitrary
             # types (currently bool, string and string_list) into a single type
             # of setting (string) with the information preserved whether the
@@ -142,9 +142,24 @@ def _go_transition_impl(settings, attr):
                 old_value = str(old_value)
             settings[original_key] = json.encode(old_value)
         else:
-            settings[original_key] = ""
+            # Preserve the value to keep the transition idempotent. While it
+            # should never be nested, Bazel applies it twice to check for
+            # idempotency and in Bazel 8.3.1 cquery and aquery don't handle
+            # targets with non-idempotent rule transitions correctly.
+            # https://github.com/bazelbuild/bazel/pull/26738
+            settings[original_key] = original_settings.get(original_key, "")
 
     return settings
+
+go_transition = transition(
+    implementation = _go_transition_impl,
+    inputs = [
+        "//command_line_option:platforms",
+    ] + TRANSITIONED_GO_SETTING_KEYS + _SETTING_KEY_TO_ORIGINAL_SETTING_KEY.values(),
+    outputs = [
+        "//command_line_option:platforms",
+    ] + TRANSITIONED_GO_SETTING_KEYS + _SETTING_KEY_TO_ORIGINAL_SETTING_KEY.values(),
+)
 
 def _request_nogo_transition(settings, _attr):
     """Indicates that we want the project configured nogo instead of a noop.
@@ -166,14 +181,18 @@ request_nogo_transition = transition(
     outputs = ["//go/private:request_nogo"],
 )
 
-go_transition = transition(
-    implementation = _go_transition_impl,
-    inputs = [
-        "//command_line_option:platforms",
-    ] + TRANSITIONED_GO_SETTING_KEYS,
-    outputs = [
-        "//command_line_option:platforms",
-    ] + TRANSITIONED_GO_SETTING_KEYS + _SETTING_KEY_TO_ORIGINAL_SETTING_KEY.values(),
+def _non_request_nogo_transition(_settings, _attr):
+    # This transition is used to make sure we only end up with 1 copy of coverdata,
+    # even if a test links against it and is run in coverage mode.
+    #
+    # It is also used to make sure that we do not end up with multiple configurations
+    # for CC toolchain dependencies when doing CGO.
+    return {"//go/private:request_nogo": False}
+
+non_request_nogo_transition = transition(
+    implementation = _non_request_nogo_transition,
+    inputs = [],
+    outputs = ["//go/private:request_nogo"],
 )
 
 _common_reset_transition_dict = dict({
@@ -259,17 +278,18 @@ def _go_stdlib_transition_impl(settings, _attr):
             settings[label] = value
     settings["//go/config:tags"] = [t for t in settings["//go/config:tags"] if t in _TAG_AFFECTS_STDLIB]
     settings["//go/private:bootstrap_nogo"] = False
+    settings["//command_line_option:collect_code_coverage"] = False
     return settings
 
 go_stdlib_transition = transition(
     implementation = _go_stdlib_transition_impl,
     inputs = _reset_transition_keys,
-    outputs = _reset_transition_keys,
+    outputs = _reset_transition_keys + ["//command_line_option:collect_code_coverage"],
 )
 
 def _go_reset_target_impl(ctx):
     t = ctx.attr.dep[0]  # [0] seems to be necessary with the transition
-    providers = [t[p] for p in [GoLibrary, GoSource, GoArchive] if p in t]
+    providers = [t[p] for p in [GoInfo, GoArchive] if p in t]
 
     # We can't pass DefaultInfo through as-is, since Bazel forbids executable
     # if it's a file declared in a different target. To emulate that, symlink
@@ -307,21 +327,26 @@ go_reset_target = rule(
         "dep": attr.label(
             mandatory = True,
             cfg = go_tool_transition,
+            doc = """The target to forward providers from and apply go_tool_transition to.""",
         ),
         "_allowlist_function_transition": attr.label(
             default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
         ),
     },
-    doc = """Forwards providers from a target and applies go_tool_transition.
+    doc = """Forwards providers from a target and default Go binary settings.
 
-go_reset_target depends on a single target, built using go_tool_transition. It
+go_reset_target depends on a single target and builds it to be a Go tool binary. It
 forwards Go providers and DefaultInfo.
 
-This is used to work around a problem with building tools: Go tools should be
-built with 'cfg = "exec"' so they work on the execution platform, but we also
-need to apply go_tool_transition so that e.g. a tool isn't built as a shared
-library with race instrumentation. This acts as an intermediate rule that allows
-to apply both both transitions.
+go_reset_target does two things using transitions:
+   1. builds the tool with 'cfg = "exec"' so they work on the execution platform.
+   2. Sets most Go settings to default value and disables nogo.
+
+This is used for Go tool binaries that shouldn't depend on the link mode or tags of the
+target configuration and neither the tools nor the code they potentially
+generate should be subject to Nogo's static analysis. This is helpful, for example, so
+a tool isn't built as a shared library with race instrumentation. This acts as an
+intermediate rule that allows users to apply these transitions.
 """,
 )
 
@@ -331,6 +356,7 @@ non_go_reset_target = rule(
         "dep": attr.label(
             mandatory = True,
             cfg = non_go_tool_transition,
+            allow_files = True,
         ),
         "_allowlist_function_transition": attr.label(
             default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
@@ -405,6 +431,7 @@ def _set_ternary(settings, attr, name):
 _SDK_VERSION_BUILD_SETTING = "//go/toolchain:sdk_version"
 TRANSITIONED_GO_CROSS_SETTING_KEYS = [
     _SDK_VERSION_BUILD_SETTING,
+    "//command_line_option:compilation_mode",
     "//command_line_option:platforms",
 ]
 
@@ -412,6 +439,9 @@ def _go_cross_transition_impl(settings, attr):
     settings = dict(settings)
     if attr.sdk_version != None:
         settings[_SDK_VERSION_BUILD_SETTING] = attr.sdk_version
+
+    if attr.compilation_mode != "":
+        settings["//command_line_option:compilation_mode"] = attr.compilation_mode
 
     if attr.platform != None:
         settings["//command_line_option:platforms"] = str(attr.platform)
@@ -430,7 +460,7 @@ go_cross_transition = transition(
 # This should be updated to contain the union of all tags relevant for all
 # versions of Go that are still relevant.
 #
-# Currently supported versions: 1.18, 1.19, 1.20
+# Currently supported versions: 1.18..1.23
 #
 # To regenerate, run and paste the output of
 #     bazel run //go/tools/internal/stdlib_tags:stdlib_tags -- path/to/go_sdk_1/src ...
@@ -438,17 +468,22 @@ _TAG_AFFECTS_STDLIB = {
     "alpha": None,
     "appengine": None,
     "asan": None,
-    "boringcrypto": None,
+    "boringcrypto": None,  # Added in Go 1.19
+    "checknewoldreassignment": None,  # Added in Go 1.22
     "cmd_go_bootstrap": None,
     "compiler_bootstrap": None,
     "debuglog": None,
+    "debugtrace": None,  # Added in Go 1.22
     "faketime": None,
     "gc": None,
     "gccgo": None,
-    "gen": None,
+    "gen": None,  # Removed in Go 1.20
     "generate": None,
-    "gofuzz": None,
+    "gofuzz": None,  # Removed in Go 1.23
+    "icu": None,  # Added in Go 1.23
     "ignore": None,
+    "internal": None,  # Added in Go 1.21
+    "internal_pie": None,  # Added in Go 1.21, removed in Go 1.22
     "libfuzzer": None,
     "m68k": None,
     "math_big_pure_go": None,
@@ -457,13 +492,15 @@ _TAG_AFFECTS_STDLIB = {
     "netgo": None,
     "nethttpomithttp2": None,
     "nios2": None,
-    "noopt": None,
+    "noopt": None,  # Added in Go 1.20
     "osusergo": None,
     "purego": None,
     "race": None,
     "sh": None,
     "shbe": None,
-    "tablegen": None,
-    "testgo": None,
+    "static": None,  # Added in Go 1.21
+    "tablegen": None,  # Removed in Go 1.19
+    "testgo": None,  # Removed in Go 1.19
     "timetzdata": None,
+    "tools": None,  # Added in Go 1.21
 }

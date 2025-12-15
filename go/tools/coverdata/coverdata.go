@@ -29,6 +29,8 @@ import (
 var (
 	Counters = make(map[string][]uint32)
 	Blocks = make(map[string][]testing.CoverBlock)
+
+	SrcPathMapping = make(map[string]string)
 )
 
 // RegisterFile causes the coverage data recorded for a file to be included
@@ -55,4 +57,8 @@ func RegisterFile(fileName string, counter []uint32, pos []uint32, numStmts []ui
 		}
 	}
 	Blocks[fileName] = block
+}
+
+func RegisterSrcPathMapping(importPathFile string, srcName string) {
+	SrcPathMapping[importPathFile] = srcName
 }

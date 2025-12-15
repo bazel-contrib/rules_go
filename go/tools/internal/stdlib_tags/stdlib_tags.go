@@ -86,7 +86,7 @@ func walkFile(path string, tags map[string]struct{}) error {
 
 	scanner := bufio.NewScanner(file)
 	// The Go SDK contains some very long lines in vendored files (minified JS).
-	scanner.Buffer(make([]byte, 0, 128*1024), 1024*1024)
+	scanner.Buffer(make([]byte, 0, 128*1024), 2*1024*1024)
 	for scanner.Scan() {
 		line := scanner.Text()
 		if !isConstraint(line) {
@@ -102,6 +102,7 @@ func walkFile(path string, tags map[string]struct{}) error {
 	if err = scanner.Err(); err != nil {
 		return fmt.Errorf("%s: %w", path, err)
 	}
+
 	return nil
 }
 
@@ -125,7 +126,7 @@ func isConstraint(line string) bool {
 }
 
 // Taken from
-// https://github.com/golang/go/blob/3d5391ed87d813110e10b954c62bf7ed578b591f/src/go/build/syslist.go
+// https://github.com/golang/go/blob/2693f77b3583585172810427e12a634b28d34493/src/internal/syslist/syslist.go
 var knownOS = map[string]bool{
 	"aix":       true,
 	"android":   true,
@@ -142,6 +143,7 @@ var knownOS = map[string]bool{
 	"openbsd":   true,
 	"plan9":     true,
 	"solaris":   true,
+	"wasip1":    true,
 	"windows":   true,
 	"zos":       true,
 }

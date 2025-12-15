@@ -1,5 +1,5 @@
 diff -urN a/gomock/BUILD.bazel b/gomock/BUILD.bazel
---- a/gomock/BUILD.bazel	1969-12-31 16:00:00
+--- a/gomock/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/gomock/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,34 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -37,7 +37,7 @@ diff -urN a/gomock/BUILD.bazel b/gomock/BUILD.bazel
 +    deps = ["//gomock/internal/mock_gomock"],
 +)
 diff -urN a/gomock/internal/mock_gomock/BUILD.bazel b/gomock/internal/mock_gomock/BUILD.bazel
---- a/gomock/internal/mock_gomock/BUILD.bazel	1969-12-31 16:00:00
+--- a/gomock/internal/mock_gomock/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/gomock/internal/mock_gomock/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,15 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -56,7 +56,7 @@ diff -urN a/gomock/internal/mock_gomock/BUILD.bazel b/gomock/internal/mock_gomoc
 +    visibility = ["//gomock:__subpackages__"],
 +)
 diff -urN a/mockgen/BUILD.bazel b/mockgen/BUILD.bazel
---- a/mockgen/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,36 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
@@ -96,7 +96,7 @@ diff -urN a/mockgen/BUILD.bazel b/mockgen/BUILD.bazel
 +    deps = ["//mockgen/model"],
 +)
 diff -urN a/mockgen/internal/tests/aux_imports_embedded_interface/BUILD.bazel b/mockgen/internal/tests/aux_imports_embedded_interface/BUILD.bazel
---- a/mockgen/internal/tests/aux_imports_embedded_interface/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/aux_imports_embedded_interface/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/aux_imports_embedded_interface/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,28 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -128,7 +128,7 @@ diff -urN a/mockgen/internal/tests/aux_imports_embedded_interface/BUILD.bazel b/
 +    deps = ["//gomock"],
 +)
 diff -urN a/mockgen/internal/tests/aux_imports_embedded_interface/faux/BUILD.bazel b/mockgen/internal/tests/aux_imports_embedded_interface/faux/BUILD.bazel
---- a/mockgen/internal/tests/aux_imports_embedded_interface/faux/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/aux_imports_embedded_interface/faux/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/aux_imports_embedded_interface/faux/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,14 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -146,7 +146,7 @@ diff -urN a/mockgen/internal/tests/aux_imports_embedded_interface/faux/BUILD.baz
 +    visibility = ["//mockgen:__subpackages__"],
 +)
 diff -urN a/mockgen/internal/tests/const_array_length/BUILD.bazel b/mockgen/internal/tests/const_array_length/BUILD.bazel
---- a/mockgen/internal/tests/const_array_length/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/const_array_length/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/const_array_length/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,18 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -168,7 +168,7 @@ diff -urN a/mockgen/internal/tests/const_array_length/BUILD.bazel b/mockgen/inte
 +    visibility = ["//mockgen:__subpackages__"],
 +)
 diff -urN a/mockgen/internal/tests/copyright_file/BUILD.bazel b/mockgen/internal/tests/copyright_file/BUILD.bazel
---- a/mockgen/internal/tests/copyright_file/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/copyright_file/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/copyright_file/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,18 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -190,7 +190,7 @@ diff -urN a/mockgen/internal/tests/copyright_file/BUILD.bazel b/mockgen/internal
 +    visibility = ["//mockgen:__subpackages__"],
 +)
 diff -urN a/mockgen/internal/tests/custom_package_name/client/v1/BUILD.bazel b/mockgen/internal/tests/custom_package_name/client/v1/BUILD.bazel
---- a/mockgen/internal/tests/custom_package_name/client/v1/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/custom_package_name/client/v1/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/custom_package_name/client/v1/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,14 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -208,7 +208,7 @@ diff -urN a/mockgen/internal/tests/custom_package_name/client/v1/BUILD.bazel b/m
 +    visibility = ["//mockgen:__subpackages__"],
 +)
 diff -urN a/mockgen/internal/tests/custom_package_name/greeter/BUILD.bazel b/mockgen/internal/tests/custom_package_name/greeter/BUILD.bazel
---- a/mockgen/internal/tests/custom_package_name/greeter/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/custom_package_name/greeter/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/custom_package_name/greeter/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,31 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -243,7 +243,7 @@ diff -urN a/mockgen/internal/tests/custom_package_name/greeter/BUILD.bazel b/moc
 +    ],
 +)
 diff -urN a/mockgen/internal/tests/custom_package_name/validator/BUILD.bazel b/mockgen/internal/tests/custom_package_name/validator/BUILD.bazel
---- a/mockgen/internal/tests/custom_package_name/validator/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/custom_package_name/validator/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/custom_package_name/validator/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,14 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -261,7 +261,7 @@ diff -urN a/mockgen/internal/tests/custom_package_name/validator/BUILD.bazel b/m
 +    visibility = ["//mockgen:__subpackages__"],
 +)
 diff -urN a/mockgen/internal/tests/dot_imports/BUILD.bazel b/mockgen/internal/tests/dot_imports/BUILD.bazel
---- a/mockgen/internal/tests/dot_imports/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/dot_imports/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/dot_imports/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,18 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -283,7 +283,7 @@ diff -urN a/mockgen/internal/tests/dot_imports/BUILD.bazel b/mockgen/internal/te
 +    visibility = ["//mockgen:__subpackages__"],
 +)
 diff -urN a/mockgen/internal/tests/empty_interface/BUILD.bazel b/mockgen/internal/tests/empty_interface/BUILD.bazel
---- a/mockgen/internal/tests/empty_interface/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/empty_interface/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/empty_interface/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,18 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -305,7 +305,7 @@ diff -urN a/mockgen/internal/tests/empty_interface/BUILD.bazel b/mockgen/interna
 +    visibility = ["//mockgen:__subpackages__"],
 +)
 diff -urN a/mockgen/internal/tests/extra_import/BUILD.bazel b/mockgen/internal/tests/extra_import/BUILD.bazel
---- a/mockgen/internal/tests/extra_import/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/extra_import/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/extra_import/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,18 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -327,7 +327,7 @@ diff -urN a/mockgen/internal/tests/extra_import/BUILD.bazel b/mockgen/internal/t
 +    visibility = ["//mockgen:__subpackages__"],
 +)
 diff -urN a/mockgen/internal/tests/generated_identifier_conflict/BUILD.bazel b/mockgen/internal/tests/generated_identifier_conflict/BUILD.bazel
---- a/mockgen/internal/tests/generated_identifier_conflict/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/generated_identifier_conflict/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/generated_identifier_conflict/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,25 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -356,7 +356,7 @@ diff -urN a/mockgen/internal/tests/generated_identifier_conflict/BUILD.bazel b/m
 +    deps = ["//gomock"],
 +)
 diff -urN a/mockgen/internal/tests/generics/BUILD.bazel b/mockgen/internal/tests/generics/BUILD.bazel
---- a/mockgen/internal/tests/generics/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/generics/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/generics/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,21 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -381,7 +381,7 @@ diff -urN a/mockgen/internal/tests/generics/BUILD.bazel b/mockgen/internal/tests
 +    visibility = ["//mockgen:__subpackages__"],
 +)
 diff -urN a/mockgen/internal/tests/generics/other/BUILD.bazel b/mockgen/internal/tests/generics/other/BUILD.bazel
---- a/mockgen/internal/tests/generics/other/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/generics/other/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/generics/other/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,14 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -399,7 +399,7 @@ diff -urN a/mockgen/internal/tests/generics/other/BUILD.bazel b/mockgen/internal
 +    visibility = ["//mockgen:__subpackages__"],
 +)
 diff -urN a/mockgen/internal/tests/generics/source/BUILD.bazel b/mockgen/internal/tests/generics/source/BUILD.bazel
---- a/mockgen/internal/tests/generics/source/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/generics/source/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/generics/source/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,15 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_test")
@@ -418,7 +418,7 @@ diff -urN a/mockgen/internal/tests/generics/source/BUILD.bazel b/mockgen/interna
 +    ],
 +)
 diff -urN a/mockgen/internal/tests/import_embedded_interface/BUILD.bazel b/mockgen/internal/tests/import_embedded_interface/BUILD.bazel
---- a/mockgen/internal/tests/import_embedded_interface/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/import_embedded_interface/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/import_embedded_interface/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,36 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -458,7 +458,7 @@ diff -urN a/mockgen/internal/tests/import_embedded_interface/BUILD.bazel b/mockg
 +    deps = ["//gomock"],
 +)
 diff -urN a/mockgen/internal/tests/import_embedded_interface/ersatz/BUILD.bazel b/mockgen/internal/tests/import_embedded_interface/ersatz/BUILD.bazel
---- a/mockgen/internal/tests/import_embedded_interface/ersatz/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/import_embedded_interface/ersatz/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/import_embedded_interface/ersatz/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,14 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -476,7 +476,7 @@ diff -urN a/mockgen/internal/tests/import_embedded_interface/ersatz/BUILD.bazel 
 +    visibility = ["//mockgen:__subpackages__"],
 +)
 diff -urN a/mockgen/internal/tests/import_embedded_interface/faux/BUILD.bazel b/mockgen/internal/tests/import_embedded_interface/faux/BUILD.bazel
---- a/mockgen/internal/tests/import_embedded_interface/faux/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/import_embedded_interface/faux/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/import_embedded_interface/faux/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,21 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -501,7 +501,7 @@ diff -urN a/mockgen/internal/tests/import_embedded_interface/faux/BUILD.bazel b/
 +    visibility = ["//mockgen:__subpackages__"],
 +)
 diff -urN a/mockgen/internal/tests/import_embedded_interface/other/ersatz/BUILD.bazel b/mockgen/internal/tests/import_embedded_interface/other/ersatz/BUILD.bazel
---- a/mockgen/internal/tests/import_embedded_interface/other/ersatz/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/import_embedded_interface/other/ersatz/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/import_embedded_interface/other/ersatz/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,14 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -519,7 +519,7 @@ diff -urN a/mockgen/internal/tests/import_embedded_interface/other/ersatz/BUILD.
 +    visibility = ["//mockgen:__subpackages__"],
 +)
 diff -urN a/mockgen/internal/tests/import_embedded_interface/other/log/BUILD.bazel b/mockgen/internal/tests/import_embedded_interface/other/log/BUILD.bazel
---- a/mockgen/internal/tests/import_embedded_interface/other/log/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/import_embedded_interface/other/log/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/import_embedded_interface/other/log/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,14 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -537,7 +537,7 @@ diff -urN a/mockgen/internal/tests/import_embedded_interface/other/log/BUILD.baz
 +    visibility = ["//mockgen:__subpackages__"],
 +)
 diff -urN a/mockgen/internal/tests/import_source/BUILD.bazel b/mockgen/internal/tests/import_source/BUILD.bazel
---- a/mockgen/internal/tests/import_source/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/import_source/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/import_source/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,18 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -559,7 +559,7 @@ diff -urN a/mockgen/internal/tests/import_source/BUILD.bazel b/mockgen/internal/
 +    visibility = ["//mockgen:__subpackages__"],
 +)
 diff -urN a/mockgen/internal/tests/import_source/definition/BUILD.bazel b/mockgen/internal/tests/import_source/definition/BUILD.bazel
---- a/mockgen/internal/tests/import_source/definition/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/import_source/definition/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/import_source/definition/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,18 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -581,7 +581,7 @@ diff -urN a/mockgen/internal/tests/import_source/definition/BUILD.bazel b/mockge
 +    visibility = ["//mockgen:__subpackages__"],
 +)
 diff -urN a/mockgen/internal/tests/internal_pkg/BUILD.bazel b/mockgen/internal/tests/internal_pkg/BUILD.bazel
---- a/mockgen/internal/tests/internal_pkg/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/internal_pkg/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/internal_pkg/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,14 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -599,7 +599,7 @@ diff -urN a/mockgen/internal/tests/internal_pkg/BUILD.bazel b/mockgen/internal/t
 +    visibility = ["//mockgen:__subpackages__"],
 +)
 diff -urN a/mockgen/internal/tests/internal_pkg/subdir/internal/pkg/BUILD.bazel b/mockgen/internal/tests/internal_pkg/subdir/internal/pkg/BUILD.bazel
---- a/mockgen/internal/tests/internal_pkg/subdir/internal/pkg/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/internal_pkg/subdir/internal/pkg/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/internal_pkg/subdir/internal/pkg/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,14 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -617,7 +617,7 @@ diff -urN a/mockgen/internal/tests/internal_pkg/subdir/internal/pkg/BUILD.bazel 
 +    visibility = ["//mockgen:__subpackages__"],
 +)
 diff -urN a/mockgen/internal/tests/internal_pkg/subdir/internal/pkg/reflect_output/BUILD.bazel b/mockgen/internal/tests/internal_pkg/subdir/internal/pkg/reflect_output/BUILD.bazel
---- a/mockgen/internal/tests/internal_pkg/subdir/internal/pkg/reflect_output/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/internal_pkg/subdir/internal/pkg/reflect_output/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/internal_pkg/subdir/internal/pkg/reflect_output/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,18 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -639,7 +639,7 @@ diff -urN a/mockgen/internal/tests/internal_pkg/subdir/internal/pkg/reflect_outp
 +    visibility = ["//mockgen:__subpackages__"],
 +)
 diff -urN a/mockgen/internal/tests/internal_pkg/subdir/internal/pkg/source_output/BUILD.bazel b/mockgen/internal/tests/internal_pkg/subdir/internal/pkg/source_output/BUILD.bazel
---- a/mockgen/internal/tests/internal_pkg/subdir/internal/pkg/source_output/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/internal_pkg/subdir/internal/pkg/source_output/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/internal_pkg/subdir/internal/pkg/source_output/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,18 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -661,7 +661,7 @@ diff -urN a/mockgen/internal/tests/internal_pkg/subdir/internal/pkg/source_outpu
 +    visibility = ["//mockgen:__subpackages__"],
 +)
 diff -urN a/mockgen/internal/tests/missing_import/output/BUILD.bazel b/mockgen/internal/tests/missing_import/output/BUILD.bazel
---- a/mockgen/internal/tests/missing_import/output/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/missing_import/output/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/missing_import/output/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,18 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -683,7 +683,7 @@ diff -urN a/mockgen/internal/tests/missing_import/output/BUILD.bazel b/mockgen/i
 +    visibility = ["//mockgen:__subpackages__"],
 +)
 diff -urN a/mockgen/internal/tests/missing_import/source/BUILD.bazel b/mockgen/internal/tests/missing_import/source/BUILD.bazel
---- a/mockgen/internal/tests/missing_import/source/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/missing_import/source/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/missing_import/source/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,14 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -701,7 +701,7 @@ diff -urN a/mockgen/internal/tests/missing_import/source/BUILD.bazel b/mockgen/i
 +    visibility = ["//mockgen:__subpackages__"],
 +)
 diff -urN a/mockgen/internal/tests/mock_in_test_package/BUILD.bazel b/mockgen/internal/tests/mock_in_test_package/BUILD.bazel
---- a/mockgen/internal/tests/mock_in_test_package/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/mock_in_test_package/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/mock_in_test_package/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,23 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -728,7 +728,7 @@ diff -urN a/mockgen/internal/tests/mock_in_test_package/BUILD.bazel b/mockgen/in
 +    ],
 +)
 diff -urN a/mockgen/internal/tests/overlapping_methods/BUILD.bazel b/mockgen/internal/tests/overlapping_methods/BUILD.bazel
---- a/mockgen/internal/tests/overlapping_methods/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/overlapping_methods/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/overlapping_methods/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,26 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -758,7 +758,7 @@ diff -urN a/mockgen/internal/tests/overlapping_methods/BUILD.bazel b/mockgen/int
 +    deps = ["//gomock"],
 +)
 diff -urN a/mockgen/internal/tests/panicing_test/BUILD.bazel b/mockgen/internal/tests/panicing_test/BUILD.bazel
---- a/mockgen/internal/tests/panicing_test/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/panicing_test/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/panicing_test/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,21 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -783,7 +783,7 @@ diff -urN a/mockgen/internal/tests/panicing_test/BUILD.bazel b/mockgen/internal/
 +    deps = ["//gomock"],
 +)
 diff -urN a/mockgen/internal/tests/parenthesized_parameter_type/BUILD.bazel b/mockgen/internal/tests/parenthesized_parameter_type/BUILD.bazel
---- a/mockgen/internal/tests/parenthesized_parameter_type/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/parenthesized_parameter_type/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/parenthesized_parameter_type/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,18 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -805,7 +805,7 @@ diff -urN a/mockgen/internal/tests/parenthesized_parameter_type/BUILD.bazel b/mo
 +    visibility = ["//mockgen:__subpackages__"],
 +)
 diff -urN a/mockgen/internal/tests/performance/big_interface/BUILD.bazel b/mockgen/internal/tests/performance/big_interface/BUILD.bazel
---- a/mockgen/internal/tests/performance/big_interface/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/performance/big_interface/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/performance/big_interface/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,14 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -823,7 +823,7 @@ diff -urN a/mockgen/internal/tests/performance/big_interface/BUILD.bazel b/mockg
 +    visibility = ["//mockgen:__subpackages__"],
 +)
 diff -urN a/mockgen/internal/tests/self_package/BUILD.bazel b/mockgen/internal/tests/self_package/BUILD.bazel
---- a/mockgen/internal/tests/self_package/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/self_package/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/self_package/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,18 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -845,7 +845,7 @@ diff -urN a/mockgen/internal/tests/self_package/BUILD.bazel b/mockgen/internal/t
 +    visibility = ["//mockgen:__subpackages__"],
 +)
 diff -urN a/mockgen/internal/tests/test_package/BUILD.bazel b/mockgen/internal/tests/test_package/BUILD.bazel
---- a/mockgen/internal/tests/test_package/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/test_package/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/test_package/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,23 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -872,7 +872,7 @@ diff -urN a/mockgen/internal/tests/test_package/BUILD.bazel b/mockgen/internal/t
 +    deps = ["//gomock"],
 +)
 diff -urN a/mockgen/internal/tests/unexported_method/BUILD.bazel b/mockgen/internal/tests/unexported_method/BUILD.bazel
---- a/mockgen/internal/tests/unexported_method/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/unexported_method/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/unexported_method/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,25 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -901,7 +901,7 @@ diff -urN a/mockgen/internal/tests/unexported_method/BUILD.bazel b/mockgen/inter
 +    deps = ["//gomock"],
 +)
 diff -urN a/mockgen/internal/tests/vendor_dep/BUILD.bazel b/mockgen/internal/tests/vendor_dep/BUILD.bazel
---- a/mockgen/internal/tests/vendor_dep/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/vendor_dep/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/vendor_dep/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,22 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -927,7 +927,7 @@ diff -urN a/mockgen/internal/tests/vendor_dep/BUILD.bazel b/mockgen/internal/tes
 +    visibility = ["//mockgen:__subpackages__"],
 +)
 diff -urN a/mockgen/internal/tests/vendor_dep/source_mock_package/BUILD.bazel b/mockgen/internal/tests/vendor_dep/source_mock_package/BUILD.bazel
---- a/mockgen/internal/tests/vendor_dep/source_mock_package/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/vendor_dep/source_mock_package/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/vendor_dep/source_mock_package/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,18 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -949,7 +949,7 @@ diff -urN a/mockgen/internal/tests/vendor_dep/source_mock_package/BUILD.bazel b/
 +    visibility = ["//mockgen:__subpackages__"],
 +)
 diff -urN a/mockgen/internal/tests/vendor_pkg/BUILD.bazel b/mockgen/internal/tests/vendor_pkg/BUILD.bazel
---- a/mockgen/internal/tests/vendor_pkg/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/internal/tests/vendor_pkg/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/internal/tests/vendor_pkg/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,18 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -971,7 +971,7 @@ diff -urN a/mockgen/internal/tests/vendor_pkg/BUILD.bazel b/mockgen/internal/tes
 +    visibility = ["//mockgen:__subpackages__"],
 +)
 diff -urN a/mockgen/model/BUILD.bazel b/mockgen/model/BUILD.bazel
---- a/mockgen/model/BUILD.bazel	1969-12-31 16:00:00
+--- a/mockgen/model/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/mockgen/model/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,20 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -995,7 +995,7 @@ diff -urN a/mockgen/model/BUILD.bazel b/mockgen/model/BUILD.bazel
 +    embed = [":model"],
 +)
 diff -urN a/sample/BUILD.bazel b/sample/BUILD.bazel
---- a/sample/BUILD.bazel	1969-12-31 16:00:00
+--- a/sample/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/sample/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,36 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -1035,7 +1035,7 @@ diff -urN a/sample/BUILD.bazel b/sample/BUILD.bazel
 +    ],
 +)
 diff -urN a/sample/concurrent/BUILD.bazel b/sample/concurrent/BUILD.bazel
---- a/sample/concurrent/BUILD.bazel	1969-12-31 16:00:00
+--- a/sample/concurrent/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/sample/concurrent/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,24 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -1063,7 +1063,7 @@ diff -urN a/sample/concurrent/BUILD.bazel b/sample/concurrent/BUILD.bazel
 +    ],
 +)
 diff -urN a/sample/concurrent/mock/BUILD.bazel b/sample/concurrent/mock/BUILD.bazel
---- a/sample/concurrent/mock/BUILD.bazel	1969-12-31 16:00:00
+--- a/sample/concurrent/mock/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/sample/concurrent/mock/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,15 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -1082,7 +1082,7 @@ diff -urN a/sample/concurrent/mock/BUILD.bazel b/sample/concurrent/mock/BUILD.ba
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/sample/imp1/BUILD.bazel b/sample/imp1/BUILD.bazel
---- a/sample/imp1/BUILD.bazel	1969-12-31 16:00:00
+--- a/sample/imp1/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/sample/imp1/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,14 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -1100,7 +1100,7 @@ diff -urN a/sample/imp1/BUILD.bazel b/sample/imp1/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/sample/imp2/BUILD.bazel b/sample/imp2/BUILD.bazel
---- a/sample/imp2/BUILD.bazel	1969-12-31 16:00:00
+--- a/sample/imp2/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/sample/imp2/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,14 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -1118,7 +1118,7 @@ diff -urN a/sample/imp2/BUILD.bazel b/sample/imp2/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/sample/imp3/BUILD.bazel b/sample/imp3/BUILD.bazel
---- a/sample/imp3/BUILD.bazel	1969-12-31 16:00:00
+--- a/sample/imp3/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/sample/imp3/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,14 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -1136,7 +1136,7 @@ diff -urN a/sample/imp3/BUILD.bazel b/sample/imp3/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/sample/imp4/BUILD.bazel b/sample/imp4/BUILD.bazel
---- a/sample/imp4/BUILD.bazel	1969-12-31 16:00:00
+--- a/sample/imp4/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/sample/imp4/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,14 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")

@@ -14,6 +14,15 @@
 
 load("@io_bazel_rules_go//go:def.bzl", "go_test")
 load("@io_bazel_rules_go//go/tools/bazel_testing:def.bzl", "go_bazel_test")
+load(":defs.bzl", "root_symlinks")
+
+root_symlinks(
+    name = "root_symlinks",
+    data = [
+        "test.txt",
+        "test_dir",
+    ],
+)
 
 go_test(
     name = "runfiles_test",
@@ -22,13 +31,24 @@ go_test(
         "runfiles_test.go",
     ],
     data = [
+        "root_symlinks",
         "test.txt",
+        "test_dir",
         "//tests/runfiles/testprog",
         "@bazel_tools//tools/bash/runfiles",
     ],
     deps = [
         "//go/runfiles",
+        "//tests/runfiles/testfs",
     ],
+)
+
+go_test(
+    name = "runfiles_internal_test",
+    srcs = [
+        "runfiles_internal_test.go",
+    ],
+    embed = ["//go/runfiles"],
 )
 
 go_bazel_test(

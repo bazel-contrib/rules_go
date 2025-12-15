@@ -17,11 +17,12 @@ filegroup(
     srcs = glob(["**"]) + [
         "//go/config:all_files",
         "//go/constraints/amd64:all_files",
+        "//go/constraints/arm:all_files",
         "//go/platform:all_files",
+        "//go/private:all_files",
         "//go/runfiles:all_files",
         "//go/toolchain:all_files",
         "//go/tools:all_files",
-        "//go/private:all_files",
     ],
     visibility = ["//visibility:public"],
 )

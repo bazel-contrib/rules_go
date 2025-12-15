@@ -198,6 +198,28 @@ func (r *importReader) findEmbed(first bool) bool {
 		case ' ', '\t':
 			// leave startLine alone
 
+		case '\'':
+			startLine = false
+			for r.err == nil {
+				if r.eof {
+					r.syntaxError()
+				}
+				c = r.readByteNoBuf()
+				if c == '\\' {
+					_ = r.readByteNoBuf()
+					if r.err != nil {
+						r.syntaxError()
+						return false
+					}
+					continue
+				}
+				if c == '\'' {
+					c = r.readByteNoBuf()
+					goto Reswitch
+				}
+			}
+			goto Reswitch
+
 		case '"':
 			startLine = false
 			for r.err == nil {
@@ -206,7 +228,7 @@ func (r *importReader) findEmbed(first bool) bool {
 				}
 				c = r.readByteNoBuf()
 				if c == '\\' {
-					r.readByteNoBuf()
+					_ = r.readByteNoBuf()
 					if r.err != nil {
 						r.syntaxError()
 						return false

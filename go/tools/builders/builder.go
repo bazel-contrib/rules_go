@@ -32,15 +32,27 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if len(args) == 0 {
+
+	verb := verbFromName(os.Args[0])
+	if verb == "" && len(args) == 0 {
 		log.Fatalf("usage: %s verb options...", os.Args[0])
 	}
-	verb, rest := args[0], args[1:]
+
+	var rest []string
+	if verb == "" {
+		verb, rest = args[0], args[1:]
+	} else {
+		rest = args
+	}
 
 	var action func(args []string) error
 	switch verb {
 	case "compilepkg":
 		action = compilePkg
+	case "nogo":
+		action = nogo
+	case "nogovalidation":
+		action = nogoValidation
 	case "filterbuildid":
 		action = filterBuildID
 	case "gentestmain":
@@ -53,6 +65,8 @@ func main() {
 		action = stdlib
 	case "stdliblist":
 		action = stdliblist
+	case "cc":
+		action = cc
 	default:
 		log.Fatalf("unknown action: %s", verb)
 	}

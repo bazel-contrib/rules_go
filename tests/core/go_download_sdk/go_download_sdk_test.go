@@ -33,6 +33,11 @@ go_test(
     srcs = ["version_test.go"],
 )
 
+go_test(
+    name = "patch_test",
+    srcs = ["patch_test.go"],
+)
+
 -- version_test.go --
 package version_test
 
@@ -47,6 +52,19 @@ var want = flag.String("version", "", "")
 func Test(t *testing.T) {
 	if v := runtime.Version(); v != *want {
 		t.Errorf("got version %q; want %q", v, *want)
+	}
+}
+-- patch_test.go --
+package version_test
+
+import (
+	"os"
+	"testing"
+)
+
+func Test(t *testing.T) {
+	if v := os.SayHello; v != "Hello"{
+		t.Errorf("got version %q; want \"Hello\"", v)
 	}
 }
 `,
@@ -124,12 +142,43 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk")
 
 go_download_sdk(
     name = "go_sdk",
-		goarch = "amd64",
-		goos = "windows",
-		version = "1.20.4",
+	goarch = "amd64",
+	goos = "windows",
+	version = "1.20.4",
 )
 `,
 			fetchOnly: "@go_sdk//:BUILD.bazel",
+		},
+		{
+			desc: "multiple_sdks_by_name",
+			rule: `
+load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk", "go_host_sdk")
+
+go_download_sdk(
+    name = "go_sdk",
+    version = "1.23.5",
+)
+go_download_sdk(
+    name = "go_sdk_1_17",
+    version = "1.17",
+)
+go_download_sdk(
+    name = "go_sdk_1_17_1",
+    version = "1.17.1",
+)
+go_download_sdk(
+    name = "go_sdk_with_experiments",
+    version = "1.23.5",
+	experiments = ["rangefunc"],
+)
+`,
+			optToWantVersion: map[string]string{
+				"": "go1.23.5",
+				"--@io_bazel_rules_go//go/toolchain:sdk_name=go_sdk_1_17_1":           "go1.17.1",
+				"--@io_bazel_rules_go//go/toolchain:sdk_name=go_sdk_1_17":             "go1.17",
+				"--@io_bazel_rules_go//go/toolchain:sdk_name=go_sdk":                  "go1.23.5",
+				"--@io_bazel_rules_go//go/toolchain:sdk_name=go_sdk_with_experiments": "go1.23.5 X:rangefunc",
+			},
 		},
 	} {
 		t.Run(test.desc, func(t *testing.T) {
@@ -183,5 +232,68 @@ go_register_toolchains()
 				})
 			}
 		})
+	}
+}
+
+func TestPatch(t *testing.T) {
+	origWorkspaceData, err := ioutil.ReadFile("WORKSPACE")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i := bytes.Index(origWorkspaceData, []byte("go_rules_dependencies()"))
+	if i < 0 {
+		t.Fatal("could not find call to go_rules_dependencies()")
+	}
+
+	buf := &bytes.Buffer{}
+	buf.Write(origWorkspaceData[:i])
+	buf.WriteString(`
+load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk")
+
+go_download_sdk(
+    name = "go_sdk_patched",
+	version = "1.21.1",
+    patch_strip = 1,
+    patches = ["//:test.patch"],
+)
+
+go_rules_dependencies()
+
+go_register_toolchains()
+`)
+	if err := ioutil.WriteFile("WORKSPACE", buf.Bytes(), 0666); err != nil {
+		t.Fatal(err)
+	}
+
+	patchContent := []byte(`diff --git a/src/os/dir.go b/src/os/dir.go
+index 5306bcb..d110a19 100644
+--- a/src/os/dir.go
++++ b/src/os/dir.go
+@@ -17,6 +17,8 @@ const (
+ 	readdirFileInfo
+ )
+
++const SayHello = "Hello"
++
+ // Readdir reads the contents of the directory associated with file and
+ // returns a slice of up to n FileInfo values, as would be returned
+ // by Lstat, in directory order. Subsequent calls on the same file will yield
+`)
+
+	if err := ioutil.WriteFile("test.patch", patchContent, 0666); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := ioutil.WriteFile("WORKSPACE", origWorkspaceData, 0666); err != nil {
+			t.Errorf("error restoring WORKSPACE: %v", err)
+		}
+	}()
+
+	if err := bazel_testing.RunBazel(
+		"test",
+		"//:patch_test",
+	); err != nil {
+		t.Fatal(err)
 	}
 }

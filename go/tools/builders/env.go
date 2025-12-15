@@ -25,6 +25,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -34,7 +35,9 @@ var (
 	// cgoEnvVars is the list of all cgo environment variable
 	cgoEnvVars = []string{"CGO_CFLAGS", "CGO_CXXFLAGS", "CGO_CPPFLAGS", "CGO_LDFLAGS"}
 	// cgoAbsEnvFlags are all the flags that need absolute path in cgoEnvVars
-	cgoAbsEnvFlags = []string{"-I", "-L", "-isysroot", "-isystem", "-iquote", "-include", "-gcc-toolchain", "--sysroot", "-resource-dir", "-fsanitize-blacklist", "-fsanitize-ignorelist"}
+	cgoAbsEnvFlags = []string{"-I", "-L", "-isysroot", "-isystem", "-iquote", "-include", "-imacros", "-gcc-toolchain", "--sysroot", "-resource-dir", "-fsanitize-blacklist", "-fsanitize-ignorelist", "--warning-suppression-mappings"}
+	// cgoAbsPlaceholder is placed in front of flag values that must be absolutized
+	cgoAbsPlaceholder = "__GO_BAZEL_CC_PLACEHOLDER__"
 )
 
 // env holds a small amount of Go environment and toolchain information
@@ -47,6 +50,9 @@ type env struct {
 	// sdk is the path to the Go SDK, which contains tools for the host
 	// platform. This may be different than GOROOT.
 	sdk string
+
+	// goroot is set as the value of GOROOT if non-empty.
+	goroot string
 
 	// installSuffix is the name of the directory below GOROOT/pkg that contains
 	// the .a files for the standard library we should build against.
@@ -67,6 +73,7 @@ type env struct {
 func envFlags(flags *flag.FlagSet) *env {
 	env := &env{}
 	flags.StringVar(&env.sdk, "sdk", "", "Path to the Go SDK.")
+	flags.StringVar(&env.goroot, "goroot", "", "The value to set for GOROOT.")
 	flags.Var(&tagFlag{}, "tags", "List of build tags considered true.")
 	flags.StringVar(&env.installSuffix, "installsuffix", "", "Standard library under GOROOT/pkg")
 	flags.BoolVar(&env.verbose, "v", false, "Whether subprocess command lines should be printed")
@@ -74,11 +81,17 @@ func envFlags(flags *flag.FlagSet) *env {
 	return env
 }
 
-// checkFlags checks whether env flags were set to valid values. checkFlags
-// should be called after parsing flags.
-func (e *env) checkFlags() error {
+// checkFlagsAndSetGoroot checks whether env flags were set to valid values and sets GOROOT.
+// checkFlagsAndSetGoroot should be called after parsing flags.
+func (e *env) checkFlagsAndSetGoroot() error {
 	if e.sdk == "" {
 		return errors.New("-sdk was not set")
+	}
+	if e.goroot != "" {
+		err := os.Setenv("GOROOT", e.goroot)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -150,10 +163,113 @@ func (e *env) runCommandToFile(out, err io.Writer, args []string) error {
 	return runAndLogCommand(cmd, e.verbose)
 }
 
-func absEnv(envNameList []string, argList []string) error {
+func symlinkBuilderCC() (func(), string, error) {
+	absPath, err := filepath.Abs(os.Args[0])
+	if err != nil {
+		return nil, "", err
+	}
+
+	dirname, err := os.MkdirTemp("", "")
+	if err != nil {
+		return nil, "", err
+	}
+
+	// re-use the file extension if there is one (mostly for .exe)
+	builderPath := filepath.Join(dirname, "builder-cc"+filepath.Ext(os.Args[0]))
+
+	if err := os.Symlink(absPath, builderPath); err != nil {
+		_ = os.RemoveAll(dirname)
+		return nil, "", err
+	}
+
+	return func() { _ = os.RemoveAll(dirname) }, builderPath, nil
+}
+
+var symlinkBuilderName = regexp.MustCompile(`.*builder-(\w+)(\.exe)?$`)
+
+// verbFromName parses the builder verb from the builder name so
+// that the builder+verb can be invoked in a way that allows the verb
+// to be part of the program name, rather than requring it to be in the
+// arg list. this makes it easier to set a program like `builder cc` as
+// an environment variable in a way that is more compatible
+func verbFromName(arg0 string) string {
+	matches := symlinkBuilderName.FindAllStringSubmatch(arg0, 1)
+	if len(matches) != 1 {
+		return ""
+	}
+
+	if len(matches[0]) < 2 {
+		return ""
+	}
+
+	return matches[0][1]
+}
+
+// absCCLinker sets the target of the `-extld` to a name which `verbFromName`
+// can extract correctly, allowing go tool link to be able to use the `builder cc` wrapper
+func absCCLinker(argList []string) (func(), error) {
+	extldIndex := -1
+	for i, arg := range argList {
+		if arg == "-extld" && i+1 < len(argList) {
+			extldIndex = i + 1
+			break
+		}
+	}
+	if extldIndex < 0 {
+		// if we don't find extld just return
+		// a noop cleanup function
+		return func() {}, nil
+	}
+
+	cleanup, buildercc, err := symlinkBuilderCC()
+	if err != nil {
+		return nil, err
+	}
+
+	err = os.Setenv("GO_CC", argList[extldIndex])
+	if err != nil {
+		cleanup()
+		return nil, err
+	}
+
+	err = os.Setenv("GO_CC_ROOT", abs("."))
+	if err != nil {
+		cleanup()
+		return nil, err
+	}
+
+	argList[extldIndex] = buildercc
+
+	return cleanup, nil
+}
+
+// absCCCompiler modifies CGO flags to workaround relative paths.
+// Because go is having its own sandbox, all CGO flags should use
+// absolute paths. However, CGO flags are embedded in the output
+// so we cannot use absolute paths directly. Instead, use a placeholder
+// for the absolute path and we replace CC with this builder so that
+// we can expand the placeholder later.
+func absCCCompiler(envNameList []string, argList []string) error {
+	err := os.Setenv("GO_CC", os.Getenv("CC"))
+	if err != nil {
+		return err
+	}
+	err = os.Setenv("GO_CC_ROOT", abs("."))
+	if err != nil {
+		return err
+	}
+	err = os.Setenv("CC", abs(os.Args[0])+" cc")
+	if err != nil {
+		return err
+	}
 	for _, envName := range envNameList {
 		splitedEnv := strings.Fields(os.Getenv(envName))
-		absArgs(splitedEnv, argList)
+		transformArgs(splitedEnv, argList, func(s string) string {
+			if filepath.IsAbs(s) {
+				return s
+			}
+			return cgoAbsPlaceholder + s
+		})
 		if err := os.Setenv(envName, strings.Join(splitedEnv, " ")); err != nil {
 			return err
 		}
@@ -168,7 +284,7 @@ func runAndLogCommand(cmd *exec.Cmd, verbose bool) error {
 	cleanup := passLongArgsInResponseFiles(cmd)
 	defer cleanup()
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("error running subcommand %s: %v", cmd.Path, err)
+		return fmt.Errorf("error running subcommand %s: %w", cmd.Path, err)
 	}
 	return nil
 }
@@ -310,10 +426,16 @@ func abs(path string) string {
 // absArgs applies abs to strings that appear in args. Only paths that are
 // part of options named by flags are modified.
 func absArgs(args []string, flags []string) {
+	transformArgs(args, flags, abs)
+}
+
+// transformArgs applies fn to strings that appear in args. Only paths that are
+// part of options named by flags are modified.
+func transformArgs(args []string, flags []string, fn func(string) string) {
 	absNext := false
 	for i := range args {
 		if absNext {
-			args[i] = abs(args[i])
+			args[i] = fn(args[i])
 			absNext = false
 			continue
 		}
@@ -331,7 +453,7 @@ func absArgs(args []string, flags []string) {
 				possibleValue = possibleValue[1:]
 				separator = "="
 			}
-			args[i] = fmt.Sprintf("%s%s%s", f, separator, abs(possibleValue))
+			args[i] = fmt.Sprintf("%s%s%s", f, separator, fn(possibleValue))
 			break
 		}
 	}
@@ -421,7 +543,11 @@ func passLongArgsInResponseFiles(cmd *exec.Cmd) (cleanup func()) {
 	cleanup = func() { os.Remove(tf.Name()) }
 	var buf bytes.Buffer
 	for _, arg := range cmd.Args[1:] {
-		fmt.Fprintf(&buf, "%s\n", arg)
+		// Slashes need to be doubled for escaping
+		escaped_arg := strings.ReplaceAll(arg, "\\", "\\\\")
+		// Newlines too, so that they don't get split when read
+		escaped_arg = strings.ReplaceAll(escaped_arg, "\n", "\\n")
+		fmt.Fprintf(&buf, "%s\n", escaped_arg)
 	}
 	if _, err := tf.Write(buf.Bytes()); err != nil {
 		tf.Close()

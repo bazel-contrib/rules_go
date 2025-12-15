@@ -8,7 +8,10 @@ go_library(
 
 go_test(
     name = "lib_test",
-    srcs = ["lib_test.go"],
+    srcs = [
+        "lib_blackbox_test.go",
+        "lib_test.go",
+    ],
     embed = [":lib"],
 )
 

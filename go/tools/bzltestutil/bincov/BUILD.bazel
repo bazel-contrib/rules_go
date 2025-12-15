@@ -1,0 +1,24 @@
+load("//go:def.bzl", "go_tool_library")
+
+go_tool_library(
+    name = "bincov",
+    srcs = [
+        "coverage_visitor.go",
+        "coverage_visitor_go123.go",
+        "coverage_visitor_go124.go",
+        "exit_hook.go",
+    ],
+    importpath = "github.com/bazelbuild/rules_go/go/tools/bzltestutil/bincov",
+    visibility = ["//visibility:public"],
+    deps = ["//go/tools/bzltestutil"],
+)
+
+filegroup(
+    name = "all_files",
+    testonly = True,
+    srcs = glob(
+        ["**"],
+        exclude = ["testdata/*"],
+    ),
+    visibility = ["//visibility:public"],
+)

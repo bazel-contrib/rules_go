@@ -21,38 +21,42 @@ import (
 )
 
 var testArgs = bazel_testing.Args{
+	ModuleFileSuffix: `
+bazel_dep(name = "protobuf", version = "29.0-rc2", repo_name = "com_google_protobuf")
+bazel_dep(name = "toolchains_protoc", version = "0.3.4")
+`,
+	WorkspacePrefix: `
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+# The non-polyfill version of this is needed by rules_proto below.
+http_archive(
+    name = "bazel_features",
+    sha256 = "d7787da289a7fb497352211ad200ec9f698822a9e0757a4976fd9f713ff372b3",
+    strip_prefix = "bazel_features-1.9.1",
+    url = "https://github.com/bazel-contrib/bazel_features/releases/download/v1.9.1/bazel_features-v1.9.1.tar.gz",
+)
+
+load("@bazel_features//:deps.bzl", "bazel_features_deps")
+
+bazel_features_deps()
+`,
 	WorkspaceSuffix: `
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
     name = "com_google_protobuf",
-    sha256 = "75be42bd736f4df6d702a0e4e4d30de9ee40eac024c4b845d17ae4cc831fe4ae",
-    strip_prefix = "protobuf-21.7",
-    # latest available in BCR, as of 2022-09-30
+    integrity = "sha256-zl0At4RQoMpAC/NgrADA1ZnMIl8EnZhqJ+mk45bFqEo=",
+    strip_prefix = "protobuf-29.0-rc2",
     urls = [
-        "https://github.com/protocolbuffers/protobuf/archive/v21.7.tar.gz",
-        "https://mirror.bazel.build/github.com/protocolbuffers/protobuf/archive/v21.7.tar.gz",
+        "https://github.com/protocolbuffers/protobuf/archive/v29.0-rc2.tar.gz",
+        "https://mirror.bazel.build/github.com/protocolbuffers/protobuf/archive/v29.0-rc2.tar.gz",
     ],
 )
 
-load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
-
-protobuf_deps()
-
-http_archive(
-    name = "rules_proto",
-    sha256 = "4d421d51f9ecfe9bf96ab23b55c6f2b809cbaf0eea24952683e397decfbd0dd0",
-    strip_prefix = "rules_proto-f6b8d89b90a7956f6782a4a3609b2f0eee3ce965",
-    # master, as of 2020-01-06
-    urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_proto/archive/f6b8d89b90a7956f6782a4a3609b2f0eee3ce965.tar.gz",
-        "https://github.com/bazelbuild/rules_proto/archive/f6b8d89b90a7956f6782a4a3609b2f0eee3ce965.tar.gz",
-    ],
-)
 `,
 	Main: `
 -- BUILD.bazel --
-load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@com_google_protobuf//bazel:proto_library.bzl", "proto_library")
 load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
 load("@io_bazel_rules_go//go:def.bzl", "go_binary")
 

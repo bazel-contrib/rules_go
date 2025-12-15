@@ -19,7 +19,6 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -27,6 +26,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 )
 
@@ -50,16 +50,11 @@ func link(args []string) error {
 	buildmode := flags.String("buildmode", "", "Build mode used.")
 	flags.Var(&xdefs, "X", "A string variable to replace in the linked binary (repeated).")
 	flags.Var(&stamps, "stamp", "The name of a file with stamping values.")
-	conflictErrMsg := flags.String("conflict_err", "", "Error message about conflicts to report if there's a link error.")
 	if err := flags.Parse(builderArgs); err != nil {
 		return err
 	}
-	if err := goenv.checkFlags(); err != nil {
+	if err := goenv.checkFlagsAndSetGoroot(); err != nil {
 		return err
-	}
-
-	if *conflictErrMsg != "" {
-		return errors.New(*conflictErrMsg)
 	}
 
 	// On Windows, take the absolute path of the output file and main file.
@@ -146,9 +141,35 @@ func link(args []string) error {
 	}
 	goargs = append(goargs, "-o", *outFile)
 
+	// substitute `builder cc` for the linker with a symlink to builder called `builder-cc`.
+	// unfortunately we can't just set an environment variable to `builder cc` because
+	// in `go tool link` the `linkerFlagSupported` [1][2] call sites used to determine
+	// if a linker supports various flags all appear to use the first arg after splitting
+	// so the `cc` would be left off of `builder cc`
+	//
+	//    [1]: https://cs.opensource.google/go/go/+/ad7f736d8f51ea03166b698256385c869968ae3e:src/cmd/link/internal/ld/lib.go;l=1739
+	//    [2]: https://cs.opensource.google/go/go/+/master:src/cmd/link/internal/ld/lib.go;drc=c6531fae589cf3f9475f3567a5beffb4336fe1d6;l=1429?q=linkerFlagSupported&ss=go%2Fgo
+	linkerCleanup, err := absCCLinker(toolArgs)
+	if err != nil {
+		return err
+	}
+	defer linkerCleanup()
 	// add in the unprocess pass through options
 	goargs = append(goargs, toolArgs...)
 	goargs = append(goargs, *main)
+
+	clearGoRoot, err := onVersion(23)
+	if err != nil {
+		return err
+	}
+	if clearGoRoot {
+		// Explicitly set GOROOT to a dummy value when running linker.
+		// This ensures that the GOROOT written into the binary
+		// is constant and thus builds are reproducible.
+		oldroot := os.Getenv("GOROOT")
+		os.Setenv("GOROOT", "GOROOT")
+		defer os.Setenv("GOROOT", oldroot)
+	}
 	if err := goenv.runCommand(goargs); err != nil {
 		return err
 	}
@@ -160,4 +181,21 @@ func link(args []string) error {
 	}
 
 	return nil
+}
+
+var versionExp = regexp.MustCompile(`.*go1\.(\d+).*$`)
+
+func onVersion(version int) (bool, error) {
+	v := runtime.Version()
+	m := versionExp.FindStringSubmatch(v)
+	if len(m) != 2 {
+		return false, fmt.Errorf("failed to match against Go version %q", v)
+	}
+	mvStr := m[1]
+	mv, err := strconv.Atoi(mvStr)
+	if err != nil {
+		return false, fmt.Errorf("convert minor version %q to int: %w", mvStr, err)
+	}
+
+	return mv >= version, nil
 }

@@ -23,6 +23,18 @@ import (
 	"strings"
 )
 
+const (
+	// arHeader appears at the beginning of archives created by "ar" and
+	// "go tool pack" on all platforms.
+	arHeader = "!<arch>\n"
+
+	// entryLength is the size in bytes of the metadata preceding each file
+	// in an archive.
+	entryLength = 60
+)
+
+var zeroBytes = []byte("0                    ")
+
 type header struct {
 	NameRaw     [16]byte
 	ModTimeRaw  [12]byte

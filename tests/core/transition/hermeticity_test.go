@@ -30,7 +30,7 @@ func TestMain(m *testing.M) {
 -- BUILD.bazel --
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
 load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
-load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@com_google_protobuf//bazel:proto_library.bzl", "proto_library")
 
 go_binary(
     name = "main",
@@ -121,32 +121,42 @@ message Foo {
   int64 value = 1;
 }
 `,
+		ModuleFileSuffix: `
+bazel_dep(name = "protobuf", version = "29.0-rc2", repo_name = "com_google_protobuf")
+bazel_dep(name = "toolchains_protoc", version = "0.3.4")
+`,
+		WorkspacePrefix: `
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+# The non-polyfill version of this is needed by rules_proto below.
+http_archive(
+    name = "bazel_features",
+    sha256 = "d7787da289a7fb497352211ad200ec9f698822a9e0757a4976fd9f713ff372b3",
+    strip_prefix = "bazel_features-1.9.1",
+    url = "https://github.com/bazel-contrib/bazel_features/releases/download/v1.9.1/bazel_features-v1.9.1.tar.gz",
+)
+
+load("@bazel_features//:deps.bzl", "bazel_features_deps")
+
+bazel_features_deps()
+
+http_archive(
+    name = "rules_cc",
+    sha256 = "bbf1ae2f83305b7053b11e4467d317a7ba3517a12cef608543c1b1c5bf48a4df",
+    strip_prefix = "rules_cc-0.0.16",
+    urls = ["https://github.com/bazelbuild/rules_cc/releases/download/0.0.16/rules_cc-0.0.16.tar.gz"],
+)
+`,
 		WorkspaceSuffix: `
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
     name = "com_google_protobuf",
-    sha256 = "75be42bd736f4df6d702a0e4e4d30de9ee40eac024c4b845d17ae4cc831fe4ae",
-    strip_prefix = "protobuf-21.7",
-    # latest available in BCR, as of 2022-09-30
+    integrity = "sha256-zl0At4RQoMpAC/NgrADA1ZnMIl8EnZhqJ+mk45bFqEo=",
+    strip_prefix = "protobuf-29.0-rc2",
     urls = [
-        "https://github.com/protocolbuffers/protobuf/archive/v21.7.tar.gz",
-        "https://mirror.bazel.build/github.com/protocolbuffers/protobuf/archive/v21.7.tar.gz",
-    ],
-)
-
-load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
-
-protobuf_deps()
-
-http_archive(
-    name = "rules_proto",
-    sha256 = "4d421d51f9ecfe9bf96ab23b55c6f2b809cbaf0eea24952683e397decfbd0dd0",
-    strip_prefix = "rules_proto-f6b8d89b90a7956f6782a4a3609b2f0eee3ce965",
-    # master, as of 2020-01-06
-    urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_proto/archive/f6b8d89b90a7956f6782a4a3609b2f0eee3ce965.tar.gz",
-        "https://github.com/bazelbuild/rules_proto/archive/f6b8d89b90a7956f6782a4a3609b2f0eee3ce965.tar.gz",
+        "https://github.com/protocolbuffers/protobuf/archive/v29.0-rc2.tar.gz",
+        "https://mirror.bazel.build/github.com/protocolbuffers/protobuf/archive/v29.0-rc2.tar.gz",
     ],
 )
 `,
@@ -157,21 +167,24 @@ func TestGoBinaryNonGoAttrsAreReset(t *testing.T) {
 	assertDependsCleanlyOnWithFlags(
 		t,
 		"//:main",
-		"//:helper")
+		"//:helper",
+		false)
 }
 
 func TestGoLibraryNonGoAttrsAreReset(t *testing.T) {
 	assertDependsCleanlyOnWithFlags(
 		t,
 		"//:main",
-		"//:indirect_helper")
+		"//:indirect_helper",
+		false)
 }
 
 func TestGoTestNonGoAttrsAreReset(t *testing.T) {
 	assertDependsCleanlyOnWithFlags(
 		t,
 		"//:main_test",
-		"//:helper")
+		"//:helper",
+		false)
 }
 
 func TestGoProtoLibraryToolAttrsAreReset(t *testing.T) {
@@ -179,6 +192,8 @@ func TestGoProtoLibraryToolAttrsAreReset(t *testing.T) {
 		t,
 		"//:foo_go_proto",
 		"@com_google_protobuf//:protoc",
+		// No dep with --incompatible_enable_proto_toolchain_resolution.
+		true,
 		"--@io_bazel_rules_go//go/config:static",
 		"--@io_bazel_rules_go//go/config:msan",
 		"--@io_bazel_rules_go//go/config:race",
@@ -190,11 +205,18 @@ func TestGoProtoLibraryToolAttrsAreReset(t *testing.T) {
 		t,
 		"//:foo_go_proto",
 		"@com_google_protobuf//:protoc",
+		true,
 		"--@io_bazel_rules_go//go/config:pure",
 	)
 }
 
-func assertDependsCleanlyOnWithFlags(t *testing.T, targetA, targetB string, flags ...string) {
+func assertDependsCleanlyOnWithFlags(t *testing.T, targetA, targetB string, allowNoDep bool, flags ...string) {
+	// Analyze the targets to ensure that MODULE.bazel.lock has been created, otherwise bazel config
+	// will fail after the cquery command due to the Skyframe invalidation caused by a changed file.
+	err := bazel_testing.RunBazel(append([]string{"build", targetA, targetB, "--nobuild"}, flags...)...)
+	if err != nil {
+		t.Fatalf("bazel build %s %s: %v", targetA, targetB, err)
+	}
 	query := fmt.Sprintf("deps(%s) intersect %s", targetA, targetB)
 	out, err := bazel_testing.BazelOutput(append(
 		[]string{
@@ -211,6 +233,12 @@ func assertDependsCleanlyOnWithFlags(t *testing.T, targetA, targetB string, flag
 	}
 	cqueryOut := bytes.TrimSpace(out)
 	configHashes := extractConfigHashes(t, cqueryOut)
+	if len(configHashes) == 0 {
+		if allowNoDep {
+			return
+		}
+		t.Fatalf("%s does not depend on %s", targetA, targetB)
+	}
 	if len(configHashes) != 1 {
 		differingGoOptions := getGoOptions(t, configHashes...)
 		if len(differingGoOptions) != 0 {

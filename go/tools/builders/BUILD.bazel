@@ -1,4 +1,5 @@
 load("//go:def.bzl", "go_binary", "go_source", "go_test")
+load("//go/private:common.bzl", "RULES_GO_STDLIB_PREFIX")
 load("//go/private/rules:transition.bzl", "go_reset_target")
 
 go_test(
@@ -8,6 +9,13 @@ go_test(
         "filter.go",
         "filter_test.go",
         "read.go",
+        "read_test.go",
+    ],
+    data = [
+        "read_test_fixture.go",
+    ],
+    deps = [
+        "//go/runfiles",
     ],
 )
 
@@ -24,6 +32,19 @@ go_test(
 )
 
 go_test(
+    name = "nogo_fix_test",
+    size = "small",
+    srcs = [
+        "nogo_fix.go",
+        "nogo_fix_test.go",
+    ],
+    deps = [
+        "@com_github_pmezard_go_difflib//difflib:go_default_library",
+        "@org_golang_x_tools//go/analysis",
+    ],
+)
+
+go_test(
     name = "stdliblist_test",
     size = "small",
     srcs = [
@@ -35,6 +56,9 @@ go_test(
     ],
     data = ["@go_sdk//:files"],
     rundir = ".",
+    x_defs = {
+        "rulesGoStdlibPrefix": RULES_GO_STDLIB_PREFIX,
+    },
 )
 
 go_test(
@@ -46,14 +70,26 @@ go_test(
     ],
 )
 
+go_test(
+    name = "env_test",
+    size = "small",
+    srcs = [
+        "env.go",
+        "env_test.go",
+        "flags.go",
+    ],
+)
+
 filegroup(
     name = "builder_srcs",
     srcs = [
         "ar.go",
         "asm.go",
         "builder.go",
+        "cc.go",
         "cgo2.go",
         "compilepkg.go",
+        "constants.go",
         "cover.go",
         "edit.go",
         "embedcfg.go",
@@ -65,7 +101,8 @@ filegroup(
         "generate_test_main.go",
         "importcfg.go",
         "link.go",
-        "pack.go",
+        "nogo.go",
+        "nogo_validation.go",
         "read.go",
         "replicate.go",
         "stdlib.go",
@@ -80,13 +117,14 @@ filegroup(
 go_source(
     name = "nogo_srcs",
     srcs = [
+        "constants.go",
         "env.go",
         "flags.go",
+        "nogo_fix.go",
         "nogo_main.go",
         "nogo_typeparams_go117.go",
         "nogo_typeparams_go118.go",
         "nolint.go",
-        "pack.go",
     ],
     # //go/tools/builders:nogo_srcs is considered a different target by
     # Bazel's visibility check than

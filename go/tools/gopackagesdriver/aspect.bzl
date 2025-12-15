@@ -18,8 +18,10 @@ load(
     "GoStdLib",
 )
 load(
-    "@bazel_skylib//lib:paths.bzl",
-    "paths",
+    "//go/tools/gopackagesdriver/pkgjson:pkg_json.bzl",
+    "write_pkg_json",
+    file_path_lib = "file_path",
+    is_file_external_lib = "is_file_external",
 )
 
 GoPkgInfo = provider()
@@ -39,50 +41,31 @@ def bazel_supports_canonical_label_literals():
     return str(Label("//:bogus")).startswith("@@")
 
 def is_file_external(f):
-    return f.owner.workspace_root != ""
+    return is_file_external_lib(f)
 
 def file_path(f):
-    prefix = "__BAZEL_WORKSPACE__"
-    if not f.is_source:
-        prefix = "__BAZEL_EXECROOT__"
-    elif is_file_external(f):
-        prefix = "__BAZEL_OUTPUT_BASE__"
-    return paths.join(prefix, f.path)
+    return file_path_lib(f)
 
-def _go_archive_to_pkg(archive):
-    return struct(
-        ID = str(archive.data.label),
-        PkgPath = archive.data.importpath,
-        ExportFile = file_path(archive.data.export_file),
-        GoFiles = [
-            file_path(src)
-            for src in archive.data.orig_srcs
-            if src.path.endswith(".go")
-        ],
-        CompiledGoFiles = [
-            file_path(src)
-            for src in archive.data.srcs
-            if src.path.endswith(".go")
-        ],
-        OtherFiles = [
-            file_path(src)
-            for src in archive.data.orig_srcs
-            if not src.path.endswith(".go")
-        ],
-        Imports = {
-            pkg.data.importpath: str(pkg.data.label)
-            for pkg in archive.direct
-        },
-    )
+# make_pkg_json_with_archive generates a pkg.json file from an archive
+# and supports cgo generated code.
+#
+# This function was created to avoid breaking the signature of make_pkg_json
+# and avoid adding an explicit field for cgo output files in the pkg.json.
+def make_pkg_json_with_archive(ctx, name, archive):
+    pkg_json_file = ctx.actions.declare_file(name + ".pkg.json")
+    write_pkg_json(ctx, ctx.executable._pkgjson, archive, pkg_json_file)
+    return pkg_json_file
 
+# deprecated: use make_pkg_json_with_archive instead
 def make_pkg_json(ctx, name, pkg_info):
     pkg_json_file = ctx.actions.declare_file(name + ".pkg.json")
-    ctx.actions.write(pkg_json_file, content = pkg_info.to_json())
+    ctx.actions.write(pkg_json_file, content = json.encode(pkg_info))
     return pkg_json_file
 
 def _go_pkg_info_aspect_impl(target, ctx):
     # Fetch the stdlib JSON file from the inner most target
     stdlib_json_file = None
+    stdlib_cache_dir = None
 
     transitive_json_files = []
     transitive_export_files = []
@@ -105,6 +88,7 @@ def _go_pkg_info_aspect_impl(target, ctx):
                 # Fetch the stdlib json from the first dependency
                 if not stdlib_json_file:
                     stdlib_json_file = pkg_info.stdlib_json_file
+                    stdlib_cache_dir = pkg_info.stdlib_cache_dir
 
     pkg_json_files = []
     compiled_go_files = []
@@ -113,16 +97,16 @@ def _go_pkg_info_aspect_impl(target, ctx):
     if GoArchive in target:
         archive = target[GoArchive]
         compiled_go_files.extend(archive.source.srcs)
+        if archive.data.cgo_out_dir:
+            compiled_go_files.append(archive.data.cgo_out_dir)
         export_files.append(archive.data.export_file)
-        pkg = _go_archive_to_pkg(archive)
-        pkg_json_files.append(make_pkg_json(ctx, archive.data.name, pkg))
+        pkg_json_files.append(make_pkg_json_with_archive(ctx, archive.data.name, archive))
 
         if ctx.rule.kind == "go_test":
             for dep_archive in archive.direct:
                 # find the archive containing the test sources
                 if archive.data.label == dep_archive.data.label:
-                    pkg = _go_archive_to_pkg(dep_archive)
-                    pkg_json_files.append(make_pkg_json(ctx, dep_archive.data.name, pkg))
+                    pkg_json_files.append(make_pkg_json_with_archive(ctx, dep_archive.data.name, dep_archive))
                     compiled_go_files.extend(dep_archive.source.srcs)
                     export_files.append(dep_archive.data.export_file)
                     break
@@ -131,9 +115,11 @@ def _go_pkg_info_aspect_impl(target, ctx):
     # current go_ node.
     if not stdlib_json_file:
         stdlib_json_file = ctx.attr._go_stdlib[GoStdLib]._list_json
+        stdlib_cache_dir = ctx.attr._go_stdlib[GoStdLib].cache_dir
 
     pkg_info = GoPkgInfo(
         stdlib_json_file = stdlib_json_file,
+        stdlib_cache_dir = stdlib_cache_dir,
         pkg_json_files = depset(
             direct = pkg_json_files,
             transitive = transitive_json_files,
@@ -155,6 +141,7 @@ def _go_pkg_info_aspect_impl(target, ctx):
             go_pkg_driver_srcs = pkg_info.compiled_go_files,
             go_pkg_driver_export_file = pkg_info.export_files,
             go_pkg_driver_stdlib_json_file = depset([pkg_info.stdlib_json_file] if pkg_info.stdlib_json_file else []),
+            go_pkg_driver_stdlib_cache_dir = pkg_info.stdlib_cache_dir or depset([]),
         ),
     ]
 
@@ -164,6 +151,11 @@ go_pkg_info_aspect = aspect(
     attrs = {
         "_go_stdlib": attr.label(
             default = "//:stdlib",
+        ),
+        "_pkgjson": attr.label(
+            executable = True,
+            cfg = "exec",
+            default = Label("//go/tools/gopackagesdriver/pkgjson:reset_pkgjson"),
         ),
     },
 )

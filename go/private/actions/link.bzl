@@ -13,8 +13,12 @@
 # limitations under the License.
 
 load(
+    "@bazel_skylib//lib:collections.bzl",
+    "collections",
+)
+load(
     "//go/private:common.bzl",
-    "as_set",
+    "GO_TOOLCHAIN_LABEL",
     "count_group_matches",
     "has_shared_lib_extension",
 )
@@ -29,36 +33,9 @@ load(
     "//go/private:rpath.bzl",
     "rpath",
 )
-load(
-    "@bazel_skylib//lib:collections.bzl",
-    "collections",
-)
 
 def _format_archive(d):
     return "{}={}={}".format(d.label, d.importmap, d.file.path)
-
-def _transitive_archives_without_test_archives(archive, test_archives):
-    # Build the set of transitive dependencies. Currently, we tolerate multiple
-    # archives with the same importmap (though this will be an error in the
-    # future), but there is a special case which is difficult to avoid:
-    # If a go_test has internal and external archives, and the external test
-    # transitively depends on the library under test, we need to exclude the
-    # library under test and use the internal test archive instead.
-    deps = depset(transitive = [d.transitive for d in archive.direct])
-    result = {}
-
-    # Unfortunately, Starlark doesn't support set()
-    test_imports = {}
-    for t in test_archives:
-        test_imports[t.importmap] = True
-    for d in deps.to_list():
-        if d.importmap in test_imports:
-            continue
-        if d.importmap in result:
-            print("Multiple copies of {} passed to the linker. Ignoring {} in favor of {}".format(d.importmap, d.file.path, result[d.importmap].file.path))
-            continue
-        result[d.importmap] = d
-    return result.values()
 
 def emit_link(
         go,
@@ -82,11 +59,14 @@ def emit_link(
 
     if go.coverage_enabled:
         extldflags.append("--coverage")
-    gc_linkopts = list(gc_linkopts)
-    gc_linkopts.extend(go.mode.gc_linkopts)
+    gc_linkopts = gc_linkopts + go.mode.gc_linkopts
     gc_linkopts, extldflags = _extract_extldflags(gc_linkopts, extldflags)
     builder_args = go.builder_args(go, "link")
     tool_args = go.tool_args(go)
+
+    # use ar tool from cc toolchain if cc toolchain provides it
+    if go.cgo_tools and go.cgo_tools.ar_path and go.cgo_tools.ar_path.endswith("ar"):
+        tool_args.add("-extar", go.cgo_tools.ar_path)
 
     # Add in any mode specific behaviours
     if go.mode.race:
@@ -101,7 +81,7 @@ def emit_link(
         tool_args.add_all(extld)
         if extld and (go.mode.static or
                       go.mode.race or
-                      go.mode.link != LINKMODE_NORMAL or
+                      go.mode.linkmode != LINKMODE_NORMAL or
                       go.mode.goos == "windows" and go.mode.msan):
             # Force external linking for the following conditions:
             # * Mode is static but not pure: -static must be passed to the C
@@ -121,18 +101,31 @@ def emit_link(
 
     if go.mode.static:
         extldflags.append("-static")
-    if go.mode.link != LINKMODE_NORMAL:
-        builder_args.add("-buildmode", go.mode.link)
-    if go.mode.link == LINKMODE_PLUGIN:
+    if go.mode.linkmode != LINKMODE_NORMAL:
+        builder_args.add("-buildmode", go.mode.linkmode)
+    if go.mode.linkmode == LINKMODE_PLUGIN:
         tool_args.add("-pluginpath", archive.data.importpath)
 
-    arcs = _transitive_archives_without_test_archives(archive, test_archives)
-    arcs.extend(test_archives)
-    if (go.coverage_enabled and go.coverdata and
-        not any([arc.importmap == go.coverdata.data.importmap for arc in arcs])):
-        arcs.append(go.coverdata.data)
+    # TODO(zbarsky): Bazel versions older than 7.2.0 do not properly deduplicate this dep
+    # Can replace with the following once we support Bazel 7.2.0+ only:
+    #    if go.coverage_enabled and go.coverdata:
+    #        test_archives = list(test_archives) + [go.coverdata.data]
+    #    arcs = depset(test_archives, transitive = [d.transitive for d in archive.direct])
+
+    if go.coverage_enabled and go.coverdata:
+        potentially_duplicated_arcs = depset(test_archives + [go.coverdata.data], transitive = [d.transitive for d in archive.direct]).to_list()
+        importmaps = {}
+        arcs = []
+        for arc in potentially_duplicated_arcs:
+            if arc.importmap in importmaps:
+                continue
+            importmaps[arc.importmap] = True
+            arcs.append(arc)
+    else:
+        arcs = depset(test_archives, transitive = [d.transitive for d in archive.direct])
+
     builder_args.add_all(arcs, before_each = "-arc", map_each = _format_archive)
-    builder_args.add("-package_list", go.package_list)
+    builder_args.add("-package_list", go.sdk.package_list)
 
     # Build a list of rpaths for dynamic libraries we need to find.
     # rpaths are relative paths from the binary to directories where libraries
@@ -152,7 +145,7 @@ def emit_link(
     stamp_x_defs_stable = False
     for k, v in archive.x_defs.items():
         builder_args.add("-X", "%s=%s" % (k, v))
-        if go.stamp:
+        if go.mode.stamp:
             stable_vars_count = (count_group_matches(v, "{STABLE_", "}") +
                                  v.count("{BUILD_EMBED_LABEL}") +
                                  v.count("{BUILD_USER}") +
@@ -183,22 +176,15 @@ def emit_link(
         tool_args.add("-s", "-w")
     tool_args.add_joined("-extldflags", extldflags, join_with = " ")
 
-    conflict_err = _check_conflicts(arcs)
-    if conflict_err:
-        # Report package conflict errors in execution instead of analysis.
-        # We could call fail() with this message, but Bazel prints a stack
-        # that doesn't give useful information.
-        builder_args.add("-conflict_err", conflict_err)
-
     inputs_direct = stamp_inputs + [go.sdk.package_list]
     if go.coverage_enabled and go.coverdata:
         inputs_direct.append(go.coverdata.data.file)
     inputs_transitive = [
         archive.libs,
         archive.cgo_deps,
-        as_set(go.crosstool),
-        as_set(go.sdk.tools),
-        as_set(go.stdlib.libs),
+        go.cc_toolchain_files,
+        go.sdk.tools,
+        go.stdlib.libs,
     ]
     inputs = depset(direct = inputs_direct, transitive = inputs_transitive)
 
@@ -209,6 +195,7 @@ def emit_link(
         executable = go.toolchain._builder,
         arguments = [builder_args, "--", tool_args],
         env = go.env,
+        toolchain = GO_TOOLCHAIN_LABEL,
     )
 
 def _extract_extldflags(gc_linkopts, extldflags):
@@ -227,50 +214,23 @@ def _extract_extldflags(gc_linkopts, extldflags):
     """
     filtered_gc_linkopts = []
     is_extldflags = False
-    for opt in gc_linkopts:
+    skip_next = False
+
+    for i, opt in enumerate(gc_linkopts):
+        if skip_next:
+            skip_next = False
+            continue
+
         if is_extldflags:
+            if opt == "-Wl" and i + 1 < len(gc_linkopts):
+                # Merge '-Wl,' and next value
+                extldflags.append("-Wl," + gc_linkopts[i + 1])
+                skip_next = True
+            else:
+                extldflags.append(opt)
             is_extldflags = False
-            extldflags.append(opt)
         elif opt == "-extldflags":
             is_extldflags = True
         else:
             filtered_gc_linkopts.append(opt)
     return filtered_gc_linkopts, extldflags
-
-def _check_conflicts(arcs):
-    importmap_to_label = {}
-    for arc in arcs:
-        if arc.importmap in importmap_to_label:
-            return """package conflict error: {}: multiple copies of package passed to linker:
-	{}
-	{}
-Set "importmap" to different paths or use 'bazel cquery' to ensure only one
-package with this path is linked.""".format(
-                arc.importmap,
-                importmap_to_label[arc.importmap],
-                arc.label,
-            )
-        importmap_to_label[arc.importmap] = arc.label
-    for arc in arcs:
-        for dep_importmap, dep_label in zip(arc._dep_importmaps, arc._dep_labels):
-            if dep_importmap not in importmap_to_label:
-                return "package conflict error: {}: package needed by {} was not passed to linker".format(
-                    dep_importmap,
-                    arc.label,
-                )
-            if importmap_to_label[dep_importmap] != dep_label:
-                err = """package conflict error: {}: package imports {}
-	  was compiled with: {}
-	but was linked with: {}""".format(
-                    arc.importmap,
-                    dep_importmap,
-                    dep_label,
-                    importmap_to_label[dep_importmap],
-                )
-                if importmap_to_label[dep_importmap].name.endswith("_test"):
-                    err += """
-This sometimes happens when an external test (package ending with _test)
-imports a package that imports the library being tested. This is not supported."""
-                err += "\nSee https://github.com/bazelbuild/rules_go/issues/1877."
-                return err
-    return None

@@ -40,10 +40,6 @@ with review. Specifically, prepare does the following:
 * Creates the release branch if it doesn't exist locally. Release branches
   have names like "release-X.Y" where X and Y are the major and minor version
   numbers.
-* Checks that RULES_GO_VERSION is set in go/def.bzl on the local release branch
-  for the minor version being released. RULES_GO_VERSION must be a sematic
-  version without the "v" prefix that Go uses, like "1.2.4". It must match
-  the -version flag, which does require the "v" prefix.
 * Creates an archive zip file from the tip of the local release branch.
 * Creates or updates a draft GitHub release with the given release notes.
   http_archive boilerplate is generated and appended to the release notes.
@@ -91,7 +87,7 @@ func runPrepare(ctx context.Context, stderr io.Writer, args []string) error {
 	if version == "" {
 		return usageErrorf(&prepareCmd, "-version must be set")
 	}
-	if semver.Canonical(version) != version || semver.Prerelease(version) != "" || semver.Build(version) != "" {
+	if semver.Canonical(version) != version || semver.Build(version) != "" {
 		return usageErrorf(&prepareCmd, "-version must be a canonical version, like v1.2.3")
 	}
 
@@ -101,7 +97,7 @@ func runPrepare(ctx context.Context, stderr io.Writer, args []string) error {
 
 	// Get the GitHub release.
 	fmt.Fprintf(stderr, "checking if release %s exists...\n", version)
-	release, err := gh.getReleaseByTagIncludingDraft(ctx, "bazelbuild", "rules_go", version)
+	release, err := gh.getReleaseByTagIncludingDraft(ctx, "bazel-contrib", "rules_go", version)
 	if err != nil && !errors.Is(err, errReleaseNotFound) {
 		return err
 	}
@@ -109,10 +105,9 @@ func runPrepare(ctx context.Context, stderr io.Writer, args []string) error {
 		return fmt.Errorf("release %s was already published", version)
 	}
 
-	// Check that RULES_GO_VERSION is set correctly on the release branch.
 	// If this is a minor release (x.y.0), create the release branch if it
 	// does not exist.
-	fmt.Fprintf(stderr, "checking RULES_GO_VERSION...\n")
+	fmt.Fprintf(stderr, "verifying release branch...\n")
 	rootDir, err := repoRoot()
 	if err != nil {
 		return err
@@ -125,17 +120,10 @@ func runPrepare(ctx context.Context, stderr io.Writer, args []string) error {
 	branchName := "release-" + majorMinor[len("v"):]
 	if !gitBranchExists(ctx, rootDir, branchName) {
 		if !isMinorRelease {
-			return fmt.Errorf("release branch %q does not exist locally. Fetch it, set RULES_GO_VERSION, add commits, and run this command again.")
-		}
-		if err := checkRulesGoVersion(ctx, rootDir, "HEAD", version); err != nil {
-			return err
+			return fmt.Errorf("release branch %q does not exist locally. Fetch it, add commits, and run this command again.", branchName)
 		}
 		fmt.Fprintf(stderr, "creating branch %s...\n", branchName)
 		if err := gitCreateBranch(ctx, rootDir, branchName, "HEAD"); err != nil {
-			return err
-		}
-	} else {
-		if err := checkRulesGoVersion(ctx, rootDir, branchName, version); err != nil {
 			return err
 		}
 	}
@@ -181,7 +169,7 @@ func runPrepare(ctx context.Context, stderr io.Writer, args []string) error {
 	}
 
 	// Upload to mirror.bazel.build.
-	arcGHURLWithoutScheme := fmt.Sprintf("github.com/bazelbuild/rules_go/releases/download/%[1]s/rules_go-%[1]s.zip", version)
+	arcGHURLWithoutScheme := fmt.Sprintf("github.com/bazel-contrib/rules_go/releases/download/%[1]s/rules_go-%[1]s.zip", version)
 	if uploadToMirror {
 		fmt.Fprintf(stderr, "uploading archive to mirror.bazel.build...\n")
 		if err := copyFileToMirror(ctx, arcGHURLWithoutScheme, arcName); err != nil {
@@ -200,17 +188,17 @@ func runPrepare(ctx context.Context, stderr io.Writer, args []string) error {
 			Body:            &rnotesStr,
 			Draft:           &draft,
 		}
-		if release, _, err = gh.Repositories.CreateRelease(ctx, "bazelbuild", "rules_go", release); err != nil {
+		if release, _, err = gh.Repositories.CreateRelease(ctx, "bazel-contrib", "rules_go", release); err != nil {
 			return err
 		}
 	} else {
 		fmt.Fprintf(stderr, "updating release...\n")
 		release.Body = &rnotesStr
-		if release, _, err = gh.Repositories.EditRelease(ctx, "bazelbuild", "rules_go", release.GetID(), release); err != nil {
+		if release, _, err = gh.Repositories.EditRelease(ctx, "bazel-contrib", "rules_go", release.GetID(), release); err != nil {
 			return err
 		}
 		for _, asset := range release.Assets {
-			if _, err := gh.Repositories.DeleteReleaseAsset(ctx, "bazelbuild", "rules_go", asset.GetID()); err != nil {
+			if _, err := gh.Repositories.DeleteReleaseAsset(ctx, "bazel-contrib", "rules_go", asset.GetID()); err != nil {
 				return err
 			}
 		}
@@ -224,7 +212,7 @@ func runPrepare(ctx context.Context, stderr io.Writer, args []string) error {
 		Name:      "rules_go-" + version + ".zip",
 		MediaType: "application/zip",
 	}
-	if _, _, err := gh.Repositories.UploadReleaseAsset(ctx, "bazelbuild", "rules_go", release.GetID(), uploadOpts, arcFile); err != nil {
+	if _, _, err := gh.Repositories.UploadReleaseAsset(ctx, "bazel-contrib", "rules_go", release.GetID(), uploadOpts, arcFile); err != nil {
 		return err
 	}
 
@@ -234,20 +222,7 @@ Release %s has been prepared and uploaded.
 
 * Ensure that all tests pass in CI at %s.
 * Review and publish the release at %s.
-* Update README.rst and WORKSPACE if necessary.
 `, version, testURL, release.GetHTMLURL())
 
-	return nil
-}
-
-func checkRulesGoVersion(ctx context.Context, dir, refName, version string) error {
-	data, err := gitCatFile(ctx, dir, refName, "go/def.bzl")
-	if err != nil {
-		return err
-	}
-	rulesGoVersionStr := []byte(fmt.Sprintf(`RULES_GO_VERSION = "%s"`, version[len("v"):]))
-	if !bytes.Contains(data, rulesGoVersionStr) {
-		return fmt.Errorf("RULES_GO_VERSION was not set to %q in go/def.bzl. Set it, add commits, and run this command again.")
-	}
 	return nil
 }

@@ -2,6 +2,7 @@ Want to contribute? Great! First, read this page (including the small print at
 the end).
 
 ### Before you contribute
+
 **Before we can use your code, you must sign the
 [Google Individual Contributor License Agreement](https://developers.google.com/open-source/cla/individual?csw=1)
 (CLA)**, which you can do online.
@@ -15,6 +16,7 @@ the CLA until after you've submitted your code for review and a member has
 approved it, but you must do it before we can put your code into our codebase.
 
 ### The small print
+
 Contributions made by corporations are covered by a different agreement than
 the one above, the
 [Software Grant and Corporate Contributor License Agreement](https://cla.developers.google.com/about/google-corporate).
@@ -26,10 +28,10 @@ the one above, the
    an [issue](https://github.com/bazelbuild/rules_go/issues) or comment on an
    existing issue.
 1. Prepare a git commit with your change. Don't forget to
-   add [tests](https://github.com/bazelbuild/rules_go/tree/master/tests). 
+   add [tests](https://github.com/bazelbuild/rules_go/tree/master/tests).
    Run the existing tests with `bazel test //...`. Update
-   [README.md](https://github.com/bazelbuild/rules_go/blob/master/README.md)
-   if appropriate. 
+   [README.rst](https://github.com/bazelbuild/rules_go/blob/master/README.rst)
+   if appropriate.
 1. [Create a pull request](https://help.github.com/articles/creating-a-pull-request/).
    This will start the code review process. **All submissions, including
    submissions by project members, require review.**

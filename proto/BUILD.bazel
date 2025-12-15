@@ -1,11 +1,11 @@
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 load(
-    "//proto:compiler.bzl",
-    "go_proto_compiler",
-)
-load(
     "//go/private/rules:transition.bzl",
     "non_go_reset_target",
+)
+load(
+    "//proto:compiler.bzl",
+    "go_proto_compiler",
 )
 load(
     "//proto/wkt:well_known_types.bzl",
@@ -23,13 +23,17 @@ go_proto_compiler(
 
 go_proto_compiler(
     name = "go_proto",
+    plugin = "@org_golang_google_protobuf//cmd/protoc-gen-go",
     visibility = ["//visibility:public"],
     deps = PROTO_RUNTIME_DEPS + WELL_KNOWN_TYPES_APIV2,
 )
 
 go_proto_compiler(
     name = "go_grpc",
+    # TODO: Bring back the deprecation once Gazelle emits go_grpc_library.
+    #    deprecation = "Migrate to //proto:go_grpc_v2 compiler (which you'll get automatically if you use the go_grpc_library() rule).",
     options = ["plugins=grpc"],
+    plugin = "@com_github_golang_protobuf//protoc-gen-go",
     visibility = ["//visibility:public"],
     deps = PROTO_RUNTIME_DEPS + WELL_KNOWN_TYPES_APIV2 + [
         "@org_golang_google_grpc//:go_default_library",
@@ -40,14 +44,18 @@ go_proto_compiler(
 )
 
 go_proto_compiler(
-    name = "go_proto_validate",
-    plugin = "@com_github_mwitkow_go_proto_validators//protoc-gen-govalidators",
-    suffix = ".validator.pb.go",
-    valid_archive = False,
+    name = "go_grpc_v2",
+    # Do not break existing code with this upgrade
+    # See https://github.com/grpc/grpc-go/blob/master/cmd/protoc-gen-go-grpc/README.md#future-proofing-services
+    options = ["require_unimplemented_servers=false"],
+    plugin = "@org_golang_google_grpc_cmd_protoc_gen_go_grpc//:protoc-gen-go-grpc",
+    suffix = "_grpc.pb.go",
     visibility = ["//visibility:public"],
-    deps = [
-        "@com_github_golang_protobuf//proto:go_default_library",
-        "@com_github_mwitkow_go_proto_validators//:validators_golang",
+    deps = PROTO_RUNTIME_DEPS + WELL_KNOWN_TYPES_APIV2 + [
+        "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_grpc//codes:go_default_library",
+        "@org_golang_google_grpc//status:go_default_library",
+        "@org_golang_x_net//context:go_default_library",
     ],
 )
 
@@ -63,6 +71,7 @@ GOGO_VARIANTS = [
 
 [go_proto_compiler(
     name = variant + "_proto",
+    always_generates = True,
     options = GOGO_WELL_KNOWN_TYPE_REMAPS,
     plugin = "@com_github_gogo_protobuf//protoc-gen-" + variant,
     visibility = ["//visibility:public"],
@@ -77,6 +86,7 @@ GOGO_VARIANTS = [
 
 go_proto_compiler(
     name = "gofast_proto",
+    always_generates = True,
     plugin = "@com_github_gogo_protobuf//protoc-gen-gofast",
     visibility = ["//visibility:public"],
     deps = [
@@ -86,6 +96,7 @@ go_proto_compiler(
 
 [go_proto_compiler(
     name = variant + "_grpc",
+    always_generates = True,
     options = ["plugins=grpc"] + GOGO_WELL_KNOWN_TYPE_REMAPS,
     plugin = "@com_github_gogo_protobuf//protoc-gen-" + variant,
     visibility = ["//visibility:public"],
@@ -104,6 +115,7 @@ go_proto_compiler(
 
 go_proto_compiler(
     name = "gofast_grpc",
+    always_generates = True,
     options = ["plugins=grpc"],
     plugin = "@com_github_gogo_protobuf//protoc-gen-gofast",
     visibility = ["//visibility:public"],
@@ -119,20 +131,27 @@ go_proto_compiler(
 non_go_reset_target(
     name = "protoc",
     dep = "@com_google_protobuf//:protoc",
+    deprecation = "No longer used by rules_go, will be removed in a future release.",
     visibility = ["//visibility:public"],
 )
 
 filegroup(
     name = "all_rules",
     testonly = True,
-    srcs = glob(["*.bzl"]) + ["//proto/wkt:all_rules"],
+    srcs = glob(["*.bzl"]) + [
+        "//proto/private:all_files",
+        "//proto/wkt:all_rules",
+    ],
     visibility = ["//:__subpackages__"],
 )
 
 filegroup(
     name = "all_files",
     testonly = True,
-    srcs = glob(["**"]) + ["//proto/wkt:all_files"],
+    srcs = glob(["**"]) + [
+        "//proto/private:all_files",
+        "//proto/wkt:all_files",
+    ],
     visibility = ["//:__subpackages__"],
 )
 

@@ -26,6 +26,7 @@ import (
 
 func TestMain(m *testing.M) {
 	bazel_testing.TestMain(m, bazel_testing.Args{
+		Nogo: "@io_bazel_rules_go//:default_nogo",
 		Main: `
 -- BUILD.bazel --
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_tool_library", "nogo")
@@ -134,8 +135,8 @@ func Test(t *testing.T) {
 	} {
 		t.Run(test.desc, func(t *testing.T) {
 			if test.nogo != "" {
-				origRegister := "go_register_toolchains()"
-				customRegister := fmt.Sprintf("go_register_toolchains(nogo = %q)", test.nogo)
+				origRegister := `nogo = "@io_bazel_rules_go//:default_nogo",`
+				customRegister := fmt.Sprintf("nogo = %q,", test.nogo)
 				if err := replaceInFile("WORKSPACE", origRegister, customRegister); err != nil {
 					t.Fatal(err)
 				}

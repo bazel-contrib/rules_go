@@ -1,5 +1,5 @@
 diff -urN a/descriptor/BUILD.bazel b/descriptor/BUILD.bazel
---- a/descriptor/BUILD.bazel	1969-12-31 16:00:00
+--- a/descriptor/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/descriptor/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,46 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -49,7 +49,7 @@ diff -urN a/descriptor/BUILD.bazel b/descriptor/BUILD.bazel
 +    ],
 +)
 diff -urN a/internal/cmd/generate-alias/BUILD.bazel b/internal/cmd/generate-alias/BUILD.bazel
---- a/internal/cmd/generate-alias/BUILD.bazel	1969-12-31 16:00:00
+--- a/internal/cmd/generate-alias/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/internal/cmd/generate-alias/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,29 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
@@ -82,7 +82,7 @@ diff -urN a/internal/cmd/generate-alias/BUILD.bazel b/internal/cmd/generate-alia
 +    visibility = ["//:__subpackages__"],
 +)
 diff -urN a/internal/gengogrpc/BUILD.bazel b/internal/gengogrpc/BUILD.bazel
---- a/internal/gengogrpc/BUILD.bazel	1969-12-31 16:00:00
+--- a/internal/gengogrpc/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/internal/gengogrpc/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,18 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -104,7 +104,7 @@ diff -urN a/internal/gengogrpc/BUILD.bazel b/internal/gengogrpc/BUILD.bazel
 +    visibility = ["//:__subpackages__"],
 +)
 diff -urN a/internal/testprotos/jsonpb_proto/BUILD.bazel b/internal/testprotos/jsonpb_proto/BUILD.bazel
---- a/internal/testprotos/jsonpb_proto/BUILD.bazel	1969-12-31 16:00:00
+--- a/internal/testprotos/jsonpb_proto/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/internal/testprotos/jsonpb_proto/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,25 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -133,7 +133,7 @@ diff -urN a/internal/testprotos/jsonpb_proto/BUILD.bazel b/internal/testprotos/j
 +    visibility = ["//:__subpackages__"],
 +)
 diff -urN a/internal/testprotos/proto2_proto/BUILD.bazel b/internal/testprotos/proto2_proto/BUILD.bazel
---- a/internal/testprotos/proto2_proto/BUILD.bazel	1969-12-31 16:00:00
+--- a/internal/testprotos/proto2_proto/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/internal/testprotos/proto2_proto/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,15 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -152,7 +152,7 @@ diff -urN a/internal/testprotos/proto2_proto/BUILD.bazel b/internal/testprotos/p
 +    visibility = ["//:__subpackages__"],
 +)
 diff -urN a/internal/testprotos/proto3_proto/BUILD.bazel b/internal/testprotos/proto3_proto/BUILD.bazel
---- a/internal/testprotos/proto3_proto/BUILD.bazel	1969-12-31 16:00:00
+--- a/internal/testprotos/proto3_proto/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/internal/testprotos/proto3_proto/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,19 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -175,7 +175,7 @@ diff -urN a/internal/testprotos/proto3_proto/BUILD.bazel b/internal/testprotos/p
 +    visibility = ["//:__subpackages__"],
 +)
 diff -urN a/jsonpb/BUILD.bazel b/jsonpb/BUILD.bazel
---- a/jsonpb/BUILD.bazel	1969-12-31 16:00:00
+--- a/jsonpb/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/jsonpb/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,50 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -229,7 +229,7 @@ diff -urN a/jsonpb/BUILD.bazel b/jsonpb/BUILD.bazel
 +    ],
 +)
 diff -urN a/proto/BUILD.bazel b/proto/BUILD.bazel
---- a/proto/BUILD.bazel	1969-12-31 16:00:00
+--- a/proto/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/proto/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,61 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -294,7 +294,7 @@ diff -urN a/proto/BUILD.bazel b/proto/BUILD.bazel
 +    ],
 +)
 diff -urN a/protoc-gen-go/BUILD.bazel b/protoc-gen-go/BUILD.bazel
---- a/protoc-gen-go/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-go/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-go/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,19 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
@@ -317,7 +317,7 @@ diff -urN a/protoc-gen-go/BUILD.bazel b/protoc-gen-go/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/protoc-gen-go/descriptor/BUILD.bazel b/protoc-gen-go/descriptor/BUILD.bazel
---- a/protoc-gen-go/descriptor/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-go/descriptor/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-go/descriptor/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,19 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -340,7 +340,7 @@ diff -urN a/protoc-gen-go/descriptor/BUILD.bazel b/protoc-gen-go/descriptor/BUIL
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/protoc-gen-go/generator/BUILD.bazel b/protoc-gen-go/generator/BUILD.bazel
---- a/protoc-gen-go/generator/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-go/generator/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-go/generator/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,33 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -377,7 +377,7 @@ diff -urN a/protoc-gen-go/generator/BUILD.bazel b/protoc-gen-go/generator/BUILD.
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/protoc-gen-go/generator/internal/remap/BUILD.bazel b/protoc-gen-go/generator/internal/remap/BUILD.bazel
---- a/protoc-gen-go/generator/internal/remap/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-go/generator/internal/remap/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-go/generator/internal/remap/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,20 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -401,7 +401,7 @@ diff -urN a/protoc-gen-go/generator/internal/remap/BUILD.bazel b/protoc-gen-go/g
 +    embed = [":remap"],
 +)
 diff -urN a/protoc-gen-go/grpc/BUILD.bazel b/protoc-gen-go/grpc/BUILD.bazel
---- a/protoc-gen-go/grpc/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-go/grpc/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-go/grpc/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,18 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -423,7 +423,7 @@ diff -urN a/protoc-gen-go/grpc/BUILD.bazel b/protoc-gen-go/grpc/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/protoc-gen-go/plugin/BUILD.bazel b/protoc-gen-go/plugin/BUILD.bazel
---- a/protoc-gen-go/plugin/BUILD.bazel	1969-12-31 16:00:00
+--- a/protoc-gen-go/plugin/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/protoc-gen-go/plugin/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,19 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -445,8 +445,31 @@ diff -urN a/protoc-gen-go/plugin/BUILD.bazel b/protoc-gen-go/plugin/BUILD.bazel
 +    actual = ":plugin",
 +    visibility = ["//visibility:public"],
 +)
+diff -urN a/ptypes/any/BUILD.bazel b/ptypes/any/BUILD.bazel
+--- a/ptypes/any/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
++++ b/ptypes/any/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
+@@ -0,0 +1,19 @@
++load("@io_bazel_rules_go//go:def.bzl", "go_library")
++
++go_library(
++    name = "any",
++    srcs = ["any.pb.go"],
++    importpath = "github.com/golang/protobuf/ptypes/any",
++    visibility = ["//visibility:public"],
++    deps = [
++        "@org_golang_google_protobuf//reflect/protoreflect:go_default_library",
++        "@org_golang_google_protobuf//runtime/protoimpl:go_default_library",
++        "@org_golang_google_protobuf//types/known/anypb:go_default_library",
++    ],
++)
++
++alias(
++    name = "go_default_library",
++    actual = ":any",
++    visibility = ["//visibility:public"],
++)
 diff -urN a/ptypes/BUILD.bazel b/ptypes/BUILD.bazel
---- a/ptypes/BUILD.bazel	1969-12-31 16:00:00
+--- a/ptypes/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/ptypes/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,64 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
@@ -513,31 +536,8 @@ diff -urN a/ptypes/BUILD.bazel b/ptypes/BUILD.bazel
 +        "//ptypes/timestamp",
 +    ],
 +)
-diff -urN a/ptypes/any/BUILD.bazel b/ptypes/any/BUILD.bazel
---- a/ptypes/any/BUILD.bazel	1969-12-31 16:00:00
-+++ b/ptypes/any/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
-@@ -0,0 +1,19 @@
-+load("@io_bazel_rules_go//go:def.bzl", "go_library")
-+
-+go_library(
-+    name = "any",
-+    srcs = ["any.pb.go"],
-+    importpath = "github.com/golang/protobuf/ptypes/any",
-+    visibility = ["//visibility:public"],
-+    deps = [
-+        "@org_golang_google_protobuf//reflect/protoreflect:go_default_library",
-+        "@org_golang_google_protobuf//runtime/protoimpl:go_default_library",
-+        "@org_golang_google_protobuf//types/known/anypb:go_default_library",
-+    ],
-+)
-+
-+alias(
-+    name = "go_default_library",
-+    actual = ":any",
-+    visibility = ["//visibility:public"],
-+)
 diff -urN a/ptypes/duration/BUILD.bazel b/ptypes/duration/BUILD.bazel
---- a/ptypes/duration/BUILD.bazel	1969-12-31 16:00:00
+--- a/ptypes/duration/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/ptypes/duration/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,19 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -560,7 +560,7 @@ diff -urN a/ptypes/duration/BUILD.bazel b/ptypes/duration/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/ptypes/empty/BUILD.bazel b/ptypes/empty/BUILD.bazel
---- a/ptypes/empty/BUILD.bazel	1969-12-31 16:00:00
+--- a/ptypes/empty/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/ptypes/empty/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,19 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -583,7 +583,7 @@ diff -urN a/ptypes/empty/BUILD.bazel b/ptypes/empty/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/ptypes/struct/BUILD.bazel b/ptypes/struct/BUILD.bazel
---- a/ptypes/struct/BUILD.bazel	1969-12-31 16:00:00
+--- a/ptypes/struct/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/ptypes/struct/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,19 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -606,7 +606,7 @@ diff -urN a/ptypes/struct/BUILD.bazel b/ptypes/struct/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/ptypes/timestamp/BUILD.bazel b/ptypes/timestamp/BUILD.bazel
---- a/ptypes/timestamp/BUILD.bazel	1969-12-31 16:00:00
+--- a/ptypes/timestamp/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/ptypes/timestamp/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,19 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -629,7 +629,7 @@ diff -urN a/ptypes/timestamp/BUILD.bazel b/ptypes/timestamp/BUILD.bazel
 +    visibility = ["//visibility:public"],
 +)
 diff -urN a/ptypes/wrappers/BUILD.bazel b/ptypes/wrappers/BUILD.bazel
---- a/ptypes/wrappers/BUILD.bazel	1969-12-31 16:00:00
+--- a/ptypes/wrappers/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
 +++ b/ptypes/wrappers/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
 @@ -0,0 +1,19 @@
 +load("@io_bazel_rules_go//go:def.bzl", "go_library")

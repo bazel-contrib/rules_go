@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@local_config_platform//:constraints.bzl", "HOST_CONSTRAINTS")
-load("//go/private:go_toolchain.bzl", "GO_TOOLCHAIN")
+load("@platforms//host:constraints.bzl", "HOST_CONSTRAINTS")
+load("//go/private:common.bzl", "GO_TOOLCHAIN")
 
 def _ensure_target_cfg(ctx):
     # A target is assumed to be built in the target configuration if it is neither in the exec nor
     # the host configuration (the latter has been removed in Bazel 6). Since there is no API for
     # this, use the output directory to determine the configuration, which is a common pattern.
-    if "-exec-" in ctx.bin_dir.path or "/host/" in ctx.bin_dir.path:
+    if "-exec" in ctx.bin_dir.path or "/host/" in ctx.bin_dir.path:
         fail("//go is only meant to be used with 'bazel run', not as a tool. " +
              "If you need to use it as a tool (e.g. in a genrule), please " +
              "open an issue at " +
@@ -31,7 +31,10 @@ def _go_bin_for_host_impl(ctx):
     _ensure_target_cfg(ctx)
 
     sdk = ctx.toolchains[GO_TOOLCHAIN].sdk
-    sdk_files = ctx.runfiles([sdk.go] + sdk.headers + sdk.libs + sdk.srcs + sdk.tools)
+    sdk_files = ctx.runfiles(
+        [sdk.go],
+        transitive_files = depset(transitive = [sdk.headers, sdk.srcs, sdk.libs, sdk.tools]),
+    )
 
     return [
         DefaultInfo(

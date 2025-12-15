@@ -39,7 +39,7 @@ def go_bazel_test(rule_files = None, **kwargs):
     # these files.
     kwargs.setdefault("args", [])
     kwargs["args"] = (["-begin_files"] +
-                      ["$(locations {})".format(t) for t in rule_files] +
+                      ["$(rlocationpaths {})".format(t) for t in rule_files] +
                       ["-end_files"] +
                       kwargs["args"])
 

@@ -4,7 +4,10 @@ load(":stdlib_files.bzl", "stdlib_files")
 go_test(
     name = "buildid_test",
     srcs = ["buildid_test.go"],
-    data = [":stdlib_files"],
+    data = [
+        "@go_sdk//:files",
+        ":stdlib_files",
+    ],
     deps = ["//go/runfiles"],
 )
 
