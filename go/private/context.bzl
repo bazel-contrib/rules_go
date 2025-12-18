@@ -225,11 +225,17 @@ def _merge_embed(source, embed):
         if source["cgo"]:
             fail("multiple libraries with cgo enabled")
         source["cgo"] = s.cgo
-        source["cdeps"] = s.cdeps
-        source["cppopts"] = s.cppopts
-        source["copts"] = s.copts
-        source["cxxopts"] = s.cxxopts
-        source["clinkopts"] = s.clinkopts
+
+    # Merge cgo-related attributes if the embedded library has them,
+    # even if it doesn't have cgo=True itself. This is necessary because
+    # a library can have cdeps without cgo=True if it embeds another library
+    # that has cgo=True. The cdeps must propagate through the embed chain.
+    if s.cdeps or s.cppopts or s.copts or s.cxxopts or s.clinkopts:
+        source["cdeps"] = source["cdeps"] or s.cdeps
+        source["cppopts"] = source["cppopts"] or s.cppopts
+        source["copts"] = source["copts"] or s.copts
+        source["cxxopts"] = source["cxxopts"] or s.cxxopts
+        source["clinkopts"] = source["clinkopts"] or s.clinkopts
 
 def _dedup_archives(archives):
     """Returns a list of archives without duplicate import paths.
