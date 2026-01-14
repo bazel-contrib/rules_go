@@ -1,0 +1,20 @@
+"""Secure download macro that enforces SHA-256 for all tarballs."""
+
+def secure_download(name, url, sha256, strip_prefix = "", out = "."):
+    """Downloads and extracts a tarball only after SHA-256 verification."""
+    native.genrule(
+        name = name,
+        srcs = [],
+        outs = [name + "_out"],
+        cmd = """
+set -euo pipefail
+TMP=$$(mktemp -d)
+curl -L -s {url} -o "$$TMP/file.tar.gz"
+echo "{sha256}  $$TMP/file.tar.gz" | sha256sum -c -
+tar -xzf "$$TMP/file.tar.gz" -C "$$TMP" --strip-components={strip_prefix}
+mv "$$TMP"/* $(@D)
+rm -rf "$$TMP"
+        """.format(url = url, sha256 = sha256, strip_prefix = strip_prefix),
+        local = True,
+        visibility = ["//visibility:public"],
+    )
