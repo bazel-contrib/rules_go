@@ -77,13 +77,21 @@ instead.
     go_register_toolchains(version = "1.23.1")
     go_register_nogo(
       nogo = "@//:my_nogo"  # my_nogo is in the top-level BUILD file of this workspace
-      includes = ["@//:__subpackages__"],  # Labels to lint. By default only lints code in workspace.
-      excludes = ["@//generated:__subpackages__"],  # Labels to exclude.
+      includes = ["@//:__subpackages__"],  # Labels to be analyzed by nogo. By default only include code in workspace.
+      excludes = ["@//generated:__subpackages__"],  # Labels to exclude from nogo analysis.
     )
 
 **NOTE**: You must include ``"@//"`` prefix when referring to targets in the local
 workspace. Also note that you cannot use this to refer to bzlmod repos, as the labels
 don't go though repo mapping.
+
+The `includes` and `excludes` specifies the scope to performance static analysis and collect
+facts. Nogo then use the facts to analyzer other packages. For example, in order for nogo to
+determine calls to `go.uber.org/yarpc/yarpcerrors.InternalErrorf` violates the analyzer
+`golang.org/x/tools/go/analysis/passes/printf`, we need to add `@org_uber_go_yarpc//yarpcerrors:__pkg__`
+to the `includes` here. However, nogo may not fail the build for all violations in the scope,
+if `only_files` is specified for analyzers.
+
 
 The `nogo`_ rule will generate a program that executes all the supplied
 analyzers at build-time. The generated ``nogo`` program will run alongside the
@@ -269,11 +277,14 @@ contain the following key-value pairs:
 +----------------------------+---------------------------------------------------------------------+
 | ``"only_files"``           | :type:`dictionary, string to string`                                |
 +----------------------------+---------------------------------------------------------------------+
-| Specifies files that this analyzer will emit diagnostics for.                                    |
+| Specifies files that this analyzer will emit diagnostics and fail the build for.                 |
 | Its keys are regular expression strings matching Go file names, and its values are strings       |
 | containing a description of the entry.                                                           |
 | If both ``only_files`` and ``exclude_files`` are empty, this analyzer will emit diagnostics for  |
 | all Go files built by Bazel.                                                                     |
+| The key difference between ``only_files`` and ``includes`` from ``go_register_nogo`` is that     |
+| ``includes`` specified the scope to run analyzers on, but nogo only reports issues for           |
+| ``only_files``, because some analyzers need information from dependencies outside ``only_files``.|
 +----------------------------+---------------------------------------------------------------------+
 | ``"exclude_files"``        | :type:`dictionary, string to string`                                |
 +----------------------------+---------------------------------------------------------------------+
