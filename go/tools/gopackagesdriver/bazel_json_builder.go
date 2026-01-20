@@ -191,7 +191,7 @@ func (b *BazelJSONBuilder) query(ctx context.Context, query string) ([]string, e
 	return labels, nil
 }
 
-func (b *BazelJSONBuilder) Labels(ctx context.Context, requests []string) ([]string, error) {
+func (b *BazelJSONBuilder) Labels(ctx context.Context, requests []string, additionalLabels []string) ([]string, error) {
 	labels, err := b.query(ctx, b.queryFromRequests(requests...))
 	if err != nil {
 		return nil, fmt.Errorf("query failed: %w", err)
@@ -200,8 +200,7 @@ func (b *BazelJSONBuilder) Labels(ctx context.Context, requests []string) ([]str
 	if len(labels) == 0 {
 		return nil, fmt.Errorf("found no labels matching the requests")
 	}
-
-	return labels, nil
+	return append(labels, additionalLabels...), nil
 }
 
 func (b *BazelJSONBuilder) Build(ctx context.Context, labels []string, mode packages.LoadMode) ([]string, error) {
