@@ -164,6 +164,10 @@ Note: Since version v0.51.0, rules_go requires Bazel ≥ 6.5.0 to work.
 
 The ``master`` branch is only guaranteed to work with the latest version of Bazel.
 
+Quick Start
+-----------
+
+The fastest way to try this in an empty project is to click the green "Use this template" button on https://github.com/bazel-starters/go.
 
 Setup
 -----
