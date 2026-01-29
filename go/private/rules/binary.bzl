@@ -539,6 +539,7 @@ set GOTOOLCHAIN=local
 set GO111MODULE=off
 set GOTELEMETRY=off
 set GOENV=off
+set GOEXPERIMENT=none
 {go} build -trimpath -ldflags \"-buildid='' {ldflags}\" -o {out_pack} cmd/pack
 if %ERRORLEVEL% EQU 0 (
   {go} build -trimpath -ldflags \"-buildid='' {ldflags}\" -o {out} {srcs}
@@ -601,6 +602,7 @@ exit /b %GO_EXIT_CODE%
                 "GO111MODULE": "off",
                 "GOTELEMETRY": "off",
                 "GOENV": "off",
+                "GOEXPERIMENT": "none",
                 "GO_BINARY": sdk.go.path,
                 "LD_FLAGS": ctx.attr.ldflags,
             },
