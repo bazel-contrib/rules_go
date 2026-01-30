@@ -126,8 +126,10 @@ go_binary(<a href="#go_binary-name">name</a>, <a href="#go_binary-deps">deps</a>
 
 This builds an executable from a set of source files,
 which must all be in the `main` package. You can run the binary with
-`bazel run`, or you can build it with `bazel build` and run it directly.<br><br>
-***Note:*** `name` should be the same as the desired name of the generated binary.<br><br>
+`bazel run`, or you can build it with `bazel build` and run it directly.
+
+***Note:*** `name` should be the same as the desired name of the generated binary.
+
 **Providers:**
 <ul>
   <li>[GoArchive]</li>
@@ -159,7 +161,7 @@ which must all be in the `main` package. You can run the binary with
 | <a id="go_binary-goos"></a>goos |  Forces a binary to be cross-compiled for a specific operating system. It's usually better to control this on the command line with `--platforms`.<br><br>This disables cgo by default, since a cross-compiling C/C++ toolchain is rarely available. To force cgo, set `pure` = `off`.<br><br>See [Cross compilation] for more information.   | String | optional |  `"auto"`  |
 | <a id="go_binary-gotags"></a>gotags |  Enables a list of build tags when evaluating [build constraints]. Useful for conditional compilation.   | List of strings | optional |  `[]`  |
 | <a id="go_binary-importpath"></a>importpath |  The import path of this binary. Binaries can't actually be imported, but this may be used by [go_path] and other tools to report the location of source files. This may be inferred from embedded libraries.   | String | optional |  `""`  |
-| <a id="go_binary-linkmode"></a>linkmode |  Determines how the binary should be built and linked. This accepts some of the same values as `go build -buildmode` and works the same way. <br><br> <ul> <li>`auto` (default): Controlled by `//go/config:linkmode`, which defaults to `pie` on supported platforms and `normal` elsewhere.</li> <li>`normal`: Builds a normal executable with position-dependent code.</li> <li>`pie`: Builds a position-independent executable.</li> <li>`plugin`: Builds a shared library that can be loaded as a Go plugin. Only supported on platforms that support plugins.</li> <li>`c-shared`: Builds a shared library that can be linked into a C program.</li> <li>`c-archive`: Builds an archive that can be linked into a C program.</li> </ul>   | String | optional |  `"auto"`  |
+| <a id="go_binary-linkmode"></a>linkmode |  Determines how the binary should be built and linked. This accepts some of the same values as `go build -buildmode` and works the same way.<br><br><ul> <li>`auto` (default): Controlled by `//go/config:linkmode`, which defaults to `pie` on supported platforms and `normal` elsewhere.</li> <li>`normal`: Builds a normal executable with position-dependent code.</li> <li>`pie`: Builds a position-independent executable.</li> <li>`plugin`: Builds a shared library that can be loaded as a Go plugin. Only supported on platforms that support plugins.</li> <li>`c-shared`: Builds a shared library that can be linked into a C program.</li> <li>`c-archive`: Builds an archive that can be linked into a C program.</li> </ul>   | String | optional |  `"auto"`  |
 | <a id="go_binary-msan"></a>msan |  Controls whether code is instrumented for memory sanitization. May be one of `on`, `off`, or `auto`. Not available when cgo is disabled. In most cases, it's better to control this on the command line with `--@io_bazel_rules_go//go/config:msan`. See [mode attributes], specifically [msan].   | String | optional |  `"auto"`  |
 | <a id="go_binary-pgoprofile"></a>pgoprofile |  Provides a pprof file to be used for profile guided optimization when compiling go targets. A pprof file can also be provided via `--@io_bazel_rules_go//go/config:pgoprofile=<label of a pprof file>`. Profile guided optimization is only supported on go 1.20+. See https://go.dev/doc/pgo for more information.   | <a href="https://bazel.build/concepts/labels">Label</a> | optional |  `"@rules_go//go/config:empty"`  |
 | <a id="go_binary-pure"></a>pure |  Controls whether cgo source code and dependencies are compiled and linked, similar to setting `CGO_ENABLED`. May be one of `on`, `off`, or `auto`. If `auto`, pure mode is enabled when no C/C++ toolchain is configured or when cross-compiling. It's usually better to control this on the command line with `--@io_bazel_rules_go//go/config:pure`. See [mode attributes], specifically [pure].   | String | optional |  `"auto"`  |
@@ -180,7 +182,8 @@ go_cross_binary(<a href="#go_cross_binary-name">name</a>, <a href="#go_cross_bin
 
 This wraps an executable built by `go_binary` to cross compile it
 for a different platform, and/or compile it using a different version
-of the golang SDK.<br><br>
+of the golang SDK.
+
 **Providers:**
 <ul>
   <li>[GoArchive]</li>
@@ -210,9 +213,11 @@ go_library(<a href="#go_library-name">name</a>, <a href="#go_library-deps">deps<
 </pre>
 
 This builds a Go library from a set of source files that are all part of
-the same package.<br><br>
+the same package.
+
 ***Note:*** For targets generated by Gazelle, `name` is typically the last component of the path,
-or `go_default_library`, with the old naming convention.<br><br>
+or `go_default_library`, with the old naming convention.
+
 **Providers:**
 <ul>
   <li>[GoInfo]</li>
@@ -320,7 +325,8 @@ go_source(<a href="#go_source-name">name</a>, <a href="#go_source-deps">deps</a>
 
 This declares a set of source files and related dependencies that can be embedded into one of the
 other rules.
-This is used as a way of easily declaring a common set of sources re-used in multiple rules.<br><br>
+This is used as a way of easily declaring a common set of sources re-used in multiple rules.
+
 **Providers:**
 <ul>
   <li>[GoInfo]</li>
@@ -351,29 +357,36 @@ go_test(<a href="#go_test-name">name</a>, <a href="#go_test-deps">deps</a>, <a h
         <a href="#go_test-pure">pure</a>, <a href="#go_test-race">race</a>, <a href="#go_test-rundir">rundir</a>, <a href="#go_test-static">static</a>, <a href="#go_test-x_defs">x_defs</a>)
 </pre>
 
-This builds a set of tests that can be run with `bazel test`.<br><br>
+This builds a set of tests that can be run with `bazel test`.
+
 To run all tests in the workspace, and print output on failure (the
-equivalent of `go test ./...`), run<br>
+equivalent of `go test ./...`), run
+
 ```
 bazel test --test_output=errors //...
-```<br><br>
-To run a Go benchmark test, run<br>
+```
+
+To run a Go benchmark test, run
+
 ```
 bazel run //path/to:test -- -test.bench=.
-```<br><br>
+```
+
 You can run specific tests by passing the `--test_filter=pattern
 <test_filter_>` argument to Bazel. You can pass arguments to tests by passing
 `--test_arg=arg <test_arg_>` arguments to Bazel, and you can set environment
 variables in the test environment by passing
 `--test_env=VAR=value <test_env_>`. You can terminate test execution after the first
 failure by passing the `--test_runner_fail_fast <test_runner_fail_fast_>` argument
-to Bazel. This is equivalent to passing `--test_arg=-failfast <test_arg_>`.<br><br>
+to Bazel. This is equivalent to passing `--test_arg=-failfast <test_arg_>`.
+
 To write structured testlog information to Bazel's `XML_OUTPUT_FILE`, tests
 ran with `bazel test` execute using a wrapper. This functionality can be
 disabled by setting `GO_TEST_WRAP=0` in the test environment. Additionally,
 the testbinary can be invoked with `-test.v` by setting
 `GO_TEST_WRAP_TESTV=1` in the test environment; this will result in the
-`XML_OUTPUT_FILE` containing more granular data.<br><br>
+`XML_OUTPUT_FILE` containing more granular data.
+
 ***Note:*** To interoperate cleanly with old targets generated by [Gazelle], `name`
 should be `go_default_test` for internal tests and
 `go_default_xtest` for external tests. Gazelle now generates
@@ -406,7 +419,7 @@ sources.
 | <a id="go_test-goos"></a>goos |  Forces a binary to be cross-compiled for a specific operating system. It's usually better to control this on the command line with `--platforms`.<br><br>This disables cgo by default, since a cross-compiling C/C++ toolchain is rarely available. To force cgo, set `pure` = `off`.<br><br>See [Cross compilation] for more information.   | String | optional |  `"auto"`  |
 | <a id="go_test-gotags"></a>gotags |  Enables a list of build tags when evaluating [build constraints]. Useful for conditional compilation.   | List of strings | optional |  `[]`  |
 | <a id="go_test-importpath"></a>importpath |  The import path of this test. Tests can't actually be imported, but this may be used by [go_path] and other tools to report the location of source files. This may be inferred from embedded libraries.   | String | optional |  `""`  |
-| <a id="go_test-linkmode"></a>linkmode |  Determines how the binary should be built and linked. This accepts some of the same values as `go build -buildmode` and works the same way. <br><br> <ul> <li>`auto` (default): Controlled by `//go/config:linkmode`, which defaults to `pie` on supported platforms and `normal` elsewhere.</li> <li>`normal`: Builds a normal executable with position-dependent code.</li> <li>`pie`: Builds a position-independent executable.</li> <li>`plugin`: Builds a shared library that can be loaded as a Go plugin. Only supported on platforms that support plugins.</li> <li>`c-shared`: Builds a shared library that can be linked into a C program.</li> <li>`c-archive`: Builds an archive that can be linked into a C program.</li> </ul>   | String | optional |  `"auto"`  |
+| <a id="go_test-linkmode"></a>linkmode |  Determines how the binary should be built and linked. This accepts some of the same values as `go build -buildmode` and works the same way.<br><br><ul> <li>`auto` (default): Controlled by `//go/config:linkmode`, which defaults to `pie` on supported platforms and `normal` elsewhere.</li> <li>`normal`: Builds a normal executable with position-dependent code.</li> <li>`pie`: Builds a position-independent executable.</li> <li>`plugin`: Builds a shared library that can be loaded as a Go plugin. Only supported on platforms that support plugins.</li> <li>`c-shared`: Builds a shared library that can be linked into a C program.</li> <li>`c-archive`: Builds an archive that can be linked into a C program.</li> </ul>   | String | optional |  `"auto"`  |
 | <a id="go_test-msan"></a>msan |  Controls whether code is instrumented for memory sanitization. May be one of `on`, `off`, or `auto`. Not available when cgo is disabled. In most cases, it's better to control this on the command line with `--@io_bazel_rules_go//go/config:msan`. See [mode attributes], specifically [msan].   | String | optional |  `"auto"`  |
 | <a id="go_test-pure"></a>pure |  Controls whether cgo source code and dependencies are compiled and linked, similar to setting `CGO_ENABLED`. May be one of `on`, `off`, or `auto`. If `auto`, pure mode is enabled when no C/C++ toolchain is configured or when cross-compiling. It's usually better to control this on the command line with `--@io_bazel_rules_go//go/config:pure`. See [mode attributes], specifically [pure].   | String | optional |  `"auto"`  |
 | <a id="go_test-race"></a>race |  Controls whether code is instrumented for race detection. May be one of `on`, `off`, or `auto`. Not available when cgo is disabled. In most cases, it's better to control this on the command line with `--@io_bazel_rules_go//go/config:race`. See [mode attributes], specifically [race].   | String | optional |  `"auto"`  |

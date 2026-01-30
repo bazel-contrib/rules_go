@@ -85,7 +85,8 @@ go_source = rule(
     provides = [GoInfo],
     doc = """This declares a set of source files and related dependencies that can be embedded into one of the
     other rules.
-    This is used as a way of easily declaring a common set of sources re-used in multiple rules.<br><br>
+    This is used as a way of easily declaring a common set of sources re-used in multiple rules.
+
     **Providers:**
     <ul>
       <li>[GoInfo]</li>

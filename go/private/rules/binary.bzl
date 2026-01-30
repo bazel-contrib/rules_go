@@ -459,7 +459,7 @@ def _go_binary_kwargs(go_cc_aspects = []):
                 values = ["auto"] + LINKMODES,
                 doc = """Determines how the binary should be built and linked. This accepts some of
                 the same values as `go build -buildmode` and works the same way.
-                <br><br>
+
                 <ul>
                 <li>`auto` (default): Controlled by `//go/config:linkmode`, which defaults to `pie` on supported platforms and `normal` elsewhere.</li>
                 <li>`normal`: Builds a normal executable with position-dependent code.</li>
@@ -495,8 +495,10 @@ def _go_binary_kwargs(go_cc_aspects = []):
         "toolchains": [GO_TOOLCHAIN] + CGO_TOOLCHAINS,
         "doc": """This builds an executable from a set of source files,
         which must all be in the `main` package. You can run the binary with
-        `bazel run`, or you can build it with `bazel build` and run it directly.<br><br>
-        ***Note:*** `name` should be the same as the desired name of the generated binary.<br><br>
+        `bazel run`, or you can build it with `bazel build` and run it directly.
+
+        ***Note:*** `name` should be the same as the desired name of the generated binary.
+
         **Providers:**
         <ul>
           <li>[GoArchive]</li>
