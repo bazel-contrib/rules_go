@@ -140,9 +140,7 @@ _go_cross_kwargs = {
     of the golang SDK.
 
     **Providers:**
-    <ul>
-      <li>[GoArchive]</li>
-    </ul>
+    - [GoArchive]
     """,
 }
 

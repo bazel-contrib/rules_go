@@ -205,10 +205,8 @@ go_library = rule(
     or `go_default_library`, with the old naming convention.
 
     **Providers:**
-    <ul>
-      <li>[GoInfo]</li>
-      <li>[GoArchive]</li>
-    </ul>
+    - [GoInfo]
+    - [GoArchive]
     """,
 )
 

@@ -500,9 +500,7 @@ def _go_binary_kwargs(go_cc_aspects = []):
         ***Note:*** `name` should be the same as the desired name of the generated binary.
 
         **Providers:**
-        <ul>
-          <li>[GoArchive]</li>
-        </ul>
+        - [GoArchive]
         """,
     }
 

@@ -201,18 +201,18 @@ go_path = rule(
             doc = """
             Determines how the generated directory is provided. May be one of:
             <ul>
-                <li><code>"archive"</code>: The generated directory is packaged as a single .zip file.</li>
-                <li><code>"copy"</code>: The generated directory is a single tree artifact. Source files
+                <li>`"archive"`: The generated directory is packaged as a single .zip file.</li>
+                <li>`"copy"`: The generated directory is a single tree artifact. Source files
                 are copied into the tree.</li>
-                <li><code>"link"</code>: <b>Unmaintained due to correctness issues</b>. Source files
+                <li>`"link"`: **Unmaintained due to correctness issues**. Source files
                 are symlinked into the tree. All of the symlink files are provided as separate output
                 files.</li>
             </ul>
 
-            ***Note:*** In <code>"copy"</code> mode, when a <code>GoPath</code> is consumed as a set of input
+            ***Note:*** In `"copy"` mode, when a `GoPath` is consumed as a set of input
             files or run files, Bazel may provide symbolic links instead of regular files.
             Any program that consumes these files should dereference links, e.g., if you
-            run <code>tar</code>, use the <code>--dereference</code> flag.
+            run `tar`, use the `--dereference` flag.
             """,
         ),
         "include_data": attr.bool(

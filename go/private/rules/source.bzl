@@ -88,9 +88,7 @@ go_source = rule(
     This is used as a way of easily declaring a common set of sources re-used in multiple rules.
 
     **Providers:**
-    <ul>
-      <li>[GoInfo]</li>
-    </ul>
+    - [GoInfo]
     """,
 )
 # See docs/go/core/rules.md#go_source for full documentation.
