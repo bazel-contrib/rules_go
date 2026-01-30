@@ -131,9 +131,7 @@ which must all be in the `main` package. You can run the binary with
 ***Note:*** `name` should be the same as the desired name of the generated binary.
 
 **Providers:**
-<ul>
-  <li>[GoArchive]</li>
-</ul>
+- [GoArchive]
 
 **ATTRIBUTES**
 
@@ -185,9 +183,7 @@ for a different platform, and/or compile it using a different version
 of the golang SDK.
 
 **Providers:**
-<ul>
-  <li>[GoArchive]</li>
-</ul>
+- [GoArchive]
 
 **ATTRIBUTES**
 
@@ -219,10 +215,8 @@ the same package.
 or `go_default_library`, with the old naming convention.
 
 **Providers:**
-<ul>
-  <li>[GoInfo]</li>
-  <li>[GoArchive]</li>
-</ul>
+- [GoInfo]
+- [GoArchive]
 
 **ATTRIBUTES**
 
@@ -276,7 +270,7 @@ Packages will be in subdirectories named after their `importpath` or `importmap`
 | <a id="go_path-include_data"></a>include_data |  When true, data files referenced by libraries, binaries, and tests will be included in the output directory. Files listed in the `data` attribute for this rule will be included regardless of this attribute.   | Boolean | optional |  `True`  |
 | <a id="go_path-include_pkg"></a>include_pkg |  When true, a `pkg` subdirectory containing the compiled libraries will be created in the generated `GOPATH` containing compiled libraries.   | Boolean | optional |  `False`  |
 | <a id="go_path-include_transitive"></a>include_transitive |  When true, the transitive dependency graph will be included in the generated `GOPATH`. This is the default behaviour. When false, only the direct dependencies will be included in the generated `GOPATH`.   | Boolean | optional |  `True`  |
-| <a id="go_path-mode"></a>mode |  Determines how the generated directory is provided. May be one of: <ul>     <li><code>"archive"</code>: The generated directory is packaged as a single .zip file.</li>     <li><code>"copy"</code>: The generated directory is a single tree artifact. Source files     are copied into the tree.</li>     <li><code>"link"</code>: <b>Unmaintained due to correctness issues</b>. Source files     are symlinked into the tree. All of the symlink files are provided as separate output     files.</li> </ul><br><br>***Note:*** In <code>"copy"</code> mode, when a <code>GoPath</code> is consumed as a set of input files or run files, Bazel may provide symbolic links instead of regular files. Any program that consumes these files should dereference links, e.g., if you run <code>tar</code>, use the <code>--dereference</code> flag.   | String | optional |  `"copy"`  |
+| <a id="go_path-mode"></a>mode |  Determines how the generated directory is provided. May be one of: <ul>     <li>`"archive"`: The generated directory is packaged as a single .zip file.</li>     <li>`"copy"`: The generated directory is a single tree artifact. Source files     are copied into the tree.</li>     <li>`"link"`: **Unmaintained due to correctness issues**. Source files     are symlinked into the tree. All of the symlink files are provided as separate output     files.</li> </ul><br><br>***Note:*** In `"copy"` mode, when a `GoPath` is consumed as a set of input files or run files, Bazel may provide symbolic links instead of regular files. Any program that consumes these files should dereference links, e.g., if you run `tar`, use the `--dereference` flag.   | String | optional |  `"copy"`  |
 
 
 <a id="go_reset_target"></a>
@@ -328,9 +322,7 @@ other rules.
 This is used as a way of easily declaring a common set of sources re-used in multiple rules.
 
 **Providers:**
-<ul>
-  <li>[GoInfo]</li>
-</ul>
+- [GoInfo]
 
 **ATTRIBUTES**
 
