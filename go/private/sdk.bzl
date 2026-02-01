@@ -121,7 +121,11 @@ def _go_download_sdk_impl(ctx):
             "version": version,
             "strip_prefix": ctx.attr.strip_prefix,
         }
-    return None
+
+    if hasattr(ctx, "repo_metadata"):
+        return ctx.repo_metadata(reproducible = True)
+    else:
+        return None
 
 go_download_sdk_rule = repository_rule(
     implementation = _go_download_sdk_impl,
