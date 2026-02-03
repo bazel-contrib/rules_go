@@ -44,5 +44,7 @@ def apple_ensure_options(ctx, env, compiler_option_lists, linker_option_lists, t
     min_version = _apple_version_min(ctx, platform, platform_type)
     for compiler_options in compiler_option_lists:
         compiler_options.append(min_version)
+        # Allow unused parameters since they are present in the stdlib src.
+        compiler_options.append("-Wno-unused-parameter")
     for linker_options in linker_option_lists:
         linker_options.append(min_version)
