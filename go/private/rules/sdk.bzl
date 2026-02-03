@@ -36,9 +36,11 @@ def _go_sdk_impl(ctx):
             goos = ctx.attr.goos,
             goarch = ctx.attr.goarch,
             experiments = ",".join(ctx.attr.experiments),
+            toolchain_experiments = ",".join(ctx.attr.toolchain_experiments),
             root_file = ctx.file.root_file,
             package_list = package_list,
             libs = depset(ctx.files.libs),
+
             headers = depset(ctx.files.headers),
             srcs = depset(ctx.files.srcs),
             tools = depset(ctx.files.tools),
@@ -61,6 +63,10 @@ go_sdk = rule(
         "experiments": attr.string_list(
             mandatory = False,
             doc = "Go experiments to enable via GOEXPERIMENT",
+        ),
+        "toolchain_experiments": attr.string_list(
+            mandatory = False,
+            doc = "Go experiments to enable via GOEXPERIMENT for toolchain tools",
         ),
         "root_file": attr.label(
             mandatory = True,
