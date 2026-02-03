@@ -103,7 +103,7 @@ def cgo_configure(go, srcs, cdeps, cppopts, copts, cxxopts, clinkopts):
         if CcInfo in d:
             cc_transitive_headers = d[CcInfo].compilation_context.headers
             inputs_transitive.append(cc_transitive_headers)
-            cc_libs, cc_link_flags = _cc_libs_and_flags(d)
+            cc_libs, cc_link_flags = _cc_libs_and_flags(d, go.mode)
             inputs_direct.extend(cc_libs)
             deps_direct.extend(cc_libs)
             cc_defines = d[CcInfo].compilation_context.defines.to_list()
@@ -191,7 +191,7 @@ def cgo_configure(go, srcs, cdeps, cppopts, copts, cxxopts, clinkopts):
         clinkopts = clinkopts,
     )
 
-def _cc_libs_and_flags(target):
+def _cc_libs_and_flags(target, mode):
     # Copied from get_libs_for_static_executable in migration instructions
     # from bazelbuild/bazel#7036.
     libs = []
@@ -199,14 +199,16 @@ def _cc_libs_and_flags(target):
     for li in target[CcInfo].linking_context.linker_inputs.to_list():
         flags.extend(li.user_link_flags)
         for library_to_link in li.libraries:
-            if library_to_link.static_library != None:
-                libs.append(library_to_link.static_library)
-            elif library_to_link.pic_static_library != None:
-                libs.append(library_to_link.pic_static_library)
-            elif library_to_link.interface_library != None:
-                libs.append(library_to_link.interface_library)
-            elif library_to_link.dynamic_library != None:
-                libs.append(library_to_link.dynamic_library)
+            if mode.static:
+                if library_to_link.static_library != None:
+                    libs.append(library_to_link.static_library)
+                elif library_to_link.pic_static_library != None:
+                    libs.append(library_to_link.pic_static_library)
+            else:
+                if library_to_link.interface_library != None:
+                    libs.append(library_to_link.interface_library)
+                elif library_to_link.dynamic_library != None:
+                    libs.append(library_to_link.dynamic_library)
     return libs, flags
 
 def _alwayslink_lib_opts(go, lib_path):
