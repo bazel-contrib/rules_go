@@ -40,7 +40,6 @@ def _go_sdk_impl(ctx):
             root_file = ctx.file.root_file,
             package_list = package_list,
             libs = depset(ctx.files.libs),
-
             headers = depset(ctx.files.headers),
             srcs = depset(ctx.files.srcs),
             tools = depset(ctx.files.tools),

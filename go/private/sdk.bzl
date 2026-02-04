@@ -469,7 +469,6 @@ def _sdk_build_file(ctx, platform, version, experiments, toolchain_experiments):
             "{exec_compatible_with}": repr([
                 GOARCH_CONSTRAINTS[goarch],
                 GOOS_CONSTRAINTS[goos],
-
             ]),
         },
     )
