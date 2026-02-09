@@ -93,7 +93,6 @@ def cgo_configure(go, srcs, cdeps, cppopts, copts, cxxopts, clinkopts):
     deps_direct = []
     lib_opts = []
     runfiles = go._ctx.runfiles(collect_data = True)
-    seen_alwayslink_libs = {}
 
     # Always include the sandbox as part of the build. Bazel does this, but it
     # doesn't appear in the CompilationContext.
@@ -146,13 +145,7 @@ def cgo_configure(go, srcs, cdeps, cppopts, copts, cxxopts, clinkopts):
                         # libclntsh.dylib.12.1, users have to create a unversioned symbolic link,
                         # so it can be treated as a simple shared library too.
                         continue
-
-                if lib.basename.endswith(".lo") and lib.path not in seen_alwayslink_libs:
-                    seen_alwayslink_libs[lib.path] = True
-                    lib_opts.extend(_alwayslink_lib_opts(go, lib.path))
-                else:
-                    lib_opts.append(lib.path)
-
+                lib_opts.append(lib.path)
             clinkopts.extend(cc_link_flags)
 
         elif hasattr(d, "objc"):
@@ -208,11 +201,6 @@ def _cc_libs_and_flags(target):
             elif library_to_link.dynamic_library != None:
                 libs.append(library_to_link.dynamic_library)
     return libs, flags
-
-def _alwayslink_lib_opts(go, lib_path):
-    if go.mode.goos == "darwin":
-        return ["-Wl,-force_load,{}".format(lib_path)]
-    return ["-Wl,-whole-archive", lib_path, "-Wl,-no-whole-archive"]
 
 def _include_unique(opts, flag, include, seen):
     if include in seen:
