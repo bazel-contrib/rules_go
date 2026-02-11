@@ -34,6 +34,8 @@ def emit_binary(
         gc_linkopts = [],
         version_file = None,
         info_file = None,
+        buildinfo_metadata = None,
+        target_label = None,
         executable = None):
     """See go/toolchains.rst#binary for full documentation."""
 
@@ -61,6 +63,8 @@ def emit_binary(
         gc_linkopts = gc_linkopts,
         version_file = version_file,
         info_file = info_file,
+        buildinfo_metadata = buildinfo_metadata,
+        target_label = target_label,
     )
     cgo_dynamic_deps = [
         d

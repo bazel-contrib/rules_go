@@ -167,6 +167,8 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
             is_external_pkg = is_external_pkg,
         )
 
+    # Buildinfo metadata is collected via aspect and stored separately
+
     data = GoArchiveData(
         # TODO(#2578): reconsider the provider API. There's a lot of redundant
         # information here. Some fields are tuples instead of lists or dicts
