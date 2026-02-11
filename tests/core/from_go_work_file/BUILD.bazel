@@ -1,0 +1,6 @@
+load("@io_bazel_rules_go//go/tools/bazel_testing:def.bzl", "go_bazel_test")
+
+go_bazel_test(
+    name = "from_go_work_file_test",
+    srcs = ["from_go_work_file_test.go"],
+)

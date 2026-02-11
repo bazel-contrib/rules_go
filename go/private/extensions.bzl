@@ -13,7 +13,7 @@
 # limitations under the License.
 
 load("@io_bazel_rules_go_bazel_features//:features.bzl", "bazel_features")
-load("//go/private:go_mod.bzl", "version_from_go_mod")
+load("//go/private:go_mod.bzl", "version_from_go_mod", "version_from_go_work")
 load("//go/private:nogo.bzl", "DEFAULT_NOGO", "NOGO_DEFAULT_EXCLUDES", "NOGO_DEFAULT_INCLUDES", "go_register_nogo")
 load("//go/private:sdk.bzl", "detect_host_platform", "fetch_sdks_by_version", "go_download_sdk_rule", "go_host_sdk_rule", "go_multiple_toolchains", "go_wrap_sdk_rule")
 
@@ -125,10 +125,13 @@ _wrap_tag = tag_class(
 )
 
 _from_file_tag = tag_class(
-    doc = """Use a specific Go SDK version described by a `go.mod` file.  Optionally supply GOOS, GOARCH, and download from a customisable URL, and apply local patches or set experiments.""",
+    doc = """Use a specific Go SDK version described by a `go.mod` or `go.work` file.  Optionally supply GOOS, GOARCH, and download from a customisable URL, and apply local patches or set experiments.""",
     attrs = _COMMON_TAG_ATTRS | {
         "go_mod": attr.label(
             doc = "The go.mod file to read the SDK version from.",
+        ),
+        "go_work": attr.label(
+            doc = "The go.work file to read the SDK version from.",
         ),
     },
 )
@@ -258,15 +261,22 @@ def _go_sdk_impl(ctx):
 
         additional_download_tags = []
 
-        # If the module suggests to read the toolchain version from a `go.mod` file, use that.
+        # If the module suggests to read the toolchain version from a `go.mod` or `go.work` file, use that.
         for index, from_file_tag in enumerate(module.tags.from_file):
-            version = version_from_go_mod(ctx, from_file_tag.go_mod)
+            if from_file_tag.go_mod and from_file_tag.go_work:
+                fail("go_sdk.from_file: either go_mod or go_work must be specified, but not both")
+            elif from_file_tag.go_mod:
+                version = version_from_go_mod(ctx, from_file_tag.go_mod)
+            elif from_file_tag.go_work:
+                version = version_from_go_work(ctx, from_file_tag.go_work)
+            else:
+                fail("go_sdk.from_file: either go_mod or go_work must be specified")
 
             # Synthesize a `download` tag so we can reuse the selection logic below.
             download_tag = {
                 key: getattr(from_file_tag, key)
                 for key in dir(from_file_tag)
-                if key not in ["go_mod"]
+                if key not in ["go_mod", "go_work"]
             }
             download_tag["version"] = version
             additional_download_tags.append(struct(**download_tag))
