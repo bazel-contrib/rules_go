@@ -1,0 +1,49 @@
+load("@io_bazel_rules_go//go/private:experimental/bootstrap_rules.bzl", "experimental_bootstrap_go_sdk")
+load("@io_bazel_rules_go//go/private:sdk_build_defs.bzl", "STDLIB_SRCS_EXCLUDE", "define_sdk_repository_targets")
+
+package(default_visibility = ["//visibility:public"])
+
+experimental_bootstrap_go_sdk(
+    name = "bootstrap",
+    experiments = {experiments},
+    goarch = "{goarch}",
+    goos = "{goos}",
+)
+
+filegroup(
+    name = "libs",
+    # Go 1.20+ no longer ships precompiled stdlib .a files in pkg/{goos}_{goarch}.
+    # Keep this empty so rules_go always compiles stdlib from source for the bootstrapped SDK.
+    srcs = [],
+)
+
+filegroup(
+    name = "headers",
+    srcs = [":bootstrap_headers"],
+)
+
+filegroup(
+    name = "srcs",
+    srcs = [":bootstrap_srcs"],
+)
+
+filegroup(
+    name = "tools",
+    srcs = [":bootstrap_tools"],
+)
+
+define_sdk_repository_targets(
+    exec_compatible_with = {exec_compatible_with},
+    experiments = {experiments},
+    files_srcs = [":bootstrap_files"],
+    go = ":bootstrap_go",
+    go_sdk_root_file = ":bootstrap_root_file",
+    goarch = "{goarch}",
+    goos = "{goos}",
+    package_list_srcs = glob(
+        ["src/**/*"],
+        allow_empty = True,
+        exclude = STDLIB_SRCS_EXCLUDE,
+    ),
+    version = "{version}",
+)
