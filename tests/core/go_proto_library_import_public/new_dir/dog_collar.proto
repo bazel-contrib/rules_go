@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+package foo.bar;
+
+message DogCollar {
+    string name = 1;
+    string phone_number = 2;
+}
