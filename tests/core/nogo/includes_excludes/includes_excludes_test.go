@@ -23,15 +23,14 @@ import (
 
 func TestMain(m *testing.M) {
 	bazel_testing.TestMain(m, bazel_testing.Args{
-		Nogo:         "@//:my_nogo",
-		NogoIncludes: []string{"@//go:__subpackages__"},
-		NogoExcludes: []string{"@//go/third_party:__subpackages__"},
+		Nogo: "@io_bazel_rules_go//:tools_nogo",
 		Main: `
 -- BUILD.bazel --
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "nogo", "TOOLS_NOGO")
 
 nogo(
     name = "my_nogo",
+    config = ":nogo.json",
     visibility = ["//visibility:public"],
     deps = TOOLS_NOGO,
 )
@@ -95,6 +94,24 @@ func useless() string {
 	}
 	return foo
 }
+
+-- nogo.json --
+{
+  "_base": {
+    "only_files": {
+      "^go/": "go files"
+    },
+    "exclude_files": {
+      "^go/third_party/": "vendored"
+    }
+  }
+}
+`,
+		ModuleFileSuffix: `
+go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk")
+go_sdk.nogo(
+    nogo = "//:my_nogo",
+)
 `,
 	})
 }

@@ -77,13 +77,19 @@ instead.
     go_register_toolchains(version = "1.23.1")
     go_register_nogo(
       nogo = "@//:my_nogo"  # my_nogo is in the top-level BUILD file of this workspace
-      includes = ["@//:__subpackages__"],  # Labels to lint. By default only lints code in workspace.
-      excludes = ["@//generated:__subpackages__"],  # Labels to exclude.
+      excludes = ["@//generated:__subpackages__"],  # Labels to exclude from nogo facts collection. This is unsafe. See notes below.
     )
 
 **NOTE**: You must include ``"@//"`` prefix when referring to targets in the local
 workspace. Also note that you cannot use this to refer to bzlmod repos, as the labels
 don't go though repo mapping.
+
+Although nogo only reports errors in those files in `only_files` is specified for analyzers,
+it still collects facts from all targets in the transitive dependency closure, because it needs
+those facts to accurately reports the errors. However, this can be slow, especially in large Go packages,
+which could be generated. For performance reasons, users can exclude them with `excludes`.
+This is unsafe, and should only be used to exclude packages that don't provide
+useful nogo facts for the configured set of analyzers.
 
 The `nogo`_ rule will generate a program that executes all the supplied
 analyzers at build-time. The generated ``nogo`` program will run alongside the
@@ -282,6 +288,9 @@ contain the following key-value pairs:
 | Keys in ``exclude_files`` override keys in ``only_files``. If a .go file matches a key present   |
 | in both ``only_files`` and ``exclude_files``, the analyzer will not emit diagnostics for that    |
 | file.                                                                                            |
+| The key difference between ``excludes_files`` and ``excludes`` from ``go_register_nogo`` is that |
+| the former is used to exclude files from reporting errors, while the latter is to prevent        |
+| nogo from collecting facts from certain packages.                                                |
 +----------------------------+---------------------------------------------------------------------+
 | ``"analyzer_flags"``       | :type:`dictionary, string to string`                                |
 +----------------------------+---------------------------------------------------------------------+
