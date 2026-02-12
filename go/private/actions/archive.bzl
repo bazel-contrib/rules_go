@@ -144,7 +144,7 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
             is_external_pkg = is_external_pkg,
         )
     else:
-        cgo_deps = depset()
+        cgo_deps = []
         emit_compilepkg(
             go,
             sources = source.srcs,
@@ -204,17 +204,12 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
         runfiles = source.runfiles,
         _validation_output = out_nogo_validation,
         _nogo_diagnostics = out_diagnostics,
-        _cgo_deps = cgo_deps,
+        _cgo_deps = depset(cgo_deps),
     )
     x_defs = dict(source.x_defs)
     for a in direct:
         x_defs.update(a.x_defs)
 
-    # Ensure that the _cgo_export.h of the current target comes first when cgo_exports is iterated
-    # by prepending it and specifying the order explicitly. This is required as the CcInfo attached
-    # to the archive only exposes a single header rather than combining all headers.
-    cgo_exports_direct = [out_cgo_export_h] if out_cgo_export_h else []
-    cgo_exports = depset(direct = cgo_exports_direct, transitive = [a.cgo_exports for a in direct], order = "preorder")
     return GoArchive(
         source = source,
         data = data,
@@ -222,8 +217,8 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
         libs = depset(direct = [out_lib], transitive = [a.libs for a in direct]),
         transitive = depset([data], transitive = [a.transitive for a in direct]),
         x_defs = x_defs,
-        cgo_deps = depset(transitive = [cgo_deps] + [a.cgo_deps for a in direct]),
-        cgo_exports = cgo_exports,
+        cgo_deps = depset(cgo_deps, transitive = [a.cgo_deps for a in direct]),
+        cgo_export = out_cgo_export_h,
         runfiles = runfiles,
         _headers = headers,
     )
