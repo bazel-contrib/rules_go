@@ -1,9 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_sdk")
-load("@io_bazel_rules_go//go/private:common.bzl", "RULES_GO_STDLIB_PREFIX")
-load("@io_bazel_rules_go//go/private:go_toolchain.bzl", "declare_go_toolchains")
-load("@io_bazel_rules_go//go/private/rules:binary.bzl", "go_tool_binary")
-load("@io_bazel_rules_go//go/private/rules:sdk.bzl", "package_list")
-load("@io_bazel_rules_go//go/private/rules:transition.bzl", "non_go_reset_target")
+load("@io_bazel_rules_go//go/private:sdk_build_defs.bzl", "STDLIB_SRCS_EXCLUDE", "define_sdk_repository_targets")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -26,21 +21,7 @@ filegroup(
     srcs = glob(
         ["src/**/*"],
         allow_empty = True,
-        exclude = [
-            "src/**/*_test.go",
-            "src/**/testdata/**",
-            # Only used by tests, cgo fails with linux before 3.17
-            "src/crypto/internal/sysrand/internal/seccomp/**",
-            "src/encoding/json/internal/jsontest/**",
-            "src/log/slog/internal/benchmarks/**",
-            "src/log/slog/internal/slogtest/**",
-            "src/internal/obscuretestdata/**",
-            "src/internal/testpty/**",
-            "src/net/internal/cgotest/**",
-            "src/net/internal/socktest/**",
-            "src/reflect/internal/example*/**",
-            "src/runtime/internal/startlinetest/**",
-        ],
+        exclude = STDLIB_SRCS_EXCLUDE,
     ),
 )
 
@@ -55,6 +36,20 @@ filegroup(
 )
 
 filegroup(
+    name = "compiler_binaries",
+    srcs = glob(
+        [
+            "pkg/tool/{goos}_{goarch}/asm*",
+            "pkg/tool/{goos}_{goarch}/cgo*",
+            "pkg/tool/{goos}_{goarch}/compile*",
+            "pkg/tool/{goos}_{goarch}/cover*",
+            "pkg/tool/{goos}_{goarch}/link*",
+        ],
+        allow_empty = True,
+    ),
+)
+
+filegroup(
     name = "config",
     srcs = glob(
         ["go.env*"],
@@ -62,77 +57,20 @@ filegroup(
     ),
 )
 
-go_sdk(
-    name = "go_sdk",
-    srcs = [":srcs"],
+define_sdk_repository_targets(
     experiments = {experiments},
-    go = "bin/go{exe}",
-    goarch = "{goarch}",
-    goos = "{goos}",
-    headers = [":headers"],
-    libs = [":libs"],
-    package_list = ":package_list",
-    root_file = "ROOT",
-    tools = [":tools"],
-    version = "{version}",
-)
-
-go_tool_binary(
-    name = "builder",
-    srcs = ["@io_bazel_rules_go//go/tools/builders:builder_srcs"],
     exec_compatible_with = {exec_compatible_with},
-    ldflags = "-X main.rulesGoStdlibPrefix={}".format(RULES_GO_STDLIB_PREFIX),
-    # The .exe suffix is required on Windows and harmless on other platforms.
-    # Output attributes are not configurable, so we use it everywhere.
-    out_pack = "pack.exe",
-    sdk = ":go_sdk",
-)
-
-non_go_reset_target(
-    name = "builder_reset",
-    dep = ":builder",
-)
-
-non_go_reset_target(
-    name = "pack_reset",
-    dep = ":pack.exe",
-)
-
-# TODO(jayconrod): Gazelle depends on this file directly. This dependency
-# should be broken, and this rule should be folded into go_sdk.
-package_list(
-    name = "package_list",
-    srcs = [":srcs"],
-    out = "packages.txt",
-    root_file = "ROOT",
-)
-
-declare_go_toolchains(
-    builder = ":builder_reset",
-    exec_goos = "{goos}",
-    pack = ":pack_reset",
-    sdk = ":go_sdk",
-)
-
-filegroup(
-    name = "files",
-    srcs = glob([
+    files_srcs = glob([
         "bin/go*",
         "src/**",
         "pkg/**",
     ]) + [
         ":config",
     ],
-)
-
-exports_files(
-    glob([
-        "lib/time/zoneinfo.zip",
-        # wasm support files including wasm_exec.js
-        # for GOOS=js GOARCH=wasm
-        # located in misc/wasm/ (Go 1.23 and earlier)
-        # or lib/wasm/ (Go 1.24 and later)
-        "*/wasm/**",
-    ]),
-    visibility = ["//visibility:public"],
+    go = "bin/go{exe}",
+    goarch = "{goarch}",
+    goos = "{goos}",
+    go_sdk_root_file = "ROOT",
+    package_list_srcs = [":srcs"],
+    version = "{version}",
 )

@@ -9,4 +9,8 @@ go_cross_binary(
     name = "hello_old",
     sdk_version = "1.22",
     target = ":hello",
+    target_compatible_with = select({
+        "@io_bazel_rules_go//go/toolchain:source_bootstrapped": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
 )

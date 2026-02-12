@@ -19,6 +19,29 @@ string_flag(
     build_setting_default = "",
 )
 
+string_flag(
+    name = "source",
+    build_setting_default = "prebuilt",
+    values = [
+        "bootstrapped",
+        "prebuilt",
+    ],
+)
+
+config_setting(
+    name = "source_bootstrapped",
+    flag_values = {
+        ":source": "bootstrapped",
+    },
+)
+
+config_setting(
+    name = "source_prebuilt",
+    flag_values = {
+        ":source": "prebuilt",
+    },
+)
+
 filegroup(
     name = "all_rules",
     srcs = glob(["*.bzl"]),

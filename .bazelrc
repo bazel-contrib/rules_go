@@ -33,6 +33,8 @@ build:ci --spawn_strategy=standalone
 build:ci --genrule_strategy=standalone
 test:ci --test_strategy=standalone
 
+common:bootstrap --//go/toolchain:source=bootstrapped
+
 # Incompatible flags to test in a dedicated CI pipeline.
 build:incompatible --incompatible_load_proto_rules_from_bzl
 build:incompatible --incompatible_enable_cc_toolchain_resolution

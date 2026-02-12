@@ -64,6 +64,11 @@ dev_go_sdk.download(
     name = "rules_go_internal_compatibility_sdk",
     version = "1.22.12",
 )
+dev_go_sdk.from_file(
+    name = "go_bootstrap_sdk",
+    go_mod = "//:go.mod",
+    experimental_build_compiler_from_source = True,
+)
 
 bazel_dep(name = "toolchains_protoc", version = "0.6.0", dev_dependency = True)
 
