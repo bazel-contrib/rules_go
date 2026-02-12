@@ -64,6 +64,7 @@ var (
 	buildWorkingDirectory = os.Getenv("BUILD_WORKING_DIRECTORY")
 	additionalAspects     = strings.Fields(os.Getenv("GOPACKAGESDRIVER_BAZEL_ADDTL_ASPECTS"))
 	additionalKinds       = strings.Fields(os.Getenv("GOPACKAGESDRIVER_BAZEL_KINDS"))
+	additionalLabels      = strings.Fields(os.Getenv("GOPACKAGESDRIVER_BAZEL_ADDTL_LABELS"))
 	emptyResponse         = &driverResponse{
 		NotHandled: true,
 		Compiler:   "gc",
@@ -91,7 +92,7 @@ func run(ctx context.Context, in io.Reader, out io.Writer, args []string) error 
 		return fmt.Errorf("unable to build JSON files: %w", err)
 	}
 
-	labels, err := bazelJsonBuilder.Labels(ctx, queries)
+	labels, err := bazelJsonBuilder.Labels(ctx, queries, additionalLabels)
 	if err != nil {
 		return fmt.Errorf("unable to lookup package: %w", err)
 	}
