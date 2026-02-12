@@ -216,7 +216,7 @@ def proto_path(src, proto):
     return src.path[len(prefix):]
 
 def _go_proto_compiler_impl(ctx):
-    go = go_context(ctx, include_deprecated_properties = False)
+    go = go_context(ctx)
     go_info = new_go_info(go, ctx.attr)
     proto_toolchain = _find_toolchain(
         ctx,
