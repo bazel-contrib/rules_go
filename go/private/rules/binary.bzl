@@ -539,6 +539,7 @@ set GOTOOLCHAIN=local
 set GO111MODULE=off
 set GOTELEMETRY=off
 set GOENV=off
+set GOEXPERIMENT={goexperiment}
 {go} build -trimpath -ldflags \"-buildid='' {ldflags}\" -o {out_pack} cmd/pack
 if %ERRORLEVEL% EQU 0 (
   {go} build -trimpath -ldflags \"-buildid='' {ldflags}\" -o {out} {srcs}
@@ -554,6 +555,7 @@ exit /b %GO_EXIT_CODE%
             out_pack = ctx.outputs.out_pack.path,
             srcs = " ".join([f.path for f in ctx.files.srcs]),
             ldflags = ctx.attr.ldflags,
+            goexperiment = sdk.toolchain_experiments,
         )
         bat = ctx.actions.declare_file(name + ".bat")
         ctx.actions.write(
@@ -601,6 +603,7 @@ exit /b %GO_EXIT_CODE%
                 "GO111MODULE": "off",
                 "GOTELEMETRY": "off",
                 "GOENV": "off",
+                "GOEXPERIMENT": sdk.toolchain_experiments,
                 "GO_BINARY": sdk.go.path,
                 "LD_FLAGS": ctx.attr.ldflags,
             },
