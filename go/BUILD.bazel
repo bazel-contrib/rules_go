@@ -18,6 +18,7 @@ filegroup(
         "//go/config:all_files",
         "//go/constraints/amd64:all_files",
         "//go/constraints/arm:all_files",
+        "//go/constraints/arm64:all_files",
         "//go/platform:all_files",
         "//go/private:all_files",
         "//go/runfiles:all_files",
