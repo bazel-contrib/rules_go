@@ -472,6 +472,9 @@ default_go_config_info = GoConfigInfo(
     gc_goopts = [],
     amd64 = None,
     arm = None,
+    arm64 = None,
+    arm64_lse = False,
+    arm64_crypto = False,
     pgoprofile = None,
     export_stdlib = False,
 )
@@ -593,6 +596,16 @@ def go_context(
     # See https://go.dev/wiki/MinimumRequirements#arm
     if mode.arm:
         env["GOARM"] = mode.arm
+
+    # Similarly, set GOARM64 based on platform constraints in //go/constraints/arm64.
+    # See https://go.dev/wiki/MinimumRequirements#arm64
+    if mode.arm64:
+        arm64_val = mode.arm64
+        if mode.arm64_lse:
+            arm64_val += ",lse"
+        if mode.arm64_crypto:
+            arm64_val += ",crypto"
+        env["GOARM64"] = arm64_val
 
     if cgo_context_info:
         env.update(cgo_context_info.env)
@@ -1031,6 +1044,9 @@ def _go_config_impl(ctx):
         gc_goopts = ctx.attr.gc_goopts[BuildSettingInfo].value,
         amd64 = ctx.attr.amd64,
         arm = ctx.attr.arm,
+        arm64 = ctx.attr.arm64,
+        arm64_lse = ctx.attr.arm64_lse,
+        arm64_crypto = ctx.attr.arm64_crypto,
         pgoprofile = pgoprofile,
         export_stdlib = ctx.attr.export_stdlib[BuildSettingInfo].value,
     )
@@ -1085,6 +1101,9 @@ go_config = rule(
         ),
         "amd64": attr.string(),
         "arm": attr.string(),
+        "arm64": attr.string(),
+        "arm64_lse": attr.bool(),
+        "arm64_crypto": attr.bool(),
         "pgoprofile": attr.label(
             mandatory = True,
             allow_files = True,
