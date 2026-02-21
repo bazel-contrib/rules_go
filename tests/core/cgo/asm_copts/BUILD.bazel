@@ -1,0 +1,19 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "asm_copts",
+    srcs = [
+        "asm_amd64.S",
+        "asm_arm64.S",
+        "cgoasm.go",
+    ],
+    cgo = True,
+    copts = ["-DASM_COPTS_VALUE=99"],
+    importpath = "github.com/bazelbuild/rules_go/tests/core/cgo/asm_copts",
+)
+
+go_test(
+    name = "asm_copts_test",
+    srcs = ["cgoasm_test.go"],
+    embed = [":asm_copts"],
+)

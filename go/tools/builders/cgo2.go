@@ -213,13 +213,14 @@ func cgo2(goenv *env, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSr
 	// Compile C, C++, Objective-C/C++, and assembly code.
 	defaultCFlags := defaultCFlags(workDir)
 	combinedCFlags := combineFlags(cppFlags, hdrIncludes, cFlags, defaultCFlags)
+	asmCFlags := combineFlags(cppFlags, cFlags, defaultCFlags)
 	for _, lang := range []struct{ srcs, flags []string }{
 		{genCSrcs, combinedCFlags},
 		{cSrcs, combinedCFlags},
 		{cxxSrcs, combineFlags(cppFlags, hdrIncludes, cxxFlags, defaultCFlags)},
 		{objcSrcs, combineFlags(cppFlags, hdrIncludes, objcFlags, defaultCFlags)},
 		{objcxxSrcs, combineFlags(cppFlags, hdrIncludes, objcxxFlags, defaultCFlags)},
-		{sSrcs, nil},
+		{sSrcs, asmCFlags},
 	} {
 		for _, src := range lang.srcs {
 			obj := filepath.Join(workDir, fmt.Sprintf("_x%d.o", len(cObjs)))
@@ -331,7 +332,7 @@ func compileCSources(goenv *env, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSrcs, hS
 		{cxxSrcs, combineFlags(cppFlags, hdrIncludes, cxxFlags, defaultCFlags)},
 		{objcSrcs, combineFlags(cppFlags, hdrIncludes, objcFlags, defaultCFlags)},
 		{objcxxSrcs, combineFlags(cppFlags, hdrIncludes, objcxxFlags, defaultCFlags)},
-		{sSrcs, nil},
+		{sSrcs, combineFlags(cppFlags, cFlags, defaultCFlags)},
 	} {
 		for _, src := range lang.srcs {
 			obj := filepath.Join(workDir, fmt.Sprintf("_x%d.o", len(cObjs)))
