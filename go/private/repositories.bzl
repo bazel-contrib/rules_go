@@ -319,9 +319,11 @@ def go_rules_dependencies(force = False):
         name = "io_bazel_rules_go_bazel_features",
     )
 
+    host_compatible_sdk_label = _get_host_compatible_sdk_label()
     _maybe(
         _go_host_compatible_s_d_k_label,
         name = "go_host_compatible_sdk_label",
+        host_compatible_sdk_label = host_compatible_sdk_label,
     )
 
     wrapper(
@@ -343,12 +345,26 @@ def go_rules_dependencies(force = False):
 
 def _go_host_compatible_sdk_label_impl(ctx):
     ctx.file("BUILD.bazel")
-    ctx.file("defs.bzl", """HOST_COMPATIBLE_SDK = Label("@go_sdk//:ROOT")""")
+    ctx.file("defs.bzl", """HOST_COMPATIBLE_SDK = Label("{}")""".format(ctx.attr.host_compatible_sdk_label))
+
+def _get_host_compatible_sdk_label():
+    # Keep compatibility with custom @go_sdk repositories that only expose :ROOT.
+    go_sdk_rule = native.existing_rules().get("go_sdk")
+    if go_sdk_rule and go_sdk_rule.get("kind") == "go_download_sdk_rule" and go_sdk_rule.get("experimental_bootstrap", False):
+        return "@go_sdk//:host_compatible_root_file"
+    return "@go_sdk//:ROOT"
 
 # This rule name has to avoid containing both "go_" and "_sdk" as substrings
 # due to this check in Gazelle:
 # https://github.com/bazelbuild/bazel-gazelle/blob/f08119735757370319d4f8c7653c0805fdae4817/deps.bzl#L92
-_go_host_compatible_s_d_k_label = repository_rule(_go_host_compatible_sdk_label_impl)
+_go_host_compatible_s_d_k_label = repository_rule(
+    implementation = _go_host_compatible_sdk_label_impl,
+    attrs = {
+        "host_compatible_sdk_label": attr.string(
+            default = "@go_sdk//:ROOT",
+        ),
+    },
+)
 
 def _maybe(repo_rule, name, **kwargs):
     if name not in native.existing_rules():

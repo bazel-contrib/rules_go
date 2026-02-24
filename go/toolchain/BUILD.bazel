@@ -1,5 +1,6 @@
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("//go/private:sdk.bzl", "SDK_SOURCE_BOOTSTRAPPED", "SDK_SOURCE_PREBUILT")
 load(
     ":toolchains.bzl",
     "declare_constraints",
@@ -20,25 +21,25 @@ string_flag(
 )
 
 string_flag(
-    name = "source",
-    build_setting_default = "prebuilt",
+    name = "experimental_source",
+    build_setting_default = SDK_SOURCE_PREBUILT,
     values = [
-        "bootstrapped",
-        "prebuilt",
+        SDK_SOURCE_BOOTSTRAPPED,
+        SDK_SOURCE_PREBUILT,
     ],
 )
 
 config_setting(
-    name = "source_bootstrapped",
+    name = "bootstrapped",
     flag_values = {
-        ":source": "bootstrapped",
+        ":experimental_source": SDK_SOURCE_BOOTSTRAPPED,
     },
 )
 
 config_setting(
-    name = "source_prebuilt",
+    name = "prebuilt",
     flag_values = {
-        ":source": "prebuilt",
+        ":experimental_source": SDK_SOURCE_PREBUILT,
     },
 )
 

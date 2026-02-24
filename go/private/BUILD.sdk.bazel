@@ -3,6 +3,11 @@ load("@io_bazel_rules_go//go/private:sdk_build_defs.bzl", "STDLIB_SRCS_EXCLUDE",
 package(default_visibility = ["//visibility:public"])
 
 filegroup(
+    name = "host_compatible_root_file",
+    srcs = ["ROOT"],
+)
+
+filegroup(
     name = "libs",
     srcs = glob(
         ["pkg/{goos}_{goarch}/**/*.a"],
@@ -36,20 +41,6 @@ filegroup(
 )
 
 filegroup(
-    name = "compiler_binaries",
-    srcs = glob(
-        [
-            "pkg/tool/{goos}_{goarch}/asm*",
-            "pkg/tool/{goos}_{goarch}/cgo*",
-            "pkg/tool/{goos}_{goarch}/compile*",
-            "pkg/tool/{goos}_{goarch}/cover*",
-            "pkg/tool/{goos}_{goarch}/link*",
-        ],
-        allow_empty = True,
-    ),
-)
-
-filegroup(
     name = "config",
     srcs = glob(
         ["go.env*"],
@@ -58,8 +49,8 @@ filegroup(
 )
 
 define_sdk_repository_targets(
-    experiments = {experiments},
     exec_compatible_with = {exec_compatible_with},
+    experiments = {experiments},
     files_srcs = glob([
         "bin/go*",
         "src/**",
@@ -68,9 +59,9 @@ define_sdk_repository_targets(
         ":config",
     ],
     go = "bin/go{exe}",
+    go_sdk_root_file = "ROOT",
     goarch = "{goarch}",
     goos = "{goos}",
-    go_sdk_root_file = "ROOT",
     package_list_srcs = [":srcs"],
     version = "{version}",
 )

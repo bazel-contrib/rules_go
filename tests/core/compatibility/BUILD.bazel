@@ -10,7 +10,7 @@ go_cross_binary(
     sdk_version = "1.22",
     target = ":hello",
     target_compatible_with = select({
-        "@io_bazel_rules_go//go/toolchain:source_bootstrapped": ["@platforms//:incompatible"],
+        "@io_bazel_rules_go//go/toolchain:bootstrapped": ["@platforms//:incompatible"],
         "//conditions:default": [],
     }),
 )
