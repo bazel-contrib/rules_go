@@ -206,9 +206,10 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
         _nogo_diagnostics = out_diagnostics,
         _cgo_deps = cgo_deps,
     )
-    x_defs = dict(source.x_defs)
+    x_defs = {}
     for a in direct:
         x_defs.update(a.x_defs)
+    x_defs.update(source.x_defs)
 
     # Ensure that the _cgo_export.h of the current target comes first when cgo_exports is iterated
     # by prepending it and specifying the order explicitly. This is required as the CcInfo attached

@@ -34,6 +34,9 @@ go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
 # platforms, using the version given from the `go.mod` file.
 go_sdk.from_file(go_mod = "//:go.mod")
 
+# Alternatively, use the version from a `go.work` file.
+go_sdk.from_file(go_work = "//:go.work")
+
 # Download an SDK for the host OS & architecture as well as common remote execution
 # platforms, with a specific version.
 go_sdk.download(version = "1.23.1")
@@ -52,6 +55,11 @@ go_sdk.host()
 Nota bene: The use of `go_sdk.host()` [may break builds](https://github.com/enola-dev/enola/issues/713) whenever the host Go version is upgraded
 (because many OS package managers, such as Debian/Ubuntu's `apt`, distribute Go into a directory which contains the version, such as `/usr/lib/go-1.22/`).
 As package upgrades happen outside of Bazel's control, this will lead to non-reproducible builds. Due to this, use of `go_sdk.host()` is discouraged.
+
+When using `go_sdk.from_file()`, exactly one of `go_mod` or `go_work` must be specified.
+Version extraction follows the same precedence for both file types: the `toolchain` directive takes precedence
+over the `go` directive. If neither directive is present, `go.mod` has an implicit `go 1.16` line while
+`go.work` has an implicit `go 1.18` line as per [Go Toolchains](https://go.dev/doc/toolchain#config) documentation.
 
 You can register multiple Go SDKs and select which one to use on a per-target basis using [`go_cross_binary`](rules.md#go_cross_binary).
 As long as you specify the `version` of an SDK, it will be downloaded lazily, that is, only when it is actually needed during a particular build.

@@ -23,9 +23,25 @@ def version_from_go_mod(module_ctx, go_mod_label):
     Returns:
       a string containing the version of the Go SDK defined in go.mod
     """
-    _check_go_mod_name(go_mod_label.name)
-    go_mod_path = module_ctx.path(go_mod_label)
-    go_mod_content = module_ctx.read(go_mod_path)
+    return _version_from_go_file(module_ctx, go_mod_label, "go.mod", "1.16")
+
+def version_from_go_work(module_ctx, go_work_label):
+    """Returns a version string from a go.work file.
+
+    Args:
+       module_ctx: a https://bazel.build/rules/lib/module_ctx object passed
+            from the MODULE.bazel call.
+       go_work_label: a Label for a `go.work` file.
+
+    Returns:
+      a string containing the version of the Go SDK defined in go.work
+    """
+    return _version_from_go_file(module_ctx, go_work_label, "go.work", "1.18")
+
+def _version_from_go_file(module_ctx, file_label, expected_filename, default_version):
+    _check_filename(file_label.name, expected_filename)
+    file_path = module_ctx.path(file_label)
+    file_content = module_ctx.read(file_path)
 
     state = {
         "toolchain": None,
@@ -33,29 +49,29 @@ def version_from_go_mod(module_ctx, go_mod_label):
     }
 
     current_directive = None
-    for line_no, line in enumerate(go_mod_content.splitlines(), 1):
-        tokens, _ = _tokenize_line(line, go_mod_path, line_no)
+    for line_no, line in enumerate(file_content.splitlines(), 1):
+        tokens, _ = _tokenize_line(line, file_path, line_no)
         if not tokens:
             continue
 
         if not current_directive:
             if tokens[0] == "go":
-                _validate_go_version(go_mod_path, state, tokens, line_no)
+                _validate_go_version(file_path, state, tokens, line_no)
                 state["go"] = tokens[1]
 
             if tokens[0] == "toolchain":
-                _validate_toolchain_version(go_mod_path, state, tokens, line_no)
+                _validate_toolchain_version(file_path, state, tokens, line_no)
                 state["toolchain"] = tokens[1][len("go"):].strip()
 
             if tokens[1] == "(":
                 current_directive = tokens[0]
                 if len(tokens) > 2:
-                    fail("{}:{}: unexpected token '{}' after '('".format(go_mod_path, line_no, tokens[2]))
+                    fail("{}:{}: unexpected token '{}' after '('".format(file_path, line_no, tokens[2]))
                 continue
         elif tokens[0] == ")":
             current_directive = None
             if len(tokens) > 1:
-                fail("{}:{}: unexpected token '{}' after ')'".format(go_mod_path, line_no, tokens[1]))
+                fail("{}:{}: unexpected token '{}' after ')'".format(file_path, line_no, tokens[1]))
             continue
 
     version = state["toolchain"]
@@ -63,8 +79,10 @@ def version_from_go_mod(module_ctx, go_mod_label):
         # https://go.dev/doc/toolchain: "a go.mod that says go 1.21.0 with no toolchain line is interpreted as if it had a toolchain go1.21.0 line."
         version = state["go"]
     if not version:
-        # "As of the Go 1.17 release, if the go directive is missing, go 1.16 is assumed."
-        version = "1.16"
+        # https://go.dev/doc/toolchain#config: "For compatibility reasons, if the go line is omitted from a go.mod file,
+        # the module is considered to have an implicit go 1.16 line, and if the go line is omitted from a go.work file,
+        # the workspace is considered to have an implicit go 1.18 line."
+        version = default_version
 
     return version
 
@@ -123,9 +141,9 @@ def _tokenize_line(line, path, line_no):
 
     return tokens, None
 
-def _check_go_mod_name(name):
-    if name != "go.mod":
-        fail("go_sdk.from_file requires a 'go.mod' file, not '{}'".format(name))
+def _check_filename(name, expected):
+    if name != expected:
+        fail("go_sdk.from_file requires a '{}' file, not '{}'".format(expected, name))
 
 def _validate_go_version(path, state, tokens, line_no):
     if len(tokens) == 1:

@@ -293,3 +293,26 @@ build_test(
     name = "testing_testing_test",
     targets = [":testing_testing_bin_run"],
 )
+
+go_library(
+    name = "stamp_override_lib",
+    srcs = ["stamp_override_lib.go"],
+    importpath = "github.com/bazelbuild/rules_go/tests/core/go_binary/stamp_override_lib",
+    x_defs = {"Version": "lib_version"},
+)
+
+go_binary(
+    name = "stamp_override_bin",
+    srcs = ["stamp_override_bin.go"],
+    deps = [":stamp_override_lib"],
+    x_defs = {
+        "github.com/bazelbuild/rules_go/tests/core/go_binary/stamp_override_lib.Version": "bin_version",
+    },
+)
+
+go_test(
+    name = "stamp_override_test",
+    srcs = ["stamp_override_test.go"],
+    data = [":stamp_override_bin"],
+    deps = ["//go/tools/bazel"],
+)
