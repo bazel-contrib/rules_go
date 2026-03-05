@@ -81,6 +81,7 @@ bzl_library(
     deps = [
         "//go/private:platforms",
         "//go/private:providers",
+        "//go/private:sdk",
         "//go/private/actions:archive",
         "//go/private/actions:binary",
         "//go/private/actions:link",

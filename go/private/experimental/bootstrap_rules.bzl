@@ -79,6 +79,17 @@ ACTION_PATH="${PATH:-}"
 if [[ -z "$ACTION_PATH" ]]; then
   ACTION_PATH="/usr/bin:/bin:/usr/sbin:/sbin"
 fi
+WINDOWS_CMD=""
+if [[ "$IS_WINDOWS" == "1" ]]; then
+  WINDOWS_CMD="${COMSPEC:-${ComSpec:-}}"
+  if [[ -z "$WINDOWS_CMD" ]]; then
+    WINDOWS_ROOT="${SYSTEMROOT:-${SystemRoot:-C:\\Windows}}"
+    WINDOWS_CMD="${WINDOWS_ROOT}\\System32\\cmd.exe"
+  fi
+  if [[ "$WINDOWS_CMD" == [A-Za-z]:\\* || "$WINDOWS_CMD" == [A-Za-z]:/* ]]; then
+    WINDOWS_CMD="$(/usr/bin/cygpath -u "$WINDOWS_CMD")"
+  fi
+fi
 
 copy_dir() {
   local src="$1"
@@ -108,7 +119,7 @@ mkdir -p "$WORKDIR/home" "$WORKDIR/gocache"
     GOTOOLCHAIN=local \
     GOROOT_BOOTSTRAP="$BOOTSTRAP_ROOT" \
     GOEXPERIMENT="$EXPERIMENTS" \
-    cmd.exe /c "$(basename "$MAKE_BAT")"
+    "$WINDOWS_CMD" /c "$(basename "$MAKE_BAT")"
   else
     HOME="$WORKDIR/home" \
     GOCACHE="$WORKDIR/gocache" \

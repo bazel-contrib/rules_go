@@ -4,3 +4,9 @@ go_bazel_test(
     name = "go_download_sdk_test",
     srcs = ["go_download_sdk_test.go"],
 )
+
+go_bazel_test(
+    name = "bootstrap_determinism_test",
+    size = "large",
+    srcs = ["bootstrap_determinism_test.go"],
+)

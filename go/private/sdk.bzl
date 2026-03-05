@@ -19,6 +19,12 @@ load("//go/private:platforms.bzl", "GOARCH_CONSTRAINTS", "GOOS_CONSTRAINTS")
 
 MIN_SUPPORTED_VERSION = (1, 14, 0)
 
+# SDK source selector values used by toolchain registration and by
+# `--@io_bazel_rules_go//go/toolchain:experimental_source`.
+# Keep these string values stable for compatibility with existing configs.
+SDK_SOURCE_BOOTSTRAPPED = "bootstrapped"
+SDK_SOURCE_PREBUILT = "prebuilt"
+
 def _go_host_sdk_impl(ctx):
     goroot = _detect_host_sdk(ctx)
     platform = _detect_sdk_platform(ctx, goroot)
@@ -106,7 +112,7 @@ def _go_download_sdk_impl(ctx):
     _remote_sdk(ctx, [url.format(filename) for url in ctx.attr.urls], ctx.attr.strip_prefix, sha256)
     patch(ctx, patch_args = _get_patch_args(ctx.attr.patch_strip))
 
-    sdk_build_file_override = ctx.attr._bootstrap_sdk_build_file if ctx.attr.bootstrap else None
+    sdk_build_file_override = ctx.attr._bootstrap_sdk_build_file if ctx.attr.experimental_bootstrap else None
 
     detected_version = _detect_sdk_version(ctx, ".")
     _sdk_build_file(ctx, platform, detected_version, experiments = ctx.attr.experiments, sdk_build_file_override = sdk_build_file_override)
@@ -148,7 +154,7 @@ go_download_sdk_rule = repository_rule(
             default = 0,
             doc = "The number of leading path segments to be stripped from the file name in the patches.",
         ),
-        "bootstrap": attr.bool(default = False),
+        "experimental_bootstrap": attr.bool(default = False),
         "_sdk_build_file": attr.label(
             default = Label("//go/private:BUILD.sdk.bazel"),
         ),
@@ -310,7 +316,7 @@ go_multiple_toolchains = repository_rule(
     },
 )
 
-def _go_toolchains(name, sdk_repo, sdk_type, sdk_version = None, goos = None, goarch = None, sdk_source = "prebuilt"):
+def _go_toolchains(name, sdk_repo, sdk_type, sdk_version = None, goos = None, goarch = None, sdk_source = SDK_SOURCE_PREBUILT):
     go_multiple_toolchains(
         name = name,
         prefixes = [""],
@@ -324,6 +330,7 @@ def _go_toolchains(name, sdk_repo, sdk_type, sdk_version = None, goos = None, go
 
 def go_download_sdk(name, register_toolchains = True, **kwargs):
     go_download_sdk_rule(name = name, **kwargs)
+    sdk_source = SDK_SOURCE_BOOTSTRAPPED if kwargs.get("experimental_bootstrap") else SDK_SOURCE_PREBUILT
     _go_toolchains(
         name = name + "_toolchains",
         sdk_repo = name,
@@ -331,6 +338,7 @@ def go_download_sdk(name, register_toolchains = True, **kwargs):
         sdk_version = kwargs.get("version"),
         goos = kwargs.get("goos"),
         goarch = kwargs.get("goarch"),
+        sdk_source = sdk_source,
     )
     if register_toolchains:
         _register_toolchains(name)

@@ -5,8 +5,8 @@ go_test(
     name = "buildid_test",
     srcs = ["buildid_test.go"],
     data = [
-        "@go_sdk//:files",
         ":stdlib_files",
+        "@go_sdk//:files",
     ],
     deps = ["//go/runfiles"],
 )

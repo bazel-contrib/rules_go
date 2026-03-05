@@ -43,12 +43,13 @@ def define_sdk_repository_targets(
         go,
         goarch,
         goos,
+        go_sdk_srcs = [":srcs"],
         go_sdk_root_file,
         package_list_srcs,
         version):
     go_sdk(
         name = "go_sdk",
-        srcs = [":srcs"],
+        srcs = go_sdk_srcs,
         experiments = experiments,
         go = go,
         goarch = goarch,

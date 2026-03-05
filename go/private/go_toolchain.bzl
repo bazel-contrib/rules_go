@@ -19,6 +19,7 @@ load("@bazel_skylib//lib:selects.bzl", "selects")
 load("//go/private:common.bzl", "GO_TOOLCHAIN")
 load("//go/private:platforms.bzl", "PLATFORMS")
 load("//go/private:providers.bzl", "GoSDK")
+load("//go/private:sdk.bzl", "SDK_SOURCE_PREBUILT")
 load("//go/private/actions:archive.bzl", "emit_archive")
 load("//go/private/actions:binary.bzl", "emit_binary")
 load("//go/private/actions:link.bzl", "emit_link")
@@ -136,7 +137,7 @@ def declare_bazel_toolchains(
         prerelease,
         sdk_name,
         sdk_type,
-        sdk_source = "prebuilt",
+        sdk_source = SDK_SOURCE_PREBUILT,
         prefix = ""):
     """Declares toolchain targets for each platform."""
 
@@ -243,7 +244,7 @@ def declare_bazel_toolchains(
         visibility = ["//visibility:private"],
     )
 
-    sdk_source_label = Label("//go/toolchain:source")
+    sdk_source_label = Label("//go/toolchain:experimental_source")
 
     native.config_setting(
         name = prefix + "match_sdk_source",
