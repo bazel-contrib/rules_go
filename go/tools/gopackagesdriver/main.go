@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"runtime"
 	"strings"
@@ -64,6 +65,7 @@ var (
 	buildWorkingDirectory = os.Getenv("BUILD_WORKING_DIRECTORY")
 	additionalAspects     = strings.Fields(os.Getenv("GOPACKAGESDRIVER_BAZEL_ADDTL_ASPECTS"))
 	additionalKinds       = strings.Fields(os.Getenv("GOPACKAGESDRIVER_BAZEL_KINDS"))
+	logPath               = os.Getenv("GOPACKAGESDRIVER_LOG")
 	emptyResponse         = &driverResponse{
 		NotHandled: true,
 		Compiler:   "gc",
@@ -73,13 +75,32 @@ var (
 	}
 )
 
-func run(ctx context.Context, in io.Reader, out io.Writer, args []string) error {
+func run(ctx context.Context, in io.Reader, out io.Writer, args []string) (retErr error) {
+	if logPath != "" {
+		f, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error opening log file: %v\n", err)
+			os.Exit(1)
+		}
+		defer f.Close()
+		slog.SetDefault(slog.New(slog.NewJSONHandler(f, nil)).With("pid", os.Getpid()))
+	} else {
+		slog.SetDefault(slog.New(slog.NewJSONHandler(io.Discard, nil)))
+	}
+
 	queries := args
 
 	request, err := ReadDriverRequest(in)
 	if err != nil {
 		return fmt.Errorf("unable to read request: %w", err)
 	}
+
+	slog.Info("start", "args", args, "request", request)
+	defer func() {
+		if retErr != nil {
+			slog.Error("finish", "error", retErr)
+		}
+	}()
 
 	bazel, err := NewBazel(ctx, bazelBin, workspaceRoot, buildWorkingDirectory, bazelCommonFlags, bazelStartupFlags)
 	if err != nil {
@@ -114,8 +135,11 @@ func run(ctx context.Context, in io.Reader, out io.Writer, args []string) error 
 	if err != nil {
 		return fmt.Errorf("unable to marshal response: %v", err)
 	}
-	_, err = out.Write(data)
-	return err
+	if _, err = out.Write(data); err != nil {
+		return fmt.Errorf("writing response: %w", err)
+	}
+	slog.Info("finish", "packages", len(resp.Packages))
+	return nil
 }
 
 func main() {
