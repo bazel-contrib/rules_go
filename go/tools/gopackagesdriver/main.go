@@ -85,7 +85,7 @@ func run(ctx context.Context, in io.Reader, out io.Writer, args []string) (retEr
 		defer f.Close()
 		slog.SetDefault(slog.New(slog.NewJSONHandler(f, nil)).With("pid", os.Getpid()))
 	} else {
-		slog.SetDefault(slog.New(slog.NewJSONHandler(io.Discard, nil)))
+		slog.SetDefault(slog.New(slog.DiscardHandler))
 	}
 
 	queries := args

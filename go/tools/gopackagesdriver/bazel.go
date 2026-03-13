@@ -113,7 +113,7 @@ func (b *Bazel) run(ctx context.Context, command string, args ...string) (string
 			exitCode = -1
 		}
 	}
-	slog.Info("bazel", "command", command, "args", cmd.Args, "exit_code", exitCode, "stderr", stderrBuf.String())
+	slog.Info("bazel", "command", command, "args", cmd.Args, "exit_code", exitCode, "stderr", stderrBuf)
 
 	return string(output), err
 }
