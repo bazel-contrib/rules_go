@@ -91,6 +91,7 @@ def cgo_configure(go, srcs, cdeps, cppopts, copts, cxxopts, clinkopts):
     inputs_direct = []
     inputs_transitive = []
     deps_direct = []
+    link_inputs_direct = []
     lib_opts = []
     runfiles = go._ctx.runfiles(collect_data = True)
 
@@ -102,9 +103,11 @@ def cgo_configure(go, srcs, cdeps, cppopts, copts, cxxopts, clinkopts):
         if CcInfo in d:
             cc_transitive_headers = d[CcInfo].compilation_context.headers
             inputs_transitive.append(cc_transitive_headers)
-            cc_libs, cc_link_flags = _cc_libs_and_flags(d)
+            cc_libs, cc_link_flags, cc_additional_inputs = _cc_libs_and_flags(d)
             inputs_direct.extend(cc_libs)
+            inputs_direct.extend(cc_additional_inputs)
             deps_direct.extend(cc_libs)
+            link_inputs_direct.extend(cc_additional_inputs)
             cc_defines = d[CcInfo].compilation_context.defines.to_list()
             cppopts.extend(["-D" + define for define in cc_defines])
             cc_includes = d[CcInfo].compilation_context.includes.to_list()
@@ -165,6 +168,7 @@ def cgo_configure(go, srcs, cdeps, cppopts, copts, cxxopts, clinkopts):
 
     inputs = depset(direct = inputs_direct, transitive = inputs_transitive)
     deps = depset(direct = deps_direct)
+    link_inputs = depset(direct = link_inputs_direct)
 
     # HACK: some C/C++ toolchains will ignore libraries (including dynamic libs
     # specified with -l flags) unless they appear after .o or .a files with
@@ -175,6 +179,7 @@ def cgo_configure(go, srcs, cdeps, cppopts, copts, cxxopts, clinkopts):
     return struct(
         inputs = inputs,
         deps = deps,
+        link_inputs = link_inputs,
         runfiles = runfiles,
         cppopts = cppopts,
         copts = copts,
@@ -189,8 +194,10 @@ def _cc_libs_and_flags(target):
     # from bazelbuild/bazel#7036.
     libs = []
     flags = []
+    additional_inputs = []
     for li in target[CcInfo].linking_context.linker_inputs.to_list():
         flags.extend(li.user_link_flags)
+        additional_inputs.extend(li.additional_inputs)
         for library_to_link in li.libraries:
             if library_to_link.static_library != None:
                 libs.append(library_to_link.static_library)
@@ -202,11 +209,14 @@ def _cc_libs_and_flags(target):
                     # On Linux, the interface library may be a linker script (e.g.
                     # "libfoo.so" containing GROUP(...)) that references the actual
                     # versioned dynamic library. The dynamic library must also be in
-                    # the sandbox so the linker can resolve it.
-                    libs.append(library_to_link.dynamic_library)
+                    # the sandbox so the linker can resolve it (e.g. via -rpath-link).
+                    # Add to additional_inputs (sandbox-only) rather than libs to
+                    # avoid generating rpath entries for versioned .so files when many
+                    # libraries are present (which causes "Argument list too long").
+                    additional_inputs.append(library_to_link.dynamic_library)
             elif library_to_link.dynamic_library != None:
                 libs.append(library_to_link.dynamic_library)
-    return libs, flags
+    return libs, flags, additional_inputs
 
 def _include_unique(opts, flag, include, seen):
     if include in seen:
