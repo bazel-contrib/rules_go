@@ -39,12 +39,12 @@ type Config struct {
 }
 
 func main() {
-	if err := run(os.Args, os.Stdout, os.Stderr); err != nil {
+	if err := run(os.Args, os.Stdin, os.Stdout, os.Stderr); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func run(args []string, stdout, stderr io.Writer) error {
+func run(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	// Force usage of the Bazel-configured Go SDK.
 	err := os.Setenv("GOTOOLCHAIN", "local")
 	if err != nil {
@@ -72,7 +72,7 @@ func run(args []string, stdout, stderr io.Writer) error {
 	}
 
 	goArgs := append([]string{goBin}, args[1:]...)
-	if err = runProcess(goArgs, env, stdout, stderr); err != nil {
+	if err = runProcess(goArgs, env, stdin, stdout, stderr); err != nil {
 		return err
 	}
 
@@ -95,7 +95,7 @@ func run(args []string, stdout, stderr io.Writer) error {
 				bazel = "bazel"
 			}
 			_, _ = fmt.Fprintf(stderr, "rules_go: Running '%s mod tidy' since %s changed...\n", bazel, strings.Join(diff, ", "))
-			if err = runProcess([]string{bazel, "mod", "tidy"}, nil, stdout, stderr); err != nil {
+			if err = runProcess([]string{bazel, "mod", "tidy"}, nil, nil, stdout, stderr); err != nil {
 				return err
 			}
 		} else {
@@ -246,9 +246,10 @@ func hashFile(path string) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-func runProcess(args, env []string, stdout, stderr io.Writer) error {
+func runProcess(args, env []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Dir = bazelEnv.workingDir
+	cmd.Stdin = stdin
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	cmd.Env = env
