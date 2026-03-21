@@ -33,6 +33,7 @@ func TestNoBindNow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer e.Close()
 
 	ds := e.SectionByType(elf.SHT_DYNAMIC)
 	if ds == nil {
@@ -60,12 +61,10 @@ func TestNoBindNow(t *testing.T) {
 			val = uint64(e.ByteOrder.Uint32(d[i+4:]))
 		}
 
-		// DT_FLAGS = 30, DF_BIND_NOW = 0x8
-		if tag == 30 && val&0x8 != 0 {
+		if elf.DynTag(tag) == elf.DT_FLAGS && elf.DynFlag(val)&elf.DF_BIND_NOW != 0 {
 			t.Error("binary hello_auto_bin has DF_BIND_NOW set in DT_FLAGS")
 		}
-		// DT_FLAGS_1 = 0x6ffffffb, DF_1_NOW = 0x1
-		if tag == 0x6ffffffb && val&0x1 != 0 {
+		if elf.DynTag(tag) == elf.DT_FLAGS_1 && elf.DynFlag1(val)&elf.DF_1_NOW != 0 {
 			t.Error("binary hello_auto_bin has DF_1_NOW set in DT_FLAGS_1")
 		}
 	}
