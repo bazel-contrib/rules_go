@@ -57,13 +57,6 @@ def emit_link(
     # in archives via CGO_LDFLAGS if it's needed.
     extldflags = [f for f in extldflags_from_cc_toolchain(go) if f not in ("-lstdc++", "-lc++", "-static")]
 
-    # Remove -z,now (BIND_NOW) from CC toolchain flags. The Go toolchain
-    # (go build) does not pass this flag to the linker. BIND_NOW forces the
-    # dynamic linker to resolve all undefined symbols at load time, which
-    # breaks Go libraries that use dlopen/dlsym to load symbols at runtime
-    # (e.g., NVIDIA's go-nvml). See #4377.
-    extldflags = _remove_bind_now(extldflags)
-
     if go.coverage_enabled:
         extldflags.append("--coverage")
     gc_linkopts = gc_linkopts + go.mode.gc_linkopts
@@ -241,32 +234,3 @@ def _extract_extldflags(gc_linkopts, extldflags):
         else:
             filtered_gc_linkopts.append(opt)
     return filtered_gc_linkopts, extldflags
-
-def _remove_bind_now(extldflags):
-    """Removes -z,now (BIND_NOW) from linker flags while preserving other flags.
-
-    The CC toolchain typically includes -Wl,-z,relro,-z,now for security
-    hardening. While -z,relro is safe to keep, -z,now forces all dynamic
-    symbols to be resolved at load time, which is incompatible with Go
-    libraries that load symbols at runtime via dlopen/dlsym (e.g., go-nvml).
-    The standard Go toolchain (go build) does not set -z,now.
-
-    Args:
-      extldflags: a list of flags to be passed to the external linker.
-
-    Return:
-      A new list with -z,now removed from any compound or standalone flags.
-    """
-    result = []
-    for f in extldflags:
-        if ",-z,now" in f:
-            # Remove -z,now from compound flags like -Wl,-z,relro,-z,now
-            cleaned = f.replace(",-z,now", "")
-            if cleaned and cleaned != "-Wl":
-                result.append(cleaned)
-        elif f in ("-Wl,-z,now", "-z,now"):
-            # Skip standalone -z,now flags
-            continue
-        else:
-            result.append(f)
-    return result
