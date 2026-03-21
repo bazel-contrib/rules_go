@@ -143,6 +143,7 @@ linkmode_pie_wrapper(
 go_test(
     name = "pie_test",
     srcs = [
+        "bind_now_test.go",
         "pie_darwin_amd64_test.go",
         "pie_darwin_test.go",
         "pie_linux_test.go",
