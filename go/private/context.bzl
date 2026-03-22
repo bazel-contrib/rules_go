@@ -21,7 +21,7 @@ load(
     "BuildSettingInfo",
 )
 load(
-    "@bazel_tools//tools/build_defs/cc:action_names.bzl",
+    "@rules_cc//cc:action_names.bzl",
     "CPP_COMPILE_ACTION_NAME",
     "CPP_LINK_DYNAMIC_LIBRARY_ACTION_NAME",
     "CPP_LINK_EXECUTABLE_ACTION_NAME",
@@ -31,8 +31,8 @@ load(
     "OBJC_COMPILE_ACTION_NAME",
 )
 load(
-    "@bazel_tools//tools/cpp:toolchain_utils.bzl",
-    "find_cpp_toolchain",
+    "@rules_cc//cc:find_cc_toolchain.bzl",
+    "find_cc_toolchain",
 )
 load(
     "@io_bazel_rules_nogo//:scope.bzl",
@@ -77,9 +77,9 @@ load(
     "get_source",
 )
 
-CPP_TOOLCHAIN_TYPE = Label("@bazel_tools//tools/cpp:toolchain_type")
+CPP_TOOLCHAIN_TYPE = Label("@rules_cc//cc:toolchain_type")
 CGO_ATTRS = {
-    "_cc_toolchain": attr.label(default = "@bazel_tools//tools/cpp:optional_current_cc_toolchain"),
+    "_cc_toolchain": attr.label(default = "@rules_cc//cc:optional_current_cc_toolchain"),
     "_xcode_config": attr.label(default = configuration_field(fragment = "apple", name = "xcode_config_label")),
     "_pure_flag": attr.label(default = "//go/config:pure"),
     "_pure_constraint": attr.label(default = "//go/toolchain:cgo_off"),
@@ -743,7 +743,7 @@ def cgo_context_data_impl(ctx):
     # toolchain (to be inputs into actions that need it).
     # ctx.files._cc_toolchain won't work when cc toolchain resolution
     # is switched on.
-    cc_toolchain = find_cpp_toolchain(ctx, mandatory = False)
+    cc_toolchain = find_cc_toolchain(ctx, mandatory = False)
     if not cc_toolchain or cc_toolchain.compiler in _UNSUPPORTED_C_COMPILERS:
         return None
 
