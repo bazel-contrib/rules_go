@@ -309,20 +309,25 @@ def _go_sdk_impl(ctx):
                 index = index,
             )
 
+            # Explicit goos/goarch prevents --repository_cache collisions
+            # across host platforms. See https://github.com/bazelbuild/rules_go/issues/4581
+            effective_goos = download_tag.goos or host_detected_goos
+            effective_goarch = download_tag.goarch or host_detected_goarch
+
             _download_sdk(
                 get_sdks_by_version = get_sdks_by_version_cached,
                 name = name,
-                goos = download_tag.goos,
-                goarch = download_tag.goarch,
+                goos = effective_goos,
+                goarch = effective_goarch,
                 download_tag = download_tag,
             )
 
-            if (not download_tag.goos or download_tag.goos == host_detected_goos) and (not download_tag.goarch or download_tag.goarch == host_detected_goarch):
+            if effective_goos == host_detected_goos and effective_goarch == host_detected_goarch:
                 first_host_compatible_toolchain = first_host_compatible_toolchain or "@{}//:ROOT".format(name)
 
             toolchains.append(struct(
-                goos = download_tag.goos,
-                goarch = download_tag.goarch,
+                goos = effective_goos,
+                goarch = effective_goarch,
                 sdk_repo = name,
                 sdk_type = "remote",
                 sdk_version = download_tag.version,
