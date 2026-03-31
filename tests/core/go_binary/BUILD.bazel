@@ -8,6 +8,11 @@ load(":many_deps.bzl", "many_deps")
 test_suite(name = "go_binary")
 
 go_bazel_test(
+    name = "bind_now_test",
+    srcs = ["bind_now_test.go"],
+)
+
+go_bazel_test(
     name = "configurable_attribute_bad_test",
     srcs = ["configurable_attribute_bad_test.go"],
 )
@@ -143,7 +148,6 @@ linkmode_pie_wrapper(
 go_test(
     name = "pie_test",
     srcs = [
-        "bind_now_test.go",
         "pie_darwin_amd64_test.go",
         "pie_darwin_test.go",
         "pie_linux_test.go",
