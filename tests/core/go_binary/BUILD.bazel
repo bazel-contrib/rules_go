@@ -10,6 +10,7 @@ test_suite(name = "go_binary")
 go_bazel_test(
     name = "bind_now_test",
     srcs = ["bind_now_test.go"],
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 go_bazel_test(
