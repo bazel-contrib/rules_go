@@ -80,13 +80,12 @@ func TestBindNowConsistentWithGoBuild(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Locate the Go SDK from the output base.
-	out, err := bazel_testing.BazelOutput("info", "output_base")
+	// Locate the Go SDK via the rules_go go wrapper.
+	goRootOut, err := bazel_testing.BazelOutput("run", "@io_bazel_rules_go//go", "--", "env", "GOROOT")
 	if err != nil {
 		t.Fatal(err)
 	}
-	outputBase := strings.TrimSpace(string(out))
-	goCmd := filepath.Join(outputBase, "external", "go_sdk", "bin", "go")
+	goCmd := filepath.Join(strings.TrimSpace(string(goRootOut)), "bin", "go")
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
