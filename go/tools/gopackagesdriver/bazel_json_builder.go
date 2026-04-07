@@ -257,12 +257,59 @@ func (b *BazelJSONBuilder) Build(ctx context.Context, labels []string, mode pack
 }
 
 func (b *BazelJSONBuilder) PathResolver() PathResolverFunc {
+	execRoot := b.bazel.ExecutionRoot()
+	bazelOutDir := filepath.Join(execRoot, "bazel-out")
+	configDirCache := map[string]string{}
+
 	return func(p string) string {
-		p = strings.Replace(p, "__BAZEL_EXECROOT__", b.bazel.ExecutionRoot(), 1)
+		p = strings.Replace(p, "__BAZEL_EXECROOT__", execRoot, 1)
 		p = strings.Replace(p, "__BAZEL_WORKSPACE__", b.bazel.WorkspaceRoot(), 1)
 		p = strings.Replace(p, "__BAZEL_OUTPUT_BASE__", b.bazel.OutputBase(), 1)
+		return resolvePathMappedDir(p, bazelOutDir, configDirCache)
+	}
+}
+
+// resolvePathMappedDir resolves path-mapped bazel output directories to their
+// real names on disk. Bazel's path mapping feature (used by rules_go's stdlib
+// build for better remote cache hit rates) can rewrite output directory names
+// (e.g. "k8-fastbuild" -> "cfg"). Files referenced in stdlib.pkg.json may use
+// these mapped names that don't exist as actual directories on disk. This
+// function detects such mismatches and finds the real directory by scanning
+// bazel-out/. Results are cached per config directory name.
+func resolvePathMappedDir(p string, bazelOutDir string, cache map[string]string) string {
+	prefix := bazelOutDir + string(filepath.Separator)
+	if !strings.HasPrefix(p, prefix) {
 		return p
 	}
+	rest := p[len(prefix):]
+	sep := strings.IndexByte(rest, filepath.Separator)
+	if sep < 0 {
+		return p
+	}
+	configDir := rest[:sep]
+	suffix := rest[sep+1:]
+
+	if real, ok := cache[configDir]; ok {
+		return filepath.Join(bazelOutDir, real, suffix)
+	}
+	if _, err := os.Stat(filepath.Join(bazelOutDir, configDir)); err == nil {
+		cache[configDir] = configDir
+		return p
+	}
+	entries, err := os.ReadDir(bazelOutDir)
+	if err != nil {
+		return p
+	}
+	for _, e := range entries {
+		if e.IsDir() {
+			candidate := filepath.Join(bazelOutDir, e.Name(), suffix)
+			if _, err := os.Stat(candidate); err == nil {
+				cache[configDir] = e.Name()
+				return candidate
+			}
+		}
+	}
+	return p
 }
 
 func cleanPath(p string) string {
