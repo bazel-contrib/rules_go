@@ -141,7 +141,7 @@ func Wrap(pkg string) error {
 	cmd := exec.Command(exePath, args...)
 	cmd.Env = append(os.Environ(), "GO_TEST_WRAP=0")
 	// On Windows, any current directory value longer than MAX_PATH(260 chars)
-	// will cau/ CreateProcess to fail, regardless of LongPathsEnabled=1 or a
+	// will cause CreateProcess to fail, regardless of LongPathsEnabled=1 or a
 	// longPathAware PE manifest.
 	// Inheriting the value from the parent process (by passing NULL as
 	// lpCurrentDirectory) will also fail.
