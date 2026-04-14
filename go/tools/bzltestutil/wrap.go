@@ -136,20 +136,18 @@ func Wrap(pkg string) error {
 	// will be killed by Bazel after the grace period (15s) expires.
 	signal.Ignore(syscall.SIGTERM)
 
-	wd, wdErr := os.Getwd()
-
 	cmd := exec.Command(exePath, args...)
 	cmd.Env = append(os.Environ(), "GO_TEST_WRAP=0")
 	// On Windows, any current directory value longer than MAX_PATH(260 chars)
 	// will cause CreateProcess to fail, regardless of LongPathsEnabled=1 or a
-	// longPathAware PE manifest.
-	// Inheriting the value from the parent process (by passing NULL as
-	// lpCurrentDirectory) will also fail.
-	// Setting cmd.Dir to a short path bypasses this.
-	// The child's chdir package init() will call os.Chdir to restore the correct
-	// runfiles directory after launch: os.Chdir (SetCurrentDirectoryW) respects
-	// Go's runtime PEB long-path bit
-	if runtime.GOOS == "windows" && wdErr == nil && len(wd) >= 260 {
+	// longPathAware PE manifest. Inheriting the value from the parent process
+	// (by passing NULL as lpCurrentDirectory) will also fail.
+	// Always set cmd.Dir to a short path so CreateProcess succeeds.
+	// Re-add GO_TEST_RUN_FROM_BAZEL so the child's chdir package init() will
+	// call os.Chdir to restore the correct runfiles directory after launch.
+	// os.Chdir (SetCurrentDirectoryW) respects Go's runtime PEB long-path bit,
+	// so it handles paths longer than MAX_PATH.
+	if runtime.GOOS == "windows" {
 		cmd.Dir = os.TempDir()
 		cmd.Env = append(cmd.Env, "GO_TEST_RUN_FROM_BAZEL=1")
 	}
