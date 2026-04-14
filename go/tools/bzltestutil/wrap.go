@@ -151,6 +151,7 @@ func Wrap(pkg string) error {
 	// Go's runtime PEB long-path bit
 	if runtime.GOOS == "windows" && wdErr == nil && len(wd) >= 260 {
 		cmd.Dir = os.TempDir()
+		cmd.Env = append(cmd.Env, "GO_TEST_RUN_FROM_BAZEL=1")
 	}
 	cmd.Stderr = io.MultiWriter(os.Stderr, streamMerger.ErrW)
 	cmd.Stdout = io.MultiWriter(os.Stdout, streamMerger.OutW)
