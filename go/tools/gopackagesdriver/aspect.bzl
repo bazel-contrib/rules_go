@@ -108,6 +108,8 @@ def _go_pkg_info_aspect_impl(target, ctx):
                 if archive.data.label == dep_archive.data.label:
                     pkg_json_files.append(make_pkg_json_with_archive(ctx, dep_archive.data.name, dep_archive))
                     compiled_go_files.extend(dep_archive.source.srcs)
+                    if dep_archive.data.cgo_out_dir:
+                        compiled_go_files.append(dep_archive.data.cgo_out_dir)
                     export_files.append(dep_archive.data.export_file)
                     break
 
