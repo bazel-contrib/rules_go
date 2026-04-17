@@ -551,15 +551,10 @@ def go_context(
         stdlib = go_context_data[GoStdLib]
         go_context_info = go_context_data[GoContextInfo]
 
-    if go_context_data and CgoContextInfo in go_context_data:
-        # Prefer the pre-computed CgoContextInfo from go_context_data: it is
-        # evaluated once by the cgo_context_data rule (via non_request_nogo_transition)
-        # and shared across all go_library targets in the same configuration.
-        # Checking this before the _cc_toolchain path avoids re-running the
-        # expensive cgo_context_data_impl for every go_library target.
-        cgo_context_info = go_context_data[CgoContextInfo]
-    elif getattr(attr, "_cc_toolchain", None) and CPP_TOOLCHAIN_TYPE in ctx.toolchains:
+    if getattr(attr, "_cc_toolchain", None) and CPP_TOOLCHAIN_TYPE in ctx.toolchains:
         cgo_context_info = cgo_context_data_impl(ctx)
+    elif go_context_data and CgoContextInfo in go_context_data:
+        cgo_context_info = go_context_data[CgoContextInfo]
     elif getattr(attr, "_cgo_context_data", None) and CgoContextInfo in attr._cgo_context_data:
         cgo_context_info = attr._cgo_context_data[CgoContextInfo]
     elif getattr(attr, "cgo_context_data", None) and CgoContextInfo in attr.cgo_context_data:
