@@ -147,17 +147,16 @@ _UNSUPPORTED_FEATURES = [
     "rules_go_unsupported_feature",
 ]
 
-def _match_option(option, pattern):
-    if pattern.endswith("="):
-        return option.startswith(pattern)
-    else:
-        return option == pattern
-
 def _filter_options(options, denylist):
+    # The denylist is a dict. Split into exact-match and prefix-match patterns.
+    # Exact matches use O(1) dict lookup; only the rare prefix patterns (ending
+    # in "=", e.g. "-fmax-errors=") need a linear scan.
+    prefix_patterns = [p for p in denylist if p.endswith("=")]
     return [
         option
         for option in options
-        if not any([_match_option(option, pattern) for pattern in denylist])
+        if option not in denylist and
+           not any([option.startswith(p) for p in prefix_patterns])
     ]
 
 def _strip_bind_now(options):
@@ -552,15 +551,10 @@ def go_context(
         stdlib = go_context_data[GoStdLib]
         go_context_info = go_context_data[GoContextInfo]
 
-    if go_context_data and CgoContextInfo in go_context_data:
-        # Prefer the pre-computed CgoContextInfo from go_context_data: it is
-        # evaluated once by the cgo_context_data rule (via non_request_nogo_transition)
-        # and shared across all go_library targets in the same configuration.
-        # Checking this before the _cc_toolchain path avoids re-running the
-        # expensive cgo_context_data_impl for every go_library target.
-        cgo_context_info = go_context_data[CgoContextInfo]
-    elif getattr(attr, "_cc_toolchain", None) and CPP_TOOLCHAIN_TYPE in ctx.toolchains:
+    if getattr(attr, "_cc_toolchain", None) and CPP_TOOLCHAIN_TYPE in ctx.toolchains:
         cgo_context_info = cgo_context_data_impl(ctx)
+    elif go_context_data and CgoContextInfo in go_context_data:
+        cgo_context_info = go_context_data[CgoContextInfo]
     elif getattr(attr, "_cgo_context_data", None) and CgoContextInfo in attr._cgo_context_data:
         cgo_context_info = attr._cgo_context_data[CgoContextInfo]
     elif getattr(attr, "cgo_context_data", None) and CgoContextInfo in attr.cgo_context_data:
