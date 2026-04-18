@@ -35,6 +35,7 @@ load(
     "CGO_FRAGMENTS",
     "CGO_TOOLCHAINS",
     "new_go_info",
+    rule_maybe_needs_cc_toolchain = "maybe_needs_cc_toolchain",
 )
 load(
     "//go/private/rules:transition.bzl",
@@ -89,6 +90,7 @@ declares the \"{attr_name}\" attribute.""".format(
         include_deprecated_properties = False,
         importpath = attr.importpath,
         go_context_data = attr._go_context_data,
+        maybe_needs_cc_toolchain = False,
     )
     imports = get_imports(attr, go.importpath)
     return [GoProtoImports(imports = imports)]
@@ -111,6 +113,10 @@ def _proto_library_to_source(_go, attr, source, merge):
         if GoInfo in compiler:
             merge(source, compiler[GoInfo])
 
+def _go_proto_library_maybe_needs_cc_toolchain(ctx):
+    compilers = [ctx.attr.compiler] if ctx.attr.compiler else ctx.attr.compilers
+    return rule_maybe_needs_cc_toolchain(ctx.attr, go_infos = compilers)
+
 def _go_proto_library_impl(ctx):
     go = go_context(
         ctx,
@@ -120,6 +126,7 @@ def _go_proto_library_impl(ctx):
         importpath_aliases = ctx.attr.importpath_aliases,
         embed = ctx.attr.embed,
         go_context_data = ctx.attr._go_context_data,
+        maybe_needs_cc_toolchain = _go_proto_library_maybe_needs_cc_toolchain(ctx),
     )
     if ctx.attr.compiler:
         #TODO: print("DEPRECATED: compiler attribute on {}, use compilers instead".format(ctx.label))
