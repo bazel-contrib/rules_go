@@ -108,14 +108,44 @@ def cgo_configure(go, srcs, cdeps, cppopts, copts, cxxopts, clinkopts):
             cc_defines = d[CcInfo].compilation_context.defines.to_list()
             cppopts.extend(["-D" + define for define in cc_defines])
             cc_includes = d[CcInfo].compilation_context.includes.to_list()
+            cc_quote_includes = d[CcInfo].compilation_context.quote_includes.to_list()
             for inc in cc_includes:
                 _include_unique(cppopts, "-I", inc, seen_includes)
-            cc_quote_includes = d[CcInfo].compilation_context.quote_includes.to_list()
+
+                # cc_common.compile() (used by cc_import) may store package-relative
+                # include paths in compilation_context.includes,
+                # instead of exec-root-relative ones.
+                # For instance, it may store "include/lib" instead of "external/my_repo/include/lib".
+                # This will cause headers to be missing at build time.
+                # Resolve by combining with source roots from quote_includes,
+                # which always contain the correct prefixes for the source root and output root.
+                if not inc.startswith("external/") and not inc.startswith("bazel-out/"):
+                    for qi in cc_quote_includes:
+                        combined = qi + "/" + inc
+                        if combined != inc:
+                            _include_unique(cppopts, "-I", combined, seen_includes)
             for inc in cc_quote_includes:
                 _include_unique(cppopts, "-iquote", inc, seen_quote_includes)
             cc_system_includes = d[CcInfo].compilation_context.system_includes.to_list()
             for inc in cc_system_includes:
                 _include_unique(cppopts, "-isystem", inc, seen_system_includes)
+
+            # When the "external_include_paths" feature is enabled (common in
+            # newer Bazel versions), cc_common.compile() moves all include
+            # paths for external repos into compilation_context.external_includes
+            # instead of includes/system_includes. This is how rules_distroless
+            # Debian package cc_imports propagate their header search paths.
+            if hasattr(d[CcInfo].compilation_context, "external_includes"):
+                cc_external_includes = d[CcInfo].compilation_context.external_includes.to_list()
+                ext_roots = [p for p in cc_external_includes if p.startswith("external/") or p.startswith("bazel-out/")]
+                for inc in cc_external_includes:
+                    _include_unique(cppopts, "-isystem", inc, seen_system_includes)
+
+                    # Apply the same package-relative path resolution as for
+                    # compilation_context.includes above.
+                    if not inc.startswith("external/") and not inc.startswith("bazel-out/"):
+                        for root in ext_roots:
+                            _include_unique(cppopts, "-isystem", root + "/" + inc, seen_system_includes)
             for lib in cc_libs:
                 # If both static and dynamic variants are available, Bazel will only give
                 # us the static variant. We'll get one file for each transitive dependency,
