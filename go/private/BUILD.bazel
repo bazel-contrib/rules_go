@@ -64,10 +64,9 @@ bzl_library(
         "//go/private/rules:transition",
         "@bazel_skylib//lib:paths",
         "@bazel_skylib//rules:common_settings",
-        "@bazel_tools//tools/build_defs/cc:action_names.bzl",
-        "@bazel_tools//tools/cpp:toolchain_utils.bzl",
         "@io_bazel_rules_nogo//:scope.bzl",
-        "@rules_cc//cc:find_cc_toolchain_bzl",  # Transitive dep of @bazel_tools//tools/cpp:toolchain_utils.bzl
+        "@rules_cc//cc:action_names_bzl",
+        "@rules_cc//cc:find_cc_toolchain_bzl",
     ],
 )
 
