@@ -23,7 +23,18 @@ load(
     "//go/private:mode.bzl",
     "LINKMODE_NORMAL",
     "extldflags_from_cc_toolchain",
+    "runtime_lib_linkopts_from_cc_toolchain",
 )
+
+_CXX_SOURCE_EXTENSIONS = [
+    ".cc",
+    ".cpp",
+    ".cxx",
+    ".mm",
+]
+
+def _has_cxx_sources(srcs):
+    return any([src.path.endswith(ext) for src in srcs for ext in _CXX_SOURCE_EXTENSIONS])
 
 def cgo_configure(go, srcs, cdeps, cppopts, copts, cxxopts, clinkopts):
     """cgo_configure returns the inputs and compile / link options
@@ -59,15 +70,9 @@ def cgo_configure(go, srcs, cdeps, cppopts, copts, cxxopts, clinkopts):
     cxxopts = go.cgo_tools.cxx_compile_options + cxxopts
     objcopts = go.cgo_tools.objc_compile_options + copts
     objcxxopts = go.cgo_tools.objcxx_compile_options + cxxopts
-    clinkopts = extldflags_from_cc_toolchain(go) + clinkopts
-
-    # NOTE(#2545): avoid unnecessary dynamic link
-    if "-static-libstdc++" in clinkopts:
-        clinkopts = [
-            option
-            for option in clinkopts
-            if option not in ("-lstdc++", "-lc++")
-        ]
+    toolchain_clinkopts = extldflags_from_cc_toolchain(go)
+    runtime_lib_linkopts = runtime_lib_linkopts_from_cc_toolchain(go)
+    needs_cxx_runtime = _has_cxx_sources(srcs)
 
     if go.mode != LINKMODE_NORMAL:
         for opt_list in (copts, cxxopts, objcopts, objcxxopts):
@@ -146,6 +151,9 @@ def cgo_configure(go, srcs, cdeps, cppopts, copts, cxxopts, clinkopts):
                         # so it can be treated as a simple shared library too.
                         continue
                 lib_opts.append(lib.path)
+                if lib.basename.endswith(".a"):
+                    # Match cgo2's heuristic: static cdeps may need the C++ runtime.
+                    needs_cxx_runtime = True
             clinkopts.extend(cc_link_flags)
 
         elif hasattr(d, "objc"):
@@ -170,7 +178,17 @@ def cgo_configure(go, srcs, cdeps, cppopts, copts, cxxopts, clinkopts):
     # specified with -l flags) unless they appear after .o or .a files with
     # undefined symbols they provide. Put all the .a files from cdeps first,
     # so that we actually link with -lstdc++ and others.
-    clinkopts = lib_opts + clinkopts
+    if needs_cxx_runtime:
+        toolchain_clinkopts = toolchain_clinkopts + runtime_lib_linkopts
+    clinkopts = lib_opts + toolchain_clinkopts + clinkopts
+
+    # NOTE(#2545): avoid unnecessary dynamic link
+    if "-static-libstdc++" in clinkopts:
+        clinkopts = [
+            option
+            for option in clinkopts
+            if option not in ("-lstdc++", "-lc++")
+        ]
 
     return struct(
         inputs = inputs,
