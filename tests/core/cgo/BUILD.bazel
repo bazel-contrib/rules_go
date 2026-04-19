@@ -507,6 +507,7 @@ cc_library(
     hdrs = ["native_dep.h"],
     # Force static linking to ensure that the build doesn't succeed by
     # accidentally picking up the shared library in the search path.
+    alwayslink = True,
     linkstatic = True,
 )
 
@@ -555,4 +556,31 @@ go_bazel_test(
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
+)
+
+# Regression test for cdeps propagation through embed chains.
+# Tests that when a go_library with cdeps embeds another go_library with cgo=True,
+# and a go_test embeds the library with cdeps, the cdeps are properly propagated.
+# This was broken in rules_go v0.51.0+ and fixed in this commit.
+go_library(
+    name = "cdeps_embed_base",
+    srcs = [
+        "cdeps_embed_base.go",
+        "cdeps_embed.h",
+    ],
+    cgo = True,
+    importpath = "github.com/bazelbuild/rules_go/tests/core/cgo/cdeps_embed",
+)
+
+go_library(
+    name = "cdeps_embed_with_cdeps",
+    cdeps = [":native_dep"],
+    embed = [":cdeps_embed_base"],
+    importpath = "github.com/bazelbuild/rules_go/tests/core/cgo/cdeps_embed",
+)
+
+go_test(
+    name = "cdeps_embed_test",
+    srcs = ["cdeps_embed_test.go"],
+    embed = [":cdeps_embed_with_cdeps"],
 )
