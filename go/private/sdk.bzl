@@ -19,6 +19,12 @@ load("//go/private:platforms.bzl", "GOARCH_CONSTRAINTS", "GOOS_CONSTRAINTS")
 
 MIN_SUPPORTED_VERSION = (1, 14, 0)
 
+# SDK source selector values used by toolchain registration and by
+# `--@io_bazel_rules_go//go/toolchain:experimental_source`.
+# Keep these string values stable for compatibility with existing configs.
+SDK_SOURCE_BOOTSTRAPPED = "bootstrapped"
+SDK_SOURCE_PREBUILT = "prebuilt"
+
 def _go_host_sdk_impl(ctx):
     goroot = _detect_host_sdk(ctx)
     platform = _detect_sdk_platform(ctx, goroot)
@@ -101,13 +107,15 @@ def _go_download_sdk_impl(ctx):
 
     if platform not in sdks:
         fail("unsupported platform {}".format(platform))
-    filename, sha256 = sdks[platform]
 
+    filename, sha256 = sdks[platform]
     _remote_sdk(ctx, [url.format(filename) for url in ctx.attr.urls], ctx.attr.strip_prefix, sha256)
     patch(ctx, patch_args = _get_patch_args(ctx.attr.patch_strip))
 
+    sdk_build_file_override = ctx.attr._bootstrap_sdk_build_file if ctx.attr.experimental_bootstrap else None
+
     detected_version = _detect_sdk_version(ctx, ".")
-    _sdk_build_file(ctx, platform, detected_version, experiments = ctx.attr.experiments)
+    _sdk_build_file(ctx, platform, detected_version, experiments = ctx.attr.experiments, sdk_build_file_override = sdk_build_file_override)
 
     if not ctx.attr.sdks and not ctx.attr.version:
         # Returning this makes Bazel print a message that 'version' must be
@@ -146,8 +154,12 @@ go_download_sdk_rule = repository_rule(
             default = 0,
             doc = "The number of leading path segments to be stripped from the file name in the patches.",
         ),
+        "experimental_bootstrap": attr.bool(default = False),
         "_sdk_build_file": attr.label(
             default = Label("//go/private:BUILD.sdk.bazel"),
+        ),
+        "_bootstrap_sdk_build_file": attr.label(
+            default = Label("//go/private:experimental/BUILD.bootstrap.sdk.bazel"),
         ),
     },
 )
@@ -180,7 +192,7 @@ def _get_patch_args(patch_strip):
         return ["-p{}".format(patch_strip)]
     return []
 
-def go_toolchains_single_definition(ctx, *, prefix, goos, goarch, sdk_repo, sdk_type, sdk_version):
+def go_toolchains_single_definition(ctx, *, prefix, goos, goarch, sdk_repo, sdk_type, sdk_version, sdk_source):
     if not goos and not goarch:
         goos, goarch = detect_host_platform(ctx)
     else:
@@ -223,6 +235,7 @@ def go_toolchains_single_definition(ctx, *, prefix, goos, goarch, sdk_repo, sdk_
     prerelease = {identifier_prefix}PRERELEASE_SUFFIX,
     sdk_name = "{sdk_repo}",
     sdk_type = "{sdk_type}",
+    sdk_source = "{sdk_source}",
 )
 """.format(
         prefix = prefix,
@@ -231,6 +244,7 @@ def go_toolchains_single_definition(ctx, *, prefix, goos, goarch, sdk_repo, sdk_
         goarch = goarch,
         goos = goos,
         sdk_type = sdk_type,
+        sdk_source = sdk_source,
     ))
 
     return struct(
@@ -245,8 +259,9 @@ def go_toolchains_build_file_content(
         goarchs,
         sdk_repos,
         sdk_types,
-        sdk_versions):
-    if not _have_same_length(prefixes, geese, goarchs, sdk_repos, sdk_types, sdk_versions):
+        sdk_versions,
+        sdk_sources):
+    if not _have_same_length(prefixes, geese, goarchs, sdk_repos, sdk_types, sdk_versions, sdk_sources):
         fail("all lists must have the same length")
 
     loads = [
@@ -265,6 +280,7 @@ def go_toolchains_build_file_content(
             sdk_repo = sdk_repos[i],
             sdk_type = sdk_types[i],
             sdk_version = sdk_versions[i],
+            sdk_source = sdk_sources[i],
         )
         loads.extend(definition.loads)
         chunks.extend(definition.chunks)
@@ -282,6 +298,7 @@ def _go_multiple_toolchains_impl(ctx):
             sdk_repos = ctx.attr.sdk_repos,
             sdk_types = ctx.attr.sdk_types,
             sdk_versions = ctx.attr.sdk_versions,
+            sdk_sources = ctx.attr.sdk_sources,
         ),
         executable = False,
     )
@@ -293,12 +310,13 @@ go_multiple_toolchains = repository_rule(
         "sdk_repos": attr.string_list(mandatory = True),
         "sdk_types": attr.string_list(mandatory = True),
         "sdk_versions": attr.string_list(mandatory = True),
+        "sdk_sources": attr.string_list(mandatory = True),
         "geese": attr.string_list(mandatory = True),
         "goarchs": attr.string_list(mandatory = True),
     },
 )
 
-def _go_toolchains(name, sdk_repo, sdk_type, sdk_version = None, goos = None, goarch = None):
+def _go_toolchains(name, sdk_repo, sdk_type, sdk_version = None, goos = None, goarch = None, sdk_source = SDK_SOURCE_PREBUILT):
     go_multiple_toolchains(
         name = name,
         prefixes = [""],
@@ -307,10 +325,12 @@ def _go_toolchains(name, sdk_repo, sdk_type, sdk_version = None, goos = None, go
         sdk_repos = [sdk_repo],
         sdk_types = [sdk_type],
         sdk_versions = [sdk_version or ""],
+        sdk_sources = [sdk_source],
     )
 
 def go_download_sdk(name, register_toolchains = True, **kwargs):
     go_download_sdk_rule(name = name, **kwargs)
+    sdk_source = SDK_SOURCE_BOOTSTRAPPED if kwargs.get("experimental_bootstrap") else SDK_SOURCE_PREBUILT
     _go_toolchains(
         name = name + "_toolchains",
         sdk_repo = name,
@@ -318,6 +338,7 @@ def go_download_sdk(name, register_toolchains = True, **kwargs):
         sdk_version = kwargs.get("version"),
         goos = kwargs.get("goos"),
         goarch = kwargs.get("goarch"),
+        sdk_source = sdk_source,
     )
     if register_toolchains:
         _register_toolchains(name)
@@ -439,13 +460,13 @@ def _local_sdk(ctx, path):
             continue
         ctx.symlink(entry, entry.basename)
 
-def _sdk_build_file(ctx, platform, version, experiments):
+def _sdk_build_file(ctx, platform, version, experiments, sdk_build_file_override = None):
     ctx.file("ROOT")
     goos, _, goarch = platform.partition("_")
 
     ctx.template(
         "BUILD.bazel",
-        ctx.path(ctx.attr._sdk_build_file),
+        ctx.path(sdk_build_file_override or ctx.attr._sdk_build_file),
         executable = False,
         substitutions = {
             "{goos}": goos,

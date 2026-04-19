@@ -15,7 +15,7 @@
 load("@io_bazel_rules_go_bazel_features//:features.bzl", "bazel_features")
 load("//go/private:go_mod.bzl", "version_from_go_mod", "version_from_go_work")
 load("//go/private:nogo.bzl", "DEFAULT_NOGO", "NOGO_DEFAULT_EXCLUDES", "NOGO_DEFAULT_INCLUDES", "go_register_nogo")
-load("//go/private:sdk.bzl", "detect_host_platform", "fetch_sdks_by_version", "go_download_sdk_rule", "go_host_sdk_rule", "go_multiple_toolchains", "go_wrap_sdk_rule")
+load("//go/private:sdk.bzl", "SDK_SOURCE_BOOTSTRAPPED", "SDK_SOURCE_PREBUILT", "detect_host_platform", "fetch_sdks_by_version", "go_download_sdk_rule", "go_host_sdk_rule", "go_multiple_toolchains", "go_wrap_sdk_rule")
 
 def host_compatible_toolchain_impl(ctx):
     ctx.file("BUILD.bazel")
@@ -53,6 +53,10 @@ _COMMON_TAG_ATTRS = {
         doc = "The number of leading path segments to be stripped from the file name in the patches.",
     ),
     "strip_prefix": attr.string(default = "go"),
+    "experimental_build_compiler_from_source": attr.bool(
+        default = False,
+        doc = "Whether to bootstrap compiler tool binaries from source instead of using the prebuilt SDK compiler binaries.",
+    ),
 }
 
 _download_tag = tag_class(
@@ -255,9 +259,10 @@ def _go_sdk_impl(ctx):
                 sdk_repo = name,
                 sdk_type = "remote",
                 sdk_version = wrap_tag.version,
+                sdk_source = SDK_SOURCE_PREBUILT,
             ))
             if (not wrap_tag.goos or wrap_tag.goos == host_detected_goos) and (not wrap_tag.goarch or wrap_tag.goarch == host_detected_goarch):
-                first_host_compatible_toolchain = first_host_compatible_toolchain or "@{}//:ROOT".format(name)
+                first_host_compatible_toolchain = first_host_compatible_toolchain or "@{}//:host_compatible_root_file".format(name)
 
         additional_download_tags = []
 
@@ -318,14 +323,16 @@ def _go_sdk_impl(ctx):
             )
 
             if (not download_tag.goos or download_tag.goos == host_detected_goos) and (not download_tag.goarch or download_tag.goarch == host_detected_goarch):
-                first_host_compatible_toolchain = first_host_compatible_toolchain or "@{}//:ROOT".format(name)
+                first_host_compatible_toolchain = first_host_compatible_toolchain or "@{}//:host_compatible_root_file".format(name)
 
+            sdk_source = SDK_SOURCE_BOOTSTRAPPED if download_tag.experimental_build_compiler_from_source else SDK_SOURCE_PREBUILT
             toolchains.append(struct(
                 goos = download_tag.goos,
                 goarch = download_tag.goarch,
                 sdk_repo = name,
                 sdk_type = "remote",
                 sdk_version = download_tag.version,
+                sdk_source = sdk_source,
             ))
 
             # Additionally register SDKs for all common execution platforms, but only if the user
@@ -362,6 +369,7 @@ def _go_sdk_impl(ctx):
                         sdk_repo = default_name,
                         sdk_type = "remote",
                         sdk_version = download_tag.version,
+                        sdk_source = sdk_source,
                     ))
 
         for index, host_tag in enumerate(module.tags.host):
@@ -389,8 +397,9 @@ def _go_sdk_impl(ctx):
                 sdk_repo = name,
                 sdk_type = "host",
                 sdk_version = host_tag.version,
+                sdk_source = SDK_SOURCE_PREBUILT,
             ))
-            first_host_compatible_toolchain = first_host_compatible_toolchain or "@{}//:ROOT".format(name)
+            first_host_compatible_toolchain = first_host_compatible_toolchain or "@{}//:host_compatible_root_file".format(name)
 
     host_compatible_toolchain(name = "go_host_compatible_sdk_label", toolchain = first_host_compatible_toolchain)
     if len(toolchains) > _MAX_NUM_TOOLCHAINS:
@@ -412,6 +421,7 @@ def _go_sdk_impl(ctx):
         sdk_repos = [toolchain.sdk_repo for toolchain in toolchains],
         sdk_types = [toolchain.sdk_type for toolchain in toolchains],
         sdk_versions = [toolchain.sdk_version for toolchain in toolchains],
+        sdk_sources = [toolchain.sdk_source for toolchain in toolchains],
     )
 
     if bazel_features.external_deps.extension_metadata_has_reproducible:
@@ -469,6 +479,7 @@ def _download_sdk(*, get_sdks_by_version, name, goos, goarch, download_tag):
         urls = download_tag.urls,
         version = download_tag.version,
         strip_prefix = download_tag.strip_prefix,
+        experimental_bootstrap = download_tag.experimental_build_compiler_from_source,
     )
 
 go_sdk_extra_kwargs = {

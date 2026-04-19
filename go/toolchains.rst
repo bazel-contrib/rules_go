@@ -113,6 +113,11 @@ with the same Go SDK version, but have different experiments enabled or patches 
       experiments = ["rangefunc"],
     )
 
+To experiment with source-bootstrapped compiler binaries instead of prebuilt
+ones, set ``--@io_bazel_rules_go//go/toolchain:experimental_source=bootstrapped``.
+The default is ``prebuilt``. This build setting is experimental and may change.
+See `Customizing go_sdk`_ for WORKSPACE / MODULE.bazel setup and prerequisites.
+
 The toolchain
 ~~~~~~~~~~~~~
 
@@ -209,6 +214,61 @@ temporary limitation that will be removed in the future.
     go_rules_dependencies()
 
     go_register_toolchains()
+
+.. _customizing_go_sdk:
+
+Customizing go_sdk
+~~~~~~~~~~~~~~~~~~
+
+``go_download_sdk`` applies ``patches`` / ``patch_strip`` to the downloaded SDK
+tree before it is exposed to rules_go. This includes the standard library source
+under ``src/``, so normal stdlib source patches are applied automatically.
+
+Use this default flow when you only need source-level changes (for example,
+patching ``src/net/http`` or other stdlib packages).
+
+If you need compiler/linker binaries themselves (for example, ``compile`` or
+``link`` under ``pkg/tool``) to reflect source changes, use
+``experimental_bootstrap = True`` and select the bootstrapped toolchain:
+
+.. code:: bzl
+
+    # WORKSPACE
+    load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk", "go_register_toolchains", "go_rules_dependencies")
+
+    go_download_sdk(
+        name = "go_sdk",
+        version = "1.23.5",
+        patches = ["//:my_go_patch.diff"],
+        patch_strip = 1,
+        experimental_bootstrap = True,
+    )
+
+    go_rules_dependencies()
+    load("@rules_shell//shell:repositories.bzl", "rules_shell_toolchains")
+    rules_shell_toolchains()
+    go_register_toolchains()
+
+Bzlmod equivalent:
+
+.. code:: bzl
+
+    # MODULE.bazel
+    go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk")
+
+    go_sdk.download(
+        name = "go_sdk",
+        version = "1.23.5",
+        patches = ["//:my_go_patch.diff"],
+        patch_strip = 1,
+        experimental_build_compiler_from_source = True,
+    )
+
+    use_repo(go_sdk, "go_sdk")
+
+Build with
+``--@io_bazel_rules_go//go/toolchain:experimental_source=bootstrapped`` to use
+the bootstrapped compiler/linker binaries.
 
 
 Writing new Go rules
@@ -355,6 +415,13 @@ This downloads a Go SDK for use in toolchains.
 | :param:`patch_strip`           | :type:`int`                 | :value:`0`                                  |
 +--------------------------------+-----------------------------+---------------------------------------------+
 | The number of leading slashes to be stripped from the file name in thepatches.                             |
++--------------------------------+-----------------------------+---------------------------------------------+
+| :param:`experimental_bootstrap`| :type:`bool`                | :value:`False`                              |
++--------------------------------+-----------------------------+---------------------------------------------+
+| Experimental: if true, exposes source-bootstrapped Go compiler binaries via                                |
+| ``--@io_bazel_rules_go//go/toolchain:experimental_source=bootstrapped``.                                   |
+| In WORKSPACE mode, call ``rules_shell_toolchains()`` from                                                   |
+| ``@rules_shell//shell:repositories.bzl`` before ``go_register_toolchains()``.                              |
 +--------------------------------+-----------------------------+---------------------------------------------+
 
 **Example**:

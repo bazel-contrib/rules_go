@@ -19,6 +19,7 @@ load("@bazel_skylib//lib:selects.bzl", "selects")
 load("//go/private:common.bzl", "GO_TOOLCHAIN")
 load("//go/private:platforms.bzl", "PLATFORMS")
 load("//go/private:providers.bzl", "GoSDK")
+load("//go/private:sdk.bzl", "SDK_SOURCE_PREBUILT")
 load("//go/private/actions:archive.bzl", "emit_archive")
 load("//go/private/actions:binary.bzl", "emit_binary")
 load("//go/private/actions:link.bzl", "emit_link")
@@ -136,6 +137,7 @@ def declare_bazel_toolchains(
         prerelease,
         sdk_name,
         sdk_type,
+        sdk_source = SDK_SOURCE_PREBUILT,
         prefix = ""):
     """Declares toolchain targets for each platform."""
 
@@ -242,6 +244,33 @@ def declare_bazel_toolchains(
         visibility = ["//visibility:private"],
     )
 
+    sdk_source_label = Label("//go/toolchain:experimental_source")
+
+    native.config_setting(
+        name = prefix + "match_sdk_source",
+        flag_values = {
+            sdk_source_label: sdk_source,
+        },
+        visibility = ["//visibility:private"],
+    )
+
+    native.config_setting(
+        name = prefix + "match_all_sources",
+        flag_values = {
+            sdk_source_label: "",
+        },
+        visibility = ["//visibility:private"],
+    )
+
+    selects.config_setting_group(
+        name = prefix + "sdk_source_setting",
+        match_any = [
+            ":" + prefix + "match_all_sources",
+            ":" + prefix + "match_sdk_source",
+        ],
+        visibility = ["//visibility:private"],
+    )
+
     for p in PLATFORMS:
         if p.cgo:
             # Don't declare separate toolchains for cgo_on / cgo_off.
@@ -266,6 +295,7 @@ def declare_bazel_toolchains(
             target_compatible_with = constraints,
             target_settings = [
                 ":" + prefix + "sdk_name_setting",
+                ":" + prefix + "sdk_source_setting",
                 ":" + prefix + "sdk_version_setting",
             ],
             toolchain = go_toolchain_repo + "//:go_" + p.name + "-impl",

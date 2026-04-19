@@ -17,6 +17,9 @@ package go_download_sdk_test
 import (
 	"bytes"
 	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel_testing"
@@ -293,6 +296,334 @@ index 5306bcb..d110a19 100644
 	if err := bazel_testing.RunBazel(
 		"test",
 		"//:patch_test",
+	); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestBootstrapPropagatesToolchainSource(t *testing.T) {
+	for _, test := range []struct {
+		name, bootstrapAttr string
+	}{
+		{
+			name:          "experimental_bootstrap",
+			bootstrapAttr: "experimental_bootstrap = True,",
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			origWorkspaceData, err := ioutil.ReadFile("WORKSPACE")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			i := bytes.Index(origWorkspaceData, []byte("go_rules_dependencies()"))
+			if i < 0 {
+				t.Fatal("could not find call to go_rules_dependencies()")
+			}
+
+			buf := &bytes.Buffer{}
+			buf.Write(origWorkspaceData[:i])
+			buf.WriteString(`
+load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk")
+
+go_download_sdk(
+    name = "go_sdk",
+    version = "1.26.0",
+    ` + test.bootstrapAttr + `
+)
+
+go_rules_dependencies()
+
+go_register_toolchains()
+`)
+			if err := ioutil.WriteFile("WORKSPACE", buf.Bytes(), 0666); err != nil {
+				t.Fatal(err)
+			}
+			defer func() {
+				if err := ioutil.WriteFile("WORKSPACE", origWorkspaceData, 0666); err != nil {
+					t.Errorf("error restoring WORKSPACE: %v", err)
+				}
+			}()
+
+			if err := bazel_testing.RunBazel("query", "@go_sdk_toolchains//:all"); err != nil {
+				t.Fatal(err)
+			}
+
+			outputBase, err := bazel_testing.BazelOutput("info", "output_base")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			toolchainsBuildFile := filepath.Join(strings.TrimSpace(string(outputBase)), "external", "go_sdk_toolchains", "BUILD.bazel")
+			toolchainsBuildData, err := os.ReadFile(toolchainsBuildFile)
+			if err != nil {
+				t.Fatalf("reading %s: %v", toolchainsBuildFile, err)
+			}
+
+			if !bytes.Contains(toolchainsBuildData, []byte(`sdk_source = "bootstrapped"`)) {
+				t.Fatalf("go_sdk_toolchains should set sdk_source to bootstrapped when go_download_sdk(%s):\n%s", test.bootstrapAttr, toolchainsBuildData)
+			}
+		})
+	}
+}
+
+func TestExperimentalBootstrapWithRulesShellToolchains(t *testing.T) {
+	origWorkspaceData, err := ioutil.ReadFile("WORKSPACE")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i := bytes.Index(origWorkspaceData, []byte("go_rules_dependencies()"))
+	if i < 0 {
+		t.Fatal("could not find call to go_rules_dependencies()")
+	}
+
+	buf := &bytes.Buffer{}
+	buf.Write(origWorkspaceData[:i])
+	buf.WriteString(`
+load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk")
+
+go_download_sdk(
+    name = "go_sdk",
+    version = "1.26.0",
+    experimental_bootstrap = True,
+)
+
+go_rules_dependencies()
+
+load("@rules_shell//shell:repositories.bzl", "rules_shell_toolchains")
+
+rules_shell_toolchains()
+
+go_register_toolchains()
+`)
+	if err := ioutil.WriteFile("WORKSPACE", buf.Bytes(), 0666); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := ioutil.WriteFile("WORKSPACE", origWorkspaceData, 0666); err != nil {
+			t.Errorf("error restoring WORKSPACE: %v", err)
+		}
+	}()
+
+	if err := bazel_testing.RunBazel(
+		"cquery",
+		"//:version_test",
+		"--@io_bazel_rules_go//go/toolchain:experimental_source=bootstrapped",
+	); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestExperimentalBootstrapHostCompatibleSDKRoot(t *testing.T) {
+	origWorkspaceData, err := ioutil.ReadFile("WORKSPACE")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i := bytes.Index(origWorkspaceData, []byte("go_rules_dependencies()"))
+	if i < 0 {
+		t.Fatal("could not find call to go_rules_dependencies()")
+	}
+
+	buf := &bytes.Buffer{}
+	buf.Write(origWorkspaceData[:i])
+	buf.WriteString(`
+load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk")
+
+go_download_sdk(
+    name = "go_sdk",
+    version = "1.26.0",
+    experimental_bootstrap = True,
+)
+
+go_rules_dependencies()
+
+go_register_toolchains()
+`)
+	if err := ioutil.WriteFile("WORKSPACE", buf.Bytes(), 0666); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := ioutil.WriteFile("WORKSPACE", origWorkspaceData, 0666); err != nil {
+			t.Errorf("error restoring WORKSPACE: %v", err)
+		}
+	}()
+
+	if err := bazel_testing.RunBazel(
+		"query",
+		"set(@go_host_compatible_sdk_label//:all @go_sdk//:host_compatible_root_file)",
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	outputBase, err := bazel_testing.BazelOutput("info", "output_base")
+	if err != nil {
+		t.Fatal(err)
+	}
+	outputBasePath := strings.TrimSpace(string(outputBase))
+
+	defsPath := filepath.Join(outputBasePath, "external", "go_host_compatible_sdk_label", "defs.bzl")
+	defsData, err := os.ReadFile(defsPath)
+	if err != nil {
+		t.Fatalf("reading %s: %v", defsPath, err)
+	}
+	if !bytes.Contains(defsData, []byte(`HOST_COMPATIBLE_SDK = Label("@go_sdk//:host_compatible_root_file")`)) {
+		t.Fatalf("go_host_compatible_sdk_label should point to :host_compatible_root_file:\n%s", defsData)
+	}
+
+	sdkBuildPath := filepath.Join(outputBasePath, "external", "go_sdk", "BUILD.bazel")
+	sdkBuildData, err := os.ReadFile(sdkBuildPath)
+	if err != nil {
+		t.Fatalf("reading %s: %v", sdkBuildPath, err)
+	}
+	if !bytes.Contains(sdkBuildData, []byte(`name = "host_compatible_root_file"`)) {
+		t.Fatalf("go_sdk BUILD.bazel should define :host_compatible_root_file:\n%s", sdkBuildData)
+	}
+	if !bytes.Contains(sdkBuildData, []byte(`srcs = [":bootstrap_root_file"]`)) {
+		t.Fatalf("go_sdk :host_compatible_root_file should point to :bootstrap_root_file in bootstrap mode:\n%s", sdkBuildData)
+	}
+	if !bytes.Contains(sdkBuildData, []byte(`name = "go_sdk_srcs"`)) {
+		t.Fatalf("go_sdk BUILD.bazel should define :go_sdk_srcs in bootstrap mode:\n%s", sdkBuildData)
+	}
+	if !bytes.Contains(sdkBuildData, []byte(`srcs = [":bootstrap_srcs"]`)) {
+		t.Fatalf("go_sdk :go_sdk_srcs should point to :bootstrap_srcs in bootstrap mode:\n%s", sdkBuildData)
+	}
+	if !bytes.Contains(sdkBuildData, []byte(`go_sdk_srcs = [":go_sdk_srcs"]`)) {
+		t.Fatalf("go_sdk should wire go_sdk_srcs to :go_sdk_srcs in bootstrap mode:\n%s", sdkBuildData)
+	}
+	if !bytes.Contains(sdkBuildData, []byte(`package_list_srcs = [":srcs"]`)) {
+		t.Fatalf("go_sdk :package_list should be derived from filtered :srcs in bootstrap mode:\n%s", sdkBuildData)
+	}
+}
+
+func TestCustomGoSDKHostCompatibleLabelBackwardCompatibility(t *testing.T) {
+	origWorkspaceData, err := ioutil.ReadFile("WORKSPACE")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i := bytes.Index(origWorkspaceData, []byte("go_rules_dependencies()"))
+	if i < 0 {
+		t.Fatal("could not find call to go_rules_dependencies()")
+	}
+
+	customSDKPath, err := filepath.Abs("custom_go_sdk")
+	if err != nil {
+		t.Fatalf("resolving custom SDK path: %v", err)
+	}
+	if err := os.MkdirAll(customSDKPath, 0777); err != nil {
+		t.Fatalf("creating custom SDK path: %v", err)
+	}
+	defer func() {
+		if err := os.RemoveAll(customSDKPath); err != nil {
+			t.Errorf("removing custom SDK path: %v", err)
+		}
+	}()
+	if err := os.WriteFile(filepath.Join(customSDKPath, "ROOT"), nil, 0666); err != nil {
+		t.Fatalf("creating custom SDK ROOT file: %v", err)
+	}
+
+	buf := &bytes.Buffer{}
+	buf.Write(origWorkspaceData[:i])
+	buf.WriteString(`
+load("@bazel_tools//tools/build_defs/repo:local.bzl", "new_local_repository")
+
+new_local_repository(
+    name = "go_sdk",
+    path = "`)
+	buf.WriteString(filepath.ToSlash(customSDKPath))
+	buf.WriteString(`",
+    build_file_content = """package(default_visibility = ["//visibility:public"])
+exports_files(["ROOT"])
+""",
+)
+
+go_rules_dependencies()
+`)
+	if err := ioutil.WriteFile("WORKSPACE", buf.Bytes(), 0666); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := ioutil.WriteFile("WORKSPACE", origWorkspaceData, 0666); err != nil {
+			t.Errorf("error restoring WORKSPACE: %v", err)
+		}
+	}()
+
+	if err := bazel_testing.RunBazel(
+		"query",
+		"set(@go_host_compatible_sdk_label//:all @go_sdk//:ROOT)",
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	outputBase, err := bazel_testing.BazelOutput("info", "output_base")
+	if err != nil {
+		t.Fatal(err)
+	}
+	outputBasePath := strings.TrimSpace(string(outputBase))
+
+	defsPath := filepath.Join(outputBasePath, "external", "go_host_compatible_sdk_label", "defs.bzl")
+	defsData, err := os.ReadFile(defsPath)
+	if err != nil {
+		t.Fatalf("reading %s: %v", defsPath, err)
+	}
+	if !bytes.Contains(defsData, []byte(`HOST_COMPATIBLE_SDK = Label("@go_sdk//:ROOT")`)) {
+		t.Fatalf("go_host_compatible_sdk_label should point to :ROOT for custom go_sdk repos:\n%s", defsData)
+	}
+}
+
+func TestExperimentalBootstrapWithBzlmod(t *testing.T) {
+	origModuleData, err := ioutil.ReadFile("MODULE.bazel")
+	hadModule := err == nil
+	if err != nil && !os.IsNotExist(err) {
+		t.Fatal(err)
+	}
+	defer func() {
+		if hadModule {
+			if err := ioutil.WriteFile("MODULE.bazel", origModuleData, 0666); err != nil {
+				t.Errorf("error restoring MODULE.bazel: %v", err)
+			}
+			return
+		}
+		if err := os.Remove("MODULE.bazel"); err != nil && !os.IsNotExist(err) {
+			t.Errorf("error removing MODULE.bazel: %v", err)
+		}
+	}()
+
+	const moduleData = `
+module(name = "go_download_sdk_bzlmod_test")
+
+bazel_dep(name = "rules_go", repo_name = "io_bazel_rules_go")
+# Keep @local_config_cc visible under bzlmod for Windows CI, where
+# GO_BAZEL_TEST_BAZELFLAGS includes --extra_toolchains=@local_config_cc//...
+bazel_dep(name = "rules_cc", version = "0.1.5")
+local_path_override(
+    module_name = "rules_go",
+    path = "../tested_repo",
+)
+
+cc_configure = use_extension("@rules_cc//cc:extensions.bzl", "cc_configure_extension")
+use_repo(cc_configure, "local_config_cc")
+
+go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk")
+go_sdk.download(
+    name = "go_sdk",
+    version = "1.26.0",
+    experimental_build_compiler_from_source = True,
+)
+use_repo(go_sdk, "go_sdk")
+`
+	if err := ioutil.WriteFile("MODULE.bazel", []byte(moduleData), 0666); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := bazel_testing.RunBazel(
+		"cquery",
+		"//:version_test",
+		"--enable_bzlmod",
+		"--noenable_workspace",
+		"--@io_bazel_rules_go//go/toolchain:experimental_source=bootstrapped",
 	); err != nil {
 		t.Fatal(err)
 	}
