@@ -669,6 +669,7 @@ def _recompile_external_deps(go, external_go_info, internal_archive, library_lab
     # Pass internal dependencies that need to be recompiled down to the builder to check if the internal archive
     # tries to import any of the dependencies. If there is, that means that there is a dependency cycle.
     need_recompile_deps = []
+    original_internal_deps = internal_go_info.deps
     for archive in internal_go_info.deps:
         dep_data = archive.data
         if not need_recompile[dep_data.label]:
@@ -686,13 +687,14 @@ def _recompile_external_deps(go, external_go_info, internal_archive, library_lab
 
     # Build a map from labels to possibly recompiled GoArchives.
     label_to_archive = {}
-    i = 0
     for label in dep_list:
-        i += 1
-
         # If this library is the internal archive, use the recompiled version.
         if label == internal_archive.data.label:
-            label_to_archive[label] = internal_archive
+            # ensure the internal archive has all of the orignal dependencies including the recompiled ones.
+            internal_attrs = structs.to_dict(internal_archive)
+            internal_attrs["direct"] = [label_to_archive[archive.data.label] for archive in original_internal_deps]
+            internal_archive = GoArchive(**internal_attrs)
+            label_to_archive[internal_archive.data.label] = internal_archive
             continue
 
         # If this is a library embedded into the internal test archive,
