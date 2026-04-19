@@ -546,6 +546,12 @@ go_test(
 )
 
 go_bazel_test(
+    name = "cc_linker_inputs_test",
+    srcs = ["cc_linker_inputs_test.go"],
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+go_bazel_test(
     name = "wrapped_cgo_test",
     srcs = ["wrapped_cgo_test.go"],
     target_compatible_with = select({
