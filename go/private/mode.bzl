@@ -168,6 +168,16 @@ def extldflags_from_cc_toolchain(go):
         # in each package. We use the executable options for this.
         return go.cgo_tools.ld_executable_options
 
+def runtime_libs_from_cc_toolchain(go):
+    if not go.cgo_tools:
+        return depset()
+    elif go.mode.linkmode in (LINKMODE_SHARED, LINKMODE_PLUGIN, LINKMODE_C_SHARED):
+        return go.cgo_tools.cc_toolchain.dynamic_runtime_lib(feature_configuration = go.cgo_tools.feature_configuration)
+    else:
+        # Match extldflags_from_cc_toolchain: c-archive still uses executable
+        # link semantics for cgo's per-package link probe.
+        return go.cgo_tools.cc_toolchain.static_runtime_lib(feature_configuration = go.cgo_tools.feature_configuration)
+
 def extld_from_cc_toolchain(go):
     if not go.cgo_tools:
         return []

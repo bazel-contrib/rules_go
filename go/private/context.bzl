@@ -57,8 +57,11 @@ load(
 )
 load(
     ":mode.bzl",
+    "LINKMODE_C_SHARED",
     "LINKMODE_NORMAL",
     "LINKMODE_PIE",
+    "LINKMODE_PLUGIN",
+    "LINKMODE_SHARED",
     "installsuffix",
     "validate_mode",
 )
@@ -521,6 +524,11 @@ default_go_config_info = GoConfigInfo(
     export_stdlib = False,
 )
 
+def _cc_runtime_libs_for_mode(mode, cgo_tools):
+    if mode.linkmode in (LINKMODE_SHARED, LINKMODE_PLUGIN, LINKMODE_C_SHARED):
+        return cgo_tools.cc_toolchain.dynamic_runtime_lib(feature_configuration = cgo_tools.feature_configuration)
+    return cgo_tools.cc_toolchain.static_runtime_lib(feature_configuration = cgo_tools.feature_configuration)
+
 def _defaults_to_pie(goos, race):
     # based on DefaultPIE in src/internal/platform/supported.go
     if goos in ["android", "darwin", "ios"]:
@@ -650,8 +658,11 @@ def go_context(
 
     if cgo_context_info:
         env.update(cgo_context_info.env)
-        cc_toolchain_files = cgo_context_info.cc_toolchain_files
         cgo_tools = cgo_context_info.cgo_tools
+        cc_toolchain_files = depset(transitive = [
+            cgo_context_info.cc_toolchain_files,
+            _cc_runtime_libs_for_mode(mode, cgo_tools),
+        ])
     else:
         cc_toolchain_files = depset()
         cgo_tools = None
