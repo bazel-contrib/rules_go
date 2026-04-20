@@ -3,11 +3,19 @@ load("//docs:doc_helpers.bzl", "stardoc_with_diff_test", "update_docs")
 # For each doc file, generate MD from bzl_library, then perform diff test
 stardoc_with_diff_test(
     bzl_library_target = "//docs/go/extras:extras",
+    extra_deps = [
+        "@rules_license//rules:providers.bzl",
+        "@rules_license//rules_gathering:gathering_providers.bzl",
+    ],
     out_label = "//docs/go/extras:extras.md",
 )
 
 stardoc_with_diff_test(
     bzl_library_target = "//docs/go/core:rules",
+    extra_deps = [
+        "@rules_license//rules:providers.bzl",
+        "@rules_license//rules_gathering:gathering_providers.bzl",
+    ],
     out_label = "//docs/go/core:rules.md",
 )
 

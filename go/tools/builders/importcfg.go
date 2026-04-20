@@ -30,6 +30,7 @@ import (
 type archive struct {
 	label, importPath, packagePath, file string
 	importPathAliases                    []string
+	modulePath, moduleVersion            string
 }
 
 // checkImports verifies that each import in files refers to a
@@ -154,7 +155,7 @@ func buildImportcfgFileForCompile(imports map[string]*archive, installSuffix, di
 	return filename, nil
 }
 
-func buildImportcfgFileForLink(archives []archive, stdPackageListPath, installSuffix, dir string) (string, error) {
+func buildImportcfgFileForLink(archives []archive, stdPackageListPath, installSuffix, dir, modinfo string) (string, error) {
 	buf := &bytes.Buffer{}
 	goroot, ok := os.LookupEnv("GOROOT")
 	if !ok {
@@ -177,8 +178,15 @@ func buildImportcfgFileForLink(archives []archive, stdPackageListPath, installSu
 	if err := scanner.Err(); err != nil {
 		return "", err
 	}
+	if modinfo != "" {
+		fmt.Fprintf(buf, "modinfo %q\n", modinfo)
+	}
 	depsSeen := map[string]string{}
 	for _, arc := range archives {
+		label := arc.label
+		if label == "" {
+			label = arc.importPath
+		}
 		if prevLabel, ok := depsSeen[arc.packagePath]; ok {
 			return "", fmt.Errorf(`
 package conflict error: %s: multiple copies of package passed to linker:
@@ -187,13 +195,10 @@ package conflict error: %s: multiple copies of package passed to linker:
 Set "importmap" to different paths or use 'bazel cquery' to ensure only one
 package with this path is linked.`,
 				arc.packagePath,
-				arc.importPath,
+				label,
 				prevLabel)
 		}
-		// TODO(zbarsky): The labels are empty, and `importPath` contains the label.
-		// The parsing is incorrect because arrchiveMultiFlag assuming the formatting from
-		// `compilepkg.bzl` but `_format_archive` in `link.bzl` formats differently.
-		depsSeen[arc.packagePath] = arc.importPath
+		depsSeen[arc.packagePath] = label
 		fmt.Fprintf(buf, "packagefile %s=%s\n", arc.packagePath, arc.file)
 	}
 	f, err := ioutil.TempFile(dir, "importcfg")
@@ -268,5 +273,30 @@ func (m *archiveMultiFlag) Set(v string) error {
 		file:              abs(parts[2]),
 	}
 	*m = append(*m, a)
+	return nil
+}
+
+type linkArchiveMultiFlag []archive
+
+func (m *linkArchiveMultiFlag) String() string {
+	if m == nil || len(*m) == 0 {
+		return ""
+	}
+	return fmt.Sprint(*m)
+}
+
+func (m *linkArchiveMultiFlag) Set(v string) error {
+	parts := strings.Split(v, "=")
+	if len(parts) != 6 {
+		return fmt.Errorf("badly formed -arc flag: %s", v)
+	}
+	*m = append(*m, archive{
+		label:         parts[0],
+		importPath:    parts[1],
+		packagePath:   parts[2],
+		file:          abs(parts[3]),
+		modulePath:    parts[4],
+		moduleVersion: parts[5],
+	})
 	return nil
 }

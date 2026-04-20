@@ -193,6 +193,8 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
         _copts = tuple(source.copts),
         _cxxopts = tuple(source.cxxopts),
         _clinkopts = tuple(source.clinkopts),
+        _module_path = getattr(source, "_module_path", ""),
+        _module_version = getattr(source, "_module_version", ""),
 
         # Information on dependencies
         _dep_labels = tuple([d.data.label for d in direct]),
@@ -227,4 +229,6 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
         cgo_exports = cgo_exports,
         runfiles = runfiles,
         _headers = headers,
+        _module_path = getattr(data, "_module_path", ""),
+        _module_version = getattr(data, "_module_version", ""),
     )

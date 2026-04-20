@@ -14,12 +14,13 @@
 
 load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
-load("@stardoc//stardoc:stardoc.bzl", "stardoc")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("@stardoc//stardoc:stardoc.bzl", "stardoc")
 
 def stardoc_with_diff_test(
         bzl_library_target,
-        out_label):
+        out_label,
+        extra_deps = []):
     """Creates a stardoc target coupled with a diff_test for a given bzl_library.
 
     This is helpful for minimizing boilerplate when lots of stardoc targets are to be generated.
@@ -27,6 +28,7 @@ def stardoc_with_diff_test(
     Args:
         bzl_library_target: the label of the bzl_library target to generate documentation for
         out_label: the label of the output MD file
+        extra_deps: additional Starlark files or bzl_library targets required for doc extraction
     """
 
     out_file = out_label.replace("//", "").replace(":", "/")
@@ -36,7 +38,7 @@ def stardoc_with_diff_test(
         name = out_file.replace("/", "_").replace(".md", "-docgen"),
         out = out_file.replace(".md", "-docgen.md"),
         input = bzl_library_target + ".bzl",
-        deps = [bzl_library_target],
+        deps = [bzl_library_target] + extra_deps,
     )
 
     # Ensure that the generated MD has been updated in the local source tree
