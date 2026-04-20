@@ -40,6 +40,7 @@ load(
     NOGO_INCLUDES = "INCLUDES",
 )
 load("@rules_cc//cc/common:cc_common.bzl", "cc_common")
+load("@rules_license//rules:providers.bzl", "PackageInfo")
 load(
     "//go/platform:apple.bzl",
     "apple_ensure_options",
@@ -240,6 +241,35 @@ def _tool_args(go):
     args.use_param_file("-param=%s")
     return args
 
+def normalize_module_version(version):
+    if not version:
+        return "(devel)"
+    if version == "(devel)":
+        return version
+    if version.startswith("v"):
+        return version
+    return "v" + version
+
+def module_info_from_metadata(label, package_metadata = (), applicable_licenses = ()):
+    if not label.repo_name and not label.workspace_root:
+        return struct(path = "", version = "")
+
+    # Bazel may surface repo-level metadata through either spelling depending on
+    # the version and rule surface, so probe both.
+    for metadata_group in (package_metadata, applicable_licenses):
+        for metadata in metadata_group:
+            if PackageInfo not in metadata:
+                continue
+            info = metadata[PackageInfo]
+            if not info.package_name:
+                continue
+            return struct(
+                path = info.package_name,
+                version = normalize_module_version(info.package_version),
+            )
+
+    return struct(path = "", version = "")
+
 def _merge_embed(source, embed):
     s = get_source(embed)
     source["srcs"] = s.srcs + source["srcs"]
@@ -249,6 +279,10 @@ def _merge_embed(source, embed):
     source["x_defs"].update(s.x_defs)
     source["gc_goopts"] = source["gc_goopts"] + s.gc_goopts
     source["runfiles"] = source["runfiles"].merge(s.runfiles)
+    module_path = getattr(s, "_module_path", "")
+    if not source["_module_path"] and module_path:
+        source["_module_path"] = module_path
+        source["_module_version"] = getattr(s, "_module_version", "")
 
     if s.cgo:
         if source["cgo"]:
@@ -354,6 +388,12 @@ def new_go_info(
     if deps == None:
         deps = [get_archive(dep) for dep in getattr(attr, "deps", [])]
 
+    module_info = module_info_from_metadata(
+        go.label,
+        getattr(attr, "package_metadata", ()),
+        getattr(attr, "applicable_licenses", ()),
+    )
+
     go_info = {
         "name": go.label.name if not name else name,
         "label": go.label,
@@ -378,6 +418,8 @@ def new_go_info(
         "cxxopts": _expand_opts(go, "cxxopts", getattr(attr, "cxxopts", [])),
         "clinkopts": _expand_opts(go, "clinkopts", getattr(attr, "clinkopts", [])),
         "pgoprofile": getattr(attr, "pgoprofile", None),
+        "_module_path": module_info.path,
+        "_module_version": module_info.version,
     }
 
     for e in getattr(attr, "embed", []):

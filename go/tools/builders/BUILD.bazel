@@ -81,6 +81,15 @@ go_test(
 )
 
 go_test(
+    name = "buildinfo_test",
+    size = "small",
+    srcs = [
+        "buildinfo.go",
+        "buildinfo_test.go",
+    ],
+)
+
+go_test(
     name = "nogo_version_test",
     size = "small",
     srcs = [
@@ -101,6 +110,7 @@ filegroup(
         "ar.go",
         "asm.go",
         "builder.go",
+        "buildinfo.go",
         "cc.go",
         "cgo2.go",
         "compilepkg.go",

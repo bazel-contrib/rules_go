@@ -1,0 +1,22 @@
+diff -urN a/rules/BUILD b/rules/BUILD
+--- a/rules/BUILD	2000-01-01 00:00:00.000000000 -0000
++++ b/rules/BUILD	2000-01-01 00:00:00.000000000 -0000
+@@ -47,5 +47,5 @@
+ exports_files(
+     glob([
+         "*.bzl",
+     ]),
+-    visibility = ["//doc_build:__pkg__"],
++    visibility = ["//visibility:public"],
+ )
+diff -urN a/rules_gathering/BUILD b/rules_gathering/BUILD
+--- a/rules_gathering/BUILD	2000-01-01 00:00:00.000000000 -0000
++++ b/rules_gathering/BUILD	2000-01-01 00:00:00.000000000 -0000
+@@ -29,5 +29,5 @@
+ exports_files(
+     glob([
+         "*.bzl",
+     ]),
+-    visibility = ["//doc_build:__pkg__"],
++    visibility = ["//visibility:public"],
+ )

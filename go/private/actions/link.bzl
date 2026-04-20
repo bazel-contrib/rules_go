@@ -35,7 +35,14 @@ load(
 )
 
 def _format_archive(d):
-    return "{}={}={}".format(d.label, d.importmap, d.file.path)
+    return "{}={}={}={}={}={}".format(
+        d.label,
+        d.importpath,
+        d.importmap,
+        d.file.path,
+        getattr(d, "_module_path", ""),
+        getattr(d, "_module_version", ""),
+    )
 
 def emit_link(
         go,
@@ -125,6 +132,7 @@ def emit_link(
         arcs = depset(test_archives, transitive = [d.transitive for d in archive.direct])
 
     builder_args.add_all(arcs, before_each = "-arc", map_each = _format_archive)
+    builder_args.add("-go_version", go.sdk.version)
     builder_args.add("-package_list", go.sdk.package_list)
 
     # Build a list of rpaths for dynamic libraries we need to find.

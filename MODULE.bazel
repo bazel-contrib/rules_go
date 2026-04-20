@@ -13,6 +13,12 @@ bazel_dep(name = "rules_proto", version = "7.0.2")
 bazel_dep(name = "protobuf", version = "29.0", repo_name = "com_google_protobuf")
 bazel_dep(name = "rules_shell", version = "0.3.0")
 bazel_dep(name = "rules_cc", version = "0.1.5")
+bazel_dep(name = "rules_license", version = "1.0.0")
+single_version_override(
+    module_name = "rules_license",
+    patch_strip = 1,
+    patches = ["//third_party:rules_license-stardoc.patch"],
+)
 
 go_sdk = use_extension("//go:extensions.bzl", "go_sdk")
 
@@ -32,7 +38,7 @@ use_repo(
 
 register_toolchains("@go_toolchains//:all")
 
-bazel_dep(name = "gazelle", version = "0.36.0")
+bazel_dep(name = "gazelle", version = "0.47.0")
 
 go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
 go_deps.from_file(go_mod = "//:go.mod")

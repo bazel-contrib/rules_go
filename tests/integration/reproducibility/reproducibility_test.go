@@ -46,6 +46,7 @@ go_library(
 go_binary(
     name = "hello",
     srcs = ["hello.go"],
+    deps = ["@com_github_google_go_cmp//cmp:go_default_library"],
 )
 
 go_binary(
@@ -64,12 +65,15 @@ go_binary(
 -- hello.go --
 package main
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/google/go-cmp/cmp"
+)
 
 func main() {
-	fmt.Println("hello")
+	fmt.Println("hello", cmp.Equal("same", "same"))
 }
-
 -- add.h --
 #ifdef __cplusplus
 extern "C" {
@@ -126,6 +130,54 @@ func main() {
 	fmt.Println("In C++, 2 + 2 = ", AddCPP(2, 2))
 }
 
+-- deps/com_github_google_go_cmp/MODULE.bazel --
+module(name = "com_github_google_go_cmp")
+
+bazel_dep(name = "rules_go", repo_name = "io_bazel_rules_go")
+bazel_dep(name = "rules_license", version = "1.0.0")
+
+-- deps/com_github_google_go_cmp/BUILD.bazel --
+load("@rules_license//rules:package_info.bzl", "package_info")
+
+package_info(
+    name = "gazelle_generated_package_info",
+    package_name = "github.com/google/go-cmp",
+    package_version = "0.6.0",
+    visibility = ["//:__subpackages__"],
+)
+
+-- deps/com_github_google_go_cmp/cmp/BUILD.bazel --
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "cmp",
+    srcs = ["cmp.go"],
+    importpath = "github.com/google/go-cmp/cmp",
+    applicable_licenses = ["//:gazelle_generated_package_info"],
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "go_default_library",
+    actual = ":cmp",
+    visibility = ["//visibility:public"],
+)
+
+-- deps/com_github_google_go_cmp/cmp/cmp.go --
+package cmp
+
+func Equal(x, y string) bool {
+	return x == y
+}
+
+`,
+		ModuleFileSuffix: `
+bazel_dep(name = "com_github_google_go_cmp")
+
+local_path_override(
+    module_name = "com_github_google_go_cmp",
+    path = "deps/com_github_google_go_cmp",
+)
 `,
 	})
 }
