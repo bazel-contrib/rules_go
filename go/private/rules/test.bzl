@@ -739,6 +739,7 @@ def _recompile_external_deps(go, external_go_info, internal_archive, library_lab
             copts = list(arc_data._copts),
             cxxopts = list(arc_data._cxxopts),
             clinkopts = list(arc_data._clinkopts),
+            _package_metadata = getattr(arc_data, "_package_metadata", None),
         )
 
         # If this archive needs to be recompiled, use go.archive.
@@ -760,6 +761,7 @@ def _recompile_external_deps(go, external_go_info, internal_archive, library_lab
                 runfiles = go_info.runfiles,
                 mode = go.mode,
                 _headers = internal_archive._headers,
+                _package_metadata = getattr(arc_data, "_package_metadata", None),
             )
         label_to_archive[label] = archive
 

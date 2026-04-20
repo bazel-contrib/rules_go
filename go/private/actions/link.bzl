@@ -35,7 +35,12 @@ load(
 )
 
 def _format_archive(d):
-    return "{}={}={}".format(d.label, d.importmap, d.file.path)
+    return "{}={}={}={}".format(
+        d.label,
+        d.importpath,
+        d.importmap,
+        d.file.path,
+    )
 
 def emit_link(
         go,
@@ -125,7 +130,17 @@ def emit_link(
     else:
         arcs = depset(test_archives, transitive = [d.transitive for d in archive.direct])
 
-    builder_args.add_all(arcs, before_each = "-arc", map_each = _format_archive)
+    arc_list = arcs.to_list() if type(arcs) == "depset" else arcs
+    package_metadata_files = depset([
+        metadata
+        for d in arc_list
+        for metadata in [getattr(d, "_package_metadata", None)]
+        if metadata
+    ])
+
+    builder_args.add_all(arc_list, before_each = "-arc", map_each = _format_archive)
+    builder_args.add_all(package_metadata_files, before_each = "-package_metadata")
+    builder_args.add("-go_version", go.sdk.version)
     builder_args.add("-package_list", go.sdk.package_list)
 
     # Build a list of rpaths for dynamic libraries we need to find.
@@ -187,6 +202,7 @@ def emit_link(
         go.cc_toolchain_files,
         go.sdk.tools,
         go.stdlib.libs,
+        package_metadata_files,
     ]
     inputs = depset(direct = inputs_direct, transitive = inputs_transitive)
 
