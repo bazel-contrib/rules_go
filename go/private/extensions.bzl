@@ -307,6 +307,10 @@ def _go_sdk_impl(ctx):
                 multi_version = multi_version_module[module.name],
                 tag_type = "download",
                 index = index,
+                suffix = "_{}_{}".format(
+                    download_tag.goos or host_detected_goos,
+                    download_tag.goarch or host_detected_goarch,
+                ),
             )
 
             _download_sdk(
