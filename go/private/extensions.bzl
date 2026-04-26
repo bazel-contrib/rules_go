@@ -307,10 +307,8 @@ def _go_sdk_impl(ctx):
                 multi_version = multi_version_module[module.name],
                 tag_type = "download",
                 index = index,
-                suffix = "_{}_{}".format(
-                    download_tag.goos or host_detected_goos,
-                    download_tag.goarch or host_detected_goarch,
-                ),
+                goos = download_tag.goos or host_detected_goos,
+                goarch = download_tag.goarch or host_detected_goarch,
             )
 
             _download_sdk(
@@ -349,7 +347,8 @@ def _go_sdk_impl(ctx):
                         multi_version = multi_version_module[module.name],
                         tag_type = "download",
                         index = index,
-                        suffix = "_{}_{}".format(goos, goarch),
+                        goos = goos,
+                        goarch = goarch,
                     )
 
                     _download_sdk(
@@ -430,9 +429,12 @@ def _go_sdk_impl(ctx):
     else:
         return None
 
-def _default_go_sdk_name(*, module, multi_version, tag_type, index, suffix = ""):
+def _default_go_sdk_name(*, module, multi_version, tag_type, index, goos = None, goarch = None):
     # Keep the version and name of the root module out of the repository name if possible to
     # prevent unnecessary rebuilds when it changes.
+    suffix = ""
+    if goos and goarch:
+        suffix = "_{}_{}".format(goos, goarch)
     return "{name}_{version}_{tag_type}_{index}{suffix}".format(
         # "main_" is not a valid module name and thus can't collide.
         name = "main_" if module.is_root else module.name,
