@@ -107,7 +107,6 @@ _nogo = rule(
         "_nogo_srcs": attr.label(
             default = "//go/tools/builders:nogo_srcs",
         ),
-        "_cgo_context_data": attr.label(default = "//:cgo_context_data_proxy"),
         "_go_config": attr.label(default = "//:go_config"),
         "_go_difflib": attr.label(default = "@com_github_pmezard_go_difflib//difflib:go_default_library"),
         "_stdlib": attr.label(default = "//:stdlib"),

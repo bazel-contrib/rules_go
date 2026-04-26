@@ -101,8 +101,6 @@ def declare_go_toolchains(exec_goos, sdk, builder, pack):
     for p in PLATFORMS:
         if p.cgo:
             # Don't declare separate toolchains for cgo_on / cgo_off.
-            # This is controlled by the cgo_context_data dependency of
-            # go_context_data, which is configured using constraint_values.
             continue
 
         link_flags = []
@@ -245,8 +243,6 @@ def declare_bazel_toolchains(
     for p in PLATFORMS:
         if p.cgo:
             # Don't declare separate toolchains for cgo_on / cgo_off.
-            # This is controlled by the cgo_context_data dependency of
-            # go_context_data, which is configured using constraint_values.
             continue
 
         cgo_constraints = (

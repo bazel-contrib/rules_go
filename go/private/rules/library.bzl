@@ -242,7 +242,6 @@ go_tool_library = rule(
         "gc_goopts": attr.string_list(),
         "x_defs": attr.string_dict(),
         "_go_config": attr.label(default = "//:go_config"),
-        "_cgo_context_data": attr.label(default = "//:cgo_context_data_proxy"),
         "_stdlib": attr.label(default = "//:stdlib"),
     } | CGO_ATTRS,
     fragments = CGO_FRAGMENTS,

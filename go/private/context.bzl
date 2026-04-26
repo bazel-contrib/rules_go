@@ -496,15 +496,6 @@ def maybe_needs_cc_toolchain(attr, go_infos = []):
     """Returns whether this rule's own sources may use the C/C++ toolchain."""
     return _sources_use_cgo(attr, go_infos)
 
-def _precomputed_cgo_context_info(attr, go_context_data):
-    if go_context_data and CgoContextInfo in go_context_data:
-        return go_context_data[CgoContextInfo]
-    if getattr(attr, "_cgo_context_data", None) and CgoContextInfo in attr._cgo_context_data:
-        return attr._cgo_context_data[CgoContextInfo]
-    if getattr(attr, "cgo_context_data", None) and CgoContextInfo in attr.cgo_context_data:
-        return attr.cgo_context_data[CgoContextInfo]
-    return None
-
 def validate_nogo(go):
     """Whether nogo should be run as a validation action rather than just to generate fact files for the current
     target."""
@@ -583,18 +574,15 @@ def go_context(
     )
 
     if maybe_needs_cc_toolchain and not cgo_disabled:
-        has_cc_toolchain = getattr(attr, "_cc_toolchain", None) and CPP_TOOLCHAIN_TYPE in ctx.toolchains
-        if has_cc_toolchain:
+        if getattr(attr, "_cc_toolchain", None) and CPP_TOOLCHAIN_TYPE in ctx.toolchains:
             cgo_context_info = cgo_context_data_impl(ctx)
-        else:
-            cgo_context_info = _precomputed_cgo_context_info(attr, go_context_data)
 
     if maybe_needs_cc_toolchain:
         cgo_available = cgo_context_info != None
     else:
         # Preserve cgo build-mode/tag behavior for rules that won't use the
         # C/C++ toolchain in their own actions.
-        cgo_available = not cgo_disabled and _precomputed_cgo_context_info(attr, go_context_data) != None
+        cgo_available = not cgo_disabled
 
     if goos == "auto" and goarch == "auto" and cgo_available and (go_config_info == None or not go_config_info.pure):
         # Fast-path to reuse the GoConfigInfo as-is
@@ -755,7 +743,8 @@ def _go_context_data_impl(ctx):
         print("WARNING: --features=race is no longer supported. Use --@io_bazel_rules_go//go/config:race instead.")
     if "msan" in ctx.features:
         print("WARNING: --features=msan is no longer supported. Use --@io_bazel_rules_go//go/config:msan instead.")
-    providers = [
+
+    return [
         GoContextInfo(
             coverdata = ctx.attr.coverdata[0][GoArchive],
             nogo = ctx.attr.nogo[DefaultInfo].files_to_run,
@@ -763,14 +752,10 @@ def _go_context_data_impl(ctx):
         ctx.attr.stdlib[GoStdLib],
         ctx.attr.go_config[GoConfigInfo],
     ]
-    if ctx.attr.cgo_context_data and CgoContextInfo in ctx.attr.cgo_context_data:
-        providers.append(ctx.attr.cgo_context_data[CgoContextInfo])
-    return providers
 
 go_context_data = rule(
     _go_context_data_impl,
     attrs = {
-        "cgo_context_data": attr.label(),
         "coverdata": attr.label(
             mandatory = True,
             cfg = non_request_nogo_transition,
@@ -1018,38 +1003,6 @@ def cgo_context_data_impl(ctx):
             ar_path = cc_toolchain.ar_executable,
         ),
     )
-
-cgo_context_data = rule(
-    implementation = cgo_context_data_impl,
-    attrs = {
-        "_allowlist_function_transition": attr.label(
-            default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
-        ),
-    } | CGO_ATTRS,
-    toolchains = CGO_TOOLCHAINS,
-    fragments = CGO_FRAGMENTS,
-    doc = """Collects information about the C/C++ toolchain. The C/C++ toolchain
-    is needed to build cgo code, but is generally optional. Rules can't have
-    optional toolchains, so instead, we have an optional dependency on this
-    rule.""",
-    cfg = non_request_nogo_transition,
-)
-
-def _cgo_context_data_proxy_impl(ctx):
-    if ctx.attr.actual and CgoContextInfo in ctx.attr.actual:
-        return [ctx.attr.actual[CgoContextInfo]]
-    return []
-
-cgo_context_data_proxy = rule(
-    implementation = _cgo_context_data_proxy_impl,
-    attrs = {
-        "actual": attr.label(),
-    },
-    doc = """Conditionally depends on cgo_context_data and forwards it provider.
-
-    Useful in situations where select cannot be used, like attribute defaults.
-    """,
-)
 
 def _go_config_impl(ctx):
     pgo_profiles = ctx.attr.pgoprofile.files.to_list()

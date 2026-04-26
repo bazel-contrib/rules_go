@@ -4,8 +4,6 @@ load(
 )
 load(
     "//go/private:context.bzl",
-    "cgo_context_data",
-    "cgo_context_data_proxy",
     "go_config",
     "go_context_data",
 )
@@ -41,11 +39,6 @@ load(
 
 stdlib(
     name = "stdlib",
-    cgo_context_data = select({
-        "//go/platform:internal_cgo_off": None,
-        "//go/private:is_pure": None,
-        "//conditions:default": ":cgo_context_data",
-    }),
     visibility = ["//visibility:public"],
 )
 
@@ -68,38 +61,12 @@ nogo(
 )
 
 # go_context_data collects build options and is depended on by all Go targets.
-# It may depend on cgo_context_data if CGo isn't disabled.
 go_context_data(
     name = "go_context_data",
-    cgo_context_data = select({
-        "//go/platform:internal_cgo_off": None,
-        "//go/private:is_pure": None,
-        "//conditions:default": ":cgo_context_data",
-    }),
     coverdata = "//go/tools/coverdata",
     go_config = ":go_config",
     nogo = "@io_bazel_rules_nogo//:nogo",
     stdlib = ":stdlib",
-    visibility = ["//visibility:public"],
-)
-
-# cgo_context_data collects information about the C/C++ toolchain.
-# go_context_data depends if cgo is enabled in the target configuration.
-cgo_context_data(
-    name = "cgo_context_data",
-    visibility = ["//visibility:private"],
-)
-
-# cgo_context_data_proxy depends on cgo_context_data if cgo is enabled and
-# forwards its provider. Rule attributes may depend on this, since they cannot
-# use select.
-cgo_context_data_proxy(
-    name = "cgo_context_data_proxy",
-    actual = select({
-        "//go/platform:internal_cgo_off": None,
-        "//go/private:is_pure": None,
-        "//conditions:default": ":cgo_context_data",
-    }),
     visibility = ["//visibility:public"],
 )
 

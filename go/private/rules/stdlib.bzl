@@ -40,7 +40,6 @@ stdlib = rule(
     implementation = _stdlib_impl,
     cfg = go_stdlib_transition,
     attrs = {
-        "cgo_context_data": attr.label(),
         "_go_config": attr.label(
             default = "//:go_config",
             providers = [GoConfigInfo],

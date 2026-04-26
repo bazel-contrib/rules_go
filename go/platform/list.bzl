@@ -14,18 +14,12 @@
 
 load(
     "//go/private:platforms.bzl",
-    _GOARCH = "GOARCH_CONSTRAINTS",
-    _GOOS = "GOOS_CONSTRAINTS",
-    _GOOS_GOARCH = "GOOS_GOARCH",
-    _MSAN_GOOS_GOARCH = "MSAN_GOOS_GOARCH",
-    _RACE_GOOS_GOARCH = "RACE_GOOS_GOARCH",
+    GOARCH = "GOARCH_CONSTRAINTS",
+    GOOS = "GOOS_CONSTRAINTS",
+    "GOOS_GOARCH",
+    "MSAN_GOOS_GOARCH",
+    "RACE_GOOS_GOARCH",
 )
-
-GOOS_GOARCH = _GOOS_GOARCH
-GOOS = _GOOS
-GOARCH = _GOARCH
-RACE_GOOS_GOARCH = _RACE_GOOS_GOARCH
-MSAN_GOOS_GOARCH = _MSAN_GOOS_GOARCH
 
 def declare_config_settings():
     """Generates config_setting targets.
@@ -56,12 +50,3 @@ def declare_config_settings():
             ],
             visibility = ["//visibility:public"],
         )
-
-    # Setting that determines whether cgo is enabled.
-    # This is experimental and may be changed or removed when we migrate
-    # to build settings.
-    native.config_setting(
-        name = "internal_cgo_off",
-        constraint_values = [Label("//go/toolchain:cgo_off")],
-        visibility = [Label("//:__pkg__")],
-    )
