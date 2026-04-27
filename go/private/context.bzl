@@ -57,8 +57,11 @@ load(
 )
 load(
     ":mode.bzl",
+    "LINKMODE_C_SHARED",
     "LINKMODE_NORMAL",
     "LINKMODE_PIE",
+    "LINKMODE_PLUGIN",
+    "LINKMODE_SHARED",
     "installsuffix",
     "validate_mode",
 )
@@ -530,6 +533,14 @@ default_go_config_info = GoConfigInfo(
     export_stdlib = False,
 )
 
+def _cc_runtime_libs_for_mode(mode, cgo_context_info):
+    if mode.linkmode in (LINKMODE_SHARED, LINKMODE_PLUGIN, LINKMODE_C_SHARED):
+        return cgo_context_info.cc_toolchain_dynamic_runtime_lib
+    return cgo_context_info.cc_toolchain_static_runtime_lib
+
+def _file_linkopts(files):
+    return [file.path for file in files.to_list()]
+
 def _defaults_to_pie(goos, race):
     # based on DefaultPIE in src/internal/platform/supported.go
     if goos in ["android", "darwin", "ios"]:
@@ -661,7 +672,10 @@ def go_context(
 
     if cgo_context_info:
         env.update(cgo_context_info.env)
-        cc_toolchain_files = cgo_context_info.cc_toolchain_files
+        cc_toolchain_files = depset(transitive = [
+            cgo_context_info.cc_toolchain_files,
+            _cc_runtime_libs_for_mode(mode, cgo_context_info),
+        ])
         cgo_tools = cgo_context_info.cgo_tools
     else:
         cc_toolchain_files = depset()
@@ -999,8 +1013,13 @@ def cgo_context_data_impl(ctx):
             paths.append("/usr/bin")
     env["PATH"] = ctx.configuration.host_path_separator.join(paths)
 
+    cc_toolchain_static_runtime_lib = cc_toolchain.static_runtime_lib(feature_configuration = feature_configuration)
+    cc_toolchain_dynamic_runtime_lib = cc_toolchain.dynamic_runtime_lib(feature_configuration = feature_configuration)
+
     return CgoContextInfo(
         cc_toolchain_files = cc_toolchain.all_files,
+        cc_toolchain_static_runtime_lib = cc_toolchain_static_runtime_lib,
+        cc_toolchain_dynamic_runtime_lib = cc_toolchain_dynamic_runtime_lib,
         env = env,
         cgo_tools = struct(
             cc_toolchain = cc_toolchain,
@@ -1015,6 +1034,8 @@ def cgo_context_data_impl(ctx):
             ld_static_lib_path = ld_static_lib_path,
             ld_dynamic_lib_path = ld_dynamic_lib_path,
             ld_dynamic_lib_options = ld_dynamic_lib_options,
+            ld_static_runtime_lib_options = _file_linkopts(cc_toolchain_static_runtime_lib),
+            ld_dynamic_runtime_lib_options = _file_linkopts(cc_toolchain_dynamic_runtime_lib),
             ar_path = cc_toolchain.ar_executable,
         ),
     )
