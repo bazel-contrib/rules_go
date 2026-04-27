@@ -14,12 +14,15 @@
 
 load(
     "//go/private:platforms.bzl",
+    "GOOS_GOARCH",
     GOARCH = "GOARCH_CONSTRAINTS",
     GOOS = "GOOS_CONSTRAINTS",
-    "GOOS_GOARCH",
-    "MSAN_GOOS_GOARCH",
-    "RACE_GOOS_GOARCH",
+    _MSAN_GOOS_GOARCH = "MSAN_GOOS_GOARCH",
+    _RACE_GOOS_GOARCH = "RACE_GOOS_GOARCH",
 )
+
+RACE_GOOS_GOARCH = _RACE_GOOS_GOARCH
+MSAN_GOOS_GOARCH = _MSAN_GOOS_GOARCH
 
 def declare_config_settings():
     """Generates config_setting targets.

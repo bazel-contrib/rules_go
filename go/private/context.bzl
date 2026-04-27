@@ -573,18 +573,19 @@ def go_context(
         ctx.target_platform_has_constraint(attr._pure_constraint[platform_common.ConstraintValueInfo])
     )
 
-    if maybe_needs_cc_toolchain and not cgo_disabled:
-        if getattr(attr, "_cc_toolchain", None) and CPP_TOOLCHAIN_TYPE in ctx.toolchains:
-            cgo_context_info = cgo_context_data_impl(ctx)
+    has_cc_toolchain_attr = getattr(attr, "_cc_toolchain", None) != None
+    needs_cgo_context = maybe_needs_cc_toolchain or go_config_info != None
+    if not cgo_disabled and needs_cgo_context and has_cc_toolchain_attr and CPP_TOOLCHAIN_TYPE in ctx.toolchains:
+        cgo_context_info = cgo_context_data_impl(ctx)
 
-    if maybe_needs_cc_toolchain:
+    if has_cc_toolchain_attr:
         cgo_available = cgo_context_info != None
     else:
         # Preserve cgo build-mode/tag behavior for rules that won't use the
         # C/C++ toolchain in their own actions.
         cgo_available = not cgo_disabled
 
-    if goos == "auto" and goarch == "auto" and cgo_available and (go_config_info == None or not go_config_info.pure):
+    if goos == "auto" and goarch == "auto" and cgo_available and go_config_info != None and not go_config_info.pure:
         # Fast-path to reuse the GoConfigInfo as-is
         mode = go_config_info or default_go_config_info
     else:
