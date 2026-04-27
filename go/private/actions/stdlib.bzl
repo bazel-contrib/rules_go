@@ -70,7 +70,7 @@ def _build_stdlib_list_json(go):
     cache_dir = go.declare_directory(go, "gocache")
     args = go.builder_args(go, "stdliblist")
     args.add("-out", out)
-    args.add_all("-cache", [cache_dir], expand_directories = False)
+    args.add("-cache", cache_dir.path)
     if go.export_stdlib:
         args.add("-export", go.export_stdlib)
 
@@ -87,7 +87,6 @@ def _build_stdlib_list_json(go):
         arguments = [args],
         env = _build_env(go),
         toolchain = GO_TOOLCHAIN_LABEL,
-        execution_requirements = SUPPORTS_PATH_MAPPING_REQUIREMENT,
     )
     return out, cache_dir
 

@@ -116,7 +116,7 @@ def _go_transition_impl(settings, attr):
         settings["//go/config:linkmode"] = linkmode
 
     pgoprofile = getattr(attr, "pgoprofile", "auto")
-    if pgoprofile != "auto":
+    if pgoprofile != "auto" and pgoprofile != Label("//go/config:empty"):
         settings["//go/config:pgoprofile"] = pgoprofile
 
     for key, original_key in _SETTING_KEY_TO_ORIGINAL_SETTING_KEY.items():

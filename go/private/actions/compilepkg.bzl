@@ -216,6 +216,7 @@ def emit_compilepkg(
             sources = sources,
             cgo_go_srcs = cgo_go_srcs,
             archives = archives,
+            go_version = go.sdk.version,
             out_diagnostics = out_diagnostics,
             out_facts = out_facts,
             out_validation = out_nogo_validation,
@@ -229,6 +230,7 @@ def _run_nogo(
         sources,
         cgo_go_srcs,
         archives,
+        go_version,
         out_diagnostics,
         out_facts,
         out_validation,
@@ -253,6 +255,11 @@ def _run_nogo(
         nogo_args.add("-facts_only")
     nogo_args.add("-out_facts", out_facts)
     nogo_args.add_all("-out", [out_diagnostics], expand_directories = False)
+    if go_version:
+        # -go_version is the raw SDK version from go.sdk.version (for example
+        # "1.24.3"), without the leading "go" prefix expected by go/types.
+        # nogo_main.go normalizes it before type checking.
+        nogo_args.add("-go_version", go_version)
     nogo_args.add("-nogo", nogo.executable)
 
     # This action runs nogo and produces the facts files for downstream nogo actions.

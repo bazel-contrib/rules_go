@@ -80,6 +80,21 @@ go_test(
     ],
 )
 
+go_test(
+    name = "nogo_version_test",
+    size = "small",
+    srcs = [
+        "nogo_goversions_go117.go",
+        "nogo_goversions_go118.go",
+        "nogo_goversions_go121.go",
+        "nogo_goversions_go122.go",
+        "nogo_version.go",
+        "nogo_version_go121_test.go",
+        "nogo_version_pre121_test.go",
+        "nogo_version_test.go",
+    ],
+)
+
 filegroup(
     name = "builder_srcs",
     srcs = [
@@ -121,9 +136,14 @@ go_source(
         "env.go",
         "flags.go",
         "nogo_fix.go",
+        "nogo_goversions_go117.go",
+        "nogo_goversions_go118.go",
+        "nogo_goversions_go121.go",
+        "nogo_goversions_go122.go",
         "nogo_main.go",
         "nogo_typeparams_go117.go",
         "nogo_typeparams_go118.go",
+        "nogo_version.go",
         "nolint.go",
     ],
     # //go/tools/builders:nogo_srcs is considered a different target by

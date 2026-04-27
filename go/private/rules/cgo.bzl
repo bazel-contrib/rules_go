@@ -198,6 +198,12 @@ def _cc_libs_and_flags(target):
                 libs.append(library_to_link.pic_static_library)
             elif library_to_link.interface_library != None:
                 libs.append(library_to_link.interface_library)
+                if library_to_link.dynamic_library != None:
+                    # On Linux, the interface library may be a linker script (e.g.
+                    # "libfoo.so" containing GROUP(...)) that references the actual
+                    # versioned dynamic library. The dynamic library must also be in
+                    # the sandbox so the linker can resolve it.
+                    libs.append(library_to_link.dynamic_library)
             elif library_to_link.dynamic_library != None:
                 libs.append(library_to_link.dynamic_library)
     return libs, flags

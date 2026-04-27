@@ -21,7 +21,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"log/slog"
 	"net/url"
 	"os"
 	"os/exec"
@@ -98,8 +100,21 @@ func (b *Bazel) run(ctx context.Context, command string, args ...string) (string
 	cmd := exec.CommandContext(ctx, b.bazelBin, concatStringsArrays(b.bazelStartupFlags, defaultArgs, args)...)
 	fmt.Fprintln(os.Stderr, "Running:", cmd.Args)
 	cmd.Dir = b.WorkspaceRoot()
-	cmd.Stderr = os.Stderr
+	var stderrBuf bytes.Buffer
+	cmd.Stderr = io.MultiWriter(os.Stderr, &stderrBuf)
+
 	output, err := cmd.Output()
+
+	exitCode := 0
+	if err != nil {
+		if exitErr := (*exec.ExitError)(nil); errors.As(err, &exitErr) {
+			exitCode = exitErr.ExitCode()
+		} else {
+			exitCode = -1
+		}
+	}
+	slog.Info("bazel", "command", command, "args", cmd.Args, "exit_code", exitCode, "stderr", stderrBuf)
+
 	return string(output), err
 }
 

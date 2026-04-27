@@ -147,18 +147,47 @@ _UNSUPPORTED_FEATURES = [
     "rules_go_unsupported_feature",
 ]
 
-def _match_option(option, pattern):
-    if pattern.endswith("="):
-        return option.startswith(pattern)
-    else:
-        return option == pattern
-
 def _filter_options(options, denylist):
+    # The denylist is a dict. Split into exact-match and prefix-match patterns.
+    # Exact matches use O(1) dict lookup; only the rare prefix patterns (ending
+    # in "=", e.g. "-fmax-errors=") need a linear scan.
+    prefix_patterns = [p for p in denylist if p.endswith("=")]
     return [
         option
         for option in options
-        if not any([_match_option(option, pattern) for pattern in denylist])
+        if option not in denylist and
+           not any([option.startswith(p) for p in prefix_patterns])
     ]
+
+def _strip_bind_now(options):
+    """Remove -z now from -Wl, linker flags to prevent BIND_NOW.
+
+    BIND_NOW breaks Go libraries that use dlopen/dlsym to load symbols at
+    runtime (e.g., NVIDIA's go-nvml). The CC toolchain may pass flags like
+    -Wl,-z,relro,-z,now in any order; this function strips only the -z,now
+    pair and preserves everything else (e.g., -z,relro).
+
+    See https://github.com/bazel-contrib/rules_go/issues/4377.
+    """
+    result = []
+    for opt in options:
+        if not opt.startswith("-Wl,"):
+            result.append(opt)
+            continue
+        parts = opt[len("-Wl,"):].split(",")
+        filtered = []
+        skip_next = False
+        for i in range(len(parts)):
+            if skip_next:
+                skip_next = False
+                continue
+            if parts[i] == "-z" and i + 1 < len(parts) and parts[i + 1] == "now":
+                skip_next = True
+                continue
+            filtered.append(parts[i])
+        if filtered:
+            result.append("-Wl," + ",".join(filtered))
+    return result
 
 def _child_name(go, path, ext, name):
     if not name:
@@ -842,14 +871,14 @@ def cgo_context_data_impl(ctx):
         feature_configuration = feature_configuration,
         action_name = CPP_LINK_EXECUTABLE_ACTION_NAME,
     )
-    ld_executable_options = _filter_options(
+    ld_executable_options = _strip_bind_now(_filter_options(
         cc_common.get_memory_inefficient_command_line(
             feature_configuration = feature_configuration,
             action_name = CPP_LINK_EXECUTABLE_ACTION_NAME,
             variables = ld_executable_variables,
         ) + ctx.fragments.cpp.linkopts,
         _LINKER_OPTIONS_DENYLIST,
-    )
+    ))
     env.update(cc_common.get_environment_variables(
         feature_configuration = feature_configuration,
         action_name = CPP_LINK_EXECUTABLE_ACTION_NAME,
@@ -883,14 +912,14 @@ def cgo_context_data_impl(ctx):
         feature_configuration = feature_configuration,
         action_name = CPP_LINK_DYNAMIC_LIBRARY_ACTION_NAME,
     )
-    ld_dynamic_lib_options = _filter_options(
+    ld_dynamic_lib_options = _strip_bind_now(_filter_options(
         cc_common.get_memory_inefficient_command_line(
             feature_configuration = feature_configuration,
             action_name = CPP_LINK_DYNAMIC_LIBRARY_ACTION_NAME,
             variables = ld_dynamic_lib_variables,
         ) + ctx.fragments.cpp.linkopts,
         _LINKER_OPTIONS_DENYLIST,
-    )
+    ))
 
     env.update(cc_common.get_environment_variables(
         feature_configuration = feature_configuration,

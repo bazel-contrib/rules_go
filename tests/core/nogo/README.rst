@@ -13,6 +13,7 @@ Contents
 * `nogo analyzers with dependencies <deps/README.rst>`_
 * `Custom nogo analyzers <custom/README.rst>`_
 * `nogo test with coverage <coverage/README.rst>`_
+* `nogo Go version plumbing <go_version/README.rst>`_
 
 .. Child list end
 

@@ -76,6 +76,7 @@ func run(args []string) (error, int) {
 	flags.Var(&factMap, "fact", "Import path and file containing facts for that library, separated by '=' (may be repeated)'")
 	factsOnly := flags.Bool("facts_only", false, "If true, only facts are emitted, no analyzers are run")
 	importcfg := flags.String("importcfg", "", "The import configuration file")
+	goVersion := flags.String("go_version", "", "The SDK Go version from rules_go, without the leading 'go' prefix (for example 1.24.3); nogo normalizes it for go/types")
 	packagePath := flags.String("p", "", "The package path (importmap) of the package being compiled")
 	xPath := flags.String("x", "", "The archive file where serialized facts should be written")
 	nogoFixDir := flags.String("fix_dir", "", "The path of the directory to store the nogo fixes in")
@@ -89,7 +90,9 @@ func run(args []string) (error, int) {
 		return fmt.Errorf("error parsing importcfg: %v", err), nogoError
 	}
 
-	diagnostics, pkg, err := checkPackage(analyzers, *packagePath, packageFile, importMap, factMap, *factsOnly, srcs, ignores)
+	normalizedGoVersion := normalizeGoVersion(*goVersion)
+
+	diagnostics, pkg, err := checkPackage(analyzers, *packagePath, normalizedGoVersion, packageFile, importMap, factMap, *factsOnly, srcs, ignores)
 	if err != nil {
 		return fmt.Errorf("error running analyzers: %v", err), nogoError
 	}
@@ -229,7 +232,7 @@ func setAnalyzerFlags(a *analysis.Analyzer, flags map[string]string) error {
 // It returns an empty string if no source code diagnostics need to be printed.
 //
 // This implementation was adapted from that of golang.org/x/tools/go/checker/internal/checker.
-func checkPackage(analyzers []*analysis.Analyzer, packagePath string, packageFile, importMap, factMap map[string]string, factsOnly bool, filenames, ignoreFiles []string) ([]diagnosticEntry, *goPackage, error) {
+func checkPackage(analyzers []*analysis.Analyzer, packagePath, goVersion string, packageFile, importMap, factMap map[string]string, factsOnly bool, filenames, ignoreFiles []string) ([]diagnosticEntry, *goPackage, error) {
 	// Register fact types and establish dependencies between analyzers.
 	actions := make(map[*analysis.Analyzer]*action)
 	var visit func(a *analysis.Analyzer) *action
@@ -284,7 +287,7 @@ func checkPackage(analyzers []*analysis.Analyzer, packagePath string, packageFil
 
 	// Load the package, including AST, types, and facts.
 	imp := newImporter(importMap, packageFile, factMap)
-	pkg, err := load(packagePath, imp, filenames)
+	pkg, err := load(packagePath, goVersion, imp, filenames)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error loading package: %v", err)
 	}
@@ -471,7 +474,7 @@ func (act *action) execOnce() {
 
 // load parses and type checks the source code in each file in filenames.
 // load also deserializes facts stored for imported packages.
-func load(packagePath string, imp *importer, filenames []string) (*goPackage, error) {
+func load(packagePath, goVersion string, imp *importer, filenames []string) (*goPackage, error) {
 	if len(filenames) == 0 {
 		return nil, errors.New("no filenames")
 	}
@@ -486,6 +489,7 @@ func load(packagePath string, imp *importer, filenames []string) (*goPackage, er
 	pkg := &goPackage{fset: imp.fset, syntax: syntax}
 
 	config := types.Config{Importer: imp}
+	initGoVersionConfig(&config, goVersion)
 	info := &types.Info{
 		Types:      make(map[ast.Expr]types.TypeAndValue),
 		Uses:       make(map[*ast.Ident]types.Object),
@@ -495,6 +499,7 @@ func load(packagePath string, imp *importer, filenames []string) (*goPackage, er
 		Selections: make(map[*ast.SelectorExpr]*types.Selection),
 	}
 
+	initFileVersions(info)
 	initInstanceInfo(info)
 
 	types, err := config.Check(packagePath, pkg.fset, syntax, info)
