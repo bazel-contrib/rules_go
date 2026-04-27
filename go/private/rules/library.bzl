@@ -26,6 +26,7 @@ load(
     "CGO_FRAGMENTS",
     "CGO_TOOLCHAINS",
     "go_context",
+    "maybe_needs_cc_toolchain",
     "new_go_info",
 )
 load(
@@ -47,6 +48,7 @@ def _go_library_impl(ctx):
         importpath_aliases = ctx.attr.importpath_aliases,
         embed = ctx.attr.embed,
         go_context_data = ctx.attr._go_context_data,
+        maybe_needs_cc_toolchain = maybe_needs_cc_toolchain(ctx.attr),
     )
 
     go_info = new_go_info(go, ctx.attr)
@@ -214,7 +216,11 @@ go_library = rule(
 
 def _go_tool_library_impl(ctx):
     """Implements the go_tool_library() rule."""
-    go = go_context(ctx, include_deprecated_properties = False)
+    go = go_context(
+        ctx,
+        include_deprecated_properties = False,
+        maybe_needs_cc_toolchain = maybe_needs_cc_toolchain(ctx.attr),
+    )
 
     go_info = new_go_info(go, ctx.attr)
     archive = go.archive(go, go_info)
