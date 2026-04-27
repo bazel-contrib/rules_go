@@ -51,6 +51,7 @@ bzl_library(
         "//go/private:context",
         "//go/private:go_toolchain",
         "//go/private:providers",
+        "//go/private/aspects:all_rules",
         "//go/private/rules:library",
         "//go/private/rules:nogo",
         "//go/private/rules:sdk",
