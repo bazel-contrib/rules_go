@@ -432,9 +432,12 @@ def _go_sdk_impl(ctx):
 def _default_go_sdk_name(*, module, multi_version, tag_type, index, goos = None, goarch = None):
     # Keep the version and name of the root module out of the repository name if possible to
     # prevent unnecessary rebuilds when it changes.
-    suffix = ""
     if goos and goarch:
         suffix = "_{}_{}".format(goos, goarch)
+    elif not goos and not goarch:
+        suffix = ""
+    else:
+        fail("goos and goarch must be specified together")
     return "{name}_{version}_{tag_type}_{index}{suffix}".format(
         # "main_" is not a valid module name and thus can't collide.
         name = "main_" if module.is_root else module.name,
