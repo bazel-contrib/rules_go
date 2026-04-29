@@ -90,7 +90,7 @@ def cgo_configure(go, srcs, cdeps, cppopts, copts, cxxopts, clinkopts):
 
     inputs_direct = []
     inputs_transitive = []
-    deps_direct = []
+    deps = []
     lib_opts = []
     runfiles = go._ctx.runfiles(collect_data = True)
 
@@ -104,7 +104,7 @@ def cgo_configure(go, srcs, cdeps, cppopts, copts, cxxopts, clinkopts):
             inputs_transitive.append(cc_transitive_headers)
             cc_libs, cc_link_flags = _cc_libs_and_flags(d)
             inputs_direct.extend(cc_libs)
-            deps_direct.extend(cc_libs)
+            deps.extend(cc_libs)
             cc_defines = d[CcInfo].compilation_context.defines.to_list()
             cppopts.extend(["-D" + define for define in cc_defines])
             cc_includes = d[CcInfo].compilation_context.includes.to_list()
@@ -164,7 +164,6 @@ def cgo_configure(go, srcs, cdeps, cppopts, copts, cxxopts, clinkopts):
             fail("unknown library has neither cc nor objc providers: %s" % d.label)
 
     inputs = depset(direct = inputs_direct, transitive = inputs_transitive)
-    deps = depset(direct = deps_direct)
 
     # HACK: some C/C++ toolchains will ignore libraries (including dynamic libs
     # specified with -l flags) unless they appear after .o or .a files with

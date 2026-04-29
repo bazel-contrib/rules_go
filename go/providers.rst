@@ -285,9 +285,9 @@ which is available through the :param:`data` field.
 | The direct cgo dependencies of this library.                                                     |
 | This has the same constraints as things that can appear in the deps of a cc_library_.            |
 +--------------------------------+-----------------------------------------------------------------+
-| :param:`cgo_exports`           | :type:`depset of GoInfo`                                        |
+| :param:`cgo_export`           | :type:`File`                                                     |
 +--------------------------------+-----------------------------------------------------------------+
-| The transitive set of c headers needed to reference exports of this archive.                     |
+| The c headers needed to reference exports of this archive.                                       |
 +--------------------------------+-----------------------------------------------------------------+
 | :param:`runfiles`              | runfiles_                                                       |
 +--------------------------------+-----------------------------------------------------------------+
