@@ -133,14 +133,8 @@ func (b *Bazel) Build(ctx context.Context, args ...string) ([]string, error) {
 		"--build_event_json_file=" + jsonFile.Name(),
 		"--build_event_json_file_path_conversion=no",
 	}, args...)
-	if _, err := b.run(ctx, "build", args...); err != nil {
-		// Ignore a regular build failure to get partial data.
-		// See https://docs.bazel.build/versions/main/guide.html#what-exit-code-will-i-get on
-		// exit codes.
-		var exerr *exec.ExitError
-		if !errors.As(err, &exerr) || exerr.ExitCode() != 1 {
-			return nil, fmt.Errorf("bazel build failed: %w", err)
-		}
+	if _, err := b.run(ctx, "build", args...); err != nil && !isAllowedBazelError(err) {
+		return nil, fmt.Errorf("bazel build failed: %w", err)
 	}
 
 	files := make([]string, 0)
@@ -169,7 +163,7 @@ var newlineRe = regexp.MustCompile(`\r?\n`)
 
 func (b *Bazel) Query(ctx context.Context, args ...string) ([]string, error) {
 	output, err := b.run(ctx, "query", args...)
-	if err != nil {
+	if err != nil && !isAllowedBazelError(err) {
 		return nil, fmt.Errorf("bazel query failed: %w", err)
 	}
 
@@ -200,6 +194,26 @@ func (b *Bazel) ExecutionRoot() string {
 
 func (b *Bazel) OutputBase() string {
 	return b.info["output_base"]
+}
+
+// isAllowedBazelError if err is an *exec.ExitError with an expected exit code
+// for a bazel command. gopackagesdriver is often invoked when the user
+// is editing code, and the build isn't expected to work. When we get one of
+// these codes, we should suppress the error and return partial results.
+func isAllowedBazelError(err error) bool {
+	var exitErr *exec.ExitError
+	if !errors.As(err, &exitErr) {
+		return false
+	}
+	switch exitErr.ExitCode() {
+	// Refer to https://github.com/bazelbuild/bazel/blob/master/src/main/java/com/google/devtools/build/lib/util/ExitCode.java.
+	case 1, // BUILD_FAILURE
+		3, // PARTIAL_ANALYSIS_FAILURE
+		7: // ANALYSIS_FAILURE
+		return true
+	default:
+		return false
+	}
 }
 
 type bazelVersion [3]int

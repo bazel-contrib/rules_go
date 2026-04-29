@@ -28,7 +28,10 @@ load(
 
 def _go_source_impl(ctx):
     """Implements the go_source() rule."""
-    go = go_context(ctx, include_deprecated_properties = False)
+    go = go_context(
+        ctx,
+        maybe_needs_cc_toolchain = False,
+    )
     go_info = new_go_info(go, ctx.attr)
     return [
         go_info,
@@ -79,7 +82,6 @@ go_source = rule(
             """,
         ),
         "_go_config": attr.label(default = "//:go_config"),
-        "_cgo_context_data": attr.label(default = "//:cgo_context_data_proxy"),
     },
     toolchains = [GO_TOOLCHAIN],
     provides = [GoInfo],

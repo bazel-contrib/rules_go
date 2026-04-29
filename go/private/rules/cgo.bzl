@@ -69,7 +69,7 @@ def cgo_configure(go, srcs, cdeps, cppopts, copts, cxxopts, clinkopts):
             if option not in ("-lstdc++", "-lc++")
         ]
 
-    if go.mode != LINKMODE_NORMAL:
+    if go.mode.linkmode != LINKMODE_NORMAL:
         for opt_list in (copts, cxxopts, objcopts, objcxxopts):
             if "-fPIC" not in opt_list:
                 opt_list.append("-fPIC")

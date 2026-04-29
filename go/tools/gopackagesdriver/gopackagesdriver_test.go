@@ -109,6 +109,11 @@ import "os"
 func main() {
 	fmt.Fprintln(os.Stderr, "Subdirectory Hello World!")
 }
+
+-- unattached.go --
+package unattached
+
+// not mentioned in any target
 `,
 	})
 }
@@ -141,9 +146,9 @@ func TestBaseFileLookup(t *testing.T) {
 		}
 
 		wantCompiledGoFiles := map[string]struct{}{
-			"hello.go": {},
-			"_cgo_gotypes.go": {},
-			"_cgo_imports.go": {},
+			"hello.go":         {},
+			"_cgo_gotypes.go":  {},
+			"_cgo_imports.go":  {},
 			"hellocgo.cgo1.go": {},
 		}
 		for _, file := range pkg.CompiledGoFiles {
@@ -159,7 +164,7 @@ func TestBaseFileLookup(t *testing.T) {
 		}
 
 		wantGoFiles := map[string]struct{}{
-			"hello.go": {},
+			"hello.go":    {},
 			"hellocgo.go": {},
 		}
 		for _, file := range pkg.GoFiles {
@@ -376,7 +381,25 @@ func TestIncompatible(t *testing.T) {
 	}
 }
 
-func runForTest(t *testing.T, driverRequest packages.DriverRequest, relativeWorkingDir string, args ...string) packages.DriverResponse {
+func TestUnattached(t *testing.T) {
+	runForTestExpectError(t, "found no labels matching the requests", packages.DriverRequest{}, ".", "file=unattached.go")
+}
+
+func runForTest(
+	t *testing.T,
+	driverRequest packages.DriverRequest,
+	relativeWorkingDir string,
+	args ...string) packages.DriverResponse {
+	t.Helper()
+	return runForTestExpectError(t, "", driverRequest, relativeWorkingDir, args...)
+}
+
+func runForTestExpectError(
+	t *testing.T,
+	wantError string,
+	driverRequest packages.DriverRequest,
+	relativeWorkingDir string,
+	args ...string) packages.DriverResponse {
 	t.Helper()
 
 	// Remove most environment variables, other than those on an allowlist.
@@ -441,8 +464,17 @@ func runForTest(t *testing.T, driverRequest packages.DriverRequest, relativeWork
 	}
 	in := bytes.NewReader(driverRequestJson)
 	out := &bytes.Buffer{}
-	if err := run(context.Background(), in, out, args); err != nil {
-		t.Fatalf("running gopackagesdriver: %v", err)
+	err = run(context.Background(), in, out, args)
+	if err == nil && wantError != "" {
+		t.Fatal("unexpected success")
+	} else if err != nil {
+		errMsg := err.Error()
+		if wantError == "" {
+			t.Fatalf("running gopackagesdriver: %s", errMsg)
+		} else if !strings.Contains(errMsg, wantError) {
+			t.Fatalf("running gopackagesdriver: %s; error did not contain %q", errMsg, wantError)
+		}
+		return packages.DriverResponse{}
 	}
 	var resp packages.DriverResponse
 	if err := json.Unmarshal(out.Bytes(), &resp); err != nil {

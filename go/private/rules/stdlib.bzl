@@ -33,14 +33,13 @@ load(
 )
 
 def _stdlib_impl(ctx):
-    go = go_context(ctx, include_deprecated_properties = False)
+    go = go_context(ctx)
     return go.toolchain.actions.stdlib(go)
 
 stdlib = rule(
     implementation = _stdlib_impl,
     cfg = go_stdlib_transition,
     attrs = {
-        "cgo_context_data": attr.label(),
         "_go_config": attr.label(
             default = "//:go_config",
             providers = [GoConfigInfo],
