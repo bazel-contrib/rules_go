@@ -77,7 +77,7 @@ load(
     "get_source",
 )
 
-CPP_TOOLCHAIN_TYPE = Label("@rules_cc//cc:toolchain_type")
+CPP_TOOLCHAIN_TYPE = Label("@bazel_tools//tools/cpp:toolchain_type")
 CGO_ATTRS = {
     "_cc_toolchain": attr.label(default = "@rules_cc//cc:optional_current_cc_toolchain"),
     "_xcode_config": attr.label(default = configuration_field(fragment = "apple", name = "xcode_config_label")),
