@@ -79,7 +79,6 @@ load(
 
 CPP_TOOLCHAIN_TYPE = Label("@bazel_tools//tools/cpp:toolchain_type")
 CGO_ATTRS = {
-    "_cc_toolchain": attr.label(default = "@rules_cc//cc:optional_current_cc_toolchain"),
     "_xcode_config": attr.label(default = configuration_field(fragment = "apple", name = "xcode_config_label")),
     "_pure_flag": attr.label(default = "//go/config:pure"),
     "_pure_constraint": attr.label(default = "//go/toolchain:cgo_off"),
@@ -573,17 +572,11 @@ def go_context(
         ctx.target_platform_has_constraint(attr._pure_constraint[platform_common.ConstraintValueInfo])
     )
 
-    has_cc_toolchain_attr = getattr(attr, "_cc_toolchain", None) != None
     needs_cgo_context = maybe_needs_cc_toolchain or go_config_info != None
-    if not cgo_disabled and needs_cgo_context and has_cc_toolchain_attr and CPP_TOOLCHAIN_TYPE in ctx.toolchains:
+    if not cgo_disabled and needs_cgo_context and CPP_TOOLCHAIN_TYPE in ctx.toolchains:
         cgo_context_info = cgo_context_data_impl(ctx)
 
-    if has_cc_toolchain_attr:
-        cgo_available = cgo_context_info != None
-    else:
-        # Preserve cgo build-mode/tag behavior for rules that won't use the
-        # C/C++ toolchain in their own actions.
-        cgo_available = not cgo_disabled
+    cgo_available = cgo_context_info != None
 
     if goos == "auto" and goarch == "auto" and cgo_available and go_config_info != None and not go_config_info.pure:
         # Fast-path to reuse the GoConfigInfo as-is
@@ -792,8 +785,6 @@ def cgo_context_data_impl(ctx):
 
     # TODO(jayconrod): find a way to get a list of files that comprise the
     # toolchain (to be inputs into actions that need it).
-    # ctx.files._cc_toolchain won't work when cc toolchain resolution
-    # is switched on.
     cc_toolchain = find_cc_toolchain(ctx, mandatory = False)
     if not cc_toolchain or cc_toolchain.compiler in _UNSUPPORTED_C_COMPILERS:
         return None

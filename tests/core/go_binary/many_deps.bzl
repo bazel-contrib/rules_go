@@ -19,6 +19,9 @@ load(
 )
 load(
     "//go/private:context.bzl",
+    "CGO_ATTRS",
+    "CGO_FRAGMENTS",
+    "CGO_TOOLCHAINS",
     "new_go_info",
 )
 
@@ -44,8 +47,9 @@ _gen_library = rule(
         "_go_context_data": attr.label(
             default = "//:go_context_data",
         ),
-    },
-    toolchains = ["@io_bazel_rules_go//go:toolchain"],
+    } | CGO_ATTRS,
+    fragments = CGO_FRAGMENTS,
+    toolchains = ["@io_bazel_rules_go//go:toolchain"] + CGO_TOOLCHAINS,
 )
 
 def _gen_main_src_impl(ctx):

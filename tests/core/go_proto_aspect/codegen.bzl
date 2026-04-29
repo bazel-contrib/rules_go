@@ -1,5 +1,11 @@
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load("@io_bazel_rules_go//go:def.bzl", "go_context", "new_go_info")
+load(
+    "//go/private:context.bzl",
+    "CGO_ATTRS",
+    "CGO_FRAGMENTS",
+    "CGO_TOOLCHAINS",
+)
 
 def _go_generated_library_impl(ctx):
     src = ctx.actions.declare_file("generated.go")
@@ -32,6 +38,7 @@ go_generated_library = rule(
     attrs = {
         "importpath": attr.string(),
         "_go_context_data": attr.label(default = "@io_bazel_rules_go//:go_context_data"),
-    },
-    toolchains = ["@io_bazel_rules_go//go:toolchain"],
+    } | CGO_ATTRS,
+    fragments = CGO_FRAGMENTS,
+    toolchains = ["@io_bazel_rules_go//go:toolchain"] + CGO_TOOLCHAINS,
 )
