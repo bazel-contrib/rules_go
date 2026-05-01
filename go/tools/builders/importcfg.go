@@ -195,6 +195,9 @@ package with this path is linked.`,
 				arc.importPath,
 				prevLabel)
 		}
+		// TODO(zbarsky): The labels are empty, and `importPath` contains the label.
+		// The parsing is incorrect because arrchiveMultiFlag assuming the formatting from
+		// `compilepkg.bzl` but `_format_archive` in `link.bzl` formats differently.
 		depsSeen[arc.packagePath] = arc.importPath
 		fmt.Fprintf(buf, "packagefile %s=%s\n", arc.packagePath, arc.file)
 		pkgToFile[arc.packagePath] = arc.file
