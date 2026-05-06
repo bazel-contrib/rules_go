@@ -168,25 +168,19 @@ bool_setting(
     visibility = ["//visibility:public"],
 )
 
-# Usually true. The entire toolchain gets nogo to use in builds via the
-# go_context_data rule, which has an incoming transition that flips this flag
-# to true. This will only be false in host mode (which disallows any
-# transitions) or accessing nogo without going through go_context_data (which
-# does not happen in rules_go and does not seem to be useful).
+# Defaults to True, meaning nogo runs everywhere except when transitioned to
+# False to prevent nogo from running on nogo's own dependencies (circular dep
+# guard).
 bool_setting(
     name = "request_nogo",
-    build_setting_default = False,
+    build_setting_default = True,
     visibility = ["//visibility:public"],
 )
 
 # Controls whether nogo alias will reference a noop or the configured nogo.
-# This *MUST* default to the noop to allow for tools to be built in the
-# deprecated "host" mode. Host mode cannot perform configuration transitions
-# so it cannot avoid circular dependencies. Therefore the default must work
-# without performing any transitions. The tradeoff is that nogo analysis is not
-# performed for any target built in host mode - this is not as bad as it seems
-# as most tools can (and should) use "exec" configuration instead of host which
-# does support transitions.
+# True (the default) means nogo runs. go_tool_transition and _reset_transition
+# both reset this to False, which prevents nogo from running on nogo's own
+# dependencies (circular dep guard) and on other tool targets.
 config_setting(
     name = "nogo_active",
     flag_values = {

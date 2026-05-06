@@ -462,6 +462,10 @@ _go_test_kwargs = {
             """,
         ),
         "_go_context_data": attr.label(default = "//:go_context_data"),
+        "_nogo": attr.label(
+            default = Label("@io_bazel_rules_nogo//:nogo"),
+            cfg = "exec",
+        ),
         "_testmain_additional_deps": attr.label_list(
             providers = [GoInfo],
             default = ["//go/tools/bzltestutil"],
