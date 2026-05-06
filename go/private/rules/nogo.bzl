@@ -109,6 +109,7 @@ _nogo = rule(
         "_nogo_srcs": attr.label(
             default = "//go/tools/builders:nogo_srcs",
         ),
+        "_go_context_data": attr.label(default = "//:go_context_data"),
         "_go_config": attr.label(default = "//:go_config"),
         "_diff_deps": attr.label_list(default = [
             "@com_github_aymanbagabas_go_udiff//:go_default_library",
