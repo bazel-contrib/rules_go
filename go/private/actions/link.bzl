@@ -182,6 +182,7 @@ def emit_link(
     inputs_transitive = [
         archive.libs,
         archive.cgo_deps,
+        archive.cgo_link_inputs,
         go.cc_toolchain_files,
         go.sdk.tools,
         go.stdlib.libs,

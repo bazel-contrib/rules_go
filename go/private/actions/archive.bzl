@@ -113,6 +113,7 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
         if go.mode.linkmode in (LINKMODE_C_SHARED, LINKMODE_C_ARCHIVE):
             out_cgo_export_h = go.declare_file(go, path = "_cgo_install.h")
         cgo_deps = cgo.deps
+        cgo_link_inputs = cgo.link_inputs
         runfiles = runfiles.merge(cgo.runfiles)
         emit_compilepkg(
             go,
@@ -145,6 +146,7 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
         )
     else:
         cgo_deps = depset()
+        cgo_link_inputs = depset()
         emit_compilepkg(
             go,
             sources = source.srcs,
@@ -205,6 +207,7 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
         _validation_output = out_nogo_validation,
         _nogo_diagnostics = out_diagnostics,
         _cgo_deps = cgo_deps,
+        _cgo_link_inputs = cgo_link_inputs,
     )
     x_defs = {}
     for a in direct:
@@ -224,6 +227,7 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
         transitive = depset([data], transitive = [a.transitive for a in direct]),
         x_defs = x_defs,
         cgo_deps = depset(transitive = [cgo_deps] + [a.cgo_deps for a in direct]),
+        cgo_link_inputs = depset(transitive = [cgo_link_inputs] + [a.cgo_link_inputs for a in direct]),
         cgo_exports = cgo_exports,
         runfiles = runfiles,
         _headers = headers,
