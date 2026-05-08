@@ -54,7 +54,7 @@ def _experimental_bootstrap_go_sdk_impl(ctx):
     args.add_all([headers], expand_directories = False)
     args.add_all([tools], expand_directories = False)
     args.add_all([lib_misc], expand_directories = False)
-    args.add_joined(ctx.attr.experiments, join_with = ",")
+    args.add_joined(ctx.attr.experiments, join_with = ",", omit_if_empty = False)
     args.add(ctx.attr.goos + "_" + ctx.attr.goarch)
     args.add("1" if is_windows else "0")
 
