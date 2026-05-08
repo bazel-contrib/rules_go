@@ -114,9 +114,10 @@ with the same Go SDK version, but have different experiments enabled or patches 
     )
 
 To experiment with source-bootstrapped compiler binaries instead of prebuilt
-ones, set ``--@io_bazel_rules_go//go/toolchain:experimental_source=bootstrapped``.
-The default is ``prebuilt``. This build setting is experimental and may change.
-See `Customizing go_sdk`_ for WORKSPACE / MODULE.bazel setup and prerequisites.
+ones, set ``experimental_build_compiler_from_source = True`` on the
+`go_download_sdk`_ or ``go_sdk.download`` SDK definition. This option is
+experimental and may change. See `Customizing go_sdk`_ for WORKSPACE /
+MODULE.bazel setup and prerequisites.
 
 The toolchain
 ~~~~~~~~~~~~~
@@ -229,7 +230,7 @@ patching ``src/net/http`` or other stdlib packages).
 
 If you need compiler/linker binaries themselves (for example, ``compile`` or
 ``link`` under ``pkg/tool``) to reflect source changes, use
-``experimental_bootstrap = True`` and select the bootstrapped toolchain:
+``experimental_build_compiler_from_source = True``:
 
 .. code:: bzl
 
@@ -241,7 +242,7 @@ If you need compiler/linker binaries themselves (for example, ``compile`` or
         version = "1.23.5",
         patches = ["//:my_go_patch.diff"],
         patch_strip = 1,
-        experimental_bootstrap = True,
+        experimental_build_compiler_from_source = True,
     )
 
     go_rules_dependencies()
@@ -266,9 +267,7 @@ Bzlmod equivalent:
 
     use_repo(go_sdk, "go_sdk")
 
-Build with
-``--@io_bazel_rules_go//go/toolchain:experimental_source=bootstrapped`` to use
-the bootstrapped compiler/linker binaries.
+The SDK will use the bootstrapped compiler/linker binaries directly.
 
 
 Writing new Go rules
@@ -416,10 +415,11 @@ This downloads a Go SDK for use in toolchains.
 +--------------------------------+-----------------------------+---------------------------------------------+
 | The number of leading slashes to be stripped from the file name in thepatches.                             |
 +--------------------------------+-----------------------------+---------------------------------------------+
-| :param:`experimental_bootstrap`| :type:`bool`                | :value:`False`                              |
+| ``experimental_build_``        | :type:`bool`                | :value:`False`                              |
+| ``compiler_from_source``       |                             |                                             |
 +--------------------------------+-----------------------------+---------------------------------------------+
-| Experimental: if true, exposes source-bootstrapped Go compiler binaries via                                |
-| ``--@io_bazel_rules_go//go/toolchain:experimental_source=bootstrapped``.                                   |
+| Experimental: if true, bootstraps Go compiler binaries from the downloaded source instead                  |
+| of using the prebuilt compiler binaries in the SDK archive.                                                |
 | In WORKSPACE mode, call ``rules_shell_toolchains()`` from                                                   |
 | ``@rules_shell//shell:repositories.bzl`` before ``go_register_toolchains()``.                              |
 +--------------------------------+-----------------------------+---------------------------------------------+

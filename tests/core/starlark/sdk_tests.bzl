@@ -12,7 +12,6 @@ def _go_toolchains_single_definition_with_version_test(ctx):
         sdk_repo = "sdk_repo",
         sdk_type = "download",
         sdk_version = "1.20.2rc1",
-        sdk_source = "prebuilt",
     )
     asserts.equals(env, [], result.loads)
     asserts.equals(env, [
@@ -33,7 +32,6 @@ _123_PREFIX_PRERELEASE_SUFFIX = "rc1"
     prerelease = _123_PREFIX_PRERELEASE_SUFFIX,
     sdk_name = "sdk_repo",
     sdk_type = "download",
-    sdk_source = "prebuilt",
 )
 """,
     ], result.chunks)
@@ -53,7 +51,6 @@ def _go_toolchains_single_definition_without_version_test(ctx):
         sdk_repo = "sdk_repo",
         sdk_type = "download",
         sdk_version = None,
-        sdk_source = "prebuilt",
     )
     asserts.equals(env, ["""load(
     "@sdk_repo//:version.bzl",
@@ -75,7 +72,6 @@ def _go_toolchains_single_definition_without_version_test(ctx):
     prerelease = _123_PREFIX_PRERELEASE_SUFFIX,
     sdk_name = "sdk_repo",
     sdk_type = "download",
-    sdk_source = "prebuilt",
 )
 """,
     ], result.chunks)

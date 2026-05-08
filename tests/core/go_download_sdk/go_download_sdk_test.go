@@ -301,13 +301,13 @@ index 5306bcb..d110a19 100644
 	}
 }
 
-func TestBootstrapPropagatesToolchainSource(t *testing.T) {
+func TestExperimentalBuildCompilerFromSourceDoesNotRequireToolchainBuildSetting(t *testing.T) {
 	for _, test := range []struct {
 		name, bootstrapAttr string
 	}{
 		{
-			name:          "experimental_bootstrap",
-			bootstrapAttr: "experimental_bootstrap = True,",
+			name:          "experimental_build_compiler_from_source",
+			bootstrapAttr: "experimental_build_compiler_from_source = True,",
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
@@ -360,8 +360,8 @@ go_register_toolchains()
 				t.Fatalf("reading %s: %v", toolchainsBuildFile, err)
 			}
 
-			if !bytes.Contains(toolchainsBuildData, []byte(`sdk_source = "bootstrapped"`)) {
-				t.Fatalf("go_sdk_toolchains should set sdk_source to bootstrapped when go_download_sdk(%s):\n%s", test.bootstrapAttr, toolchainsBuildData)
+			if bytes.Contains(toolchainsBuildData, []byte(`sdk_source = `)) {
+				t.Fatalf("go_sdk_toolchains should not require an sdk_source build setting when go_download_sdk(%s):\n%s", test.bootstrapAttr, toolchainsBuildData)
 			}
 		})
 	}
@@ -386,7 +386,7 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk")
 go_download_sdk(
     name = "go_sdk",
     version = "1.26.0",
-    experimental_bootstrap = True,
+    experimental_build_compiler_from_source = True,
 )
 
 go_rules_dependencies()
@@ -409,7 +409,6 @@ go_register_toolchains()
 	if err := bazel_testing.RunBazel(
 		"cquery",
 		"//:version_test",
-		"--@io_bazel_rules_go//go/toolchain:experimental_source=bootstrapped",
 	); err != nil {
 		t.Fatal(err)
 	}
@@ -434,7 +433,7 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk")
 go_download_sdk(
     name = "go_sdk",
     version = "1.26.0",
-    experimental_bootstrap = True,
+    experimental_build_compiler_from_source = True,
 )
 
 go_rules_dependencies()
@@ -623,7 +622,6 @@ use_repo(go_sdk, "go_sdk")
 		"//:version_test",
 		"--enable_bzlmod",
 		"--noenable_workspace",
-		"--@io_bazel_rules_go//go/toolchain:experimental_source=bootstrapped",
 	); err != nil {
 		t.Fatal(err)
 	}

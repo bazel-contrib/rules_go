@@ -350,7 +350,7 @@ def _go_host_compatible_sdk_label_impl(ctx):
 def _get_host_compatible_sdk_label():
     # Keep compatibility with custom @go_sdk repositories that only expose :ROOT.
     go_sdk_rule = native.existing_rules().get("go_sdk")
-    if go_sdk_rule and go_sdk_rule.get("kind") == "go_download_sdk_rule" and go_sdk_rule.get("experimental_bootstrap", False):
+    if go_sdk_rule and go_sdk_rule.get("kind") == "go_download_sdk_rule" and go_sdk_rule.get("experimental_build_compiler_from_source", False):
         return "@go_sdk//:host_compatible_root_file"
     return "@go_sdk//:ROOT"
 

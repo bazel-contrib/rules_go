@@ -12,9 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("//go/private:platforms.bzl", "GOARCH_CONSTRAINTS", "GOOS_CONSTRAINTS")
+
 def _experimental_bootstrap_go_sdk_impl(ctx):
-    windows_constraint = ctx.attr._windows_constraint[platform_common.ConstraintValueInfo]
-    is_windows_exec = ctx.target_platform_has_constraint(windows_constraint)
+    goos_constraint = ctx.attr.goos_constraint[platform_common.ConstraintValueInfo]
+    goarch_constraint = ctx.attr.goarch_constraint[platform_common.ConstraintValueInfo]
+    if not ctx.target_platform_has_constraint(goos_constraint) or not ctx.target_platform_has_constraint(goarch_constraint):
+        fail("Go bootstrap SDK must be built with a target platform matching {}_{}".format(ctx.attr.goos, ctx.attr.goarch))
+
+    is_windows = ctx.attr.goos == "windows"
     sh_toolchain = ctx.toolchains["@rules_shell//shell:toolchain_type"]
     if not sh_toolchain or not sh_toolchain.path:
         fail("Go bootstrap SDK requires @rules_shell//shell:toolchain_type with a configured shell path")
@@ -22,8 +28,9 @@ def _experimental_bootstrap_go_sdk_impl(ctx):
     root_file = ctx.actions.declare_file(ctx.label.name + "/ROOT")
     version = ctx.actions.declare_file(ctx.label.name + "/VERSION")
     go_env = ctx.actions.declare_file(ctx.label.name + "/go.env")
-    go = ctx.actions.declare_file(ctx.label.name + "/bin/go" + (".exe" if ctx.attr.goos == "windows" else ""))
-    gofmt = ctx.actions.declare_file(ctx.label.name + "/bin/gofmt" + (".exe" if ctx.attr.goos == "windows" else ""))
+    exe = ".exe" if is_windows else ""
+    go = ctx.actions.declare_file(ctx.label.name + "/bin/go" + exe)
+    gofmt = ctx.actions.declare_file(ctx.label.name + "/bin/gofmt" + exe)
 
     srcs = ctx.actions.declare_directory(ctx.label.name + "/src")
     libs = ctx.actions.declare_directory(ctx.label.name + "/pkg/" + ctx.attr.goos + "_" + ctx.attr.goarch)
@@ -47,13 +54,17 @@ def _experimental_bootstrap_go_sdk_impl(ctx):
     args.add_all([headers], expand_directories = False)
     args.add_all([tools], expand_directories = False)
     args.add_all([lib_misc], expand_directories = False)
-    args.add(",".join(ctx.attr.experiments))
+    args.add_joined(ctx.attr.experiments, join_with = ",")
     args.add(ctx.attr.goos + "_" + ctx.attr.goarch)
-    args.add("1" if is_windows_exec else "0")
+    args.add("1" if is_windows else "0")
 
     ctx.actions.write(
         output = bootstrap_script,
         content = """set -euo pipefail
+
+# This follows the Go source install flow documented at
+# https://go.dev/doc/install/source. The make.bash/make.bat scripts invoke
+# cmd/dist underneath.
 
 MAKE_BASH="$1"
 MAKE_BAT="$2"
@@ -219,9 +230,8 @@ _experimental_bootstrap_go_sdk = rule(
         "goos": attr.string(mandatory = True),
         "goarch": attr.string(mandatory = True),
         "experiments": attr.string_list(),
-        "_windows_constraint": attr.label(
-            default = "@platforms//os:windows",
-        ),
+        "goarch_constraint": attr.label(mandatory = True),
+        "goos_constraint": attr.label(mandatory = True),
     },
     executable = True,
     toolchains = [
@@ -247,6 +257,8 @@ def experimental_bootstrap_go_sdk(name, goos, goarch, experiments):
         goos = goos,
         goarch = goarch,
         experiments = experiments,
+        goarch_constraint = GOARCH_CONSTRAINTS[goarch],
+        goos_constraint = GOOS_CONSTRAINTS[goos],
     )
 
     native.alias(
