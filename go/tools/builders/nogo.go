@@ -22,7 +22,7 @@ func nogo(args []string) error {
 	goenv := envFlags(fs)
 	var unfilteredSrcs, ignoreSrcs, recompileInternalDeps multiFlag
 	var deps, facts archiveMultiFlag
-	var importPath, packagePath, nogoPath, packageListPath string
+	var importPath, packagePath, nogoPath, packageListPath, goVersion string
 	var testFilter string
 	var outFactsPath, outPath string
 	var coverMode string
@@ -39,6 +39,7 @@ func nogo(args []string) error {
 	fs.StringVar(&coverMode, "cover_mode", "", "The coverage mode to use. Empty if coverage instrumentation should not be added.")
 	fs.StringVar(&testFilter, "testfilter", "off", "Controls test package filtering")
 	fs.StringVar(&nogoPath, "nogo", "", "The nogo binary")
+	fs.StringVar(&goVersion, "go_version", "", "The SDK Go version to forward to nogo, without the leading 'go' prefix (for example 1.24.3).")
 	fs.StringVar(&outFactsPath, "out_facts", "", "The file to emit serialized nogo facts to")
 	fs.StringVar(&outPath, "out", "", "The path of the directory to emit logs and fixes into")
 
@@ -85,10 +86,10 @@ func nogo(args []string) error {
 		return err
 	}
 
-	return runNogo(workDir, nogoPath, goSrcs, ignoreSrcs, facts, factsOnly, importPath, importcfgPath, outFactsPath, outPath)
+	return runNogo(workDir, nogoPath, goSrcs, ignoreSrcs, facts, factsOnly, importPath, importcfgPath, goVersion, outFactsPath, outPath)
 }
 
-func runNogo(workDir string, nogoPath string, srcs, ignores []string, facts []archive, factsOnly bool, packagePath, importcfgPath, outFactsPath, outDirPath string) error {
+func runNogo(workDir string, nogoPath string, srcs, ignores []string, facts []archive, factsOnly bool, packagePath, importcfgPath, goVersion, outFactsPath, outDirPath string) error {
 	if len(srcs) == 0 {
 		// emit_compilepkg expects a nogo facts file, even if it's empty.
 		err := os.WriteFile(outFactsPath, nil, 0o666)
@@ -102,6 +103,9 @@ func runNogo(workDir string, nogoPath string, srcs, ignores []string, facts []ar
 	args = append(args, "-p", packagePath)
 	args = append(args, "-fix_dir", outDirPath)
 	args = append(args, "-importcfg", importcfgPath)
+	if goVersion != "" {
+		args = append(args, "-go_version", goVersion)
+	}
 	for _, fact := range facts {
 		args = append(args, "-fact", fmt.Sprintf("%s=%s", fact.importPath, fact.file))
 	}

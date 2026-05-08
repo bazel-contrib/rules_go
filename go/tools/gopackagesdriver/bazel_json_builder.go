@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -220,6 +221,7 @@ func (b *BazelJSONBuilder) Build(ctx context.Context, labels []string, mode pack
 		buildArgs = append(buildArgs, labels...)
 	} else {
 		// To avoid hitting MAX_ARGS length, write labels to a file and use `--target_pattern_file`
+		slog.Info("bazel_build_targets", "labels", labels)
 		targetsFile, err := ioutil.TempFile("", "gopackagesdriver_targets_")
 		if err != nil {
 			return nil, fmt.Errorf("unable to create target pattern file: %w", err)

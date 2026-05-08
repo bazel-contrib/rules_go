@@ -40,6 +40,20 @@ go_test(
         "hello_external_test.go",
     ],
     embed = [":hello"],
+    deps = [":hellohelper"],
+)
+
+# hellohelper imports hello, so a go_test that embeds hello and depends on
+# hellohelper from an external (xtest) source forces _recompile_external_deps
+# to run. This is the trigger for #3981: the recompiled internal archive's
+# direct deps used to drop the cycle-forming dependency, so the
+# gopackagesdriver reported the xtest with a hole in its Imports.
+go_library(
+    name = "hellohelper",
+    srcs = ["hellohelper/hellohelper.go"],
+    importpath = "example.com/hello/hellohelper",
+    visibility = ["//visibility:public"],
+    deps = [":hello"],
 )
 
 go_library(
@@ -83,9 +97,22 @@ func TestHelloInternal(t *testing.T) {}
 -- hello_external_test.go --
 package hello_test
 
-import "testing"
+import (
+	"testing"
 
-func TestHelloExternal(t *testing.T) {}
+	"example.com/hello/hellohelper"
+)
+
+func TestHelloExternal(t *testing.T) {
+	hellohelper.Helper()
+}
+
+-- hellohelper/hellohelper.go --
+package hellohelper
+
+import _ "example.com/hello"
+
+func Helper() {}
 
 -- incompatible.go --
 //go:build ignore
@@ -109,6 +136,11 @@ import "os"
 func main() {
 	fmt.Fprintln(os.Stderr, "Subdirectory Hello World!")
 }
+
+-- unattached.go --
+package unattached
+
+// not mentioned in any target
 `,
 	})
 }
@@ -141,9 +173,9 @@ func TestBaseFileLookup(t *testing.T) {
 		}
 
 		wantCompiledGoFiles := map[string]struct{}{
-			"hello.go": {},
-			"_cgo_gotypes.go": {},
-			"_cgo_imports.go": {},
+			"hello.go":         {},
+			"_cgo_gotypes.go":  {},
+			"_cgo_imports.go":  {},
 			"hellocgo.cgo1.go": {},
 		}
 		for _, file := range pkg.CompiledGoFiles {
@@ -159,7 +191,7 @@ func TestBaseFileLookup(t *testing.T) {
 		}
 
 		wantGoFiles := map[string]struct{}{
-			"hello.go": {},
+			"hello.go":    {},
 			"hellocgo.go": {},
 		}
 		for _, file := range pkg.GoFiles {
@@ -285,6 +317,15 @@ func TestExternalTests(t *testing.T) {
 				t.Errorf("PkgPath missing _test suffix")
 			}
 			assertSuffixesInList(t, p.GoFiles, "/hello_external_test.go")
+			// hellohelper is imported only by the xtest source and itself
+			// imports the embedded library, which forces
+			// _recompile_external_deps to filter it out of the recompiled
+			// internal archive's deps. The Imports map must still report
+			// it; otherwise consumers see the import as unresolved (#3981).
+			if _, ok := p.Imports["example.com/hello/hellohelper"]; !ok {
+				t.Errorf("xtest %s missing import of example.com/hello/hellohelper; got Imports: %v",
+					p.ID, slices.Sorted(maps.Keys(p.Imports)))
+			}
 		} else if p.ID == testId {
 			assertSuffixesInList(t, p.GoFiles, "/hello.go", "/hello_test.go")
 		}
@@ -376,7 +417,25 @@ func TestIncompatible(t *testing.T) {
 	}
 }
 
-func runForTest(t *testing.T, driverRequest packages.DriverRequest, relativeWorkingDir string, args ...string) packages.DriverResponse {
+func TestUnattached(t *testing.T) {
+	runForTestExpectError(t, "found no labels matching the requests", packages.DriverRequest{}, ".", "file=unattached.go")
+}
+
+func runForTest(
+	t *testing.T,
+	driverRequest packages.DriverRequest,
+	relativeWorkingDir string,
+	args ...string) packages.DriverResponse {
+	t.Helper()
+	return runForTestExpectError(t, "", driverRequest, relativeWorkingDir, args...)
+}
+
+func runForTestExpectError(
+	t *testing.T,
+	wantError string,
+	driverRequest packages.DriverRequest,
+	relativeWorkingDir string,
+	args ...string) packages.DriverResponse {
 	t.Helper()
 
 	// Remove most environment variables, other than those on an allowlist.
@@ -441,8 +500,17 @@ func runForTest(t *testing.T, driverRequest packages.DriverRequest, relativeWork
 	}
 	in := bytes.NewReader(driverRequestJson)
 	out := &bytes.Buffer{}
-	if err := run(context.Background(), in, out, args); err != nil {
-		t.Fatalf("running gopackagesdriver: %v", err)
+	err = run(context.Background(), in, out, args)
+	if err == nil && wantError != "" {
+		t.Fatal("unexpected success")
+	} else if err != nil {
+		errMsg := err.Error()
+		if wantError == "" {
+			t.Fatalf("running gopackagesdriver: %s", errMsg)
+		} else if !strings.Contains(errMsg, wantError) {
+			t.Fatalf("running gopackagesdriver: %s; error did not contain %q", errMsg, wantError)
+		}
+		return packages.DriverResponse{}
 	}
 	var resp packages.DriverResponse
 	if err := json.Unmarshal(out.Bytes(), &resp); err != nil {

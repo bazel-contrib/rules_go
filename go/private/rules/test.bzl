@@ -32,6 +32,7 @@ load(
     "CGO_FRAGMENTS",
     "CGO_TOOLCHAINS",
     "go_context",
+    "maybe_needs_cc_toolchain",
     "new_go_info",
 )
 load(
@@ -62,10 +63,10 @@ def _go_test_impl(ctx):
 
     go = go_context(
         ctx,
-        include_deprecated_properties = False,
         importpath = ctx.attr.importpath,
         embed = ctx.attr.embed,
         go_context_data = ctx.attr._go_context_data,
+        maybe_needs_cc_toolchain = maybe_needs_cc_toolchain(ctx.attr, go_infos = ctx.attr.deps),
         goos = ctx.attr.goos,
         goarch = ctx.attr.goarch,
     )
@@ -664,6 +665,10 @@ def _recompile_external_deps(go, external_go_info, internal_archive, library_lab
     # can't import anything that imports itself.
     internal_go_info = internal_archive.source
 
+    # Store the original labels so that we can map dependencies back onto
+    # internal_archive.direct after recompilation (see below).
+    original_internal_dep_labels = [dep.data.label for dep in internal_go_info.deps]
+
     internal_deps = []
 
     # Pass internal dependencies that need to be recompiled down to the builder to check if the internal archive
@@ -743,12 +748,27 @@ def _recompile_external_deps(go, external_go_info, internal_archive, library_lab
                 transitive = depset(direct = [arc_data], transitive = [a.transitive for a in deps]),
                 x_defs = go_info.x_defs,
                 cgo_deps = depset(transitive = [arc_data._cgo_deps] + [a.cgo_deps for a in deps]),
+                cgo_link_inputs = depset(transitive = [arc_data._cgo_link_inputs] + [a.cgo_link_inputs for a in deps]),
                 cgo_exports = depset(transitive = [a.cgo_exports for a in deps]),
                 runfiles = go_info.runfiles,
                 mode = go.mode,
                 _headers = internal_archive._headers,
             )
         label_to_archive[label] = archive
+
+    # Fix up internal_archive.direct for gopackagesdriver, which queries the
+    # archive by label to build the go/packages response map for a test file,
+    # which could be part of an x_test package. Because the aspect uses the
+    # first archive it finds for that label, we need direct to hold the
+    # recompiled external deps (=intermediate test variants), even for the
+    # internal archive. See #3981.
+    attrs = structs.to_dict(internal_archive)
+    attrs["direct"] = [
+        label_to_archive[label]
+        for label in original_internal_dep_labels
+    ]
+    internal_archive = GoArchive(**attrs)
+    label_to_archive[internal_archive.data.label] = internal_archive
 
     # Finally, we need to replace external_go_info.deps with the recompiled
     # archives.

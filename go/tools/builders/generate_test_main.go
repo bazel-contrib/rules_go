@@ -436,6 +436,9 @@ func genTestMain(args []string) error {
 		cases.Imports = append(cases.Imports, importMap[name])
 	}
 	sort.Slice(cases.Imports, func(i, j int) bool {
+		if cases.Imports[i].Name == cases.Imports[j].Name {
+			return cases.Imports[i].Path < cases.Imports[j].Path
+		}
 		return cases.Imports[i].Name < cases.Imports[j].Name
 	})
 	tpl := template.Must(template.New("source").Parse(testMainTpl))

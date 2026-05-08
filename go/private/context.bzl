@@ -21,7 +21,7 @@ load(
     "BuildSettingInfo",
 )
 load(
-    "@bazel_tools//tools/build_defs/cc:action_names.bzl",
+    "@rules_cc//cc:action_names.bzl",
     "CPP_COMPILE_ACTION_NAME",
     "CPP_LINK_DYNAMIC_LIBRARY_ACTION_NAME",
     "CPP_LINK_EXECUTABLE_ACTION_NAME",
@@ -31,8 +31,8 @@ load(
     "OBJC_COMPILE_ACTION_NAME",
 )
 load(
-    "@bazel_tools//tools/cpp:toolchain_utils.bzl",
-    "find_cpp_toolchain",
+    "@rules_cc//cc:find_cc_toolchain.bzl",
+    "find_cc_toolchain",
 )
 load(
     "@io_bazel_rules_nogo//:scope.bzl",
@@ -57,8 +57,11 @@ load(
 )
 load(
     ":mode.bzl",
+    "LINKMODE_C_SHARED",
     "LINKMODE_NORMAL",
     "LINKMODE_PIE",
+    "LINKMODE_PLUGIN",
+    "LINKMODE_SHARED",
     "installsuffix",
     "validate_mode",
 )
@@ -79,7 +82,7 @@ load(
 
 CPP_TOOLCHAIN_TYPE = Label("@bazel_tools//tools/cpp:toolchain_type")
 CGO_ATTRS = {
-    "_cc_toolchain": attr.label(default = "@bazel_tools//tools/cpp:optional_current_cc_toolchain"),
+    "_cc_toolchain": attr.label(default = "@rules_cc//cc:optional_current_cc_toolchain"),
     "_xcode_config": attr.label(default = configuration_field(fragment = "apple", name = "xcode_config_label")),
     "_pure_flag": attr.label(default = "//go/config:pure"),
     "_pure_constraint": attr.label(default = "//go/toolchain:cgo_off"),
@@ -147,18 +150,47 @@ _UNSUPPORTED_FEATURES = [
     "rules_go_unsupported_feature",
 ]
 
-def _match_option(option, pattern):
-    if pattern.endswith("="):
-        return option.startswith(pattern)
-    else:
-        return option == pattern
-
 def _filter_options(options, denylist):
+    # The denylist is a dict. Split into exact-match and prefix-match patterns.
+    # Exact matches use O(1) dict lookup; only the rare prefix patterns (ending
+    # in "=", e.g. "-fmax-errors=") need a linear scan.
+    prefix_patterns = [p for p in denylist if p.endswith("=")]
     return [
         option
         for option in options
-        if not any([_match_option(option, pattern) for pattern in denylist])
+        if option not in denylist and
+           not any([option.startswith(p) for p in prefix_patterns])
     ]
+
+def _strip_bind_now(options):
+    """Remove -z now from -Wl, linker flags to prevent BIND_NOW.
+
+    BIND_NOW breaks Go libraries that use dlopen/dlsym to load symbols at
+    runtime (e.g., NVIDIA's go-nvml). The CC toolchain may pass flags like
+    -Wl,-z,relro,-z,now in any order; this function strips only the -z,now
+    pair and preserves everything else (e.g., -z,relro).
+
+    See https://github.com/bazel-contrib/rules_go/issues/4377.
+    """
+    result = []
+    for opt in options:
+        if not opt.startswith("-Wl,"):
+            result.append(opt)
+            continue
+        parts = opt[len("-Wl,"):].split(",")
+        filtered = []
+        skip_next = False
+        for i in range(len(parts)):
+            if skip_next:
+                skip_next = False
+                continue
+            if parts[i] == "-z" and i + 1 < len(parts) and parts[i + 1] == "now":
+                skip_next = True
+                continue
+            filtered.append(parts[i])
+        if filtered:
+            result.append("-Wl," + ",".join(filtered))
+    return result
 
 def _child_name(go, path, ext, name):
     if not name:
@@ -451,6 +483,22 @@ def _matches_scopes(label, scopes):
             return True
     return False
 
+def _go_infos_use_cgo(go_infos):
+    for go_info in go_infos:
+        if GoInfo in go_info and go_info[GoInfo].cgo:
+            return True
+    return False
+
+def _sources_use_cgo(attr, go_infos):
+    """Returns whether attr's sources may need cgo processing."""
+    if getattr(attr, "cgo", False):
+        return True
+    return _go_infos_use_cgo(getattr(attr, "embed", [])) or _go_infos_use_cgo(go_infos)
+
+def maybe_needs_cc_toolchain(attr, go_infos = []):
+    """Returns whether this rule's own sources may use the C/C++ toolchain."""
+    return _sources_use_cgo(attr, go_infos)
+
 def validate_nogo(go):
     """Whether nogo should be run as a validation action rather than just to generate fact files for the current
     target."""
@@ -476,6 +524,11 @@ default_go_config_info = GoConfigInfo(
     export_stdlib = False,
 )
 
+def _cc_runtime_libs_for_mode(mode, cgo_tools):
+    if mode.linkmode in (LINKMODE_SHARED, LINKMODE_PLUGIN, LINKMODE_C_SHARED):
+        return cgo_tools.cc_toolchain.dynamic_runtime_lib(feature_configuration = cgo_tools.feature_configuration)
+    return cgo_tools.cc_toolchain.static_runtime_lib(feature_configuration = cgo_tools.feature_configuration)
+
 def _defaults_to_pie(goos, race):
     # based on DefaultPIE in src/internal/platform/supported.go
     if goos in ["android", "darwin", "ios"]:
@@ -487,12 +540,13 @@ def _defaults_to_pie(goos, race):
 def go_context(
         ctx,
         attr = None,
-        include_deprecated_properties = True,
+        include_deprecated_properties = False,
         importpath = None,
         importmap = None,
         embed = None,
         importpath_aliases = None,
         go_context_data = None,
+        maybe_needs_cc_toolchain = True,
         goos = "auto",
         goarch = "auto"):
     """Returns an API used to build Go code.
@@ -522,16 +576,24 @@ def go_context(
         stdlib = go_context_data[GoStdLib]
         go_context_info = go_context_data[GoContextInfo]
 
-    if getattr(attr, "_cc_toolchain", None) and CPP_TOOLCHAIN_TYPE in ctx.toolchains:
-        cgo_context_info = cgo_context_data_impl(ctx)
-    elif go_context_data and CgoContextInfo in go_context_data:
-        cgo_context_info = go_context_data[CgoContextInfo]
-    elif getattr(attr, "_cgo_context_data", None) and CgoContextInfo in attr._cgo_context_data:
-        cgo_context_info = attr._cgo_context_data[CgoContextInfo]
-    elif getattr(attr, "cgo_context_data", None) and CgoContextInfo in attr.cgo_context_data:
-        cgo_context_info = attr.cgo_context_data[CgoContextInfo]
+    cgo_disabled = (go_config_info and go_config_info.pure) or (
+        getattr(attr, "_pure_constraint", None) and
+        ctx.target_platform_has_constraint(attr._pure_constraint[platform_common.ConstraintValueInfo])
+    )
 
-    if goos == "auto" and goarch == "auto" and cgo_context_info and (go_config_info == None or not go_config_info.pure):
+    has_cc_toolchain_attr = getattr(attr, "_cc_toolchain", None) != None
+    needs_cgo_context = maybe_needs_cc_toolchain or go_config_info != None
+    if not cgo_disabled and needs_cgo_context and has_cc_toolchain_attr and CPP_TOOLCHAIN_TYPE in ctx.toolchains:
+        cgo_context_info = cgo_context_data_impl(ctx)
+
+    if has_cc_toolchain_attr:
+        cgo_available = cgo_context_info != None
+    else:
+        # Preserve cgo build-mode/tag behavior for rules that won't use the
+        # C/C++ toolchain in their own actions.
+        cgo_available = not cgo_disabled
+
+    if goos == "auto" and goarch == "auto" and cgo_available and go_config_info != None and not go_config_info.pure:
         # Fast-path to reuse the GoConfigInfo as-is
         mode = go_config_info or default_go_config_info
     else:
@@ -540,7 +602,7 @@ def go_context(
         mode_kwargs = structs.to_dict(go_config_info)
         mode_kwargs["goos"] = toolchain.default_goos if goos == "auto" else goos
         mode_kwargs["goarch"] = toolchain.default_goarch if goarch == "auto" else goarch
-        if not cgo_context_info:
+        if not cgo_available:
             if getattr(ctx.attr, "pure", None) == "off":
                 fail("{} has pure explicitly set to off, but no C++ toolchain could be found for its platform".format(ctx.label))
             mode_kwargs["pure"] = True
@@ -596,8 +658,11 @@ def go_context(
 
     if cgo_context_info:
         env.update(cgo_context_info.env)
-        cc_toolchain_files = cgo_context_info.cc_toolchain_files
         cgo_tools = cgo_context_info.cgo_tools
+        cc_toolchain_files = depset(transitive = [
+            cgo_context_info.cc_toolchain_files,
+            _cc_runtime_libs_for_mode(mode, cgo_tools),
+        ])
     else:
         cc_toolchain_files = depset()
         cgo_tools = None
@@ -690,7 +755,8 @@ def _go_context_data_impl(ctx):
         print("WARNING: --features=race is no longer supported. Use --@io_bazel_rules_go//go/config:race instead.")
     if "msan" in ctx.features:
         print("WARNING: --features=msan is no longer supported. Use --@io_bazel_rules_go//go/config:msan instead.")
-    providers = [
+
+    return [
         GoContextInfo(
             coverdata = ctx.attr.coverdata[0][GoArchive],
             nogo = ctx.attr.nogo[DefaultInfo].files_to_run,
@@ -698,14 +764,10 @@ def _go_context_data_impl(ctx):
         ctx.attr.stdlib[GoStdLib],
         ctx.attr.go_config[GoConfigInfo],
     ]
-    if ctx.attr.cgo_context_data and CgoContextInfo in ctx.attr.cgo_context_data:
-        providers.append(ctx.attr.cgo_context_data[CgoContextInfo])
-    return providers
 
 go_context_data = rule(
     _go_context_data_impl,
     attrs = {
-        "cgo_context_data": attr.label(),
         "coverdata": attr.label(
             mandatory = True,
             cfg = non_request_nogo_transition,
@@ -743,7 +805,7 @@ def cgo_context_data_impl(ctx):
     # toolchain (to be inputs into actions that need it).
     # ctx.files._cc_toolchain won't work when cc toolchain resolution
     # is switched on.
-    cc_toolchain = find_cpp_toolchain(ctx, mandatory = False)
+    cc_toolchain = find_cc_toolchain(ctx, mandatory = False)
     if not cc_toolchain or cc_toolchain.compiler in _UNSUPPORTED_C_COMPILERS:
         return None
 
@@ -842,14 +904,14 @@ def cgo_context_data_impl(ctx):
         feature_configuration = feature_configuration,
         action_name = CPP_LINK_EXECUTABLE_ACTION_NAME,
     )
-    ld_executable_options = _filter_options(
+    ld_executable_options = _strip_bind_now(_filter_options(
         cc_common.get_memory_inefficient_command_line(
             feature_configuration = feature_configuration,
             action_name = CPP_LINK_EXECUTABLE_ACTION_NAME,
             variables = ld_executable_variables,
         ) + ctx.fragments.cpp.linkopts,
         _LINKER_OPTIONS_DENYLIST,
-    )
+    ))
     env.update(cc_common.get_environment_variables(
         feature_configuration = feature_configuration,
         action_name = CPP_LINK_EXECUTABLE_ACTION_NAME,
@@ -883,14 +945,14 @@ def cgo_context_data_impl(ctx):
         feature_configuration = feature_configuration,
         action_name = CPP_LINK_DYNAMIC_LIBRARY_ACTION_NAME,
     )
-    ld_dynamic_lib_options = _filter_options(
+    ld_dynamic_lib_options = _strip_bind_now(_filter_options(
         cc_common.get_memory_inefficient_command_line(
             feature_configuration = feature_configuration,
             action_name = CPP_LINK_DYNAMIC_LIBRARY_ACTION_NAME,
             variables = ld_dynamic_lib_variables,
         ) + ctx.fragments.cpp.linkopts,
         _LINKER_OPTIONS_DENYLIST,
-    )
+    ))
 
     env.update(cc_common.get_environment_variables(
         feature_configuration = feature_configuration,
@@ -953,38 +1015,6 @@ def cgo_context_data_impl(ctx):
             ar_path = cc_toolchain.ar_executable,
         ),
     )
-
-cgo_context_data = rule(
-    implementation = cgo_context_data_impl,
-    attrs = {
-        "_allowlist_function_transition": attr.label(
-            default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
-        ),
-    } | CGO_ATTRS,
-    toolchains = CGO_TOOLCHAINS,
-    fragments = CGO_FRAGMENTS,
-    doc = """Collects information about the C/C++ toolchain. The C/C++ toolchain
-    is needed to build cgo code, but is generally optional. Rules can't have
-    optional toolchains, so instead, we have an optional dependency on this
-    rule.""",
-    cfg = non_request_nogo_transition,
-)
-
-def _cgo_context_data_proxy_impl(ctx):
-    if ctx.attr.actual and CgoContextInfo in ctx.attr.actual:
-        return [ctx.attr.actual[CgoContextInfo]]
-    return []
-
-cgo_context_data_proxy = rule(
-    implementation = _cgo_context_data_proxy_impl,
-    attrs = {
-        "actual": attr.label(),
-    },
-    doc = """Conditionally depends on cgo_context_data and forwards it provider.
-
-    Useful in situations where select cannot be used, like attribute defaults.
-    """,
-)
 
 def _go_config_impl(ctx):
     pgo_profiles = ctx.attr.pgoprofile.files.to_list()

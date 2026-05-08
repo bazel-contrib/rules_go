@@ -22,7 +22,7 @@ load(
 )
 
 def _go_info_impl(ctx):
-    go = go_context(ctx)
+    go = go_context(ctx, maybe_needs_cc_toolchain = False)
     report = go.declare_file(go, ext = ".txt")
     args = go.actions.args()
     args.add("-sdk", go.sdk.root_file.dirname)

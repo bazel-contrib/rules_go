@@ -36,7 +36,7 @@ gazelle(
 package hello
 `,
 		ModuleFileSuffix: `
-bazel_dep(name = "gazelle", version = "0.41.0", repo_name = "bazel_gazelle")
+bazel_dep(name = "gazelle", version = "0.45.0", repo_name = "bazel_gazelle")
 `,
 	})
 }

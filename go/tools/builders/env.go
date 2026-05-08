@@ -35,7 +35,7 @@ var (
 	// cgoEnvVars is the list of all cgo environment variable
 	cgoEnvVars = []string{"CGO_CFLAGS", "CGO_CXXFLAGS", "CGO_CPPFLAGS", "CGO_LDFLAGS"}
 	// cgoAbsEnvFlags are all the flags that need absolute path in cgoEnvVars
-	cgoAbsEnvFlags = []string{"-I", "-L", "-isysroot", "-isystem", "-iquote", "-include", "-imacros", "-gcc-toolchain", "--sysroot", "-resource-dir", "-fsanitize-blacklist", "-fsanitize-ignorelist", "--warning-suppression-mappings"}
+	cgoAbsEnvFlags = []string{"-I", "-L", "-isysroot", "-isystem", "-internal-isystem", "-iquote", "-include", "-imacros", "-gcc-toolchain", "--sysroot", "-resource-dir", "-fsanitize-blacklist", "-fsanitize-ignorelist", "--warning-suppression-mappings"}
 	// cgoAbsPlaceholder is placed in front of flag values that must be absolutized
 	cgoAbsPlaceholder = "__GO_BAZEL_CC_PLACEHOLDER__"
 )
@@ -434,6 +434,12 @@ func absArgs(args []string, flags []string) {
 func transformArgs(args []string, flags []string, fn func(string) string) {
 	absNext := false
 	for i := range args {
+		// When expecting a path argument and we see -Xclang, skip over it
+		// and map the next argument instead.
+		// ex: -Xclang -isystem -Xclang path
+		if absNext && args[i] == "-Xclang" {
+			continue
+		}
 		if absNext {
 			args[i] = fn(args[i])
 			absNext = false
