@@ -40,6 +40,20 @@ go_test(
         "hello_external_test.go",
     ],
     embed = [":hello"],
+    deps = [":hellohelper"],
+)
+
+# hellohelper imports hello, so a go_test that embeds hello and depends on
+# hellohelper from an external (xtest) source forces _recompile_external_deps
+# to run. This is the trigger for #3981: the recompiled internal archive's
+# direct deps used to drop the cycle-forming dependency, so the
+# gopackagesdriver reported the xtest with a hole in its Imports.
+go_library(
+    name = "hellohelper",
+    srcs = ["hellohelper/hellohelper.go"],
+    importpath = "example.com/hello/hellohelper",
+    visibility = ["//visibility:public"],
+    deps = [":hello"],
 )
 
 go_library(
@@ -83,9 +97,22 @@ func TestHelloInternal(t *testing.T) {}
 -- hello_external_test.go --
 package hello_test
 
-import "testing"
+import (
+	"testing"
 
-func TestHelloExternal(t *testing.T) {}
+	"example.com/hello/hellohelper"
+)
+
+func TestHelloExternal(t *testing.T) {
+	hellohelper.Helper()
+}
+
+-- hellohelper/hellohelper.go --
+package hellohelper
+
+import _ "example.com/hello"
+
+func Helper() {}
 
 -- incompatible.go --
 //go:build ignore
@@ -290,6 +317,15 @@ func TestExternalTests(t *testing.T) {
 				t.Errorf("PkgPath missing _test suffix")
 			}
 			assertSuffixesInList(t, p.GoFiles, "/hello_external_test.go")
+			// hellohelper is imported only by the xtest source and itself
+			// imports the embedded library, which forces
+			// _recompile_external_deps to filter it out of the recompiled
+			// internal archive's deps. The Imports map must still report
+			// it; otherwise consumers see the import as unresolved (#3981).
+			if _, ok := p.Imports["example.com/hello/hellohelper"]; !ok {
+				t.Errorf("xtest %s missing import of example.com/hello/hellohelper; got Imports: %v",
+					p.ID, slices.Sorted(maps.Keys(p.Imports)))
+			}
 		} else if p.ID == testId {
 			assertSuffixesInList(t, p.GoFiles, "/hello.go", "/hello_test.go")
 		}
