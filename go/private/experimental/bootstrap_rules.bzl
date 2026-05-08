@@ -20,7 +20,9 @@ def _experimental_bootstrap_go_sdk_impl(ctx):
     if not ctx.target_platform_has_constraint(goos_constraint) or not ctx.target_platform_has_constraint(goarch_constraint):
         fail("Go bootstrap SDK must be built with a target platform matching {}_{}".format(ctx.attr.goos, ctx.attr.goarch))
 
-    is_windows = ctx.attr.goos == "windows"
+    is_windows = ctx.file.bootstrap_go.extension == "exe"
+    if is_windows != (ctx.attr.goos == "windows"):
+        fail("Go bootstrap SDK executable {} does not match goos {}".format(ctx.file.bootstrap_go.path, ctx.attr.goos))
     sh_toolchain = ctx.toolchains["@rules_shell//shell:toolchain_type"]
     if not sh_toolchain or not sh_toolchain.path:
         fail("Go bootstrap SDK requires @rules_shell//shell:toolchain_type with a configured shell path")
@@ -239,11 +241,15 @@ _experimental_bootstrap_go_sdk = rule(
     ],
 )
 
-def experimental_bootstrap_go_sdk(name, goos, goarch, experiments):
+def experimental_bootstrap_go_sdk(name, goos, goarch, experiments, exec_compatible_with):
     impl_name = name + "_impl"
 
+    # The bootstrap action runs the downloaded SDK's bin/go and chooses
+    # make.bash vs make.bat based on goos, so the action execution platform must
+    # match the SDK platform.
     _experimental_bootstrap_go_sdk(
         name = impl_name,
+        exec_compatible_with = exec_compatible_with,
         srcs = native.glob(
             ["**"],
             exclude = [

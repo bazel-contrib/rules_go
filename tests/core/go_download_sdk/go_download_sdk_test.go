@@ -482,6 +482,9 @@ go_register_toolchains()
 	if !bytes.Contains(sdkBuildData, []byte(`srcs = [":bootstrap_root_file"]`)) {
 		t.Fatalf("go_sdk :host_compatible_root_file should point to :bootstrap_root_file in bootstrap mode:\n%s", sdkBuildData)
 	}
+	if !bytes.Contains(sdkBuildData, []byte(`exec_compatible_with = [`)) {
+		t.Fatalf("go_sdk bootstrap rule should constrain its execution platform to the SDK platform:\n%s", sdkBuildData)
+	}
 	if !bytes.Contains(sdkBuildData, []byte(`name = "go_sdk_srcs"`)) {
 		t.Fatalf("go_sdk BUILD.bazel should define :go_sdk_srcs in bootstrap mode:\n%s", sdkBuildData)
 	}

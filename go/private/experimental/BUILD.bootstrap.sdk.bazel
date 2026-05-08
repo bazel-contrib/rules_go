@@ -5,6 +5,7 @@ package(default_visibility = ["//visibility:public"])
 
 experimental_bootstrap_go_sdk(
     name = "bootstrap",
+    exec_compatible_with = {exec_compatible_with},
     experiments = {experiments},
     goarch = "{goarch}",
     goos = "{goos}",
@@ -51,8 +52,8 @@ define_sdk_repository_targets(
     experiments = {experiments},
     files_srcs = [":bootstrap_files"],
     go = ":bootstrap_go",
-    go_sdk_srcs = [":go_sdk_srcs"],
     go_sdk_root_file = ":bootstrap_root_file",
+    go_sdk_srcs = [":go_sdk_srcs"],
     goarch = "{goarch}",
     goos = "{goos}",
     package_list_srcs = [":srcs"],
