@@ -15,6 +15,7 @@
 load(
     "//go/private:common.bzl",
     "GO_TOOLCHAIN",
+    "GO_TOOLCHAIN_LABEL",
 )
 load(
     "//go/private:context.bzl",
@@ -64,7 +65,7 @@ def _nogo_impl(ctx):
         outputs = [nogo_main],
         mnemonic = "GoGenNogo",
         executable = go.toolchain._builder,
-        toolchain = GO_TOOLCHAIN,
+        toolchain = GO_TOOLCHAIN_LABEL,
         arguments = [nogo_args],
     )
 
