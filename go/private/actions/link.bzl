@@ -79,13 +79,10 @@ def emit_link(
     else:
         extld = extld_from_cc_toolchain(go)
         tool_args.add_all(extld)
-        if extld and (go.mode.static or
-                      go.mode.race or
+        if extld and (go.mode.race or
                       go.mode.linkmode != LINKMODE_NORMAL or
                       go.mode.goos == "windows" and go.mode.msan):
             # Force external linking for the following conditions:
-            # * Mode is static but not pure: -static must be passed to the C
-            #   linker if the binary contains cgo code. See #2168, #2216.
             # * Non-normal build mode: may not be strictly necessary, especially
             #   for modes like "pie".
             # * Race or msan build for Windows: Go linker has pairwise
@@ -98,6 +95,13 @@ def emit_link(
             #
             #       runtime/cgo(.text): relocation target memset not defined
             tool_args.add("-linkmode", "external")
+        if go.mode.static:
+            # When static linking is requested, the Go linker's auto mode may
+            # not pick external linking for packages like net that implicitly
+            # import runtime/cgo (no .o files, so externalobj stays false).
+            # The wrapper detects runtime/cgo via an import graph walk and
+            # injects -linkmode external only when needed. See #2168, #2216.
+            builder_args.add("-force-external-if-cgo")
 
     if go.mode.static:
         extldflags.append("-static")
