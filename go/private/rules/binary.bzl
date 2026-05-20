@@ -481,6 +481,10 @@ def _go_binary_kwargs(go_cc_aspects = []):
                 default = "//go/config:empty",
             ),
             "_go_context_data": attr.label(default = "//:go_context_data"),
+            "_nogo": attr.label(
+                default = Label("@io_bazel_rules_nogo//:nogo"),
+                cfg = "exec",
+            ),
             "_allowlist_function_transition": attr.label(
                 default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
             ),

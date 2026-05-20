@@ -47,7 +47,6 @@ load(
 load(
     "//go/private/rules:transition.bzl",
     "non_request_nogo_transition",
-    "request_nogo_transition",
 )
 load(
     ":common.bzl",
@@ -716,7 +715,7 @@ def go_context(
         importpath_aliases = importpath_aliases,
         pathtype = pathtype,
         cgo_tools = cgo_tools,
-        nogo = go_context_info.nogo if go_context_info else None,
+        nogo = ctx.attr._nogo[DefaultInfo].files_to_run if hasattr(ctx.attr, "_nogo") else None,
         coverdata = go_context_info.coverdata if go_context_info else None,
         coverage_enabled = ctx.configuration.coverage_enabled,
         coverage_instrumented = ctx.coverage_instrumented(),
@@ -759,7 +758,6 @@ def _go_context_data_impl(ctx):
     return [
         GoContextInfo(
             coverdata = ctx.attr.coverdata[0][GoArchive],
-            nogo = ctx.attr.nogo[DefaultInfo].files_to_run,
         ),
         ctx.attr.stdlib[GoStdLib],
         ctx.attr.go_config[GoConfigInfo],
@@ -777,10 +775,6 @@ go_context_data = rule(
             mandatory = True,
             providers = [GoConfigInfo],
         ),
-        "nogo": attr.label(
-            mandatory = True,
-            cfg = "exec",
-        ),
         "stdlib": attr.label(
             mandatory = True,
             providers = [GoStdLib],
@@ -792,7 +786,6 @@ go_context_data = rule(
     doc = """go_context_data gathers information about the build configuration.
     It is a common dependency of all Go targets.""",
     toolchains = [GO_TOOLCHAIN],
-    cfg = request_nogo_transition,
 )
 
 def cgo_context_data_impl(ctx):
