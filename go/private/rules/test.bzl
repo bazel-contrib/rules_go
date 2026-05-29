@@ -669,10 +669,6 @@ def _recompile_external_deps(go, external_go_info, internal_archive, library_lab
     # can't import anything that imports itself.
     internal_go_info = internal_archive.source
 
-    # Store the original labels so that we can map dependencies back onto
-    # internal_archive.direct after recompilation (see below).
-    original_internal_dep_labels = [dep.data.label for dep in internal_go_info.deps]
-
     internal_deps = []
 
     # Pass internal dependencies that need to be recompiled down to the builder to check if the internal archive
@@ -759,20 +755,6 @@ def _recompile_external_deps(go, external_go_info, internal_archive, library_lab
                 _headers = internal_archive._headers,
             )
         label_to_archive[label] = archive
-
-    # Fix up internal_archive.direct for gopackagesdriver, which queries the
-    # archive by label to build the go/packages response map for a test file,
-    # which could be part of an x_test package. Because the aspect uses the
-    # first archive it finds for that label, we need direct to hold the
-    # recompiled external deps (=intermediate test variants), even for the
-    # internal archive. See #3981.
-    attrs = structs.to_dict(internal_archive)
-    attrs["direct"] = [
-        label_to_archive[label]
-        for label in original_internal_dep_labels
-    ]
-    internal_archive = GoArchive(**attrs)
-    label_to_archive[internal_archive.data.label] = internal_archive
 
     # Finally, we need to replace external_go_info.deps with the recompiled
     # archives.
