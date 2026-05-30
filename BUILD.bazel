@@ -65,7 +65,6 @@ go_context_data(
     name = "go_context_data",
     coverdata = "//go/tools/coverdata",
     go_config = ":go_config",
-    nogo = "@io_bazel_rules_nogo//:nogo",
     stdlib = ":stdlib",
     visibility = ["//visibility:public"],
 )

@@ -211,10 +211,26 @@ go_proto_library = rule(
         "_go_context_data": attr.label(
             default = "//:go_context_data",
         ),
+        "_nogo": attr.label(
+            default = Label("@io_bazel_rules_nogo//:nogo"),
+            cfg = "exec",
+        ),
         "_allowlist_function_transition": attr.label(
             default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
         ),
     } | CGO_ATTRS,
+    # go-protoc-bin is built via cfg = "exec" and lands on the first registered
+    # exec platform, while the Go toolchain may have constraints on the exec
+    # platform. Because of the possible differences in platform resolution,
+    # this may end up with a go-protoc-bin that is incompatible with the
+    # selected exec platform (when --incompatible_auto_exec_groups is unset).
+    # Assign it an explicit exec group with no toolchain constraints so it
+    # resolves to the same platform as the one resolved for the binary.
+    # Note that this exec platform matching is still fragile; the proper fix
+    # is to create proper toolchains for the protoc compiler.
+    exec_groups = {
+        "internal_use_only_go_proto_gen": exec_group(),
+    },
     fragments = CGO_FRAGMENTS,
     toolchains = [GO_TOOLCHAIN] + CGO_TOOLCHAINS,
 )

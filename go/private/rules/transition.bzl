@@ -161,26 +161,6 @@ go_transition = transition(
     ] + TRANSITIONED_GO_SETTING_KEYS + _SETTING_KEY_TO_ORIGINAL_SETTING_KEY.values(),
 )
 
-def _request_nogo_transition(settings, _attr):
-    """Indicates that we want the project configured nogo instead of a noop.
-
-    This does not guarantee that the project configured nogo will be used (if
-    bootstrap is true we are currently building nogo so that is a cyclic
-    dependency).
-
-    The config setting nogo_active requires bootstrap to be false and
-    request_nogo to be true to provide the project configured nogo.
-    """
-    settings = dict(settings)
-    settings["//go/private:request_nogo"] = True
-    return settings
-
-request_nogo_transition = transition(
-    implementation = _request_nogo_transition,
-    inputs = [],
-    outputs = ["//go/private:request_nogo"],
-)
-
 def _non_request_nogo_transition(_settings, _attr):
     # This transition is used to make sure we only end up with 1 copy of coverdata,
     # even if a test links against it and is run in coverage mode.

@@ -11,7 +11,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/pmezard/go-difflib/difflib"
+	"github.com/aymanbagabas/go-udiff"
 	"golang.org/x/tools/go/analysis"
 )
 
@@ -228,17 +228,13 @@ func writePatch(patchFile io.Writer, changes []fileChange) error {
 		// see validate() that is called before this function.
 		out := applyEdits(contents, c.changes)
 
-		diff := difflib.UnifiedDiff{
-			A:        difflib.SplitLines(string(contents)),
-			B:        difflib.SplitLines(string(out)),
-			FromFile: filepath.Join("a", c.fileName),
-			ToFile:   filepath.Join("b", c.fileName),
-			Context:  3,
-		}
-
-		if err := difflib.WriteUnifiedDiff(patchFile, diff); err != nil {
-			return fmt.Errorf("creating patch for %q: %w", c.fileName, err)
-		}
+		unified := udiff.Unified(
+			filepath.Join("a", c.fileName),
+			filepath.Join("b", c.fileName),
+			string(contents),
+			string(out),
+		)
+		fmt.Fprint(patchFile, unified)
 	}
 
 	return nil

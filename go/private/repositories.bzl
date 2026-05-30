@@ -103,20 +103,19 @@ def go_rules_dependencies(force = False):
     )
 
     # Needed for nogo to generate unified diff
-    # releaser:upgrade-dep pmezard go-difflib
+    # releaser:upgrade-dep aymanbagabas go-udiff
     wrapper(
         http_archive,
-        name = "com_github_pmezard_go_difflib",
-        # v1.0.0, latest as of 2024-12-19
+        name = "com_github_aymanbagabas_go_udiff",
+        # v0.4.1, latest as of 2025-05-01
         urls = [
-            "https://mirror.bazel.build/github.com/pmezard/go-difflib/archive/refs/tags/v1.0.0.tar.gz",
-            "https://github.com/pmezard/go-difflib/archive/refs/tags/v1.0.0.tar.gz",
+            "https://github.com/aymanbagabas/go-udiff/archive/refs/tags/v0.4.1.tar.gz",
         ],
-        sha256 = "28f3dc1b5c0efd61203ab07233f774740d3bf08da4d8153fb5310db6cea0ebda",
-        strip_prefix = "go-difflib-1.0.0",
+        sha256 = "ece2365439eaa35b37430030e03bf91cacc5be9379283d7a45c13c6d6715996a",
+        strip_prefix = "go-udiff-0.4.1",
         patches = [
-            # releaser:patch-cmd gazelle -repo_root . -go_prefix github.com/pmezard/go-difflib -go_naming_convention import_alias
-            Label("//third_party:com_github_pmezard_go_difflib-gazelle.patch"),
+            # releaser:patch-cmd gazelle -repo_root . -go_prefix github.com/aymanbagabas/go-udiff -go_naming_convention import_alias
+            Label("//third_party:com_github_aymanbagabas_go_udiff-gazelle.patch"),
         ],
         patch_args = ["-p1"],
     )
