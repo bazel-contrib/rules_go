@@ -53,6 +53,12 @@ _COMMON_TAG_ATTRS = {
         doc = "The number of leading path segments to be stripped from the file name in the patches.",
     ),
     "strip_prefix": attr.string(default = "go"),
+    "strip_prefixes": attr.string_dict(
+        doc = "Per-platform strip_prefix, keyed by '<goos>_<goarch>'. " +
+              "Takes precedence over strip_prefix when non-empty. Required for " +
+              "GOPROXY-style mirrors (e.g. the golang.org/toolchain module layout) " +
+              "where each platform archive has a different top-level directory.",
+    ),
     "experimental_build_compiler_from_source": attr.bool(
         default = False,
         doc = "Whether to bootstrap compiler tool binaries from source instead of using the prebuilt SDK compiler binaries.",
@@ -482,6 +488,7 @@ def _download_sdk(*, get_sdks_by_version, name, goos, goarch, download_tag):
         urls = download_tag.urls,
         version = download_tag.version,
         strip_prefix = download_tag.strip_prefix,
+        strip_prefixes = download_tag.strip_prefixes,
         experimental_build_compiler_from_source = download_tag.experimental_build_compiler_from_source,
     )
 
