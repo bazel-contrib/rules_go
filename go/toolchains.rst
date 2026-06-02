@@ -393,7 +393,16 @@ This downloads a Go SDK for use in toolchains.
 | :param:`strip_prefix`          | :type:`string`              | :value:`"go"`                               |
 +--------------------------------+-----------------------------+---------------------------------------------+
 | A directory prefix to strip from the extracted files.                                                      |
-| Used with ``urls``.                                                                                        |
+| Used with ``urls``. Mutually exclusive with :param:`strip_prefixes`; when                                  |
+| :param:`strip_prefixes` is non-empty it takes precedence.                                                  |
++--------------------------------+-----------------------------+---------------------------------------------+
+| :param:`strip_prefixes`        | :type:`string_dict`         | :value:`{}`                                 |
++--------------------------------+-----------------------------+---------------------------------------------+
+| Per-platform directory prefix to strip from the extracted files, keyed by                                  |
+| ``"<goos>_<goarch>"``. Required when each platform archive has a distinct                                  |
+| top-level directory — most commonly when serving the SDK from a GOPROXY-style                              |
+| mirror using the ``golang.org/toolchain`` module layout. See the GOPROXY example                           |
+| below.                                                                                                     |
 +--------------------------------+-----------------------------+---------------------------------------------+
 | :param:`sdks`                  | :type:`string_list_dict`    | :value:`see description`                    |
 +--------------------------------+-----------------------------+---------------------------------------------+
@@ -462,6 +471,42 @@ This downloads a Go SDK for use in toolchains.
     go_rules_dependencies()
 
     go_register_toolchains()
+
+**GOPROXY-style mirror example**:
+
+The Go command (since Go 1.21) can fetch the toolchain as a standard Go module
+named ``golang.org/toolchain``. The same module is served by every GOPROXY-style
+mirror (``proxy.golang.org``, Artifactory, Athens, Nexus, etc.), which makes it
+convenient to serve the Go SDK from the same internal artifact store that
+already serves Go module dependencies. The archive layout differs from
+``go.dev/dl``: each per-platform ``.zip`` has a top-level directory of the form
+``golang.org/toolchain@v0.0.1-go{V}.{os}-{arch}``, so :param:`strip_prefixes`
+must be used instead of :param:`strip_prefix`.
+
+.. code:: bzl
+
+    load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk")
+
+    go_download_sdk(
+        name = "go_sdk",
+        urls = ["https://proxy.golang.org/golang.org/toolchain/@v/{}"],
+        sdks = {
+            "darwin_arm64":  ("v0.0.1-go1.22.5.darwin-arm64.zip",  "ebf537a1e8942b5939864e55e38d8885995682da4f04b392cf1017f649f46557"),
+            "linux_amd64":   ("v0.0.1-go1.22.5.linux-amd64.zip",   "0eb73889fac3ef46a759ca3f8079a7ff656158ee6aedfe127221101824001a77"),
+            "windows_amd64": ("v0.0.1-go1.22.5.windows-amd64.zip", "45a9ef35178c02c0f77d0fcb77960f7afde532332f12344f822166f21820d02d"),
+        },
+        strip_prefixes = {
+            "darwin_arm64":  "golang.org/toolchain@v0.0.1-go1.22.5.darwin-arm64",
+            "linux_amd64":   "golang.org/toolchain@v0.0.1-go1.22.5.linux-amd64",
+            "windows_amd64": "golang.org/toolchain@v0.0.1-go1.22.5.windows-amd64",
+        },
+    )
+
+To point at an internal mirror, replace the ``proxy.golang.org`` host in
+``urls`` with the GOPROXY endpoint of the mirror (the path
+``/golang.org/toolchain/@v/{}`` is part of the Go module proxy protocol and is
+the same everywhere). Both ``go_download_sdk`` and the ``go_sdk.download``
+bzlmod tag accept :param:`strip_prefixes`.
 
 go_host_sdk
 ~~~~~~~~~~~
