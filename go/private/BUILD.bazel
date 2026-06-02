@@ -165,6 +165,7 @@ bzl_library(
 bool_setting(
     name = "bootstrap_nogo",
     build_setting_default = False,
+    scope = "universal",
     visibility = ["//visibility:public"],
 )
 
@@ -174,6 +175,7 @@ bool_setting(
 bool_setting(
     name = "request_nogo",
     build_setting_default = True,
+    scope = "universal",
     visibility = ["//visibility:public"],
 )
 
