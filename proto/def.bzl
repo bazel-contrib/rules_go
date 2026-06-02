@@ -100,6 +100,8 @@ _go_proto_aspect = aspect(
         "deps",
         "embed",
     ],
+    attrs = CGO_ATTRS,
+    fragments = CGO_FRAGMENTS,
     toolchains = [GO_TOOLCHAIN] + CGO_TOOLCHAINS,
 )
 
