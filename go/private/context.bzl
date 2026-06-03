@@ -617,6 +617,7 @@ def go_context(
         "GOARCH": mode.goarch,
         "GOOS": mode.goos,
         "GOEXPERIMENT": toolchain.sdk.experiments,
+        "GOFIPS140": toolchain.sdk.gofips140,
         "GOROOT": goroot,
         "GOROOT_FINAL": "GOROOT",
         "CGO_ENABLED": "0" if mode.pure else "1",
