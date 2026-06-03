@@ -100,7 +100,9 @@ _go_proto_aspect = aspect(
         "deps",
         "embed",
     ],
-    toolchains = [GO_TOOLCHAIN],
+    attrs = CGO_ATTRS,
+    fragments = CGO_FRAGMENTS,
+    toolchains = [GO_TOOLCHAIN] + CGO_TOOLCHAINS,
 )
 
 def _proto_library_to_source(_go, attr, source, merge):
