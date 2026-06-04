@@ -15,6 +15,7 @@
 load(
     "//go/private:common.bzl",
     "GO_TOOLCHAIN",
+    "GO_TOOLCHAIN_LABEL",
 )
 load(
     "//go/private:context.bzl",
@@ -64,7 +65,7 @@ def _nogo_impl(ctx):
         outputs = [nogo_main],
         mnemonic = "GoGenNogo",
         executable = go.toolchain._builder,
-        toolchain = GO_TOOLCHAIN,
+        toolchain = GO_TOOLCHAIN_LABEL,
         arguments = [nogo_args],
     )
 
@@ -73,7 +74,7 @@ def _nogo_impl(ctx):
         go,
         struct(
             embed = [ctx.attr._nogo_srcs],
-            deps = analyzer_archives + [ctx.attr._go_difflib[GoArchive]],
+            deps = analyzer_archives + [dep[GoArchive] for dep in ctx.attr._diff_deps],
         ),
         generated_srcs = [nogo_main],
         name = go.label.name + "~nogo",
@@ -108,8 +109,11 @@ _nogo = rule(
         "_nogo_srcs": attr.label(
             default = "//go/tools/builders:nogo_srcs",
         ),
+        "_go_context_data": attr.label(default = "//:go_context_data"),
         "_go_config": attr.label(default = "//:go_config"),
-        "_go_difflib": attr.label(default = "@com_github_pmezard_go_difflib//difflib:go_default_library"),
+        "_diff_deps": attr.label_list(default = [
+            "@com_github_aymanbagabas_go_udiff//:go_default_library",
+        ]),
         "_stdlib": attr.label(default = "//:stdlib"),
         "_allowlist_function_transition": attr.label(
             default = "@bazel_tools//tools/allowlists/function_transition_allowlist",

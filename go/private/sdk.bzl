@@ -101,13 +101,15 @@ def _go_download_sdk_impl(ctx):
 
     if platform not in sdks:
         fail("unsupported platform {}".format(platform))
-    filename, sha256 = sdks[platform]
 
+    filename, sha256 = sdks[platform]
     _remote_sdk(ctx, [url.format(filename) for url in ctx.attr.urls], ctx.attr.strip_prefix, sha256)
     patch(ctx, patch_args = _get_patch_args(ctx.attr.patch_strip))
 
+    sdk_build_file_override = ctx.attr._bootstrap_sdk_build_file if ctx.attr.experimental_build_compiler_from_source else None
+
     detected_version = _detect_sdk_version(ctx, ".")
-    _sdk_build_file(ctx, platform, detected_version, experiments = ctx.attr.experiments)
+    _sdk_build_file(ctx, platform, detected_version, experiments = ctx.attr.experiments, sdk_build_file_override = sdk_build_file_override)
 
     if not ctx.attr.sdks and not ctx.attr.version:
         # Returning this makes Bazel print a message that 'version' must be
@@ -120,6 +122,7 @@ def _go_download_sdk_impl(ctx):
             "urls": ctx.attr.urls,
             "version": version,
             "strip_prefix": ctx.attr.strip_prefix,
+            "experimental_build_compiler_from_source": ctx.attr.experimental_build_compiler_from_source,
         }
 
     if hasattr(ctx, "repo_metadata"):
@@ -146,8 +149,15 @@ go_download_sdk_rule = repository_rule(
             default = 0,
             doc = "The number of leading path segments to be stripped from the file name in the patches.",
         ),
+        "experimental_build_compiler_from_source": attr.bool(
+            default = False,
+            doc = "Experimental: whether to bootstrap compiler tool binaries from source instead of using the prebuilt SDK compiler binaries.",
+        ),
         "_sdk_build_file": attr.label(
             default = Label("//go/private:BUILD.sdk.bazel"),
+        ),
+        "_bootstrap_sdk_build_file": attr.label(
+            default = Label("//go/private:experimental/BUILD.bootstrap.sdk.bazel"),
         ),
     },
 )
@@ -439,13 +449,13 @@ def _local_sdk(ctx, path):
             continue
         ctx.symlink(entry, entry.basename)
 
-def _sdk_build_file(ctx, platform, version, experiments):
+def _sdk_build_file(ctx, platform, version, experiments, sdk_build_file_override = None):
     ctx.file("ROOT")
     goos, _, goarch = platform.partition("_")
 
     ctx.template(
         "BUILD.bazel",
-        ctx.path(ctx.attr._sdk_build_file),
+        ctx.path(sdk_build_file_override or ctx.attr._sdk_build_file),
         executable = False,
         substitutions = {
             "{goos}": goos,
@@ -478,6 +488,8 @@ def detect_host_platform(ctx):
         goarch = "arm64"
     elif goarch == "x86_64":
         goarch = "amd64"
+    elif goarch == "loongarch64":
+        goarch = "loong64"
 
     return goos, goarch
 

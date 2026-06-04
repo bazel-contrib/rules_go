@@ -51,12 +51,11 @@ def go_rules_dependencies(force = False):
     wrapper(
         http_archive,
         name = "bazel_skylib",
-        # 1.6.1, latest as of 2024-05-20
         urls = [
-            "https://mirror.bazel.build/github.com/bazelbuild/bazel-skylib/releases/download/1.6.1/bazel-skylib-1.6.1.tar.gz",
-            "https://github.com/bazelbuild/bazel-skylib/releases/download/1.6.1/bazel-skylib-1.6.1.tar.gz",
+            "https://mirror.bazel.build/github.com/bazelbuild/bazel-skylib/releases/download/1.8.1/bazel-skylib-1.8.1.tar.gz",
+            "https://github.com/bazelbuild/bazel-skylib/releases/download/1.8.1/bazel-skylib-1.8.1.tar.gz",
         ],
-        sha256 = "9f38886a40548c6e96c106b752f242130ee11aaa068a56ba7e56f4511f33e4f2",
+        sha256 = "51b5105a760b353773f904d2bbc5e664d0987fbaf22265164de65d43e910d8ac",
         strip_prefix = "",
     )
 
@@ -103,20 +102,19 @@ def go_rules_dependencies(force = False):
     )
 
     # Needed for nogo to generate unified diff
-    # releaser:upgrade-dep pmezard go-difflib
+    # releaser:upgrade-dep aymanbagabas go-udiff
     wrapper(
         http_archive,
-        name = "com_github_pmezard_go_difflib",
-        # v1.0.0, latest as of 2024-12-19
+        name = "com_github_aymanbagabas_go_udiff",
+        # v0.4.1, latest as of 2025-05-01
         urls = [
-            "https://mirror.bazel.build/github.com/pmezard/go-difflib/archive/refs/tags/v1.0.0.tar.gz",
-            "https://github.com/pmezard/go-difflib/archive/refs/tags/v1.0.0.tar.gz",
+            "https://github.com/aymanbagabas/go-udiff/archive/refs/tags/v0.4.1.tar.gz",
         ],
-        sha256 = "28f3dc1b5c0efd61203ab07233f774740d3bf08da4d8153fb5310db6cea0ebda",
-        strip_prefix = "go-difflib-1.0.0",
+        sha256 = "ece2365439eaa35b37430030e03bf91cacc5be9379283d7a45c13c6d6715996a",
+        strip_prefix = "go-udiff-0.4.1",
         patches = [
-            # releaser:patch-cmd gazelle -repo_root . -go_prefix github.com/pmezard/go-difflib -go_naming_convention import_alias
-            Label("//third_party:com_github_pmezard_go_difflib-gazelle.patch"),
+            # releaser:patch-cmd gazelle -repo_root . -go_prefix github.com/aymanbagabas/go-udiff -go_naming_convention import_alias
+            Label("//third_party:com_github_aymanbagabas_go_udiff-gazelle.patch"),
         ],
         patch_args = ["-p1"],
     )
@@ -280,10 +278,10 @@ def go_rules_dependencies(force = False):
     wrapper(
         http_archive,
         name = "platforms",
-        sha256 = "3384eb1c30762704fbe38e440204e114154086c8fc8a8c2e3e28441028c019a8",
+        sha256 = "dbad4a23abcca6171e47b79edc53bd6a41067a3b75f9e8b104656b459ff25046",
         urls = [
-            "https://mirror.bazel.build/github.com/bazelbuild/platforms/releases/download/1.0.0/platforms-1.0.0.tar.gz",
-            "https://github.com/bazelbuild/platforms/releases/download/1.0.0/platforms-1.0.0.tar.gz",
+            "https://mirror.bazel.build/github.com/bazelbuild/platforms/releases/download/1.1.0/platforms-1.1.0.tar.gz",
+            "https://github.com/bazelbuild/platforms/releases/download/1.1.0/platforms-1.1.0.tar.gz",
         ],
     )
 
@@ -319,9 +317,11 @@ def go_rules_dependencies(force = False):
         name = "io_bazel_rules_go_bazel_features",
     )
 
+    host_compatible_sdk_label = _get_host_compatible_sdk_label()
     _maybe(
         _go_host_compatible_s_d_k_label,
         name = "go_host_compatible_sdk_label",
+        host_compatible_sdk_label = host_compatible_sdk_label,
     )
 
     wrapper(
@@ -343,12 +343,26 @@ def go_rules_dependencies(force = False):
 
 def _go_host_compatible_sdk_label_impl(ctx):
     ctx.file("BUILD.bazel")
-    ctx.file("defs.bzl", """HOST_COMPATIBLE_SDK = Label("@go_sdk//:ROOT")""")
+    ctx.file("defs.bzl", """HOST_COMPATIBLE_SDK = Label("{}")""".format(ctx.attr.host_compatible_sdk_label))
+
+def _get_host_compatible_sdk_label():
+    # Keep compatibility with custom @go_sdk repositories that only expose :ROOT.
+    go_sdk_rule = native.existing_rules().get("go_sdk")
+    if go_sdk_rule and go_sdk_rule.get("kind") == "go_download_sdk_rule" and go_sdk_rule.get("experimental_build_compiler_from_source", False):
+        return "@go_sdk//:host_compatible_root_file"
+    return "@go_sdk//:ROOT"
 
 # This rule name has to avoid containing both "go_" and "_sdk" as substrings
 # due to this check in Gazelle:
 # https://github.com/bazelbuild/bazel-gazelle/blob/f08119735757370319d4f8c7653c0805fdae4817/deps.bzl#L92
-_go_host_compatible_s_d_k_label = repository_rule(_go_host_compatible_sdk_label_impl)
+_go_host_compatible_s_d_k_label = repository_rule(
+    implementation = _go_host_compatible_sdk_label_impl,
+    attrs = {
+        "host_compatible_sdk_label": attr.string(
+            default = "@go_sdk//:ROOT",
+        ),
+    },
+)
 
 def _maybe(repo_rule, name, **kwargs):
     if name not in native.existing_rules():

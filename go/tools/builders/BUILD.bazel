@@ -39,7 +39,7 @@ go_test(
         "nogo_fix_test.go",
     ],
     deps = [
-        "@com_github_pmezard_go_difflib//difflib:go_default_library",
+        "@com_github_aymanbagabas_go_udiff//:go_default_library",
         "@org_golang_x_tools//go/analysis",
     ],
 )

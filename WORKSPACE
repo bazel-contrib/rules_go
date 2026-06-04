@@ -17,7 +17,7 @@ bazel_features_deps()
 
 go_rules_dependencies()
 
-go_register_toolchains(version = "1.24.0")
+go_register_toolchains(version = "1.24.12")
 
 go_register_nogo(
     nogo = "@//internal:nogo",
@@ -44,9 +44,9 @@ rbe_preconfig(
 
 http_archive(
     name = "bazel_gazelle",
-    sha256 = "e467b801046b6598c657309b45d2426dc03513777bd1092af2c62eebf990aca5",
+    sha256 = "49d9eba309b0b695824ff417d734242824ad9ab5edb56063b9d3400df1a61a56",
     urls = [
-        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.45.0/bazel-gazelle-v0.45.0.tar.gz",
+        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.51.3/bazel-gazelle-v0.51.3.tar.gz",
     ],
 )
 

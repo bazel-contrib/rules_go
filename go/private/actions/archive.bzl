@@ -140,7 +140,7 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
             cxxopts = cgo.cxxopts,
             objcopts = cgo.objcopts,
             objcxxopts = cgo.objcxxopts,
-            clinkopts = cgo.clinkopts,
+            ldflags = cgo.ldflags,
             testfilter = testfilter,
             is_external_pkg = is_external_pkg,
         )

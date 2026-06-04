@@ -5,10 +5,10 @@ toolchain go1.25.0
 go 1.24.0
 
 require (
+	github.com/aymanbagabas/go-udiff v0.4.1
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.7.0-rc.1
 	github.com/golang/protobuf v1.5.4
-	github.com/pmezard/go-difflib v1.0.0
 	golang.org/x/crypto v0.39.0
 	golang.org/x/net v0.41.0
 	golang.org/x/tools v0.34.0

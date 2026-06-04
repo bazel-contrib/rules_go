@@ -66,7 +66,7 @@ def emit_compilepkg(
         cxxopts = [],
         objcopts = [],
         objcxxopts = [],
-        clinkopts = [],
+        ldflags = None,
         out_lib = None,
         out_export = None,
         out_facts = None,
@@ -191,19 +191,21 @@ def emit_compilepkg(
             compile_args.add("-objcflags", quote_opts(objcopts))
         if objcxxopts:
             compile_args.add("-objcxxflags", quote_opts(objcxxopts))
-        if clinkopts:
-            compile_args.add("-ldflags", quote_opts(clinkopts))
 
     if go.mode.pgoprofile:
         compile_args.add("-pgoprofile", go.mode.pgoprofile)
         inputs_direct.append(go.mode.pgoprofile)
+
+    arguments = ["compilepkg", shared_args, compile_args]
+    if ldflags:
+        arguments.append(ldflags)
 
     go.actions.run(
         inputs = depset(inputs_direct, transitive = inputs_transitive),
         outputs = outputs,
         mnemonic = "GoCompilePkgExternal" if is_external_pkg else "GoCompilePkg",
         executable = go.toolchain._builder,
-        arguments = ["compilepkg", shared_args, compile_args],
+        arguments = arguments,
         env = env,
         toolchain = GO_TOOLCHAIN_LABEL,
         execution_requirements = execution_requirements,
@@ -251,7 +253,7 @@ def _run_nogo(
 
     nogo_args.add_all(archives, before_each = "-facts", map_each = _facts)
     if not out_validation:
-        # Since diagnostics are ignored, all analyzers that don't generated facts can be skipped.
+        # Since diagnostics are ignored, analyzers that don't generate facts can be skipped.
         nogo_args.add("-facts_only")
     nogo_args.add("-out_facts", out_facts)
     nogo_args.add_all("-out", [out_diagnostics], expand_directories = False)

@@ -274,9 +274,19 @@ func checkPackage(analyzers []*analysis.Analyzer, packagePath, goVersion string,
 		}
 	}
 
+	// In facts-only mode diagnostics are discarded, so we only need to run
+	// analyzers that produce facts.
+	//
+	// Note that this set may be disjoint from the initial set of analyzers: root
+	// analyzers may consume results from required analyzers which themselves use
+	// facts.
 	roots := make([]*action, 0, len(analyzers))
-	for _, a := range analyzers {
-		if !factsOnly || len(a.FactTypes) > 0 {
+	if factsOnly {
+		for _, a := range factProducers(analyzers) {
+			roots = append(roots, visit(a))
+		}
+	} else {
+		for _, a := range analyzers {
 			roots = append(roots, visit(a))
 		}
 	}
@@ -347,6 +357,30 @@ func checkPackage(analyzers []*analysis.Analyzer, packagePath, goVersion string,
 type Range struct {
 	from token.Position
 	to   int
+}
+
+// factProducers returns the set of analyzers that declare facts among the
+// transitive closure of as.
+func factProducers(as []*analysis.Analyzer) []*analysis.Analyzer {
+	var producers []*analysis.Analyzer
+	seen := make(map[*analysis.Analyzer]bool)
+	var visit func(a *analysis.Analyzer)
+	visit = func(a *analysis.Analyzer) {
+		if seen[a] {
+			return
+		}
+		seen[a] = true
+		if len(a.FactTypes) > 0 {
+			producers = append(producers, a)
+		}
+		for _, req := range a.Requires {
+			visit(req)
+		}
+	}
+	for _, a := range as {
+		visit(a)
+	}
+	return producers
 }
 
 // An action represents one unit of analysis work: the application of

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
+load("//go/private/actions:utils.bzl", "quote_opts")
 load(
     "//go/private:common.bzl",
     "get_versioned_shared_lib_extension",
@@ -23,7 +24,21 @@ load(
     "//go/private:mode.bzl",
     "LINKMODE_NORMAL",
     "extldflags_from_cc_toolchain",
+    "runtime_libs_from_cc_toolchain",
 )
+
+_CXX_SOURCE_EXTENSIONS = {
+    "cc": None,
+    "cpp": None,
+    "cxx": None,
+    "mm": None,
+}
+
+def _has_cxx_sources(srcs):
+    for src in srcs:
+        if src.extension in _CXX_SOURCE_EXTENSIONS:
+            return True
+    return False
 
 def cgo_configure(go, srcs, cdeps, cppopts, copts, cxxopts, clinkopts):
     """cgo_configure returns the inputs and compile / link options
@@ -49,7 +64,7 @@ def cgo_configure(go, srcs, cdeps, cppopts, copts, cxxopts, clinkopts):
         cxxopts: complete list of C++ compiler options.
         objcopts: complete list of Objective-C compiler options.
         objcxxopts: complete list of Objective-C++ compiler options.
-        clinkopts: complete list of linker options.
+        ldflags: Args object containing complete C linker options.
     """
     if not go.cgo_tools:
         fail("Go toolchain does not support cgo")
@@ -59,15 +74,9 @@ def cgo_configure(go, srcs, cdeps, cppopts, copts, cxxopts, clinkopts):
     cxxopts = go.cgo_tools.cxx_compile_options + cxxopts
     objcopts = go.cgo_tools.objc_compile_options + copts
     objcxxopts = go.cgo_tools.objcxx_compile_options + cxxopts
-    clinkopts = extldflags_from_cc_toolchain(go) + clinkopts
-
-    # NOTE(#2545): avoid unnecessary dynamic link
-    if "-static-libstdc++" in clinkopts:
-        clinkopts = [
-            option
-            for option in clinkopts
-            if option not in ("-lstdc++", "-lc++")
-        ]
+    toolchain_clinkopts = extldflags_from_cc_toolchain(go)
+    runtime_libs = runtime_libs_from_cc_toolchain(go)
+    needs_cxx_runtime = _has_cxx_sources(srcs)
 
     if go.mode.linkmode != LINKMODE_NORMAL:
         for opt_list in (copts, cxxopts, objcopts, objcxxopts):
@@ -149,6 +158,9 @@ def cgo_configure(go, srcs, cdeps, cppopts, copts, cxxopts, clinkopts):
                         # so it can be treated as a simple shared library too.
                         continue
                 lib_opts.append(lib.path)
+                if lib.basename.endswith(".a"):
+                    # Match cgo2's heuristic: static cdeps may need the C++ runtime.
+                    needs_cxx_runtime = True
             clinkopts.extend(cc_link_flags)
 
         elif hasattr(d, "objc"):
@@ -174,7 +186,26 @@ def cgo_configure(go, srcs, cdeps, cppopts, copts, cxxopts, clinkopts):
     # specified with -l flags) unless they appear after .o or .a files with
     # undefined symbols they provide. Put all the .a files from cdeps first,
     # so that we actually link with -lstdc++ and others.
-    clinkopts = lib_opts + clinkopts
+    pre_runtime_clinkopts = lib_opts + toolchain_clinkopts
+
+    # NOTE(#2545): avoid unnecessary dynamic link
+    if "-static-libstdc++" in pre_runtime_clinkopts + clinkopts:
+        pre_runtime_clinkopts = [
+            option
+            for option in pre_runtime_clinkopts
+            if option not in ("-lstdc++", "-lc++")
+        ]
+        clinkopts = [
+            option
+            for option in clinkopts
+            if option not in ("-lstdc++", "-lc++")
+        ]
+
+    ldflags = go.actions.args()
+    _add_ldflags(ldflags, pre_runtime_clinkopts)
+    if needs_cxx_runtime:
+        ldflags.add_all(runtime_libs, before_each = "-ldflags")
+    _add_ldflags(ldflags, clinkopts)
 
     return struct(
         inputs = inputs,
@@ -186,8 +217,12 @@ def cgo_configure(go, srcs, cdeps, cppopts, copts, cxxopts, clinkopts):
         cxxopts = cxxopts,
         objcopts = objcopts,
         objcxxopts = objcxxopts,
-        clinkopts = clinkopts,
+        ldflags = ldflags,
     )
+
+def _add_ldflags(args, opts):
+    if opts:
+        args.add("-ldflags", quote_opts(opts))
 
 def _cc_libs_and_flags(target):
     # Copied from get_libs_for_static_executable in migration instructions

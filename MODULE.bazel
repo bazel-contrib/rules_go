@@ -7,8 +7,8 @@ module(
 # The custom repo_name is used to prevent our bazel_features polyfill for WORKSPACE builds from
 # conflicting with the real bazel_features repo.
 bazel_dep(name = "bazel_features", version = "1.36.0", repo_name = "io_bazel_rules_go_bazel_features")
-bazel_dep(name = "bazel_skylib", version = "1.2.0")
-bazel_dep(name = "platforms", version = "1.0.0")
+bazel_dep(name = "bazel_skylib", version = "1.8.1")
+bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "rules_proto", version = "7.0.2")
 bazel_dep(name = "protobuf", version = "29.0", repo_name = "com_google_protobuf")
 bazel_dep(name = "rules_shell", version = "0.3.0")
@@ -32,16 +32,16 @@ use_repo(
 
 register_toolchains("@go_toolchains//:all")
 
-bazel_dep(name = "gazelle", version = "0.45.0")
+bazel_dep(name = "gazelle", version = "0.51.3")
 
 go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
 go_deps.from_file(go_mod = "//:go.mod")
 use_repo(
     go_deps,
+    "com_github_aymanbagabas_go_udiff",
     "com_github_gogo_protobuf",
     "com_github_golang_mock",
     "com_github_golang_protobuf",
-    "com_github_pmezard_go_difflib",
     "org_golang_google_genproto",
     "org_golang_google_grpc",
     "org_golang_google_grpc_cmd_protoc_gen_go_grpc",
