@@ -172,6 +172,7 @@ def _go_binary_impl(ctx):
         gc_linkopts = gc_linkopts(ctx),
         version_file = ctx.version_file,
         info_file = ctx.info_file,
+        link_exec_group = "go_link",
         executable = executable,
     )
     validation_output = archive.data._validation_output
@@ -498,6 +499,11 @@ def _go_binary_kwargs(go_cc_aspects = []):
         } | CGO_ATTRS,
         "fragments": CGO_FRAGMENTS,
         "toolchains": [GO_TOOLCHAIN] + CGO_TOOLCHAINS,
+        "exec_groups": {
+            "go_link": exec_group(
+                toolchains = [GO_TOOLCHAIN] + CGO_TOOLCHAINS,
+            ),
+        },
         "doc": """This builds an executable from a set of source files,
         which must all be in the `main` package. You can run the binary with
         `bazel run`, or you can build it with `bazel build` and run it directly.

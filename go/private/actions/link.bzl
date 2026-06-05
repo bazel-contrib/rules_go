@@ -44,7 +44,8 @@ def emit_link(
         executable = None,
         gc_linkopts = [],
         version_file = None,
-        info_file = None):
+        info_file = None,
+        exec_group = None):
     """See go/toolchains.rst#link for full documentation."""
 
     if archive == None:
@@ -197,6 +198,7 @@ def emit_link(
         arguments = [builder_args, "--", tool_args],
         env = go.env,
         toolchain = GO_TOOLCHAIN_LABEL,
+        exec_group = exec_group,
     )
 
 def _extract_extldflags(gc_linkopts, extldflags):
