@@ -59,8 +59,14 @@ func stdlib(args []string) error {
 You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 	}
 
-	// Link in the bare minimum needed to the new GOROOT
-	if err := replicate(goroot, output, replicatePaths("src", "pkg/tool", "pkg/include", "lib")); err != nil {
+	// Link in the bare minimum needed to the new GOROOT. The lib/fips140
+	// directory holds the FIPS snapshot zips and only exists when GOFIPS140 is
+	// set, so only replicate it in that case to avoid failing on SDKs that lack it.
+	replicateDirs := []string{"src", "pkg/tool", "pkg/include"}
+	if v := os.Getenv("GOFIPS140"); v != "" && v != "off" {
+		replicateDirs = append(replicateDirs, "lib/fips140")
+	}
+	if err := replicate(goroot, output, replicatePaths(replicateDirs...)); err != nil {
 		return err
 	}
 
@@ -84,8 +90,10 @@ You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 	os.Setenv("GO111MODULE", "off")
 
 	// GOFIPS140=v1.0.0 triggers a module-like download of the FIPS snapshot.
-	// Set GOMODCACHE to a temporary directory to avoid "module cache not found" errors.
-	if gofips140 := os.Getenv("GOFIPS140"); gofips140 != "" && gofips140 != "off" {
+	// Set GOMODCACHE to a temporary directory to avoid "module cache not found"
+	// errors. Only snapshot versions unpack into a module cache; "latest" builds
+	// from GOROOT/src and needs no module cache.
+	if gofips140 := os.Getenv("GOFIPS140"); gofips140 != "" && gofips140 != "off" && gofips140 != "latest" {
 		modCachePath := filepath.Join(output, ".gomodcache")
 		os.MkdirAll(modCachePath, 0o777)
 		os.Setenv("GOMODCACHE", modCachePath)
@@ -191,10 +199,9 @@ You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 	// them into the expected pkg/ directory so the linker can find them.
 	if gofips140 := os.Getenv("GOFIPS140"); gofips140 != "" && gofips140 != "off" && gofips140 != "latest" {
 		if err := installFIPSSnapshotArchives(goenv, output); err != nil {
-			return fmt.Errorf("failed to install FIPS snapshot archives: %v", err)
+			return fmt.Errorf("install FIPS snapshot archives: %w", err)
 		}
 	}
-
 	return nil
 }
 

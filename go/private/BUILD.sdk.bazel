@@ -60,7 +60,7 @@ define_sdk_repository_targets(
         "src/**",
         "pkg/**",
         "lib/fips140/**",
-    ]) + [
+    ], allow_empty = True) + [
         ":config",
     ],
     go = "bin/go{exe}",

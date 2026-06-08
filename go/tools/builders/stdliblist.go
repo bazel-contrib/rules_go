@@ -239,7 +239,11 @@ func stdliblist(args []string) error {
 	defer func() { cleanup() }()
 
 	newGoRoot := filepath.Join(cloneBase, goenv.sdk)
-	if err := replicate(abs(goenv.sdk), abs(newGoRoot), replicatePaths("src", "pkg/tool", "pkg/include", "lib")); err != nil {
+	replicateDirs := []string{"src", "pkg/tool", "pkg/include"}
+	if v := os.Getenv("GOFIPS140"); v != "" && v != "off" {
+		replicateDirs = append(replicateDirs, "lib/fips140")
+	}
+	if err := replicate(abs(goenv.sdk), abs(newGoRoot), replicatePaths(replicateDirs...)); err != nil {
 		return err
 	}
 
