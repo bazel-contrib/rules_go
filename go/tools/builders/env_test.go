@@ -4,6 +4,7 @@ package main
 
 import (
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -73,5 +74,17 @@ func TestTransformArgs(t *testing.T) {
 				t.Errorf("got %v, want %v", args, tc.expected)
 			}
 		})
+	}
+}
+
+func TestAbs(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.SkipNow()
+	}
+	before := abs("sometool")
+	t.Setenv("PWD", "/proc/self/cwd")
+	after := abs("sometool")
+	if after != before {
+		t.Errorf("got %v, want %v", after, before)
 	}
 }

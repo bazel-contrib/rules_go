@@ -415,12 +415,23 @@ func abs(path string) string {
 	if strings.HasPrefix(path, "__BAZEL_") {
 		return path
 	}
-
-	if abs, err := filepath.Abs(path); err != nil {
-		return path
-	} else {
-		return abs
+	if filepath.IsAbs(path) {
+		return filepath.Clean(path)
 	}
+	// Instead of filepath.Abs(), we EvalSymlinks on os.Getwd.  On
+	// Linux, PWD=/proc/self/cwd will cause
+	// filepath.Abs("sometool") to return
+	// "/proc/self/cwd/sometool". But that path does not behave
+	// like an absolute path. When a `go` invocation chdirs, that
+	// suddenly points somewhere else.
+	wd, err := os.Getwd()
+	if err != nil {
+		return path
+	}
+	if real, err := filepath.EvalSymlinks(wd); err == nil {
+		wd = real
+	}
+	return filepath.Join(wd, path)
 }
 
 // absArgs applies abs to strings that appear in args. Only paths that are
