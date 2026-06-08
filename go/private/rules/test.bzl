@@ -192,6 +192,7 @@ def _go_test_impl(ctx):
         gc_linkopts = test_gc_linkopts,
         version_file = ctx.version_file,
         info_file = ctx.info_file,
+        link_exec_group = "go_link",
     )
 
     env = {
@@ -494,6 +495,11 @@ _go_test_kwargs = {
     "test": True,
     "fragments": CGO_FRAGMENTS,
     "toolchains": [GO_TOOLCHAIN] + CGO_TOOLCHAINS,
+    "exec_groups": {
+        "go_link": exec_group(
+            toolchains = [GO_TOOLCHAIN] + CGO_TOOLCHAINS,
+        ),
+    },
     "doc": """This builds a set of tests that can be run with `bazel test`.
 
     To run all tests in the workspace, and print output on failure (the
