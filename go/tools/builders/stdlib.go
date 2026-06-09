@@ -59,9 +59,7 @@ func stdlib(args []string) error {
 You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 	}
 
-	// Link in the bare minimum needed to the new GOROOT. The lib/fips140
-	// directory holds the FIPS snapshot zips and only exists when GOFIPS140 is
-	// set, so only replicate it in that case to avoid failing on SDKs that lack it.
+	// lib/fips140 (the FIPS snapshot zips) only exists when GOFIPS140 is set, so add it only then.
 	replicateDirs := []string{"src", "pkg/tool", "pkg/include"}
 	if v := os.Getenv("GOFIPS140"); v != "" && v != "off" {
 		replicateDirs = append(replicateDirs, "lib/fips140")
@@ -89,10 +87,8 @@ You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 	// modules on in "auto" mode.
 	os.Setenv("GO111MODULE", "off")
 
-	// GOFIPS140=v1.0.0 triggers a module-like download of the FIPS snapshot.
-	// Set GOMODCACHE to a temporary directory to avoid "module cache not found"
-	// errors. Only snapshot versions unpack into a module cache; "latest" builds
-	// from GOROOT/src and needs no module cache.
+	// Snapshot versions unpack into a module cache, so point GOMODCACHE at a temp dir.
+	// ("latest" builds from GOROOT/src and needs none.)
 	if gofips140 := os.Getenv("GOFIPS140"); gofips140 != "" && gofips140 != "off" && gofips140 != "latest" {
 		modCachePath := filepath.Join(output, ".gomodcache")
 		os.MkdirAll(modCachePath, 0o777)
