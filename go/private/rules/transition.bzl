@@ -180,7 +180,6 @@ _common_reset_transition_dict = dict({
     "//go/config:static": False,
     "//go/config:msan": False,
     "//go/config:race": False,
-    "//go/config:pure": False,
     "//go/config:debug": False,
     "//go/config:linkmode": LINKMODE_NORMAL,
     "//go/config:tags": [],
