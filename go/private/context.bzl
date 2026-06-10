@@ -146,6 +146,12 @@ _UNSUPPORTED_FEATURES = [
     # This is a nonspecific unsupported feature which allows the authors of C++
     # toolchain to apply separate flags when compiling Go code.
     "rules_go_unsupported_feature",
+    # This is a rules_cc feature which sets PWD=/proc/self/cwd.
+    # When enabled, absolute paths computed by go/tools/builders
+    # can look like /proc/self/cwd/sometool, which changes meaning
+    # as the working directory changes, contrary to the intention
+    # of an absolute path.
+    "sanitize_pwd",
 ]
 
 def _filter_options(options, denylist):
