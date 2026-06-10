@@ -15,8 +15,6 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"go/build"
@@ -130,27 +128,31 @@ You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 	os.Setenv("CGO_LDFLAGS_ALLOW", b.String())
 	os.Setenv("GODEBUG", "installgoroot=all")
 
-	// Build the commands needed to build the std library in the right mode
+	// Assemble the flags `go install std` builds with. These are collected into a
+	// reusable slice so the GOFIPS140 snapshot packages can be built below with the
+	// identical flag set, keeping their archives ABI- and build-id-compatible with
+	// the rest of pkg/.
+	//
 	// NOTE: the go command stamps compiled .a files with build ids, which are
 	// cryptographic sums derived from the inputs. This prevents us from
 	// creating reproducible builds because the build ids are hashed from
 	// CGO_CFLAGS, which frequently contains absolute paths. As a workaround,
 	// we strip the build ids, since they won't be used after this.
-	installArgs := goenv.goCmd("install", "-toolexec", abs(os.Args[0])+" filterbuildid")
+	buildFlags := []string{"-toolexec", abs(os.Args[0]) + " filterbuildid"}
 	if len(build.Default.BuildTags) > 0 {
-		installArgs = append(installArgs, "-tags", strings.Join(build.Default.BuildTags, ","))
+		buildFlags = append(buildFlags, "-tags", strings.Join(build.Default.BuildTags, ","))
 	}
 
 	ldflags := []string{"-trimpath", sandboxPath}
 	asmflags := []string{"-trimpath", output}
 	if *race {
-		installArgs = append(installArgs, "-race")
+		buildFlags = append(buildFlags, "-race")
 	}
 	if *msan {
-		installArgs = append(installArgs, "-msan")
+		buildFlags = append(buildFlags, "-msan")
 	}
 	if *pgoprofile != "" {
-		gcflags = append(gcflags, "-pgoprofile=" + abs(*pgoprofile))
+		gcflags = append(gcflags, "-pgoprofile="+abs(*pgoprofile))
 	}
 	if *shared {
 		gcflags = append(gcflags, "-shared")
@@ -173,39 +175,41 @@ You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 			break
 		}
 	}
-	installArgs = append(installArgs, "-gcflags="+allSlug+strings.Join(gcflags, " "))
-	installArgs = append(installArgs, "-ldflags="+allSlug+strings.Join(ldflags, " "))
-	installArgs = append(installArgs, "-asmflags="+allSlug+strings.Join(asmflags, " "))
+	buildFlags = append(buildFlags,
+		"-gcflags="+allSlug+strings.Join(gcflags, " "),
+		"-ldflags="+allSlug+strings.Join(ldflags, " "),
+		"-asmflags="+allSlug+strings.Join(asmflags, " "),
+	)
 
 	if err := absCCCompiler(cgoEnvVars, cgoAbsEnvFlags); err != nil {
 		return fmt.Errorf("error modifying cgo environment to absolute path: %v", err)
 	}
 
+	installArgs := goenv.goCmd("install")
+	installArgs = append(installArgs, buildFlags...)
 	installArgs = append(installArgs, packages...)
 	if err := goenv.runCommand(installArgs); err != nil {
 		return err
 	}
 
-	// GOFIPS140=v1.0.0 places the versioned FIPS .a files into the Go build
-	// cache (~/.cache/go-build/) instead of $GOROOT/pkg/<platform>/. This is an
-	// upstream Go bug: https://github.com/golang/go/issues/76225.
-	//
-	// Workaround: after `go install std`, run `go list -json -export std` to
-	// locate the cached .a files for the versioned snapshot packages and copy
-	// them into the expected pkg/ directory so the linker can find them.
+	// GOFIPS140=<version> leaves the versioned FIPS snapshot archives in the
+	// build cache rather than $GOROOT/pkg/<platform>/ (golang/go#76225), so the
+	// linker can't find them. Build them into pkg/ with the same flags.
 	if gofips140 := os.Getenv("GOFIPS140"); gofips140 != "" && gofips140 != "off" && gofips140 != "latest" {
-		if err := installFIPSSnapshotArchives(goenv, output); err != nil {
+		if err := installFIPSSnapshotArchives(goenv, output, buildFlags); err != nil {
 			return fmt.Errorf("install FIPS snapshot archives: %w", err)
 		}
 	}
 	return nil
 }
 
-// installFIPSSnapshotArchives copies the versioned FIPS module .a files from
-// the Go build cache to $GOROOT/pkg/<platform>/. Required when GOFIPS140 is set
-// to a specific version (e.g. v1.0.0), because `go install std` does not place
-// these archives in the standard pkg directory.
-func installFIPSSnapshotArchives(goenv *env, goroot string) error {
+// installFIPSSnapshotArchives builds the versioned FIPS module packages into
+// $GOROOT/pkg/<platform>/. Needed when GOFIPS140 selects a frozen snapshot
+// (e.g. v1.0.0): `go install std` leaves these archives in the build cache
+// instead of the pkg directory (golang/go#76225). The package set is read from
+// the snapshot zip under lib/fips140, and each is built with the same flags as
+// `go install std` so the archives stay compatible with the rest of pkg/.
+func installFIPSSnapshotArchives(goenv *env, goroot string, buildFlags []string) error {
 	goos := os.Getenv("GOOS")
 	goarch := os.Getenv("GOARCH")
 	if goos == "" || goarch == "" {
@@ -213,37 +217,26 @@ func installFIPSSnapshotArchives(goenv *env, goroot string) error {
 	}
 	pkgDir := filepath.Join(goroot, "pkg", goos+"_"+goarch)
 
-	listArgs := goenv.goCmd("list", "-json", "-export", "std")
-	var buf bytes.Buffer
-	if err := goenv.runCommandToFile(&buf, os.Stderr, listArgs); err != nil {
-		return fmt.Errorf("go list -json -export std failed: %v", err)
+	pkgs, err := fipsSnapshotPackages(filepath.Join(goroot, "lib", "fips140"), os.Getenv("GOFIPS140"))
+	if err != nil {
+		return err
 	}
-
-	decoder := json.NewDecoder(&buf)
-	for decoder.More() {
-		var pkg struct {
-			ImportPath string
-			Export     string
-		}
-		if err := decoder.Decode(&pkg); err != nil {
-			return fmt.Errorf("decoding go list output: %v", err)
-		}
-		// Only handle FIPS-versioned packages that are missing from pkg dir.
-		if !strings.Contains(pkg.ImportPath, "fips140/v") {
-			continue
-		}
-		if pkg.Export == "" {
-			continue
-		}
-		dst := filepath.Join(pkgDir, filepath.FromSlash(pkg.ImportPath)+".a")
+	if len(pkgs) == 0 {
+		return fmt.Errorf("no FIPS snapshot packages found under %s", filepath.Join(goroot, "lib", "fips140"))
+	}
+	for _, imp := range pkgs {
+		dst := filepath.Join(pkgDir, filepath.FromSlash(imp)+".a")
 		if _, err := os.Stat(dst); err == nil {
 			continue
 		}
 		if err := os.MkdirAll(filepath.Dir(dst), 0o777); err != nil {
 			return err
 		}
-		if err := copyFile(pkg.Export, dst); err != nil {
-			return fmt.Errorf("copying %s to %s: %v", pkg.Export, dst, err)
+		buildArgs := goenv.goCmd("build")
+		buildArgs = append(buildArgs, buildFlags...)
+		buildArgs = append(buildArgs, "-o", dst, imp)
+		if err := goenv.runCommand(buildArgs); err != nil {
+			return fmt.Errorf("go build %s: %w", imp, err)
 		}
 	}
 	return nil

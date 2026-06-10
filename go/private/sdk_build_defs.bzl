@@ -92,6 +92,8 @@ def define_sdk_repository_targets(
         srcs = package_list_srcs,
         out = "packages.txt",
         root_file = "ROOT",
+        gofips140 = gofips140,
+        fips140_lib = native.glob(["lib/fips140/**"], allow_empty = True),
     )
 
     declare_go_toolchains(

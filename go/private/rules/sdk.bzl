@@ -117,8 +117,28 @@ go_sdk = rule(
 )
 
 def _package_list_impl(ctx):
-    _build_package_list(ctx, ctx.files.srcs, ctx.file.root_file, ctx.outputs.out)
-    return [DefaultInfo(files = depset([ctx.outputs.out]))]
+    out = ctx.outputs.out
+    gofips140 = ctx.attr.gofips140
+
+    # A shell action lists the FIPS snapshot packages from the zip. Using a
+    # shell action rather than a compiled tool avoids depending on the SDK,
+    # which would create a dependency cycle.
+    if gofips140 not in ("", "off", "latest") and ctx.files.fips140_lib:
+        normal = ctx.actions.declare_file(ctx.attr.name + ".normal.txt")
+        _build_package_list(ctx, ctx.files.srcs, ctx.file.root_file, normal)
+        lib_dir = ctx.file.root_file.dirname + "/lib/fips140"
+        script = ctx.file._fips_package_list_script
+        ctx.actions.run_shell(
+            outputs = [out],
+            inputs = [normal, script] + ctx.files.fips140_lib,
+            command = 'bash "$1" "$2" "$3" "$4" "$5"',
+            arguments = [script.path, normal.path, out.path, lib_dir, gofips140],
+            mnemonic = "GoPackageListFIPS",
+            progress_message = "Generating %s with FIPS snapshot packages" % out.short_path,
+        )
+    else:
+        _build_package_list(ctx, ctx.files.srcs, ctx.file.root_file, out)
+    return [DefaultInfo(files = depset([out]))]
 
 package_list = rule(
     _package_list_impl,
@@ -131,6 +151,20 @@ package_list = rule(
             mandatory = True,
             allow_single_file = True,
             doc = "A file in the SDK root directory. Used to determine GOROOT.",
+        ),
+        "gofips140": attr.string(
+            default = "",
+            doc = "GOFIPS140 version. For a snapshot version, the FIPS snapshot " +
+                  "packages from lib/fips140 are added to the list.",
+        ),
+        "fips140_lib": attr.label_list(
+            allow_files = True,
+            doc = "Files under lib/fips140 (the FIPS module snapshots).",
+        ),
+        "_fips_package_list_script": attr.label(
+            default = "//go/private/rules:generate_fips_package_list.sh",
+            allow_single_file = True,
+            doc = "Script that lists FIPS snapshot packages from the zip.",
         ),
         "out": attr.output(
             mandatory = True,
