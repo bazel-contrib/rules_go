@@ -103,6 +103,13 @@ func link(args []string) error {
 	goargs := goenv.goTool("link")
 	goargs = append(goargs, "-importcfg", importcfgName)
 
+	// When GOFIPS140 is set, inject the linker flag that defaults the binary
+	// to GODEBUG=fips140=on at runtime. Without this, the binary builds with
+	// FIPS module code but does not activate FIPS mode by default.
+	if gofips140 := os.Getenv("GOFIPS140"); gofips140 != "" && gofips140 != "off" {
+		goargs = append(goargs, "-X", "runtime.godebugDefault=fips140=on")
+	}
+
 	parseXdef := func(xdef string) (pkg, name, value string, err error) {
 		eq := strings.IndexByte(xdef, '=')
 		if eq < 0 {
