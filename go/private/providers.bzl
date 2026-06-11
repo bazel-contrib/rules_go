@@ -36,6 +36,7 @@ GoSDK = provider(
         "goos": "The host OS the SDK was built for.",
         "goarch": "The host architecture the SDK was built for.",
         "experiments": "Comma-separated Go experiments to enable via GOEXPERIMENT.",
+        "gofips140": "GOFIPS140 version to enable (e.g. 'v1.0.0', 'latest', 'certified', or '').",
         "root_file": "A file in the SDK root directory",
         "libs": ("Depset of pre-compiled .a files for the standard library " +
                  "built for the execution platform."),
