@@ -154,33 +154,38 @@ func buildImportcfgFileForCompile(imports map[string]*archive, installSuffix, di
 	return filename, nil
 }
 
-func buildImportcfgFileForLink(archives []archive, stdPackageListPath, installSuffix, dir string) (string, error) {
+func buildImportcfgFileForLink(archives []archive, stdPackageListPath, installSuffix, dir string) (string, map[string]string, error) {
 	buf := &bytes.Buffer{}
 	goroot, ok := os.LookupEnv("GOROOT")
 	if !ok {
-		return "", errors.New("GOROOT not set")
+		return "", nil, errors.New("GOROOT not set")
 	}
 	prefix := abs(filepath.Join(goroot, "pkg", installSuffix))
 	stdPackageListFile, err := os.Open(stdPackageListPath)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	defer stdPackageListFile.Close()
+
+	pkgToFile := make(map[string]string)
+
 	scanner := bufio.NewScanner(stdPackageListFile)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" {
 			continue
 		}
-		fmt.Fprintf(buf, "packagefile %s=%s.a\n", line, filepath.Join(prefix, filepath.FromSlash(line)))
+		archivePath := filepath.Join(prefix, filepath.FromSlash(line)) + ".a"
+		fmt.Fprintf(buf, "packagefile %s=%s\n", line, archivePath)
+		pkgToFile[line] = archivePath
 	}
 	if err := scanner.Err(); err != nil {
-		return "", err
+		return "", nil, err
 	}
 	depsSeen := map[string]string{}
 	for _, arc := range archives {
 		if prevLabel, ok := depsSeen[arc.packagePath]; ok {
-			return "", fmt.Errorf(`
+			return "", nil, fmt.Errorf(`
 package conflict error: %s: multiple copies of package passed to linker:
     %s
     %s
@@ -195,22 +200,23 @@ package with this path is linked.`,
 		// `compilepkg.bzl` but `_format_archive` in `link.bzl` formats differently.
 		depsSeen[arc.packagePath] = arc.importPath
 		fmt.Fprintf(buf, "packagefile %s=%s\n", arc.packagePath, arc.file)
+		pkgToFile[arc.packagePath] = arc.file
 	}
 	f, err := ioutil.TempFile(dir, "importcfg")
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	filename := f.Name()
 	if _, err := io.Copy(f, buf); err != nil {
 		f.Close()
 		os.Remove(filename)
-		return "", err
+		return "", nil, err
 	}
 	if err := f.Close(); err != nil {
 		os.Remove(filename)
-		return "", err
+		return "", nil, err
 	}
-	return filename, nil
+	return filename, pkgToFile, nil
 }
 
 type depsError struct {
