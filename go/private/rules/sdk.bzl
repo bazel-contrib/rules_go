@@ -147,6 +147,7 @@ def _package_list_impl(ctx):
         )
     else:
         _build_package_list(ctx, ctx.files.srcs, ctx.file.root_file, out)
+
         # No FIPS snapshot in this SDK: write an empty list so the predeclared
         # output always exists and downstream rules can unconditionally depend on it.
         ctx.actions.write(fips_out, "")

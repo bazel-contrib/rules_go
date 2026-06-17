@@ -54,18 +54,21 @@ filegroup(
 define_sdk_repository_targets(
     exec_compatible_with = {exec_compatible_with},
     experiments = {experiments},
-    gofips140 = {gofips140},
-    files_srcs = glob([
-        "bin/go*",
-        "src/**",
-        "pkg/**",
-        "lib/fips140/**",
-    ], allow_empty = True) + [
+    files_srcs = glob(
+        [
+            "bin/go*",
+            "src/**",
+            "pkg/**",
+            "lib/fips140/**",
+        ],
+        allow_empty = True,
+    ) + [
         ":config",
     ],
     go = "bin/go{exe}",
     go_sdk_root_file = "ROOT",
     goarch = "{goarch}",
+    gofips140 = {gofips140},
     goos = "{goos}",
     package_list_srcs = [":srcs"],
     version = "{version}",

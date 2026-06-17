@@ -84,7 +84,7 @@ func TestGenerateFIPSPackageListScript(t *testing.T) {
 	libDir := t.TempDir()
 	writeFixtureZip(t, filepath.Join(libDir, resolved+".zip"), []string{
 		"golang.org/fips140@" + resolved + "/fips140/" + resolved + "/sha256/sha256.go",
-		"golang.org/fips140@" + resolved + "/fips140/" + resolved + "/aes/gcm/gcm.go", // multi-level
+		"golang.org/fips140@" + resolved + "/fips140/" + resolved + "/aes/gcm/gcm.go",        // multi-level
 		"golang.org/fips140@" + resolved + "/fips140/" + resolved + "/sha256/sha256_test.go", // _test.go: filtered
 		"golang.org/fips140@" + resolved + "/fips140/" + resolved + "/LICENSE",               // non-.go: ignored
 		"golang.org/fips140@" + resolved + "/doc.go",                                         // no /fips140/ marker: ignored
