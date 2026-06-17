@@ -19,24 +19,111 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/runfiles"
 )
 
-// fixtureZipEntries mimics the layout of a real GOFIPS140 snapshot zip.
-func fixtureZipEntries(resolved string) []string {
-	base := "golang.org/fips140@" + resolved
-	return []string{
-		base + "/fips140/v1.0.0/sha256/sha256.go",
-		base + "/fips140/v1.0.0/aes/gcm/gcm.go",            // multi-level package
-		base + "/fips140/v1.0.0/sha256/sha256_test.go",     // _test.go must be filtered
-		base + "/fips140/v1.0.0/testonly/testonly_test.go", // test-only dir: yields no package
-		base + "/fips140/v1.0.0/LICENSE",                   // non-.go must be ignored
-		base + "/doc.go",                                   // root .go (no /fips140/ marker): ignored
-		base + "/go.mod",                                   // no /fips140/ marker: ignored
+func TestFIPSPackagesFromList(t *testing.T) {
+	// The dedicated FIPS list has one versioned snapshot package per line; blank
+	// lines are ignored and order is preserved.
+	path := filepath.Join(t.TempDir(), "fips_packages.txt")
+	contents := `crypto/internal/fips140/v1.0.0-c2097c7c
+crypto/internal/fips140/v1.0.0-c2097c7c/aes
+crypto/internal/fips140/v1.0.0-c2097c7c/aes/gcm
+
+crypto/internal/fips140/v1.0.0-c2097c7c/sha256
+`
+	if err := os.WriteFile(path, []byte(contents), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := fipsPackagesFromList(path)
+	if err != nil {
+		t.Fatalf("fipsPackagesFromList: %v", err)
+	}
+	want := []string{
+		"crypto/internal/fips140/v1.0.0-c2097c7c",
+		"crypto/internal/fips140/v1.0.0-c2097c7c/aes",
+		"crypto/internal/fips140/v1.0.0-c2097c7c/aes/gcm",
+		"crypto/internal/fips140/v1.0.0-c2097c7c/sha256",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("fipsPackagesFromList mismatch:\n got: %v\nwant: %v", got, want)
+	}
+}
+
+// TestGenerateFIPSPackageListScript is an input/output test for
+// generate_fips_package_list.sh: it builds a lightweight lib/fips140 tree (a
+// snapshot zip + alias file) mirroring a Go distribution, runs the script, and
+// checks both emitted files. Skipped when the script or the shell tools it needs
+// are unavailable (e.g. `go test` without Bazel runfiles).
+func TestGenerateFIPSPackageListScript(t *testing.T) {
+	for _, tool := range []string{"bash", "unzip", "sed", "grep", "sort", "cat"} {
+		if _, err := exec.LookPath(tool); err != nil {
+			t.Skipf("skipping: %q not on PATH", tool)
+		}
+	}
+	rf, err := runfiles.New()
+	if err != nil {
+		t.Skipf("skipping: runfiles unavailable: %v", err)
+	}
+	script, err := rf.Rlocation("io_bazel_rules_go/go/private/rules/generate_fips_package_list.sh")
+	if err != nil {
+		t.Skipf("skipping: script runfile unavailable: %v", err)
+	}
+	if _, err := os.Stat(script); err != nil {
+		t.Skipf("skipping: script not found: %v", err)
+	}
+
+	// Lightweight lib/fips140 tree: alias v1.0.0 -> the resolved version, and a
+	// zip whose entries mirror the real distribution layout.
+	const resolved = "v1.0.0-c2097c7c"
+	libDir := t.TempDir()
+	writeFixtureZip(t, filepath.Join(libDir, resolved+".zip"), []string{
+		"golang.org/fips140@" + resolved + "/fips140/" + resolved + "/sha256/sha256.go",
+		"golang.org/fips140@" + resolved + "/fips140/" + resolved + "/aes/gcm/gcm.go", // multi-level
+		"golang.org/fips140@" + resolved + "/fips140/" + resolved + "/sha256/sha256_test.go", // _test.go: filtered
+		"golang.org/fips140@" + resolved + "/fips140/" + resolved + "/LICENSE",               // non-.go: ignored
+		"golang.org/fips140@" + resolved + "/doc.go",                                         // no /fips140/ marker: ignored
+	})
+	if err := os.WriteFile(filepath.Join(libDir, "v1.0.0.txt"), []byte(resolved+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	dir := t.TempDir()
+	normal := filepath.Join(dir, "normal.txt")
+	if err := os.WriteFile(normal, []byte("fmt\nstrings\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out := filepath.Join(dir, "packages.txt")
+	fipsOut := filepath.Join(dir, "fips_packages.txt")
+
+	// args: normal out libdir gofips fips_out
+	cmd := exec.Command("bash", script, normal, out, libDir, "v1.0.0", fipsOut)
+	if b, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("running %s: %v\n%s", script, err, b)
+	}
+
+	wantFips := []string{
+		"crypto/internal/fips140/" + resolved + "/aes/gcm",
+		"crypto/internal/fips140/" + resolved + "/sha256",
+	}
+	if got := readLines(t, fipsOut); !reflect.DeepEqual(got, wantFips) {
+		t.Fatalf("fips_out mismatch:\n got: %v\nwant: %v", got, wantFips)
+	}
+
+	// packages.txt = normal stdlib list + the FIPS packages (sorted, unique).
+	wantOut := []string{
+		"crypto/internal/fips140/" + resolved + "/aes/gcm",
+		"crypto/internal/fips140/" + resolved + "/sha256",
+		"fmt",
+		"strings",
+	}
+	if got := readLines(t, out); !reflect.DeepEqual(got, wantOut) {
+		t.Fatalf("packages.txt mismatch:\n got: %v\nwant: %v", got, wantOut)
 	}
 }
 
@@ -62,83 +149,17 @@ func writeFixtureZip(t *testing.T, path string, entries []string) {
 	}
 }
 
-// buildFixture writes a snapshot zip and its alias file under a temp lib dir and
-// returns the dir along with the package set both enumerations must produce.
-func buildFixture(t *testing.T) (libDir string, want []string) {
+func readLines(t *testing.T, path string) []string {
 	t.Helper()
-	libDir = t.TempDir()
-	const resolved = "v1.0.0-c2097c7c"
-	writeFixtureZip(t, filepath.Join(libDir, resolved+".zip"), fixtureZipEntries(resolved))
-	// Alias file: GOFIPS140=v1.0.0 resolves to the pinned snapshot version.
-	if err := os.WriteFile(filepath.Join(libDir, "v1.0.0.txt"), []byte(resolved+"\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	return libDir, []string{
-		"crypto/internal/fips140/v1.0.0/aes/gcm",
-		"crypto/internal/fips140/v1.0.0/sha256",
-	}
-}
-
-func TestFIPSSnapshotPackages(t *testing.T) {
-	libDir, want := buildFixture(t)
-	got, err := fipsSnapshotPackages(libDir, "v1.0.0")
-	if err != nil {
-		t.Fatalf("fipsSnapshotPackages: %v", err)
-	}
-	sort.Strings(got)
-	if strings.Join(got, "\n") != strings.Join(want, "\n") {
-		t.Fatalf("fipsSnapshotPackages mismatch:\n got: %v\nwant: %v", got, want)
-	}
-}
-
-// TestFIPSSnapshotPackagesMatchScript pins fipsSnapshotPackages to the shell
-// script that builds packages.txt for the linker: both must enumerate the same
-// packages from the same zip, or the importcfg and the on-disk archives diverge.
-// Skipped when the script or the tools it relies on are unavailable (e.g.
-// minimal/non-Linux environments, or `go test` without Bazel runfiles).
-func TestFIPSSnapshotPackagesMatchScript(t *testing.T) {
-	for _, tool := range []string{"bash", "unzip", "sed", "grep", "sort", "cat"} {
-		if _, err := exec.LookPath(tool); err != nil {
-			t.Skipf("skipping: %q not on PATH", tool)
-		}
-	}
-	rf, err := runfiles.New()
-	if err != nil {
-		t.Skipf("skipping: runfiles unavailable: %v", err)
-	}
-	script, err := rf.Rlocation("io_bazel_rules_go/go/private/rules/generate_fips_package_list.sh")
-	if err != nil {
-		t.Skipf("skipping: script runfile unavailable: %v", err)
-	}
-	if _, err := os.Stat(script); err != nil {
-		t.Skipf("skipping: script not found: %v", err)
-	}
-
-	libDir, want := buildFixture(t)
-	dir := t.TempDir()
-	// An empty "normal" list makes the script's output exactly the FIPS packages.
-	normal := filepath.Join(dir, "normal.txt")
-	if err := os.WriteFile(normal, nil, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	out := filepath.Join(dir, "packages.txt")
-
-	cmd := exec.Command("bash", script, normal, out, libDir, "v1.0.0")
-	if b, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("running %s: %v\n%s", script, err, b)
-	}
-	data, err := os.ReadFile(out)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var got []string
+	var lines []string
 	for _, l := range strings.Split(string(data), "\n") {
 		if l = strings.TrimSpace(l); l != "" {
-			got = append(got, l)
+			lines = append(lines, l)
 		}
 	}
-	sort.Strings(got)
-	if strings.Join(got, "\n") != strings.Join(want, "\n") {
-		t.Fatalf("shell script enumeration differs from fipsSnapshotPackages:\n script: %v\n     go: %v", got, want)
-	}
+	return lines
 }
