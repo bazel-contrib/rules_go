@@ -20,6 +20,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -61,6 +62,12 @@ crypto/internal/fips140/v1.0.0-c2097c7c/sha256
 // checks both emitted files. Skipped when the script or the shell tools it needs
 // are unavailable (e.g. `go test` without Bazel runfiles).
 func TestGenerateFIPSPackageListScript(t *testing.T) {
+	// generate_fips_package_list.sh is a POSIX shell script that only runs in the
+	// SDK's package-list step on Linux/macOS. On Windows the msys2 tools may be on
+	// PATH but the script fails on Windows paths/semantics, so skip it there.
+	if runtime.GOOS == "windows" {
+		t.Skip("skipping: generate_fips_package_list.sh is not supported on Windows")
+	}
 	for _, tool := range []string{"bash", "unzip", "sed", "grep", "sort", "cat"} {
 		if _, err := exec.LookPath(tool); err != nil {
 			t.Skipf("skipping: %q not on PATH", tool)
