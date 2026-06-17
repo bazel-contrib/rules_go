@@ -47,6 +47,9 @@ GoSDK = provider(
                  "may not be included."),
         "package_list": ("A file containing a list of importable packages " +
                          "in the standard library."),
+        "fips_package_list": ("A file listing the versioned GOFIPS140 snapshot " +
+                              "packages the stdlib builder must place into pkg/, " +
+                              "or None for non-FIPS SDKs."),
         "tools": ("Depset of executable files in the SDK built for " +
                   "the execution platform, excluding the go binary file"),
         "go": "The go binary file",

@@ -15,56 +15,33 @@
 package main
 
 import (
-	"archive/zip"
+	"bufio"
 	"os"
-	"path/filepath"
 	"strings"
 )
 
-// fipsSnapshotPackages enumerates the import paths contributed by the GOFIPS140
-// snapshot. The version resolves from lib/fips140/<gofips140>.txt when that is an
-// alias (e.g. v1.0.0 -> v1.0.0-c2097c7c), then the matching zip is read. Entries
-// look like golang.org/fips140@<ver>/fips140/<v>/<pkg>/<file>.go and map to the
-// import path crypto/internal/fips140/<v>/<pkg>.
-//
-// IMPORTANT: this MUST produce the same package set as
-// go/private/rules/generate_fips_package_list.sh, which performs the same
-// enumeration to build packages.txt for the linker's importcfg. If the two
-// diverge, the importcfg (from packages.txt) and the on-disk archives (built
-// here) will mismatch at link time. fips_test.go pins the two together.
-func fipsSnapshotPackages(libDir, gofips140 string) ([]string, error) {
-	version := gofips140
-	if data, err := os.ReadFile(filepath.Join(libDir, gofips140+".txt")); err == nil {
-		version = strings.TrimSpace(string(data))
-	}
-	r, err := zip.OpenReader(filepath.Join(libDir, version+".zip"))
+// fipsPackagesFromList reads the versioned GOFIPS140 snapshot import paths from
+// fipsPackageListPath, one per line (blank lines ignored). That file is produced
+// by the package-list step (generate_fips_package_list.sh) — the single
+// enumeration of the snapshot, also reflected in packages.txt for the linker's
+// importcfg — so the builder consumes it verbatim rather than re-deriving the set
+// from the snapshot zip.
+func fipsPackagesFromList(fipsPackageListPath string) ([]string, error) {
+	f, err := os.Open(fipsPackageListPath)
 	if err != nil {
 		return nil, err
 	}
-	defer r.Close()
+	defer f.Close()
 
-	const marker = "/fips140/"
-	set := map[string]bool{}
-	for _, f := range r.File {
-		name := f.Name
-		if !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
-			continue
+	var pkgs []string
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		if line := strings.TrimSpace(scanner.Text()); line != "" {
+			pkgs = append(pkgs, line)
 		}
-		i := strings.Index(name, marker)
-		if i < 0 {
-			continue
-		}
-		// rel is "<v>/<pkg>/<file>.go"; drop the trailing file to get the package.
-		rel := name[i+len(marker):]
-		j := strings.LastIndex(rel, "/")
-		if j < 0 {
-			continue
-		}
-		set["crypto/internal/fips140/"+rel[:j]] = true
 	}
-	pkgs := make([]string, 0, len(set))
-	for p := range set {
-		pkgs = append(pkgs, p)
+	if err := scanner.Err(); err != nil {
+		return nil, err
 	}
 	return pkgs, nil
 }

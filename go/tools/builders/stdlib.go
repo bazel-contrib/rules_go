@@ -39,6 +39,7 @@ func stdlib(args []string) error {
 	flags.Var(&packages, "package", "Packages to build")
 	var gcflags quoteMultiFlag
 	flags.Var(&gcflags, "gcflags", "Go compiler flags")
+	fipsPackageList := flags.String("fips_package_list", "", "Path to the generated list of versioned GOFIPS140 snapshot packages to place into pkg/")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
@@ -192,38 +193,49 @@ You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 		return err
 	}
 
-	// GOFIPS140=<version> leaves the versioned FIPS snapshot archives in the
-	// build cache rather than $GOROOT/pkg/<platform>/ (golang/go#76225), so the
-	// linker can't find them. Build them into pkg/ with the same flags.
+	// GOFIPS140=<version> compiles the versioned FIPS snapshot packages, but due
+	// to golang/go#76225 `go install std` leaves their archives in the build cache
+	// instead of $GOROOT/pkg/<platform>/, so the linker can't find them. We place
+	// them with `go build -o`, reusing the exact flags `go install std` used above.
+	// Because the flags match, each `go build` is a cache hit on the archive
+	// `go install` already produced (verified with `go build -x`: it copies the
+	// cached .a, no recompile), so the placed archives are byte-identical to the
+	// rest of pkg/. The package set is read verbatim from -fips_package_list, the
+	// dedicated file the package-list step emits alongside packages.txt (a single
+	// enumeration, not re-derived here).
+	//
+	// TODO: remove this once upstream Go installs GOFIPS140 packages into the
+	// package tree instead of the build cache (golang/go#76225).
 	if gofips140 := os.Getenv("GOFIPS140"); gofips140 != "" && gofips140 != "off" && gofips140 != "latest" {
-		if err := installFIPSSnapshotArchives(goenv, output, buildFlags); err != nil {
+		if err := installFIPSSnapshotArchives(goenv, output, buildFlags, *fipsPackageList); err != nil {
 			return fmt.Errorf("install FIPS snapshot archives: %w", err)
 		}
 	}
 	return nil
 }
 
-// installFIPSSnapshotArchives builds the versioned FIPS module packages into
-// $GOROOT/pkg/<platform>/. Needed when GOFIPS140 selects a frozen snapshot
-// (e.g. v1.0.0): `go install std` leaves these archives in the build cache
-// instead of the pkg directory (golang/go#76225). The package set is read from
-// the snapshot zip under lib/fips140, and each is built with the same flags as
-// `go install std` so the archives stay compatible with the rest of pkg/.
-func installFIPSSnapshotArchives(goenv *env, goroot string, buildFlags []string) error {
+// installFIPSSnapshotArchives builds the versioned FIPS snapshot packages listed
+// in fipsPackageListPath into $GOROOT/pkg/<platform>/ with `go build -o`. See the
+// call site for why this is needed (golang/go#76225) and why `go build` reuses
+// the build cache. The list is produced by the package-list step (a single
+// enumeration shared with the linker's importcfg via packages.txt).
+func installFIPSSnapshotArchives(goenv *env, goroot string, buildFlags []string, fipsPackageListPath string) error {
 	goos := os.Getenv("GOOS")
 	goarch := os.Getenv("GOARCH")
 	if goos == "" || goarch == "" {
 		return fmt.Errorf("GOOS or GOARCH not set")
 	}
-	pkgDir := filepath.Join(goroot, "pkg", goos+"_"+goarch)
-
-	pkgs, err := fipsSnapshotPackages(filepath.Join(goroot, "lib", "fips140"), os.Getenv("GOFIPS140"))
+	if fipsPackageListPath == "" {
+		return fmt.Errorf("-fips_package_list is required for GOFIPS140 snapshot builds")
+	}
+	pkgs, err := fipsPackagesFromList(fipsPackageListPath)
 	if err != nil {
 		return err
 	}
 	if len(pkgs) == 0 {
-		return fmt.Errorf("no FIPS snapshot packages found under %s", filepath.Join(goroot, "lib", "fips140"))
+		return fmt.Errorf("no versioned FIPS packages found in %s", fipsPackageListPath)
 	}
+	pkgDir := filepath.Join(goroot, "pkg", goos+"_"+goarch)
 	for _, imp := range pkgs {
 		dst := filepath.Join(pkgDir, filepath.FromSlash(imp)+".a")
 		if _, err := os.Stat(dst); err == nil {
