@@ -31,6 +31,7 @@ func TestMain(m *testing.M) {
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
 load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
 load("@com_google_protobuf//bazel:proto_library.bzl", "proto_library")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
 
 go_binary(
     name = "main",
@@ -123,6 +124,7 @@ message Foo {
 `,
 		ModuleFileSuffix: `
 bazel_dep(name = "protobuf", version = "29.0-rc2", repo_name = "com_google_protobuf")
+bazel_dep(name = "rules_cc", version = "0.1.5")
 bazel_dep(name = "toolchains_protoc", version = "0.3.4")
 `,
 		WorkspacePrefix: `
@@ -210,6 +212,22 @@ func TestGoProtoLibraryToolAttrsAreReset(t *testing.T) {
 	)
 }
 
+func TestStdlibPreservesRequestNogoConfigurations(t *testing.T) {
+	const target = "//:main"
+	const stdlib = "@io_bazel_rules_go//:stdlib"
+	if err := bazel_testing.RunBazel("build", target, stdlib, "--nobuild"); err != nil {
+		t.Fatalf("bazel build %s %s: %v", target, stdlib, err)
+	}
+
+	// //:main requests nogo, while coverdata sets request_nogo to false. //:stdlib must
+	// preserve both values so each //:stdlib target resolves the C++ toolchain in its
+	// parent configuration.
+	configHashes := getDependencyConfigHashes(t, target, stdlib)
+	if got, want := len(configHashes), 2; got != want {
+		t.Fatalf("%s depends on %s in %d configurations, want %d", target, stdlib, got, want)
+	}
+}
+
 func assertDependsCleanlyOnWithFlags(t *testing.T, targetA, targetB string, allowNoDep bool, flags ...string) {
 	// Analyze the targets to ensure that MODULE.bazel.lock has been created, otherwise bazel config
 	// will fail after the cquery command due to the Skyframe invalidation caused by a changed file.
@@ -217,22 +235,7 @@ func assertDependsCleanlyOnWithFlags(t *testing.T, targetA, targetB string, allo
 	if err != nil {
 		t.Fatalf("bazel build %s %s: %v", targetA, targetB, err)
 	}
-	query := fmt.Sprintf("deps(%s) intersect %s", targetA, targetB)
-	out, err := bazel_testing.BazelOutput(append(
-		[]string{
-			"cquery",
-			"--transitions=full",
-			"--output=jsonproto",
-			query,
-		},
-		flags...,
-	)...,
-	)
-	if err != nil {
-		t.Fatalf("bazel cquery '%s': %v", query, err)
-	}
-	cqueryOut := bytes.TrimSpace(out)
-	configHashes := extractConfigHashes(t, cqueryOut)
+	configHashes := getDependencyConfigHashes(t, targetA, targetB, flags...)
 	if len(configHashes) == 0 {
 		if allowNoDep {
 			return
@@ -259,6 +262,25 @@ func assertDependsCleanlyOnWithFlags(t *testing.T, targetA, targetB string, allo
 			strings.Join(goOptions, "\n"),
 		)
 	}
+}
+
+func getDependencyConfigHashes(t *testing.T, targetA, targetB string, flags ...string) []string {
+	t.Helper()
+	query := fmt.Sprintf("deps(%s) intersect %s", targetA, targetB)
+	out, err := bazel_testing.BazelOutput(append(
+		[]string{
+			"cquery",
+			"--transitions=full",
+			"--output=jsonproto",
+			query,
+		},
+		flags...,
+	)...,
+	)
+	if err != nil {
+		t.Fatalf("bazel cquery '%s': %v", query, err)
+	}
+	return extractConfigHashes(t, bytes.TrimSpace(out))
 }
 
 func extractConfigHashes(t *testing.T, rawJsonOut []byte) []string {
