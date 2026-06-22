@@ -31,6 +31,7 @@ load(
 )
 load(
     "//go/private:providers.bzl",
+    "GoArchive",
     "GoInfo",
 )
 load(
@@ -202,7 +203,7 @@ go_library = rule(
     } | CGO_ATTRS,
     fragments = CGO_FRAGMENTS,
     toolchains = [GO_TOOLCHAIN] + CGO_TOOLCHAINS,
-    provides = [GoInfo],
+    provides = [GoArchive, GoInfo],
     doc = """This builds a Go library from a set of source files that are all part of
     the same package.
 

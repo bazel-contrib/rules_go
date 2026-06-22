@@ -239,6 +239,7 @@ def _go_test_impl(ctx):
 _go_test_kwargs = {
     "cfg": go_transition,
     "implementation": _go_test_impl,
+    "provides": [GoArchive],
     "attrs": {
         "data": attr.label_list(
             allow_files = True,

@@ -257,6 +257,7 @@ def _go_binary_kwargs(go_cc_aspects = []):
     return {
         "cfg": go_transition,
         "implementation": _go_binary_impl,
+        "provides": [GoArchive],
         "attrs": {
             "srcs": attr.label_list(
                 allow_files = go_exts + asm_exts + cgo_exts + syso_exts,
