@@ -118,7 +118,7 @@ func cgo2(goenv *env, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSr
 			return "", nil, nil, fmt.Errorf("failed to create temporary file for ldflags: %w", err)
 		}
 		defer os.Remove(ldflagsFile.Name())
-		if _, err := ldflagsFile.WriteString(combinedLdFlagsStr); err != nil {
+		if _, err := ldflagsFile.WriteString(formatLdFlagsFileContent(combinedLdFlagsStr)); err != nil {
 			ldflagsFile.Close()
 			return "", nil, nil, fmt.Errorf("failed to write ldflags to temporary file: %w", err)
 		}
@@ -463,6 +463,15 @@ func copyOrLinkFile(inPath, outPath string) error {
 	} else {
 		return linkFile(inPath, outPath)
 	}
+}
+
+func formatLdFlagsFileContent(flags string) string {
+	shouldEscape, _ := onVersionOrHigher(27)
+	if shouldEscape {
+		escaped := strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(flags)
+		return `"` + escaped + `"` + "\n"
+	}
+	return flags
 }
 
 func onVersionOrHigher(version int) (bool, error) {
