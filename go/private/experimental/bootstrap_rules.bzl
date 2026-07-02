@@ -14,6 +14,14 @@
 
 load("//go/private:platforms.bzl", "GOARCH_CONSTRAINTS", "GOOS_CONSTRAINTS")
 
+_BOOTSTRAP_SRCS_EXCLUDE = [
+    "BUILD.bazel",
+    "version.bzl",
+    "test/**",
+    "*_test.go",
+    "**/*_test.go",
+]
+
 def _experimental_bootstrap_go_sdk_impl(ctx):
     goos_constraint = ctx.attr.goos_constraint[platform_common.ConstraintValueInfo]
     goarch_constraint = ctx.attr.goarch_constraint[platform_common.ConstraintValueInfo]
@@ -252,10 +260,7 @@ def experimental_bootstrap_go_sdk(name, goos, goarch, experiments, exec_compatib
         exec_compatible_with = exec_compatible_with,
         srcs = native.glob(
             ["**"],
-            exclude = [
-                "BUILD.bazel",
-                "version.bzl",
-            ],
+            exclude = _BOOTSTRAP_SRCS_EXCLUDE,
         ),
         make_bash = "src/make.bash",
         make_bat = "src/make.bat",
