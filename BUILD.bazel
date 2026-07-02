@@ -94,6 +94,10 @@ go_config(
         "//conditions:default": "//go/config:debug",
     }),
     export_stdlib = "//go/config:export_stdlib",
+    force_pic = select({
+        "//go/private:force_pic": True,
+        "//conditions:default": False,
+    }),
     gc_goopts = "//go/config:gc_goopts",
     gc_linkopts = "//go/config:gc_linkopts",
     gotags = "//go/config:tags",

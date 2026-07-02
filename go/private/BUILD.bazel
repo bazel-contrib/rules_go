@@ -214,3 +214,11 @@ config_setting(
     },
     visibility = ["//:__pkg__"],
 )
+
+config_setting(
+    name = "force_pic",
+    values = {
+        "force_pic": "true",
+    },
+    visibility = ["//:__pkg__"],
+)
