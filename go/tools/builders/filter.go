@@ -121,25 +121,26 @@ func applyTestFilter(testFilter string, srcs *archiveSrcs) error {
 	switch testFilter {
 	case "off":
 	case "only":
-		testSrcs := make([]fileInfo, 0, len(srcs.goSrcs))
-		for _, f := range srcs.goSrcs {
-			if strings.HasSuffix(f.pkg, "_test") {
-				testSrcs = append(testSrcs, f)
-			}
-		}
-		srcs.goSrcs = testSrcs
+		srcs.goSrcs = filterTestFiles(srcs.goSrcs, true)
 	case "exclude":
-		libSrcs := make([]fileInfo, 0, len(srcs.goSrcs))
-		for _, f := range srcs.goSrcs {
-			if !strings.HasSuffix(f.pkg, "_test") {
-				libSrcs = append(libSrcs, f)
-			}
-		}
-		srcs.goSrcs = libSrcs
+		srcs.goSrcs = filterTestFiles(srcs.goSrcs, false)
 	default:
 		return fmt.Errorf("invalid test filter %q", testFilter)
 	}
 	return nil
+}
+
+func filterTestFiles(srcs []fileInfo, keepTest bool) []fileInfo {
+	filtered := srcs[:0]
+	for _, f := range srcs {
+		if strings.HasSuffix(f.pkg, "_test") == keepTest {
+			filtered = append(filtered, f)
+		}
+	}
+	for i := len(filtered); i < len(srcs); i++ {
+		srcs[i] = fileInfo{}
+	}
+	return filtered
 }
 
 // readFileInfo applies build constraints to an input file and returns whether
