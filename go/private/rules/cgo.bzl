@@ -202,6 +202,7 @@ def cgo_configure(go, srcs, cdeps, cppopts, copts, cxxopts, clinkopts):
         ]
 
     ldflags = go.actions.args()
+    ldflags.use_param_file("-param=%s")
     _add_ldflags(ldflags, pre_runtime_clinkopts)
     if needs_cxx_runtime:
         ldflags.add_all(runtime_libs, before_each = "-ldflags")
