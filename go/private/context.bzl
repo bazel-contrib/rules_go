@@ -1031,8 +1031,10 @@ def _go_config_impl(ctx):
 
     linkmode = ctx.attr.linkmode[BuildSettingInfo].value
     if linkmode == "auto":
-        # Mirror Go's logic by defaulting to PIE on supported platforms
-        linkmode = LINKMODE_PIE if _defaults_to_pie(toolchain.default_goos, race) else LINKMODE_NORMAL
+        if ctx.attr.force_pic or _defaults_to_pie(toolchain.default_goos, race):
+            linkmode = LINKMODE_PIE
+        else:
+            linkmode = LINKMODE_NORMAL
 
     go_config_info = GoConfigInfo(
         goos = toolchain.default_goos,
@@ -1113,6 +1115,7 @@ go_config = rule(
             mandatory = False,
             providers = [BuildSettingInfo],
         ),
+        "force_pic": attr.bool(mandatory = True),
     },
     provides = [GoConfigInfo],
     doc = """Collects information about build settings in the current
