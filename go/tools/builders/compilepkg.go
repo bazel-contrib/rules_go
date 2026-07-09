@@ -73,6 +73,8 @@ func compilePkg(args []string) error {
 	fs.StringVar(&coverFormat, "cover_format", "", "Emit source file paths in coverage instrumentation suitable for the specified coverage format")
 	fs.Var(&recompileInternalDeps, "recompile_internal_deps", "The import path of the direct dependencies that needs to be recompiled.")
 	fs.StringVar(&pgoprofile, "pgoprofile", "", "The pprof profile to consider for profile guided optimization.")
+	var importpathTrimpath bool
+	fs.BoolVar(&importpathTrimpath, "importpath_trimpath", false, "Record importpath-relative source paths, matching native 'go build -trimpath'")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -135,7 +137,8 @@ func compilePkg(args []string) error {
 		cgoGoSrcsPath,
 		coverFormat,
 		recompileInternalDeps,
-		pgoprofile)
+		pgoprofile,
+		importpathTrimpath)
 }
 
 func compileArchive(
@@ -168,6 +171,7 @@ func compileArchive(
 	coverFormat string,
 	recompileInternalDeps []string,
 	pgoprofile string,
+	importpathTrimpath bool,
 ) error {
 	workDir, cleanup, err := goenv.workDir()
 	if err != nil {
@@ -183,6 +187,14 @@ func compileArchive(
 	packageSourceDir := ""
 	if len(srcs.goSrcs) > 0 {
 		packageSourceDir = filepath.Dir(srcs.goSrcs[0].filename)
+	}
+
+	// The importpath rewrite is opt-in (//go/config:importpath_trimpath).
+	// An empty trimImportPath disables it everywhere below: the rewrite
+	// helper returns "" and cgo2 skips its //line rewrite.
+	trimImportPath := ""
+	if importpathTrimpath {
+		trimImportPath = importPath
 	}
 
 	if len(srcs.goSrcs) == 0 {
@@ -344,21 +356,21 @@ func compileArchive(
 		if coverMode != "" && cgoGoSrcsForNogoPath != "" {
 			// If the package uses Cgo, compile .s and .S files with cgo2, not the Go assembler.
 			// Otherwise: the .s/.S files will be compiled with the Go assembler later
-			srcDir, goSrcs, objFiles, err = cgo2(goenv, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSrcs, hSrcs, importPath, packagePath, packageName, cc, cppFlags, cFlags, cxxFlags, objcFlags, objcxxFlags, ldFlags, cgoExportHPath, "")
+			srcDir, goSrcs, objFiles, err = cgo2(goenv, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSrcs, hSrcs, trimImportPath, packagePath, packageName, cc, cppFlags, cFlags, cxxFlags, objcFlags, objcxxFlags, ldFlags, cgoExportHPath, "")
 			if err != nil {
 				return err
 			}
 			// Also run cgo on original source files, not coverage instrumented, if using nogo.
 			// The compilation outputs are only used to run cgo, but the generated sources are
 			// passed to the separate nogo action via cgoGoSrcsForNogoPath.
-			_, _, _, err = cgo2(goenv, goSrcsNogo, cgoSrcsNogo, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSrcs, hSrcs, importPath, packagePath, packageName, cc, cppFlags, cFlags, cxxFlags, objcFlags, objcxxFlags, ldFlags, "", cgoGoSrcsForNogoPath)
+			_, _, _, err = cgo2(goenv, goSrcsNogo, cgoSrcsNogo, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSrcs, hSrcs, trimImportPath, packagePath, packageName, cc, cppFlags, cFlags, cxxFlags, objcFlags, objcxxFlags, ldFlags, "", cgoGoSrcsForNogoPath)
 			if err != nil {
 				return err
 			}
 		} else {
 			// If the package uses Cgo, compile .s and .S files with cgo2, not the Go assembler.
 			// Otherwise: the .s/.S files will be compiled with the Go assembler later
-			srcDir, goSrcs, objFiles, err = cgo2(goenv, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSrcs, hSrcs, importPath, packagePath, packageName, cc, cppFlags, cFlags, cxxFlags, objcFlags, objcxxFlags, ldFlags, cgoExportHPath, cgoGoSrcsForNogoPath)
+			srcDir, goSrcs, objFiles, err = cgo2(goenv, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSrcs, hSrcs, trimImportPath, packagePath, packageName, cc, cppFlags, cFlags, cxxFlags, objcFlags, objcxxFlags, ldFlags, cgoExportHPath, cgoGoSrcsForNogoPath)
 			if err != nil {
 				return err
 			}
@@ -370,7 +382,7 @@ func compileArchive(
 		// else (cgo-processed copies, generated sources). The //line paths in
 		// cgo-generated sources are handled at the cgo level in cgo2.
 		trimPath := srcDir
-		if ipTrim := importpathTrimRewrite(packageSourceDir, importPath); ipTrim != "" {
+		if ipTrim := importpathTrimRewrite(packageSourceDir, trimImportPath); ipTrim != "" {
 			trimPath = ipTrim + ";" + trimPath
 		}
 		gcFlags = append(gcFlags, "-trimpath="+trimPath)
@@ -397,7 +409,7 @@ func compileArchive(
 		// prefix is an absolute dir computed at builder runtime (not on the
 		// bazel command line) and the recorded path is machine-independent,
 		// so remote cache keys and output determinism are unaffected.
-		if ipTrim := importpathTrimRewrite(packageSourceDir, importPath); ipTrim != "" {
+		if ipTrim := importpathTrimRewrite(packageSourceDir, trimImportPath); ipTrim != "" {
 			trimPath = ipTrim + ";" + trimPath
 		}
 		// Preserve an existing -trimpath argument, applying abs() to each prefix.

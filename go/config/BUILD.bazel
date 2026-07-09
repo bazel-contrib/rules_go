@@ -69,6 +69,18 @@ string_flag(
     visibility = ["//visibility:public"],
 )
 
+# When enabled, source paths recorded under -trimpath are rewritten to be
+# importpath-relative (matching native `go build -trimpath`) instead of
+# execroot-relative, so debuggers can resolve them without configuration.
+# Note: runfiles.CurrentRepository()/CallerRepository() infer the caller's
+# repository from the execroot-relative path shape and report the main
+# repository for all callers when this is enabled.
+bool_flag(
+    name = "importpath_trimpath",
+    build_setting_default = False,
+    visibility = ["//visibility:public"],
+)
+
 filegroup(
     name = "all_files",
     testonly = True,

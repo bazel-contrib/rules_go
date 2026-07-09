@@ -522,6 +522,7 @@ default_go_config_info = GoConfigInfo(
     stamp = False,
     cover_format = None,
     gc_goopts = [],
+    importpath_trimpath = False,
     amd64 = None,
     arm = None,
     pgoprofile = None,
@@ -1051,6 +1052,7 @@ def _go_config_impl(ctx):
         stamp = ctx.attr.stamp,
         cover_format = ctx.attr.cover_format[BuildSettingInfo].value,
         gc_goopts = ctx.attr.gc_goopts[BuildSettingInfo].value,
+        importpath_trimpath = ctx.attr.importpath_trimpath[BuildSettingInfo].value,
         amd64 = ctx.attr.amd64,
         arm = ctx.attr.arm,
         pgoprofile = pgoprofile,
@@ -1102,6 +1104,10 @@ go_config = rule(
             providers = [BuildSettingInfo],
         ),
         "gc_goopts": attr.label(
+            mandatory = True,
+            providers = [BuildSettingInfo],
+        ),
+        "importpath_trimpath": attr.label(
             mandatory = True,
             providers = [BuildSettingInfo],
         ),

@@ -127,6 +127,9 @@ def emit_compilepkg(
         compile_args.add("-cover_format", go.mode.cover_format)
         compile_args.add_all(cover, before_each = "-cover")
 
+    if go.mode.importpath_trimpath:
+        compile_args.add("-importpath_trimpath")
+
     shared_args.add_all(archives, before_each = "-arc", map_each = _archive)
     if recompile_internal_deps:
         shared_args.add_all(recompile_internal_deps, before_each = "-recompile_internal_deps")
