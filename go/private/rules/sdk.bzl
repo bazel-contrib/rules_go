@@ -77,7 +77,11 @@ go_sdk = rule(
             # allow_files is not set to [".a"] because that wouldn't allow
             # for zero files to be present, as is the case in Go 1.20+.
             # See also https://github.com/bazelbuild/bazel/issues/7516
-            cfg = "exec",
+            #
+            # These pre-compiled .a files are semantically target-configured,
+            # so unlike the other SDK layout attrs they are left unpinned. In
+            # practice this is moot: since none are present the bootstrap SDK
+            # never produces them under a mismatched configuration.
             allow_files = True,
             doc = ("Pre-compiled .a files for the standard library, " +
                    "built for the execution platform"),
