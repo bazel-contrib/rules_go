@@ -97,6 +97,18 @@ or using `Bazel configuration transitions`_.
 | but adds time to the initial build. Leave false unless you want to use       |
 | golangci-lint or another tool that relies on GOPACKAGESDRIVER.               |
 +------------------------+---------------------+-------------------------------+
+| :param:`importpath_trimpath` | :type:`bool`  | :value:`false`                |
++------------------------+---------------------+-------------------------------+
+| Records source paths as importpath-relative (e.g.                            |
+| ``example.com/mod/pkg/file.go``), matching native ``go build -trimpath``,    |
+| instead of execroot-relative. This lets debuggers such as Delve and GoLand   |
+| resolve sources without path substitution configuration, which is required   |
+| for remote debugging on hosts without a Bazel execroot.                      |
+|                                                                              |
+| Note: ``runfiles.CurrentRepository()`` and ``runfiles.CallerRepository()``   |
+| infer the calling repository from the execroot-relative path shape; with     |
+| this setting enabled they report the main repository for all callers.        |
++------------------------+---------------------+-------------------------------+
 
 Platforms
 ---------

@@ -115,7 +115,7 @@ func File() string {
 	return file
 }
 `,
-	WorkspaceSuffix: `
+		WorkspaceSuffix: `
 local_repository(
     name = "other_repo",
     path = "other_repo",
@@ -139,25 +139,40 @@ maincgo.go
 ../other_repo/othercgo.go
 `
 
+// With --//go/config:importpath_trimpath, recorded paths are
+// importpath-relative in all layouts, matching native `go build -trimpath`.
+var expectedImportpath = `
+example.com/main_repo/main/main.go
+example.com/main_repo/maincgo/maincgo.go
+example.com/other_repo/other/other.go
+example.com/other_repo/othercgo/othercgo.go
+`
+
+const importpathTrimpathFlag = "--@io_bazel_rules_go//go/config:importpath_trimpath=true"
+
+func checkTrimpathOutput(t *testing.T, expected string, bazelArgs ...string) {
+	t.Helper()
+	out, err := bazel_testing.BazelOutput(append([]string{"run"}, append(bazelArgs, "//:main")...)...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	outStr := "\n" + string(out)
+	if outStr != expected {
+		t.Fatal("actual", outStr, "vs expected", expected)
+	}
+}
+
 func TestTrimpath(t *testing.T) {
 	t.Run("default", func(t *testing.T) {
-		out, err := bazel_testing.BazelOutput("run", "//:main")
-		if err != nil {
-			t.Fatal(err)
-		}
-		outStr := "\n" + string(out)
-		if outStr != expectedDefault {
-			t.Fatal("actual", outStr, "vs expected", expectedDefault)
-		}
+		checkTrimpathOutput(t, expectedDefault)
 	})
 	t.Run("experimental_sibling_repository_layout", func(t *testing.T) {
-		out, err := bazel_testing.BazelOutput("run", "--experimental_sibling_repository_layout", "//:main")
-		if err != nil {
-			t.Fatal(err)
-		}
-		outStr := "\n" + string(out)
-		if outStr != expectedSibling {
-			t.Fatal("actual", outStr, "vs expected", expectedSibling)
-		}
+		checkTrimpathOutput(t, expectedSibling, "--experimental_sibling_repository_layout")
+	})
+	t.Run("importpath_trimpath", func(t *testing.T) {
+		checkTrimpathOutput(t, expectedImportpath, importpathTrimpathFlag)
+	})
+	t.Run("importpath_trimpath_sibling_repository_layout", func(t *testing.T) {
+		checkTrimpathOutput(t, expectedImportpath, importpathTrimpathFlag, "--experimental_sibling_repository_layout")
 	})
 }

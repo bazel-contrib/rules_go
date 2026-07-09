@@ -101,6 +101,7 @@ go_config(
     gc_goopts = "//go/config:gc_goopts",
     gc_linkopts = "//go/config:gc_linkopts",
     gotags = "//go/config:tags",
+    importpath_trimpath = "//go/config:importpath_trimpath",
     linkmode = "//go/config:linkmode",
     msan = "//go/config:msan",
     pgoprofile = "//go/config:pgoprofile",
