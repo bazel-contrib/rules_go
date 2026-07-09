@@ -33,7 +33,7 @@ import (
 )
 
 // cgo2 processes a set of mixed source files with cgo.
-func cgo2(goenv *env, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSrcs, hSrcs []string, packagePath, packageName string, cc string, cppFlags, cFlags, cxxFlags, objcFlags, objcxxFlags, ldFlags []string, cgoExportHPath string, cgoGoSrcsPath string) (srcDir string, allGoSrcs, cObjs []string, err error) {
+func cgo2(goenv *env, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSrcs, hSrcs []string, importPath, packagePath, packageName string, cc string, cppFlags, cFlags, cxxFlags, objcFlags, objcxxFlags, ldFlags []string, cgoExportHPath string, cgoGoSrcsPath string) (srcDir string, allGoSrcs, cObjs []string, err error) {
 	// Report an error if the C/C++ toolchain wasn't configured.
 	if cc == "" {
 		err := cgoError(cgoSrcs[:])
@@ -173,6 +173,13 @@ func cgo2(goenv *env, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSr
 	trimPath, err := createTrimPath()
 	if err != nil {
 		return "", nil, nil, err
+	}
+	// Prepend a rewrite mapping srcDir to the package's importpath so //line
+	// paths become importpath-relative, matching native `go build -trimpath`.
+	// First-match-wins; the execroot rewrite stays as the fallback for
+	// anything outside srcDir.
+	if ipTrim := importpathTrimRewrite(srcDir, importPath); ipTrim != "" {
+		trimPath = ipTrim + ";" + trimPath
 	}
 	args := goenv.goTool("cgo", "-srcdir", srcDir, "-objdir", workDir, "-trimpath", trimPath)
 	if ldflagsFile != nil {

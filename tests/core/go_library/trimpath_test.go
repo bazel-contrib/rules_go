@@ -125,18 +125,11 @@ local_repository(
 }
 
 // These are the expected paths after applying trimpath.
-var expectedDefault = `
-main.go
-maincgo.go
-external/other_repo/other.go
-external/other_repo/othercgo.go
-`
-
-var expectedSibling = `
-main.go
-maincgo.go
-../other_repo/other.go
-../other_repo/othercgo.go
+var expectedTrimpath = `
+example.com/main_repo/main/main.go
+example.com/main_repo/maincgo/maincgo.go
+example.com/other_repo/other/other.go
+example.com/other_repo/othercgo/othercgo.go
 `
 
 func TestTrimpath(t *testing.T) {
@@ -146,8 +139,8 @@ func TestTrimpath(t *testing.T) {
 			t.Fatal(err)
 		}
 		outStr := "\n" + string(out)
-		if outStr != expectedDefault {
-			t.Fatal("actual", outStr, "vs expected", expectedDefault)
+		if outStr != expectedTrimpath {
+			t.Fatal("actual", outStr, "vs expected", expectedTrimpath)
 		}
 	})
 	t.Run("experimental_sibling_repository_layout", func(t *testing.T) {
@@ -156,8 +149,8 @@ func TestTrimpath(t *testing.T) {
 			t.Fatal(err)
 		}
 		outStr := "\n" + string(out)
-		if outStr != expectedSibling {
-			t.Fatal("actual", outStr, "vs expected", expectedSibling)
+		if outStr != expectedTrimpath {
+			t.Fatal("actual", outStr, "vs expected", expectedTrimpath)
 		}
 	})
 }
