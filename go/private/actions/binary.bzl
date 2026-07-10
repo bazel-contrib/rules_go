@@ -69,6 +69,7 @@ def emit_binary(
         for d in archive.cgo_deps.to_list()
         if has_shared_lib_extension(d.basename)
     ]
+
     # package_repo_map is None for non-executable link modes.
     package_repo_map_files = [package_repo_map] if package_repo_map else []
     runfiles = go._ctx.runfiles(files = cgo_dynamic_deps + package_repo_map_files).merge(archive.runfiles)
