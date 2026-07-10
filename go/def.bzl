@@ -14,12 +14,13 @@
 
 """Public definitions for Go rules.
 
-All public Go rules, providers, and other definitions are imported and
-re-exported in this file. This allows the real location of definitions
-to change for easier maintenance.
+This file serves as the primary entry point for loading public Go rules,
+providers, and definitions. Re-exporting them here allows the underlying
+implementations to be maintained and relocated without breaking public APIs.
 
-Definitions outside this file are private unless otherwise noted, and
-may change without notice.
+Definitions outside this file are private and subject to change with the
+exception of (go/go_binary.bzl, go/go_library.bzl, go/go_test.bzl) which are provided as
+a convenience.
 """
 
 load(
