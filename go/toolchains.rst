@@ -807,7 +807,10 @@ link
 
 The link function adds an action that runs ``go tool link`` on a library.
 
-It does not return anything.
+It returns a ``File`` that maps the package path of each linked package to
+the canonical name of the Bazel repository containing its sources. This file
+must be included in the runfiles of the binary for
+``runfiles.CurrentRepository`` to work.
 
 +--------------------------------+-----------------------------+-----------------------------------+
 | **Name**                       | **Type**                    | **Default value**                 |
