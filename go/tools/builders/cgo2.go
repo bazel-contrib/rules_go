@@ -468,8 +468,7 @@ func copyOrLinkFile(inPath, outPath string) error {
 func formatLdFlagsFileContent(flags string) string {
 	shouldEscape, _ := onVersionOrHigher(27)
 	if shouldEscape {
-		escaped := strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(flags)
-		return `"` + escaped + `"` + "\n"
+		return encodeResponseFileArg(flags) + "\n"
 	}
 	return flags
 }
