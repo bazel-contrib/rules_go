@@ -160,6 +160,36 @@ func cgo2(goenv *env, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSr
 	return workDir, allGoSrcs, cObjs, nil
 }
 
+func cgo2GeneratedGoSrcsForNogo(goenv *env, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, hSrcs []string, packagePath string, cc string, cppFlags, cFlags, ldFlags []string, cgoGoSrcsPath string, cgoImportsSrc string) error {
+	if cc == "" {
+		err := cgoError(cgoSrcs[:])
+		err = append(err, cSrcs...)
+		err = append(err, cxxSrcs...)
+		err = append(err, objcSrcs...)
+		err = append(err, objcxxSrcs...)
+		return err
+	}
+	if len(cgoSrcs) == 0 {
+		return nil
+	}
+
+	workDir, cleanup, err := goenv.workDir()
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+
+	gen, err := generateCgoSources(goenv, workDir, "cgo_nogo", cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, hSrcs, packagePath, cppFlags, cFlags, ldFlags, "")
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(cgoGoSrcsPath, 0777); err != nil {
+		return err
+	}
+	gen.genGoSrcs = append(gen.genGoSrcs, cgoImportsSrc)
+	return copyGeneratedGoSrcs(gen.genGoSrcs, cgoGoSrcsPath)
+}
+
 type cgoGenResult struct {
 	workDir         string
 	hdrIncludes     []string
