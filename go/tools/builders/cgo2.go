@@ -62,164 +62,22 @@ func cgo2(goenv *env, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSr
 	}
 	defer cleanup()
 
-	// cgo2 will gather sources into a single temporary directory, since nogo
-	// scanners might want to include or exclude these sources we need to ensure
-	// that a fragment of the path is stable and human friendly enough to be
-	// referenced in nogo configuration.
-	workDir = filepath.Join(workDir, "cgo", packagePath)
-	if err := os.MkdirAll(workDir, 0700); err != nil {
-		return "", nil, nil, err
-	}
-
-	// Filter out -lstdc++ and -lc++ from ldflags if we don't have C++ sources,
-	// and set CGO_LDFLAGS. These flags get written as special comments into cgo
-	// generated sources. The compiler encodes those flags in the compiled .a
-	// file, and the linker passes them on to the external linker.
-	haveCxx := len(cxxSrcs)+len(objcxxSrcs) > 0
-	if !haveCxx {
-		for _, f := range ldFlags {
-			if strings.HasSuffix(f, ".a") {
-				// These flags come from cdeps options. Assume C++.
-				haveCxx = true
-				break
-			}
-		}
-	}
-	var combinedLdFlags []string
-	if haveCxx {
-		combinedLdFlags = append(combinedLdFlags, ldFlags...)
-	} else {
-		for _, f := range ldFlags {
-			if f != "-lc++" && f != "-lstdc++" {
-				combinedLdFlags = append(combinedLdFlags, f)
-			}
-		}
-	}
-	combinedLdFlags = append(combinedLdFlags, defaultLdFlags()...)
-
-	// go 1.23+ supports ldflags file.
-	// https://go-review.googlesource.com/c/go/+/584655
-	canUseLdflagsFile, err := onVersionOrHigher(23)
+	gen, err := generateCgoSources(goenv, workDir, "cgo", cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, hSrcs, packagePath, cppFlags, cFlags, ldFlags, cgoExportHPath)
 	if err != nil {
 		return "", nil, nil, err
 	}
-
-	var ldflagsFile *os.File
-	combinedLdFlagsStr := strings.Join(combinedLdFlags, " ")
-	if canUseLdflagsFile {
-		// Write linker flags to a temporary file instead of pasing via env variable.
-		// This avoids "argument list too long" error with extremely large CGO_LDFLAGS
-		// that can exceed system limits.
-		// Future versions of `go` may remove support for CGO_LDFLAGS entirely, so
-		// use file even for small ldflags.
-		// https://go-review.googlesource.com/c/go/+/596615
-		ldflagsFile, err = os.CreateTemp("", "cgo-ldflags-*.txt")
-		if err != nil {
-			return "", nil, nil, fmt.Errorf("failed to create temporary file for ldflags: %w", err)
-		}
-		defer os.Remove(ldflagsFile.Name())
-		if _, err := ldflagsFile.WriteString(formatLdFlagsFileContent(combinedLdFlagsStr)); err != nil {
-			ldflagsFile.Close()
-			return "", nil, nil, fmt.Errorf("failed to write ldflags to temporary file: %w", err)
-		}
-		if err := ldflagsFile.Close(); err != nil {
-			return "", nil, nil, fmt.Errorf("failed to close temporary ldflags file: %w", err)
-		}
-	} else {
-		// Fallback to env variable for backwards compatibility with older `go` versions.
-		os.Setenv("CGO_LDFLAGS", combinedLdFlagsStr)
-	}
-
-	// If cgo sources are in different directories, gather them into a temporary
-	// directory so we can use -srcdir.
-	srcDir = filepath.Dir(cgoSrcs[0])
-	srcsInSingleDir := true
-	for _, src := range cgoSrcs[1:] {
-		if filepath.Dir(src) != srcDir {
-			srcsInSingleDir = false
-			break
-		}
-	}
-
-	if srcsInSingleDir {
-		for i := range cgoSrcs {
-			cgoSrcs[i] = filepath.Base(cgoSrcs[i])
-		}
-	} else {
-		srcDir = filepath.Join(workDir, "cgosrcs")
-		if err := os.Mkdir(srcDir, 0777); err != nil {
-			return "", nil, nil, err
-		}
-		copiedSrcs, err := gatherSrcs(srcDir, cgoSrcs)
-		if err != nil {
-			return "", nil, nil, err
-		}
-		cgoSrcs = copiedSrcs
-	}
-
-	// Generate Go and C code.
-	hdrDirs := map[string]bool{}
-	var hdrIncludes []string
-	for _, hdr := range hSrcs {
-		hdrDir := filepath.Dir(hdr)
-		if !hdrDirs[hdrDir] {
-			hdrDirs[hdrDir] = true
-			hdrIncludes = append(hdrIncludes, "-iquote", hdrDir)
-		}
-	}
-	hdrIncludes = append(hdrIncludes, "-iquote", workDir) // for _cgo_export.h
-
-	// Trim the path in //line comments emitted by cgo.
-	trimPath, err := createTrimPath()
-	if err != nil {
-		return "", nil, nil, err
-	}
-	args := goenv.goTool("cgo", "-srcdir", srcDir, "-objdir", workDir, "-trimpath", trimPath)
-	if ldflagsFile != nil {
-		// The "@" prefix tells cgo to read arguments from the file.
-		args = append(args, "-ldflags", "@"+ldflagsFile.Name())
-	}
-	if packagePath != "" {
-		args = append(args, "-importpath", packagePath)
-	}
-	args = append(args, "--")
-	args = append(args, cppFlags...)
-	args = append(args, hdrIncludes...)
-	args = append(args, cFlags...)
-	args = append(args, cgoSrcs...)
-	if err := goenv.runCommand(args); err != nil {
-		return "", nil, nil, err
-	}
-
-	if cgoExportHPath != "" {
-		if err := copyFile(filepath.Join(workDir, "_cgo_export.h"), cgoExportHPath); err != nil {
-			return "", nil, nil, err
-		}
-	}
-	// Note: The tools/gopackagesdriver will break if the naming convention
-	// changes for genGoSrcs files. Changes here should be reflected
-	// there.
-	genGoSrcs := make([]string, 1+len(cgoSrcs))
-	genGoSrcs[0] = filepath.Join(workDir, "_cgo_gotypes.go")
-	genCSrcs := make([]string, 1+len(cgoSrcs))
-	genCSrcs[0] = filepath.Join(workDir, "_cgo_export.c")
-	for i, src := range cgoSrcs {
-		stem := strings.TrimSuffix(filepath.Base(src), ".go")
-		genGoSrcs[i+1] = filepath.Join(workDir, stem+".cgo1.go")
-		genCSrcs[i+1] = filepath.Join(workDir, stem+".cgo2.c")
-	}
-	cgoMainC := filepath.Join(workDir, "_cgo_main.c")
+	workDir = gen.workDir
 
 	// Compile C, C++, Objective-C/C++, and assembly code.
 	defaultCFlags := defaultCFlags(workDir)
-	combinedCFlags := combineFlags(cppFlags, hdrIncludes, cFlags, defaultCFlags)
+	combinedCFlags := combineFlags(cppFlags, gen.hdrIncludes, cFlags, defaultCFlags)
 	asmCFlags := combineFlags(cppFlags, cFlags, defaultCFlags)
 	for _, lang := range []struct{ srcs, flags []string }{
-		{genCSrcs, combinedCFlags},
+		{gen.genCSrcs, combinedCFlags},
 		{cSrcs, combinedCFlags},
-		{cxxSrcs, combineFlags(cppFlags, hdrIncludes, cxxFlags, defaultCFlags)},
-		{objcSrcs, combineFlags(cppFlags, hdrIncludes, objcFlags, defaultCFlags)},
-		{objcxxSrcs, combineFlags(cppFlags, hdrIncludes, objcxxFlags, defaultCFlags)},
+		{cxxSrcs, combineFlags(cppFlags, gen.hdrIncludes, cxxFlags, defaultCFlags)},
+		{objcSrcs, combineFlags(cppFlags, gen.hdrIncludes, objcFlags, defaultCFlags)},
+		{objcxxSrcs, combineFlags(cppFlags, gen.hdrIncludes, objcxxFlags, defaultCFlags)},
 		{sSrcs, asmCFlags},
 	} {
 		for _, src := range lang.srcs {
@@ -232,14 +90,14 @@ func cgo2(goenv *env, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSr
 	}
 
 	mainObj := filepath.Join(workDir, "_cgo_main.o")
-	if err := cCompile(goenv, cgoMainC, cc, combinedCFlags, mainObj); err != nil {
+	if err := cCompile(goenv, gen.cgoMainC, cc, combinedCFlags, mainObj); err != nil {
 		return "", nil, nil, err
 	}
 
 	// Link cgo binary and use the symbols to generate _cgo_import.go.
 	mainBin := filepath.Join(workDir, "_cgo_.o") // .o is a lie; it's an executable
-	args = append([]string{cc, "-o", mainBin, mainObj}, cObjs...)
-	args = append(args, combinedLdFlags...)
+	args := append([]string{cc, "-o", mainBin, mainObj}, cObjs...)
+	args = append(args, gen.combinedLdFlags...)
 	var originalErrBuf bytes.Buffer
 	if err := goenv.runCommandToFile(os.Stdout, &originalErrBuf, args); err != nil {
 		// If linking the binary for cgo fails, this is usually because the
@@ -280,12 +138,10 @@ func cgo2(goenv *env, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSr
 	if err := goenv.runCommand(args); err != nil {
 		return "", nil, nil, err
 	}
-	genGoSrcs = append(genGoSrcs, cgoImportsGo)
+	gen.genGoSrcs = append(gen.genGoSrcs, cgoImportsGo)
 	if cgoGoSrcsPath != "" {
-		for _, src := range genGoSrcs {
-			if err := copyFile(src, filepath.Join(cgoGoSrcsPath, filepath.Base(src))); err != nil {
-				return "", nil, nil, err
-			}
+		if err := copyGeneratedGoSrcs(gen.genGoSrcs, cgoGoSrcsPath); err != nil {
+			return "", nil, nil, err
 		}
 	}
 
@@ -296,12 +152,218 @@ func cgo2(goenv *env, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSr
 		return "", nil, nil, err
 	}
 
-	allGoSrcs = make([]string, len(goSrcs)+len(genGoSrcs))
+	allGoSrcs = make([]string, len(goSrcs)+len(gen.genGoSrcs))
 	for i := range goSrcs {
 		allGoSrcs[i] = filepath.Join(workDir, goBases[i])
 	}
-	copy(allGoSrcs[len(goSrcs):], genGoSrcs)
+	copy(allGoSrcs[len(goSrcs):], gen.genGoSrcs)
 	return workDir, allGoSrcs, cObjs, nil
+}
+
+func cgo2GeneratedGoSrcsForNogo(goenv *env, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, hSrcs []string, packagePath string, cc string, cppFlags, cFlags, ldFlags []string, cgoGoSrcsPath string, cgoImportsSrc string) error {
+	if cc == "" {
+		err := cgoError(cgoSrcs[:])
+		err = append(err, cSrcs...)
+		err = append(err, cxxSrcs...)
+		err = append(err, objcSrcs...)
+		err = append(err, objcxxSrcs...)
+		return err
+	}
+	if len(cgoSrcs) == 0 {
+		return nil
+	}
+
+	workDir, cleanup, err := goenv.workDir()
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+
+	gen, err := generateCgoSources(goenv, workDir, "cgo_nogo", cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, hSrcs, packagePath, cppFlags, cFlags, ldFlags, "")
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(cgoGoSrcsPath, 0777); err != nil {
+		return err
+	}
+	gen.genGoSrcs = append(gen.genGoSrcs, cgoImportsSrc)
+	return copyGeneratedGoSrcs(gen.genGoSrcs, cgoGoSrcsPath)
+}
+
+type cgoGenResult struct {
+	workDir         string
+	hdrIncludes     []string
+	combinedLdFlags []string
+	genGoSrcs       []string
+	genCSrcs        []string
+	cgoMainC        string
+}
+
+func generateCgoSources(goenv *env, baseWorkDir, subdir string, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, hSrcs []string, packagePath string, cppFlags, cFlags, ldFlags []string, cgoExportHPath string) (*cgoGenResult, error) {
+	// cgo2 will gather sources into a single temporary directory, since nogo
+	// scanners might want to include or exclude these sources we need to ensure
+	// that a fragment of the path is stable and human friendly enough to be
+	// referenced in nogo configuration.
+	workDir := filepath.Join(baseWorkDir, subdir, packagePath)
+	if err := os.MkdirAll(workDir, 0700); err != nil {
+		return nil, err
+	}
+
+	// Filter out -lstdc++ and -lc++ from ldflags if we don't have C++ sources,
+	// and set CGO_LDFLAGS. These flags get written as special comments into cgo
+	// generated sources. The compiler encodes those flags in the compiled .a
+	// file, and the linker passes them on to the external linker.
+	haveCxx := len(cxxSrcs)+len(objcxxSrcs) > 0
+	if !haveCxx {
+		for _, f := range ldFlags {
+			if strings.HasSuffix(f, ".a") {
+				// These flags come from cdeps options. Assume C++.
+				haveCxx = true
+				break
+			}
+		}
+	}
+	var combinedLdFlags []string
+	if haveCxx {
+		combinedLdFlags = append(combinedLdFlags, ldFlags...)
+	} else {
+		for _, f := range ldFlags {
+			if f != "-lc++" && f != "-lstdc++" {
+				combinedLdFlags = append(combinedLdFlags, f)
+			}
+		}
+	}
+	combinedLdFlags = append(combinedLdFlags, defaultLdFlags()...)
+
+	// go 1.23+ supports ldflags file.
+	// https://go-review.googlesource.com/c/go/+/584655
+	canUseLdflagsFile, err := onVersionOrHigher(23)
+	if err != nil {
+		return nil, err
+	}
+
+	var ldflagsFile *os.File
+	combinedLdFlagsStr := strings.Join(combinedLdFlags, " ")
+	if canUseLdflagsFile {
+		// Write linker flags to a temporary file instead of pasing via env variable.
+		// This avoids "argument list too long" error with extremely large CGO_LDFLAGS
+		// that can exceed system limits.
+		// Future versions of `go` may remove support for CGO_LDFLAGS entirely, so
+		// use file even for small ldflags.
+		// https://go-review.googlesource.com/c/go/+/596615
+		ldflagsFile, err = os.CreateTemp("", "cgo-ldflags-*.txt")
+		if err != nil {
+			return nil, fmt.Errorf("failed to create temporary file for ldflags: %w", err)
+		}
+		defer os.Remove(ldflagsFile.Name())
+		if _, err := ldflagsFile.WriteString(formatLdFlagsFileContent(combinedLdFlagsStr)); err != nil {
+			ldflagsFile.Close()
+			return nil, fmt.Errorf("failed to write ldflags to temporary file: %w", err)
+		}
+		if err := ldflagsFile.Close(); err != nil {
+			return nil, fmt.Errorf("failed to close temporary ldflags file: %w", err)
+		}
+	} else {
+		// Fallback to env variable for backwards compatibility with older `go` versions.
+		os.Setenv("CGO_LDFLAGS", combinedLdFlagsStr)
+	}
+
+	// If cgo sources are in different directories, gather them into a temporary
+	// directory so we can use -srcdir.
+	srcDir := filepath.Dir(cgoSrcs[0])
+	srcsInSingleDir := true
+	for _, src := range cgoSrcs[1:] {
+		if filepath.Dir(src) != srcDir {
+			srcsInSingleDir = false
+			break
+		}
+	}
+
+	if srcsInSingleDir {
+		for i := range cgoSrcs {
+			cgoSrcs[i] = filepath.Base(cgoSrcs[i])
+		}
+	} else {
+		srcDir = filepath.Join(workDir, "cgosrcs")
+		if err := os.Mkdir(srcDir, 0777); err != nil {
+			return nil, err
+		}
+		copiedSrcs, err := gatherSrcs(srcDir, cgoSrcs)
+		if err != nil {
+			return nil, err
+		}
+		cgoSrcs = copiedSrcs
+	}
+
+	// Generate Go and C code.
+	hdrDirs := map[string]bool{}
+	var hdrIncludes []string
+	for _, hdr := range hSrcs {
+		hdrDir := filepath.Dir(hdr)
+		if !hdrDirs[hdrDir] {
+			hdrDirs[hdrDir] = true
+			hdrIncludes = append(hdrIncludes, "-iquote", hdrDir)
+		}
+	}
+	hdrIncludes = append(hdrIncludes, "-iquote", workDir) // for _cgo_export.h
+
+	// Trim the path in //line comments emitted by cgo.
+	trimPath, err := createTrimPath()
+	if err != nil {
+		return nil, err
+	}
+	args := goenv.goTool("cgo", "-srcdir", srcDir, "-objdir", workDir, "-trimpath", trimPath)
+	if ldflagsFile != nil {
+		// The "@" prefix tells cgo to read arguments from the file.
+		args = append(args, "-ldflags", "@"+ldflagsFile.Name())
+	}
+	if packagePath != "" {
+		args = append(args, "-importpath", packagePath)
+	}
+	args = append(args, "--")
+	args = append(args, cppFlags...)
+	args = append(args, hdrIncludes...)
+	args = append(args, cFlags...)
+	args = append(args, cgoSrcs...)
+	if err := goenv.runCommand(args); err != nil {
+		return nil, err
+	}
+
+	if cgoExportHPath != "" {
+		if err := copyFile(filepath.Join(workDir, "_cgo_export.h"), cgoExportHPath); err != nil {
+			return nil, err
+		}
+	}
+	// Note: The tools/gopackagesdriver will break if the naming convention
+	// changes for genGoSrcs files. Changes here should be reflected
+	// there.
+	genGoSrcs := make([]string, 1+len(cgoSrcs))
+	genGoSrcs[0] = filepath.Join(workDir, "_cgo_gotypes.go")
+	genCSrcs := make([]string, 1+len(cgoSrcs))
+	genCSrcs[0] = filepath.Join(workDir, "_cgo_export.c")
+	for i, src := range cgoSrcs {
+		stem := strings.TrimSuffix(filepath.Base(src), ".go")
+		genGoSrcs[i+1] = filepath.Join(workDir, stem+".cgo1.go")
+		genCSrcs[i+1] = filepath.Join(workDir, stem+".cgo2.c")
+	}
+	cgoMainC := filepath.Join(workDir, "_cgo_main.c")
+	return &cgoGenResult{
+		workDir:         workDir,
+		hdrIncludes:     hdrIncludes,
+		combinedLdFlags: combinedLdFlags,
+		genGoSrcs:       genGoSrcs,
+		genCSrcs:        genCSrcs,
+		cgoMainC:        cgoMainC,
+	}, nil
+}
+
+func copyGeneratedGoSrcs(srcs []string, outDir string) error {
+	for _, src := range srcs {
+		if err := copyFile(src, filepath.Join(outDir, filepath.Base(src))); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // compileCSources compiles a list of C, C++, Objective-C, Objective-C++,
