@@ -121,6 +121,7 @@ def _sdk_stdlib(go):
     list_json, cache_dir = _build_stdlib_list_json(go)
     return GoStdLib(
         _list_json = list_json,
+        cgo_link_inputs = depset(),
         cache_dir = depset([cache_dir]),
         libs = go.sdk.libs,
         root_file = go.sdk.root_file,
@@ -178,6 +179,10 @@ def _build_stdlib(go):
     list_json, cache_dir = _build_stdlib_list_json(go)
     return GoStdLib(
         _list_json = list_json,
+        # runtime/cgo records CGO_LDFLAGS from this configuration in its
+        # package metadata. Keep the matching C++ toolchain files available
+        # when a later GoLink action replays those flags.
+        cgo_link_inputs = go.cc_toolchain_files,
         libs = depset([pkg]),
         cache_dir = depset([cache_dir]),
         root_file = pkg,

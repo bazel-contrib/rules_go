@@ -65,10 +65,17 @@ def _runtime_lib_inputs_test_impl(ctx):
 
     inputs = link_actions[0].inputs.to_list()
     for expected in ctx.attr.expected_inputs:
-        asserts.true(
+        matching_inputs = [input for input in inputs if input.path.endswith("/" + expected)]
+        asserts.equals(
             env,
-            any([input.path.endswith("/" + expected) for input in inputs]),
-            "expected '{}' to be in inputs: '{}'".format(expected, inputs),
+            ctx.attr.expected_input_count,
+            len(matching_inputs),
+            "expected {} '{}' inputs, got '{}': '{}'".format(
+                ctx.attr.expected_input_count,
+                expected,
+                matching_inputs,
+                inputs,
+            ),
         )
     for unexpected in ctx.attr.unexpected_inputs:
         asserts.false(
@@ -98,6 +105,7 @@ def _runtime_lib_inputs_test_impl(ctx):
 runtime_lib_inputs_test = analysistest.make(
     _runtime_lib_inputs_test_impl,
     attrs = {
+        "expected_input_count": attr.int(default = 1),
         "expected_inputs": attr.string_list(),
         "expected_linkopts": attr.string_list(),
         "unexpected_inputs": attr.string_list(),
@@ -109,6 +117,14 @@ runtime_lib_inputs_test = analysistest.make(
 )
 
 def cgo_test_suite():
+    native.genrule(
+        name = "configured_dummy_runtime_lib",
+        srcs = [":dummy.a"],
+        outs = ["configured_dummy.a"],
+        cmd = "cp $< $@",
+        cmd_bat = "copy /Y $< $@",
+    )
+
     test_cc_config(
         name = "runtime_libs_test_cc_toolchain_config",
     )
@@ -121,7 +137,7 @@ def cgo_test_suite():
         dynamic_runtime_lib = ":dummy.so",
         linker_files = ":empty",
         objcopy_files = ":empty",
-        static_runtime_lib = ":dummy.a",
+        static_runtime_lib = ":configured_dummy_runtime_lib",
         strip_files = ":empty",
         supports_param_files = 0,
         toolchain_config = ":runtime_libs_test_cc_toolchain_config",
@@ -166,11 +182,33 @@ def cgo_test_suite():
 
     runtime_lib_inputs_test(
         name = "static_runtime_lib_inputs_test",
-        expected_inputs = ["dummy.a"],
-        expected_linkopts = ["dummy.a"],
+        expected_inputs = ["configured_dummy.a"],
+        expected_linkopts = ["configured_dummy.a"],
         target_under_test = ":runtime_libs_static_binary",
         unexpected_inputs = ["dummy.so"],
         unexpected_linkopts = ["dummy.so"],
+    )
+
+    go_binary(
+        name = "stdlib_runtime_lib_inputs_binary",
+        srcs = [
+            "runtime_libs.cc",
+            "runtime_libs.go",
+        ],
+        cgo = True,
+        # go_stdlib_transition removes tags that do not affect the standard
+        # library, so this target and its stdlib dependency use different
+        # configurations of the generated C++ runtime archive above.
+        gotags = ["not_a_stdlib_tag"],
+        pure = "off",
+        tags = ["manual"],
+    )
+
+    runtime_lib_inputs_test(
+        name = "stdlib_runtime_lib_inputs_test",
+        expected_input_count = 2,
+        expected_inputs = ["configured_dummy.a"],
+        target_under_test = ":stdlib_runtime_lib_inputs_binary",
     )
 
     go_binary(
@@ -201,5 +239,6 @@ def cgo_test_suite():
             ":dynamic_runtime_lib_inputs_test",
             ":missing_cc_toolchain_explicit_pure_off_test",
             ":static_runtime_lib_inputs_test",
+            ":stdlib_runtime_lib_inputs_test",
         ],
     )
