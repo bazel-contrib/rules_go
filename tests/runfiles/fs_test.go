@@ -56,9 +56,11 @@ func mainRepoRunfiles(useCanonicalName bool) []string {
 	}
 	return []string{
 		mainRepo + "/tests/runfiles/runfiles_test_/runfiles_test" + exeSuffix,
+		mainRepo + "/tests/runfiles/runfiles_test_/runfiles_test" + exeSuffix + ".package_repo_map",
 		mainRepo + "/tests/runfiles/test.txt",
 		mainRepo + "/tests/runfiles/test_dir",
 		mainRepo + "/tests/runfiles/testprog/testprog_/testprog" + exeSuffix,
+		mainRepo + "/tests/runfiles/testprog/testprog_/testprog" + exeSuffix + ".package_repo_map",
 	}
 }
 
@@ -232,10 +234,12 @@ func testWalkDir(t *testing.T, r *runfiles.Runfiles) {
 	}
 	expected := []string{
 		"io_bazel_rules_go/tests/runfiles/runfiles_test_/runfiles_test" + exeSuffix,
+		"io_bazel_rules_go/tests/runfiles/runfiles_test_/runfiles_test" + exeSuffix + ".package_repo_map",
 		"io_bazel_rules_go/tests/runfiles/test.txt",
 		"io_bazel_rules_go/tests/runfiles/test_dir/file.txt",
 		"io_bazel_rules_go/tests/runfiles/test_dir/subdir/other_file.txt",
 		"io_bazel_rules_go/tests/runfiles/testprog/testprog_/testprog" + exeSuffix,
+		"io_bazel_rules_go/tests/runfiles/testprog/testprog_/testprog" + exeSuffix + ".package_repo_map",
 	}
 	if !slices.Equal(found, expected) {
 		t.Errorf("got %v, want %v", found, expected)

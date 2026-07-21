@@ -26,6 +26,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -45,6 +46,9 @@ func link(args []string) error {
 	main := flags.String("main", "", "Path to the main archive.")
 	packagePath := flags.String("p", "", "Package path of the main archive.")
 	outFile := flags.String("o", "", "Path to output file.")
+	packageRepoMap := flags.String("package_repo_map", "", "Path of a file to write that maps the package path of each linked package to the canonical name of the Bazel repository containing its sources.")
+	packageRepoMapRlocation := flags.String("package_repo_map_rlocation", "", "Runfiles-root-relative path of the file written to -package_repo_map.")
+	mainRepo := flags.String("main_repo", "", "Canonical name of the Bazel repository containing the main package.")
 	flags.Var(&archives, "arc", "Label, package path, and file name of a dependency, separated by '='")
 	packageList := flags.String("package_list", "", "The file containing the list of standard library packages")
 	buildmode := flags.String("buildmode", "", "Build mode used.")
@@ -95,6 +99,12 @@ func link(args []string) error {
 	if err != nil {
 		return err
 	}
+
+	if *packageRepoMap != "" {
+		if err := writePackageRepoMap(*packageRepoMap, archives, *packagePath, *mainRepo); err != nil {
+			return err
+		}
+	}
 	if !goenv.shouldPreserveWorkDir {
 		defer os.Remove(importcfgName)
 	}
@@ -133,6 +143,21 @@ func link(args []string) error {
 		})
 		if !missingKey {
 			goargs = append(goargs, "-X", fmt.Sprintf("%s.%s=%s", pkg, name, value))
+		}
+	}
+
+	// If the runfiles library is linked into the binary, tell it where to
+	// find the package repository map so that it can implement
+	// CurrentRepository without inspecting source file paths. The -X flag
+	// only takes effect if the given package is actually linked in, but
+	// skipping it entirely avoids referencing an unknown symbol.
+	const runfilesPackagePath = "github.com/bazelbuild/rules_go/go/runfiles"
+	if *packageRepoMapRlocation != "" {
+		for _, arc := range archives {
+			if arc.packagePath == runfilesPackagePath {
+				goargs = append(goargs, "-X", runfilesPackagePath+".packageRepoMapRlocation="+*packageRepoMapRlocation)
+				break
+			}
 		}
 	}
 
@@ -181,6 +206,24 @@ func link(args []string) error {
 	}
 
 	return nil
+}
+
+// writePackageRepoMap writes a file that maps the link-time package path of
+// each linked package to the canonical name of the Bazel repository
+// containing its sources, with one comma-separated pair per line. The main
+// package is included under the package path it is linked as (usually
+// "main"). The Go runfiles library reads this file at runtime to implement
+// CurrentRepository.
+func writePackageRepoMap(out string, archives []archive, mainPackagePath, mainRepo string) error {
+	lines := make([]string, 0, len(archives)+1)
+	lines = append(lines, mainPackagePath+","+mainRepo+"\n")
+	for _, arc := range archives {
+		lines = append(lines, arc.packagePath+","+arc.repoName+"\n")
+	}
+	// Sort the lines to make the output reproducible regardless of the order
+	// in which the archives are passed to the linker.
+	sort.Strings(lines)
+	return os.WriteFile(out, []byte(strings.Join(lines, "")), 0o666)
 }
 
 var versionExp = regexp.MustCompile(`.*go1\.(\d+).*$`)
