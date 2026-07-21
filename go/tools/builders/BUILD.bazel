@@ -104,6 +104,29 @@ go_test(
     ],
 )
 
+go_test(
+    name = "goobj_test",
+    size = "small",
+    srcs = [
+        "ar.go",
+        "goobj.go",
+        "goobj_test.go",
+        "testutil_test.go",
+    ],
+)
+
+go_test(
+    name = "importgraph_test",
+    size = "small",
+    srcs = [
+        "ar.go",
+        "goobj.go",
+        "importgraph.go",
+        "importgraph_test.go",
+        "testutil_test.go",
+    ],
+)
+
 filegroup(
     name = "builder_srcs",
     srcs = [
@@ -124,7 +147,9 @@ filegroup(
         "flags.go",
         "generate_nogo_main.go",
         "generate_test_main.go",
+        "goobj.go",
         "importcfg.go",
+        "importgraph.go",
         "link.go",
         "nogo.go",
         "nogo_validation.go",
