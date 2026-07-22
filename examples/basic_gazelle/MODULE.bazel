@@ -3,8 +3,8 @@ module(name = "basic_gazelle")
 # This example depends on the Bazel modules rules_go and gazelle.
 # Bazel modules are different than Go modules: Bazel modules are
 # published on registry.bazel.build and have their own build files.
-bazel_dep(name = "rules_go", version = "0.52.0")
-bazel_dep(name = "gazelle", version = "0.42.0")
+bazel_dep(name = "rules_go", version = "0.59.0")
+bazel_dep(name = "gazelle", version = "0.52.2")
 
 # Configure rules_go to download and build with a specific version of Go.
 #
@@ -12,7 +12,7 @@ bazel_dep(name = "gazelle", version = "0.42.0")
 # A module extension is a bit of code that tells Bazel how to fetch things
 # that aren't normal modules.
 go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
-go_sdk.download(version = "1.23.4")
+go_sdk.download(version = "1.24.12")
 
 # Configure Gazelle to load the list of Go modules from go.mod using the
 # go_deps module extension.

@@ -44,9 +44,9 @@ rbe_preconfig(
 
 http_archive(
     name = "bazel_gazelle",
-    sha256 = "49d9eba309b0b695824ff417d734242824ad9ab5edb56063b9d3400df1a61a56",
+    sha256 = "6549bd37cf1b82bac406119aef1b26bfec5d1c02d0d5a5518275e4513f47b3b2",
     urls = [
-        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.51.3/bazel-gazelle-v0.51.3.tar.gz",
+        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.52.2/bazel-gazelle-v0.52.2.tar.gz",
     ],
 )
 
