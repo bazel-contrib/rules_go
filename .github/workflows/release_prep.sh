@@ -5,8 +5,6 @@ set -o errexit -o nounset -o pipefail
 # Set by GH actions, see
 # https://docs.github.com/en/actions/learn-github-actions/environment-variables#default-environment-variables
 TAG=${GITHUB_REF_NAME}
-# The archive name matches the one used by all previous releases, which is
-# also what .bcr/source.template.json expects.
 ARCHIVE="rules_go-${TAG}.zip"
 git archive --format=zip --output="$ARCHIVE" "$TAG"
 SHA=$(shasum -a 256 "$ARCHIVE" | awk '{print $1}')
