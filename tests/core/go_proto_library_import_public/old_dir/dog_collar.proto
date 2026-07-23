@@ -1,0 +1,5 @@
+syntax = "proto3";
+
+package foo.bar;
+
+import public "tests/core/go_proto_library_import_public/new_dir/dog_collar.proto";
