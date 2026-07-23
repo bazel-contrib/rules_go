@@ -15,6 +15,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"go/build"
@@ -58,7 +60,7 @@ You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 	}
 
 	// Link in the bare minimum needed to the new GOROOT
-	if err := replicate(goroot, output, replicatePaths("src", "pkg/tool", "pkg/include")); err != nil {
+	if err := replicate(goroot, output, replicatePaths("src", "pkg/tool", "pkg/include", "lib")); err != nil {
 		return err
 	}
 
@@ -80,6 +82,15 @@ You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 	// mode, there may be a go.mod file in a parent directory which will turn
 	// modules on in "auto" mode.
 	os.Setenv("GO111MODULE", "off")
+
+	// GOFIPS140=v1.0.0 triggers a module-like download of the FIPS snapshot.
+	// Set GOMODCACHE to a temporary directory to avoid "module cache not found" errors.
+	if gofips140 := os.Getenv("GOFIPS140"); gofips140 != "" && gofips140 != "off" {
+		modCachePath := filepath.Join(output, ".gomodcache")
+		os.MkdirAll(modCachePath, 0o777)
+		os.Setenv("GOMODCACHE", modCachePath)
+		defer os.RemoveAll(modCachePath)
+	}
 
 	// Make sure we have an absolute path to the C compiler.
 	os.Setenv("CC", quotePathIfNeeded(abs(os.Getenv("CC"))))
@@ -169,6 +180,68 @@ You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 	installArgs = append(installArgs, packages...)
 	if err := goenv.runCommand(installArgs); err != nil {
 		return err
+	}
+
+	// GOFIPS140=v1.0.0 places the versioned FIPS .a files into the Go build
+	// cache (~/.cache/go-build/) instead of $GOROOT/pkg/<platform>/. This is an
+	// upstream Go bug: https://github.com/golang/go/issues/76225.
+	//
+	// Workaround: after `go install std`, run `go list -json -export std` to
+	// locate the cached .a files for the versioned snapshot packages and copy
+	// them into the expected pkg/ directory so the linker can find them.
+	if gofips140 := os.Getenv("GOFIPS140"); gofips140 != "" && gofips140 != "off" && gofips140 != "latest" {
+		if err := installFIPSSnapshotArchives(goenv, output); err != nil {
+			return fmt.Errorf("failed to install FIPS snapshot archives: %v", err)
+		}
+	}
+
+	return nil
+}
+
+// installFIPSSnapshotArchives copies the versioned FIPS module .a files from
+// the Go build cache to $GOROOT/pkg/<platform>/. Required when GOFIPS140 is set
+// to a specific version (e.g. v1.0.0), because `go install std` does not place
+// these archives in the standard pkg directory.
+func installFIPSSnapshotArchives(goenv *env, goroot string) error {
+	goos := os.Getenv("GOOS")
+	goarch := os.Getenv("GOARCH")
+	if goos == "" || goarch == "" {
+		return fmt.Errorf("GOOS or GOARCH not set")
+	}
+	pkgDir := filepath.Join(goroot, "pkg", goos+"_"+goarch)
+
+	listArgs := goenv.goCmd("list", "-json", "-export", "std")
+	var buf bytes.Buffer
+	if err := goenv.runCommandToFile(&buf, os.Stderr, listArgs); err != nil {
+		return fmt.Errorf("go list -json -export std failed: %v", err)
+	}
+
+	decoder := json.NewDecoder(&buf)
+	for decoder.More() {
+		var pkg struct {
+			ImportPath string
+			Export     string
+		}
+		if err := decoder.Decode(&pkg); err != nil {
+			return fmt.Errorf("decoding go list output: %v", err)
+		}
+		// Only handle FIPS-versioned packages that are missing from pkg dir.
+		if !strings.Contains(pkg.ImportPath, "fips140/v") {
+			continue
+		}
+		if pkg.Export == "" {
+			continue
+		}
+		dst := filepath.Join(pkgDir, filepath.FromSlash(pkg.ImportPath)+".a")
+		if _, err := os.Stat(dst); err == nil {
+			continue
+		}
+		if err := os.MkdirAll(filepath.Dir(dst), 0o777); err != nil {
+			return err
+		}
+		if err := copyFile(pkg.Export, dst); err != nil {
+			return fmt.Errorf("copying %s to %s: %v", pkg.Export, dst, err)
+		}
 	}
 	return nil
 }
