@@ -21,11 +21,17 @@ load(
     "go_context",
 )
 
+def _dirname(file):
+    return file.dirname
+
 def _go_info_impl(ctx):
     go = go_context(ctx, maybe_needs_cc_toolchain = False)
     report = go.declare_file(go, ext = ".txt")
     args = go.actions.args()
-    args.add("-sdk", go.sdk.root_file.dirname)
+
+    # Use a file rather than go.sdk.root_file.dirname as the latter is just a
+    # string and thus not subject to path mapping.
+    args.add_all("-sdk", [go.sdk.root_file], map_each = _dirname, expand_directories = False)
     args.add("-out", report)
     go.actions.run(
         inputs = depset([go.sdk.go], transitive = [go.sdk.tools]),

@@ -224,7 +224,10 @@ def _builder_args(go, command = None):
     if command:
         args.add(command)
     sdk_root_file = go.sdk.root_file
-    args.add("-sdk", sdk_root_file.dirname)
+
+    # Use a file rather than sdk_root_file.dirname as the latter is just a
+    # string and thus not subject to path mapping.
+    args.add_all("-sdk", [sdk_root_file], map_each = _dirname, expand_directories = False)
 
     # Path mapping can't map the values of environment variables, so we need to pass GOROOT to the
     # action via an argument instead.
