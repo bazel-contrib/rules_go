@@ -30,7 +30,6 @@ http_archive(
     name = "io_bazel_rules_go",
     sha256 = "${SHA}",
     urls = [
-        "https://mirror.bazel.build/github.com/bazel-contrib/rules_go/releases/download/${TAG}/${ARCHIVE}",
         "https://github.com/bazel-contrib/rules_go/releases/download/${TAG}/${ARCHIVE}",
     ],
 )
