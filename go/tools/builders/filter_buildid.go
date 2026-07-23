@@ -17,6 +17,7 @@ package main
 import (
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"syscall"
 )
@@ -33,6 +34,14 @@ func filterBuildID(args []string) error {
 		}
 		newArgs = append(newArgs, arg)
 	}
+	if isCgoTool(newArgs[0]) {
+		// There doesn't seem to be another way to ensure cgo is called with -trimpath here:
+		// https://github.com/golang/go/blob/8c445b7c9fe6738cbef2040a1011bd11489b0806/src/cmd/go/internal/work/exec.go#L3288
+		newArgs = append([]string{
+			newArgs[0],
+			"-trimpath", os.Getenv("BAZEL_EXECROOT"),
+		}, newArgs[1:]...)
+	}
 	if runtime.GOOS == "windows" {
 		cmd := exec.Command(newArgs[0], newArgs[1:]...)
 		cmd.Stdout = os.Stdout
@@ -40,5 +49,14 @@ func filterBuildID(args []string) error {
 		return cmd.Run()
 	} else {
 		return syscall.Exec(newArgs[0], newArgs, os.Environ())
+	}
+}
+
+func isCgoTool(args0 string) bool {
+	basename := filepath.Base(args0)
+	if runtime.GOOS == "windows" {
+		return basename == "cgo.exe"
+	} else {
+		return basename == "cgo"
 	}
 }
