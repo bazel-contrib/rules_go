@@ -111,6 +111,37 @@ go_download_sdk(
 			optToWantVersion: map[string]string{"": "go1.16"},
 		},
 		{
+			// Verifies that GOPROXY-style mirrors that serve the Go toolchain via the
+			// golang.org/toolchain module layout can be used as the SDK source. Unlike
+			// the go.dev/dl layout, each per-platform archive has a distinct top-level
+			// directory that includes the version and target triple, so a single
+			// strip_prefix string is not expressive enough.
+			desc: "strip_prefixes_goproxy_layout",
+			rule: `
+load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk")
+
+go_download_sdk(
+    name = "go_sdk",
+    urls = ["https://proxy.golang.org/golang.org/toolchain/@v/{}"],
+    sdks = {
+        "darwin_amd64":  ("v0.0.1-go1.22.5.darwin-amd64.zip",  "3c17b1ee6d6840157fb8fb2eb9bc48278b99b3f22c57929700ef5c6c757256ad"),
+        "darwin_arm64":  ("v0.0.1-go1.22.5.darwin-arm64.zip",  "ebf537a1e8942b5939864e55e38d8885995682da4f04b392cf1017f649f46557"),
+        "linux_amd64":   ("v0.0.1-go1.22.5.linux-amd64.zip",   "0eb73889fac3ef46a759ca3f8079a7ff656158ee6aedfe127221101824001a77"),
+        "linux_arm64":   ("v0.0.1-go1.22.5.linux-arm64.zip",   "2c4a947f05fdbdfc38bffe548309ab737bf32b4851aca6986625a5a1840381bb"),
+        "windows_amd64": ("v0.0.1-go1.22.5.windows-amd64.zip", "45a9ef35178c02c0f77d0fcb77960f7afde532332f12344f822166f21820d02d"),
+    },
+    strip_prefixes = {
+        "darwin_amd64":  "golang.org/toolchain@v0.0.1-go1.22.5.darwin-amd64",
+        "darwin_arm64":  "golang.org/toolchain@v0.0.1-go1.22.5.darwin-arm64",
+        "linux_amd64":   "golang.org/toolchain@v0.0.1-go1.22.5.linux-amd64",
+        "linux_arm64":   "golang.org/toolchain@v0.0.1-go1.22.5.linux-arm64",
+        "windows_amd64": "golang.org/toolchain@v0.0.1-go1.22.5.windows-amd64",
+    },
+)
+`,
+			optToWantVersion: map[string]string{"": "go1.22.5"},
+		},
+		{
 			desc: "multiple_sdks",
 			rule: `
 load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk", "go_host_sdk")
