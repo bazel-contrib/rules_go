@@ -195,6 +195,7 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
         _copts = tuple(source.copts),
         _cxxopts = tuple(source.cxxopts),
         _clinkopts = tuple(source.clinkopts),
+        _package_metadata = getattr(source, "_package_metadata", None),
 
         # Information on dependencies
         _dep_labels = tuple([d.data.label for d in direct]),
@@ -231,4 +232,5 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
         cgo_exports = cgo_exports,
         runfiles = runfiles,
         _headers = headers,
+        _package_metadata = getattr(data, "_package_metadata", None),
     )

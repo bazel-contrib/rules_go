@@ -40,6 +40,7 @@ load(
     NOGO_INCLUDES = "INCLUDES",
 )
 load("@rules_cc//cc/common:cc_common.bzl", "cc_common")
+load("@package_metadata//providers:package_metadata_info.bzl", "PackageMetadataInfo")
 load(
     "//go/platform:apple.bzl",
     "apple_ensure_options",
@@ -250,6 +251,19 @@ def _tool_args(go):
     args.use_param_file("-param=%s")
     return args
 
+def package_metadata_file_from_metadata(label, package_metadata = (), applicable_licenses = ()):
+    if not label.repo_name and not label.workspace_root:
+        return None
+
+    # Bazel may surface repo-level metadata through either spelling depending on
+    # the version and rule surface, so probe both.
+    for metadata_group in (package_metadata, applicable_licenses):
+        for metadata in metadata_group:
+            if PackageMetadataInfo in metadata:
+                return metadata[PackageMetadataInfo].metadata
+
+    return None
+
 def _merge_embed(source, embed):
     s = get_source(embed)
     source["srcs"] = s.srcs + source["srcs"]
@@ -259,6 +273,9 @@ def _merge_embed(source, embed):
     source["x_defs"].update(s.x_defs)
     source["gc_goopts"] = source["gc_goopts"] + s.gc_goopts
     source["runfiles"] = source["runfiles"].merge(s.runfiles)
+    package_metadata = getattr(s, "_package_metadata", None)
+    if not source["_package_metadata"] and package_metadata:
+        source["_package_metadata"] = package_metadata
 
     if s.cgo:
         if source["cgo"]:
@@ -364,6 +381,12 @@ def new_go_info(
     if deps == None:
         deps = [get_archive(dep) for dep in getattr(attr, "deps", [])]
 
+    package_metadata = package_metadata_file_from_metadata(
+        go.label,
+        getattr(attr, "package_metadata", ()),
+        getattr(attr, "applicable_licenses", ()),
+    )
+
     go_info = {
         "name": go.label.name if not name else name,
         "label": go.label,
@@ -388,6 +411,7 @@ def new_go_info(
         "cxxopts": _expand_opts(go, "cxxopts", getattr(attr, "cxxopts", [])),
         "clinkopts": _expand_opts(go, "clinkopts", getattr(attr, "clinkopts", [])),
         "pgoprofile": getattr(attr, "pgoprofile", None),
+        "_package_metadata": package_metadata,
     }
 
     for e in getattr(attr, "embed", []):
