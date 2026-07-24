@@ -36,8 +36,10 @@ def _go_sdk_impl(ctx):
             goos = ctx.attr.goos,
             goarch = ctx.attr.goarch,
             experiments = ",".join(ctx.attr.experiments),
+            gofips140 = ctx.attr.gofips140,
             root_file = ctx.file.root_file,
             package_list = package_list,
+            fips_package_list = ctx.file.fips_package_list,
             libs = depset(ctx.files.libs),
             headers = depset(ctx.files.headers),
             srcs = depset(ctx.files.srcs),
@@ -62,6 +64,10 @@ go_sdk = rule(
             mandatory = False,
             doc = "Go experiments to enable via GOEXPERIMENT",
         ),
+        "gofips140": attr.string(
+            default = "",
+            doc = "GOFIPS140 version to build with (e.g. 'v1.0.0', 'latest', 'certified'). Empty string disables.",
+        ),
         "root_file": attr.label(
             mandatory = True,
             allow_single_file = True,
@@ -71,6 +77,12 @@ go_sdk = rule(
             allow_single_file = True,
             doc = ("A text file containing a list of packages in the " +
                    "standard library that may be imported."),
+        ),
+        "fips_package_list": attr.label(
+            allow_single_file = True,
+            doc = ("A text file listing the versioned GOFIPS140 snapshot " +
+                   "packages the stdlib builder must place into pkg/. " +
+                   "Empty/absent for non-FIPS SDKs."),
         ),
         "libs": attr.label_list(
             # allow_files is not set to [".a"] because that wouldn't allow
@@ -112,8 +124,34 @@ go_sdk = rule(
 )
 
 def _package_list_impl(ctx):
-    _build_package_list(ctx, ctx.files.srcs, ctx.file.root_file, ctx.outputs.out)
-    return [DefaultInfo(files = depset([ctx.outputs.out]))]
+    out = ctx.outputs.out
+    fips_out = ctx.outputs.fips_out
+    gofips140 = ctx.attr.gofips140
+
+    # A shell action writes the versioned FIPS snapshot packages from the zip into
+    # fips_out (read verbatim by the stdlib builder) and the combined packages.txt
+    # into out. Using a shell action rather than a compiled tool avoids depending
+    # on the SDK, which would create a dependency cycle.
+    if gofips140 not in ("", "off", "latest") and ctx.files.fips140_lib:
+        normal = ctx.actions.declare_file(ctx.attr.name + ".normal.txt")
+        _build_package_list(ctx, ctx.files.srcs, ctx.file.root_file, normal)
+        lib_dir = ctx.file.root_file.dirname + "/lib/fips140"
+        script = ctx.file._fips_package_list_script
+        ctx.actions.run_shell(
+            outputs = [out, fips_out],
+            inputs = [normal, script] + ctx.files.fips140_lib,
+            command = 'bash "$1" "$2" "$3" "$4" "$5" "$6"',
+            arguments = [script.path, normal.path, out.path, lib_dir, gofips140, fips_out.path],
+            mnemonic = "GoPackageListFIPS",
+            progress_message = "Generating %s with FIPS snapshot packages" % out.short_path,
+        )
+    else:
+        _build_package_list(ctx, ctx.files.srcs, ctx.file.root_file, out)
+
+        # No FIPS snapshot in this SDK: write an empty list so the predeclared
+        # output always exists and downstream rules can unconditionally depend on it.
+        ctx.actions.write(fips_out, "")
+    return [DefaultInfo(files = depset([out]))]
 
 package_list = rule(
     _package_list_impl,
@@ -127,6 +165,20 @@ package_list = rule(
             allow_single_file = True,
             doc = "A file in the SDK root directory. Used to determine GOROOT.",
         ),
+        "gofips140": attr.string(
+            default = "",
+            doc = "GOFIPS140 version. For a snapshot version, the FIPS snapshot " +
+                  "packages from lib/fips140 are added to the list.",
+        ),
+        "fips140_lib": attr.label_list(
+            allow_files = True,
+            doc = "Files under lib/fips140 (the FIPS module snapshots).",
+        ),
+        "_fips_package_list_script": attr.label(
+            default = "//go/private/rules:generate_fips_package_list.sh",
+            allow_single_file = True,
+            doc = "Script that lists FIPS snapshot packages from the zip.",
+        ),
         "out": attr.output(
             mandatory = True,
             doc = "File to write. Must be 'packages.txt'.",
@@ -134,6 +186,11 @@ package_list = rule(
             # attribute because Bazel has no other way of knowing what rule
             # produces this file.
             # TODO(jayconrod): Update Gazelle and simplify this.
+        ),
+        "fips_out": attr.output(
+            mandatory = True,
+            doc = "File to write listing the versioned GOFIPS140 snapshot " +
+                  "packages (empty for non-FIPS SDKs). Read by the stdlib builder.",
         ),
     },
 )

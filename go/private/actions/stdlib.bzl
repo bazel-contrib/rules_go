@@ -61,6 +61,7 @@ def _should_use_sdk_stdlib(go):
             not go.mode.msan and
             not go.mode.pure and
             not go.mode.gc_goopts and
+            not go.sdk.gofips140 and  # FIPS stdlib must be rebuilt from source
             go.mode.linkmode in (LINKMODE_NORMAL, LINKMODE_PIE))
 
 def _build_stdlib_list_json(go):
@@ -160,6 +161,13 @@ def _build_stdlib(go):
     sdk = go.sdk
     inputs_direct = [sdk.go, sdk.package_list, sdk.root_file]
     inputs_transitive = [sdk.headers, sdk.srcs, sdk.tools, go.cc_toolchain_files]
+
+    # For GOFIPS140 snapshot SDKs, fips_package_list names the versioned FIPS
+    # packages the builder must place into pkg/ (see installFIPSSnapshotArchives).
+    # It is empty/absent for non-FIPS SDKs.
+    if sdk.fips_package_list:
+        args.add("-fips_package_list", sdk.fips_package_list)
+        inputs_direct.append(sdk.fips_package_list)
 
     if go.mode.pgoprofile:
         args.add("-pgoprofile", go.mode.pgoprofile)

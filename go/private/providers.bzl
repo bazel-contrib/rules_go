@@ -36,6 +36,7 @@ GoSDK = provider(
         "goos": "The host OS the SDK was built for.",
         "goarch": "The host architecture the SDK was built for.",
         "experiments": "Comma-separated Go experiments to enable via GOEXPERIMENT.",
+        "gofips140": "GOFIPS140 version to enable (e.g. 'v1.0.0', 'latest', 'certified', or '').",
         "root_file": "A file in the SDK root directory",
         "libs": ("Depset of pre-compiled .a files for the standard library " +
                  "built for the execution platform."),
@@ -46,6 +47,9 @@ GoSDK = provider(
                  "may not be included."),
         "package_list": ("A file containing a list of importable packages " +
                          "in the standard library."),
+        "fips_package_list": ("A file listing the versioned GOFIPS140 snapshot " +
+                              "packages the stdlib builder must place into pkg/, " +
+                              "or None for non-FIPS SDKs."),
         "tools": ("Depset of executable files in the SDK built for " +
                   "the execution platform, excluding the go binary file"),
         "go": "The go binary file",

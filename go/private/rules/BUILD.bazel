@@ -8,6 +8,7 @@ load(
 exports_files([
     "library.bzl",
     "binary_wrapper.sh",
+    "generate_fips_package_list.sh",
 ])
 
 [

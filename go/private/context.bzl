@@ -21,6 +21,11 @@ load(
     "BuildSettingInfo",
 )
 load(
+    "@io_bazel_rules_nogo//:scope.bzl",
+    NOGO_EXCLUDES = "EXCLUDES",
+    NOGO_INCLUDES = "INCLUDES",
+)
+load(
     "@rules_cc//cc:action_names.bzl",
     "CPP_COMPILE_ACTION_NAME",
     "CPP_LINK_DYNAMIC_LIBRARY_ACTION_NAME",
@@ -33,11 +38,6 @@ load(
 load(
     "@rules_cc//cc:find_cc_toolchain.bzl",
     "find_cc_toolchain",
-)
-load(
-    "@io_bazel_rules_nogo//:scope.bzl",
-    NOGO_EXCLUDES = "EXCLUDES",
-    NOGO_INCLUDES = "INCLUDES",
 )
 load("@rules_cc//cc/common:cc_common.bzl", "cc_common")
 load(
@@ -619,6 +619,7 @@ def go_context(
         "GOARCH": mode.goarch,
         "GOOS": mode.goos,
         "GOEXPERIMENT": toolchain.sdk.experiments,
+        "GOFIPS140": toolchain.sdk.gofips140,
         "GOROOT": goroot,
         "GOROOT_FINAL": "GOROOT",
         "CGO_ENABLED": "0" if mode.pure else "1",

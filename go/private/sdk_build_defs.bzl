@@ -38,6 +38,7 @@ STDLIB_SRCS_EXCLUDE = [
 def define_sdk_repository_targets(
         *,
         experiments,
+        gofips140 = "",
         exec_compatible_with,
         files_srcs,
         go,
@@ -51,12 +52,14 @@ def define_sdk_repository_targets(
         name = "go_sdk",
         srcs = go_sdk_srcs,
         experiments = experiments,
+        gofips140 = gofips140,
         go = go,
         goarch = goarch,
         goos = goos,
         headers = [":headers"],
         libs = [":libs"],
         package_list = ":package_list",
+        fips_package_list = ":fips_packages.txt",
         root_file = go_sdk_root_file,
         tools = [":tools"],
         version = version,
@@ -89,7 +92,10 @@ def define_sdk_repository_targets(
         name = "package_list",
         srcs = package_list_srcs,
         out = "packages.txt",
+        fips_out = "fips_packages.txt",
         root_file = "ROOT",
+        gofips140 = gofips140,
+        fips140_lib = native.glob(["lib/fips140/**"], allow_empty = True),
     )
 
     declare_go_toolchains(

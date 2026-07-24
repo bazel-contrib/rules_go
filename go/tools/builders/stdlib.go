@@ -39,6 +39,7 @@ func stdlib(args []string) error {
 	flags.Var(&packages, "package", "Packages to build")
 	var gcflags quoteMultiFlag
 	flags.Var(&gcflags, "gcflags", "Go compiler flags")
+	fipsPackageList := flags.String("fips_package_list", "", "Path to the generated list of versioned GOFIPS140 snapshot packages to place into pkg/")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
@@ -57,8 +58,12 @@ func stdlib(args []string) error {
 You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 	}
 
-	// Link in the bare minimum needed to the new GOROOT
-	if err := replicate(goroot, output, replicatePaths("src", "pkg/tool", "pkg/include")); err != nil {
+	// lib/fips140 (the FIPS snapshot zips) only exists when GOFIPS140 is set, so add it only then.
+	replicateDirs := []string{"src", "pkg/tool", "pkg/include"}
+	if v := os.Getenv("GOFIPS140"); v != "" && v != "off" {
+		replicateDirs = append(replicateDirs, "lib/fips140")
+	}
+	if err := replicate(goroot, output, replicatePaths(replicateDirs...)); err != nil {
 		return err
 	}
 
@@ -80,6 +85,15 @@ You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 	// mode, there may be a go.mod file in a parent directory which will turn
 	// modules on in "auto" mode.
 	os.Setenv("GO111MODULE", "off")
+
+	// Snapshot versions unpack into a module cache, so point GOMODCACHE at a temp dir.
+	// ("latest" builds from GOROOT/src and needs none.)
+	if gofips140 := os.Getenv("GOFIPS140"); gofips140 != "" && gofips140 != "off" && gofips140 != "latest" {
+		modCachePath := filepath.Join(output, ".gomodcache")
+		os.MkdirAll(modCachePath, 0o777)
+		os.Setenv("GOMODCACHE", modCachePath)
+		defer os.RemoveAll(modCachePath)
+	}
 
 	// Make sure we have an absolute path to the C compiler.
 	os.Setenv("CC", quotePathIfNeeded(abs(os.Getenv("CC"))))
@@ -115,27 +129,31 @@ You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 	os.Setenv("CGO_LDFLAGS_ALLOW", b.String())
 	os.Setenv("GODEBUG", "installgoroot=all")
 
-	// Build the commands needed to build the std library in the right mode
+	// Assemble the flags `go install std` builds with. These are collected into a
+	// reusable slice so the GOFIPS140 snapshot packages can be built below with the
+	// identical flag set, keeping their archives ABI- and build-id-compatible with
+	// the rest of pkg/.
+	//
 	// NOTE: the go command stamps compiled .a files with build ids, which are
 	// cryptographic sums derived from the inputs. This prevents us from
 	// creating reproducible builds because the build ids are hashed from
 	// CGO_CFLAGS, which frequently contains absolute paths. As a workaround,
 	// we strip the build ids, since they won't be used after this.
-	installArgs := goenv.goCmd("install", "-toolexec", abs(os.Args[0])+" filterbuildid")
+	buildFlags := []string{"-toolexec", abs(os.Args[0]) + " filterbuildid"}
 	if len(build.Default.BuildTags) > 0 {
-		installArgs = append(installArgs, "-tags", strings.Join(build.Default.BuildTags, ","))
+		buildFlags = append(buildFlags, "-tags", strings.Join(build.Default.BuildTags, ","))
 	}
 
 	ldflags := []string{"-trimpath", sandboxPath}
 	asmflags := []string{"-trimpath", output}
 	if *race {
-		installArgs = append(installArgs, "-race")
+		buildFlags = append(buildFlags, "-race")
 	}
 	if *msan {
-		installArgs = append(installArgs, "-msan")
+		buildFlags = append(buildFlags, "-msan")
 	}
 	if *pgoprofile != "" {
-		gcflags = append(gcflags, "-pgoprofile=" + abs(*pgoprofile))
+		gcflags = append(gcflags, "-pgoprofile="+abs(*pgoprofile))
 	}
 	if *shared {
 		gcflags = append(gcflags, "-shared")
@@ -158,17 +176,80 @@ You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 			break
 		}
 	}
-	installArgs = append(installArgs, "-gcflags="+allSlug+strings.Join(gcflags, " "))
-	installArgs = append(installArgs, "-ldflags="+allSlug+strings.Join(ldflags, " "))
-	installArgs = append(installArgs, "-asmflags="+allSlug+strings.Join(asmflags, " "))
+	buildFlags = append(buildFlags,
+		"-gcflags="+allSlug+strings.Join(gcflags, " "),
+		"-ldflags="+allSlug+strings.Join(ldflags, " "),
+		"-asmflags="+allSlug+strings.Join(asmflags, " "),
+	)
 
 	if err := absCCCompiler(cgoEnvVars, cgoAbsEnvFlags); err != nil {
 		return fmt.Errorf("error modifying cgo environment to absolute path: %v", err)
 	}
 
+	installArgs := goenv.goCmd("install")
+	installArgs = append(installArgs, buildFlags...)
 	installArgs = append(installArgs, packages...)
 	if err := goenv.runCommand(installArgs); err != nil {
 		return err
+	}
+
+	// GOFIPS140=<version> compiles the versioned FIPS snapshot packages, but due
+	// to golang/go#76225 `go install std` leaves their archives in the build cache
+	// instead of $GOROOT/pkg/<platform>/, so the linker can't find them. We place
+	// them with `go build -o`, reusing the exact flags `go install std` used above.
+	// Because the flags match, each `go build` is a cache hit on the archive
+	// `go install` already produced (verified with `go build -x`: it copies the
+	// cached .a, no recompile), so the placed archives are byte-identical to the
+	// rest of pkg/. The package set is read verbatim from -fips_package_list, the
+	// dedicated file the package-list step emits alongside packages.txt (a single
+	// enumeration, not re-derived here).
+	//
+	// TODO: remove this once upstream Go installs GOFIPS140 packages into the
+	// package tree instead of the build cache (golang/go#76225).
+	if gofips140 := os.Getenv("GOFIPS140"); gofips140 != "" && gofips140 != "off" && gofips140 != "latest" {
+		if err := installFIPSSnapshotArchives(goenv, output, buildFlags, *fipsPackageList); err != nil {
+			return fmt.Errorf("install FIPS snapshot archives: %w", err)
+		}
+	}
+	return nil
+}
+
+// installFIPSSnapshotArchives builds the versioned FIPS snapshot packages listed
+// in fipsPackageListPath into $GOROOT/pkg/<platform>/ with `go build -o`. See the
+// call site for why this is needed (golang/go#76225) and why `go build` reuses
+// the build cache. The list is produced by the package-list step (a single
+// enumeration shared with the linker's importcfg via packages.txt).
+func installFIPSSnapshotArchives(goenv *env, goroot string, buildFlags []string, fipsPackageListPath string) error {
+	goos := os.Getenv("GOOS")
+	goarch := os.Getenv("GOARCH")
+	if goos == "" || goarch == "" {
+		return fmt.Errorf("GOOS or GOARCH not set")
+	}
+	if fipsPackageListPath == "" {
+		return fmt.Errorf("-fips_package_list is required for GOFIPS140 snapshot builds")
+	}
+	pkgs, err := fipsPackagesFromList(fipsPackageListPath)
+	if err != nil {
+		return err
+	}
+	if len(pkgs) == 0 {
+		return fmt.Errorf("no versioned FIPS packages found in %s", fipsPackageListPath)
+	}
+	pkgDir := filepath.Join(goroot, "pkg", goos+"_"+goarch)
+	for _, imp := range pkgs {
+		dst := filepath.Join(pkgDir, filepath.FromSlash(imp)+".a")
+		if _, err := os.Stat(dst); err == nil {
+			continue
+		}
+		if err := os.MkdirAll(filepath.Dir(dst), 0o777); err != nil {
+			return err
+		}
+		buildArgs := goenv.goCmd("build")
+		buildArgs = append(buildArgs, buildFlags...)
+		buildArgs = append(buildArgs, "-o", dst, imp)
+		if err := goenv.runCommand(buildArgs); err != nil {
+			return fmt.Errorf("go build %s: %w", imp, err)
+		}
 	}
 	return nil
 }
