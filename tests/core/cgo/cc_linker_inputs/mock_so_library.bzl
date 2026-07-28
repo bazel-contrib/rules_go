@@ -1,3 +1,6 @@
+load("@rules_cc//cc/common:cc_common.bzl", "cc_common")
+load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
+
 def _mock_so_library_impl(ctx):
     cc_toolchain = ctx.toolchains["@bazel_tools//tools/cpp:toolchain_type"].cc
     feature_configuration = cc_common.configure_features(

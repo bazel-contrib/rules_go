@@ -106,6 +106,10 @@ tasks:
       - "--apple_crosstool_top=@local_config_apple_cc//:toolchain"
       - "--crosstool_top=@local_config_apple_cc//:toolchain"
       - "--host_crosstool_top=@local_config_apple_cc//:toolchain"
+      # The --*crosstool_top flags above are no-ops as of Bazel 9, which always
+      # selects the C++ toolchain via toolchain resolution. objc_library needs
+      # the Apple CC toolchain either way.
+      - "--extra_toolchains=@local_config_apple_cc_toolchains//:all"
     build_targets:
       - "//..."
       - "--"
@@ -113,6 +117,7 @@ tasks:
       - "--apple_crosstool_top=@local_config_apple_cc//:toolchain"
       - "--crosstool_top=@local_config_apple_cc//:toolchain"
       - "--host_crosstool_top=@local_config_apple_cc//:toolchain"
+      - "--extra_toolchains=@local_config_apple_cc_toolchains//:all"
     test_targets:
       - "//..."
   rbe_ubuntu2404:

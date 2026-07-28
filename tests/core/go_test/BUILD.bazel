@@ -247,9 +247,9 @@ go_test(
 go_test(
     name = "env_test",
     srcs = ["env_test.go"],
-    data = ["@go_sdk//:lib/time/zoneinfo.zip"],
+    data = ["@go_default_sdk//:lib/time/zoneinfo.zip"],
     env = {
-        "ZONEINFO": "$(rlocationpath @go_sdk//:lib/time/zoneinfo.zip)",
+        "ZONEINFO": "$(rlocationpath @go_default_sdk//:lib/time/zoneinfo.zip)",
     },
     deps = [
         "//go/runfiles",

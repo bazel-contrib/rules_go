@@ -63,7 +63,7 @@ go_test(
         "stdliblist.go",
         "stdliblist_test.go",
     ],
-    data = ["@go_sdk//:files"],
+    data = ["@go_default_sdk//:files"],
     rundir = ".",
     x_defs = {
         "rulesGoStdlibPrefix": RULES_GO_STDLIB_PREFIX,
