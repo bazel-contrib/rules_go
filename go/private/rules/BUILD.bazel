@@ -49,6 +49,7 @@ bzl_library(
         "//go/private:mode",
         "//go/private:providers",
         "//go/private:rpath",
+        "//go/private/actions:baseline_coverage",
         "//go/private/rules:transition",
     ],
 )
@@ -81,6 +82,7 @@ bzl_library(
         "//go/private:common",
         "//go/private:context",
         "//go/private:providers",
+        "//go/private/actions:baseline_coverage",
     ],
 )
 

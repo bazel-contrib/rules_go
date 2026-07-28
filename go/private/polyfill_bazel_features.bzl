@@ -9,6 +9,12 @@ _POLYFILL_BAZEL_FEATURES = """bazel_features = struct(
     # WORKSPACE users have no use for bazel mod tidy.
     bazel_mod_tidy = False,
   ),
+  rules = struct(
+    # coverage_common.instrumented_files_info gained baseline_coverage_files in
+    # Bazel 9, which is also the release that removed WORKSPACE support. Any
+    # Bazel reaching this polyfill therefore predates the parameter.
+    instrumented_files_info_has_baseline_coverage_files = False,
+  ),
 )
 """
 

@@ -1,4 +1,5 @@
 load("@io_bazel_rules_go//go/tools/bazel_testing:def.bzl", "go_bazel_test")
+load("@io_bazel_rules_go_bazel_features//:features.bzl", "bazel_features")
 
 go_bazel_test(
     name = "coverage_test",
@@ -26,6 +27,17 @@ go_bazel_test(
         "@platforms//os:windows": ["@platforms//:incompatible"],
         "//conditions:default": [],
     }),
+)
+
+go_bazel_test(
+    name = "baseline_coverage_test",
+    srcs = ["baseline_coverage_test.go"],
+    # Baseline coverage requires Bazel 9's baseline_coverage_files parameter;
+    # on older Bazel the rules fall back to Bazel's empty stub.
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }) if bazel_features.rules.instrumented_files_info_has_baseline_coverage_files else ["@platforms//:incompatible"],
 )
 
 go_bazel_test(
