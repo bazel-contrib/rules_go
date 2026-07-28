@@ -59,6 +59,15 @@ go_library(
     importpath = "example.com/declarations",
 )
 
+# cgo sources are instrumented before cgo rewrites them, exactly as a measured
+# coverage run instruments them, so the line numbers agree.
+go_library(
+    name = "untested_cgo",
+    srcs = ["untested_cgo.go"],
+    cgo = True,
+    importpath = "example.com/untestedcgo",
+)
+
 # Excluded by a build constraint that never matches, so it must not be reported
 # as uncovered.
 go_library(
@@ -115,6 +124,17 @@ package constrained
 
 func Unreachable() string {
 	return "never compiled"
+}
+-- src/untested_cgo.go --
+package untestedcgo
+
+import "C"
+
+func Describe(n int) string {
+	if n > 0 {
+		return "positive"
+	}
+	return "not positive"
 }
 -- src/untested_bin.go --
 package main
@@ -199,6 +219,20 @@ func TestBaselineCoverage(t *testing.T) {
 		}
 		if !has(lines, "LH:0") || has(lines, "LF:0") {
 			t.Errorf("expected src/untested_bin.go to report missed lines: %v", lines)
+		}
+	})
+
+	t.Run("untested cgo library reports the line numbers of its unprocessed source", func(t *testing.T) {
+		lines := record(t, report, "src/untested_cgo.go")
+		if lines == nil {
+			t.Fatal("expected a record for src/untested_cgo.go, found none")
+		}
+		// Describe's body, at the positions cmd/cover records before cgo
+		// rewrites the file. A measured run reports these same positions.
+		for _, want := range []string{"DA:5,0", "DA:6,0", "DA:7,0", "DA:8,0", "DA:9,0", "LH:0", "LF:5"} {
+			if !has(lines, want) {
+				t.Errorf("expected %q in the record for src/untested_cgo.go: %v", want, lines)
+			}
 		}
 	})
 

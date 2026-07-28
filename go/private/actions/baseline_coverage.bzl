@@ -13,7 +13,7 @@
 # limitations under the License.
 
 load("@io_bazel_rules_go_bazel_features//:features.bzl", "bazel_features")
-load("//go/private:common.bzl", "GO_TOOLCHAIN_LABEL")
+load("//go/private:common.bzl", "GO_TOOLCHAIN_LABEL", "SUPPORTS_PATH_MAPPING_REQUIREMENT")
 
 def baseline_coverage_kwargs(go, ctx, sources):
     """Emits a baseline coverage report and returns it as instrumented_files_info kwargs.
@@ -71,5 +71,11 @@ def _emit_baseline_coverage(go, *, sources, out_lcov):
         mnemonic = "GoBaselineCoverage",
         executable = go.toolchain._builder,
         arguments = ["baselinecoverage", args],
+        # The environment carries GOOS, GOARCH and CGO_ENABLED, which decide
+        # which sources the build constraints select. GOROOT is dropped and
+        # passed as an argument by builder_args instead, since path mapping
+        # cannot map environment variable values.
+        env = go.env_for_path_mapping,
+        execution_requirements = SUPPORTS_PATH_MAPPING_REQUIREMENT,
         toolchain = GO_TOOLCHAIN_LABEL,
     )
