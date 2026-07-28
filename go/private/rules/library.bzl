@@ -32,6 +32,10 @@ load(
     "GoInfo",
 )
 load(
+    "//go/private/actions:baseline_coverage.bzl",
+    "baseline_coverage_kwargs",
+)
+load(
     "//go/private/rules:transition.bzl",
     "non_go_transition",
 )
@@ -64,6 +68,7 @@ def _go_library_impl(ctx):
             source_attributes = ["srcs"],
             dependency_attributes = ["data", "deps", "embed", "embedsrcs"],
             extensions = ["go"],
+            **baseline_coverage_kwargs(go, ctx, ctx.files.srcs)
         ),
         OutputGroupInfo(
             cgo_exports = archive.cgo_exports,

@@ -123,6 +123,7 @@ filegroup(
     srcs = [
         "ar.go",
         "asm.go",
+        "baseline_coverage.go",
         "builder.go",
         "buildinfo.go",
         "cc.go",
