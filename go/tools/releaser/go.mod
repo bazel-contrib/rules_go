@@ -3,7 +3,7 @@ module github.com/bazelbuild/rules_go/go/tools/releaser
 go 1.25.0
 
 require (
-	github.com/bazelbuild/buildtools v0.0.0-20260716142318-04cf7de1434f
+	github.com/bazelbuild/buildtools v0.0.0-20231103205921-433ea8554e82
 	github.com/google/go-github/v36 v36.0.0
 	golang.org/x/mod v0.25.0
 	golang.org/x/oauth2 v0.36.0

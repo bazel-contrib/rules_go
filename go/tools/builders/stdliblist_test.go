@@ -15,7 +15,7 @@ func Test_stdliblist_noexport(t *testing.T) {
 
 	test_args := []string{
 		fmt.Sprintf("-out=%s", outJSON),
-		"-sdk=../go_sdk",
+		"-sdk=../go_default_sdk",
 	}
 
 	if err := stdliblist(test_args); err != nil {
@@ -40,9 +40,9 @@ func Test_stdliblist_noexport(t *testing.T) {
 			t.Errorf("ExportsFile should be empty when disabled but got: %v", result)
 		}
 		for _, gofile := range result.GoFiles {
-			// The SDK runfiles are prefixed with __BAZEL_OUTPUT_BASE__/../go_sdk, which is cleaned.
-			if !strings.HasPrefix(gofile, "go_sdk/") {
-				t.Errorf("all go files should be prefixed with go_sdk/ :%v", result)
+			// The SDK runfiles are prefixed with __BAZEL_OUTPUT_BASE__/../go_default_sdk, which is cleaned.
+			if !strings.HasPrefix(gofile, "go_default_sdk/") {
+				t.Errorf("all go files should be prefixed with go_default_sdk/ :%v", result)
 			}
 		}
 	}
@@ -53,7 +53,7 @@ func Test_stdliblist_export(t *testing.T) {
 	outJSON := filepath.Join(testDir, "out.json")
 	test_args := []string{
 		fmt.Sprintf("-out=%s", outJSON),
-		"-sdk=../go_sdk",
+		"-sdk=../go_default_sdk",
 		"-export",
 	}
 	// Disable CGO otherwise, this takes forever to build.
@@ -82,9 +82,9 @@ func Test_stdliblist_export(t *testing.T) {
 			anyExportSet = true
 		}
 		for _, gofile := range result.GoFiles {
-			// The SDK runfiles are prefixed with __BAZEL_OUTPUT_BASE__/../go_sdk, which is cleaned.
-			if !strings.HasPrefix(gofile, "go_sdk/") {
-				t.Errorf("all go files should be prefixed with go_sdk/ :%v", result)
+			// The SDK runfiles are prefixed with __BAZEL_OUTPUT_BASE__/../go_default_sdk, which is cleaned.
+			if !strings.HasPrefix(gofile, "go_default_sdk/") {
+				t.Errorf("all go files should be prefixed with go_default_sdk/ :%v", result)
 			}
 		}
 	}

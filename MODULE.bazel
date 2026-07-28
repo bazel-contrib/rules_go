@@ -74,11 +74,14 @@ dev_go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps", dev_dependen
 # dependencies are listed here instead; keep them in sync with the respective
 # go.mod and go.sum files.
 #
-# Needed by //go/tools/releaser and //tests:buildifier_test.
+# Needed by //go/tools/releaser and //tests:buildifier_test. This is the
+# pseudo-version of the v6.4.0 tag, which //tests:buildifier_test is formatted
+# for. There is no tagged module version because the module path lacks the
+# major version suffix.
 dev_go_deps.module(
     path = "github.com/bazelbuild/buildtools",
-    sum = "h1:2mT6QcXmMFtvg7bezs1Fef7nnpJyeCmfWoWNjwtvNZ4=",
-    version = "v0.0.0-20260716142318-04cf7de1434f",
+    sum = "h1:HTepWP/jhtWTC1gvK0RnvKCgjh4gLqiwaOwGozAXcbw=",
+    version = "v0.0.0-20231103205921-433ea8554e82",
 )
 
 # The checked-in BUILD files load from @rules_proto, which isn't visible to the
