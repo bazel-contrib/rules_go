@@ -365,7 +365,9 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 	bazelrcPath := filepath.Join(mainDir, ".bazelrc")
 	bazelrcBuf := &bytes.Buffer{}
 	if args.ModuleFileSuffix == "" {
-		fmt.Fprintf(bazelrcBuf, "common --noenable_bzlmod\n")
+		// Bazel 8 disables WORKSPACE by default, so asking for it explicitly is
+		// required to not end up with neither dependency system enabled.
+		fmt.Fprintf(bazelrcBuf, "common --noenable_bzlmod --enable_workspace\n")
 	} else {
 		fmt.Fprintf(bazelrcBuf, "common --enable_bzlmod\n")
 	}
