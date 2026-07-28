@@ -104,14 +104,11 @@ func baselineLCOV(goenv *env, goSrcs []fileInfo) (string, error) {
 
 	var out strings.Builder
 	for i, src := range goSrcs {
-		// cgo sources are rewritten before the compiler sees them, so line
-		// numbers taken from the unprocessed source would not line up with
-		// what a real coverage run reports. Leave them to Bazel's stub rather
-		// than emit subtly wrong data.
-		if src.isCgo {
-			continue
-		}
-
+		// cgo sources are included. compilepkg instruments them before cgo
+		// rewrites them, so a measured run reports positions in the
+		// unprocessed source -- the same ones read back here. Cgo sources
+		// that are not compiled at all, because CGO_ENABLED is 0, have
+		// already been filtered out.
 		lines, err := coverableLines(goenv, workDir, i, src.filename)
 		if err != nil {
 			return "", err
