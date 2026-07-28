@@ -5,7 +5,6 @@ matrix:
     - ubuntu2004_arm64
     - macos_arm64
     - windows
-  # Only BCR tests use all Bazel versions. Others use the default.
   bazel:
     - 7.*
     - 8.*
@@ -45,6 +44,9 @@ tasks:
       - "--per_file_copt=external/.*@-w"
       - "--host_per_file_copt=external/.*@-w"
   ubuntu2404:
+    name: "Bazel {bazel}"
+    platform: ubuntu2404
+    bazel: ${{ bazel }}
     # enable some unflipped incompatible flags on this platform to ensure we don't regress.
     build_flags:
       - "--config=incompatible"
@@ -68,7 +70,7 @@ tasks:
     test_targets:
       - "//..."
   bcr_tests:
-    name: BCR test module
+    name: BCR test module (Bazel {bazel})
     platform: ${{ platform }}
     bazel: ${{ bazel }}
     working_directory: tests/bcr
@@ -97,6 +99,9 @@ tasks:
     test_targets:
       - "//..."
   macos_arm64:
+    name: "Bazel {bazel}"
+    platform: macos_arm64
+    bazel: ${{ bazel }}
     build_flags:
       - "--apple_crosstool_top=@local_config_apple_cc//:toolchain"
       - "--crosstool_top=@local_config_apple_cc//:toolchain"
@@ -134,6 +139,9 @@ tasks:
       # Source directories in runfiles are not supported with RBE.
       - "-//tests/runfiles:runfiles_test"
   windows:
+    name: "Bazel {bazel}"
+    platform: windows
+    bazel: ${{ bazel }}
     build_flags:
       - '--action_env=PATH=C:\tools\msys64\usr\bin;C:\tools\msys64\bin;C:\tools\msys64\mingw64\bin;C:\python3\Scripts\;C:\python3;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0;C:\Windows\System32\OpenSSH;C:\ProgramData\GooGet;C:\Program Files\Google\Compute Engine\metadata_scripts;C:\Program Files (x86)\Google\Cloud SDK\google-cloud-sdk\bin;C:\Program Files\Google\Compute Engine\sysprep;C:\ProgramData\chocolatey\bin;C:\Program Files\Git\cmd;C:\tools\msys64\usr\bin;c:\openjdk\bin;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit\;C:\Program Files\CMake\bin;c:\ninja;c:\bazel;c:\buildkite'
     build_targets:
