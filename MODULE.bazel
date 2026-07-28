@@ -141,20 +141,6 @@ dev_go_sdk.download(
     version = "1.22.12",
 )
 
-bazel_dep(name = "toolchains_protoc", version = "0.6.0", dev_dependency = True)
-
-protoc = use_extension("@toolchains_protoc//protoc:extensions.bzl", "protoc", dev_dependency = True)
-protoc.toolchain(
-    name = "protoc_toolchains",
-    version = "v25.3",
-)
-use_repo(protoc, "protoc_toolchains")
-
-register_toolchains(
-    "@protoc_toolchains//...",
-    dev_dependency = True,
-)
-
 # Used to transition binaries in rules_go's test suite to different configurations.
 bazel_dep(name = "with_cfg.bzl", version = "0.14.1", dev_dependency = True)
 bazel_dep(name = "runfiles_remote_test", version = "0.0.0", dev_dependency = True)
