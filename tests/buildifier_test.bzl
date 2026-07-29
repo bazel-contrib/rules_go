@@ -74,7 +74,7 @@ buildifier_test = rule(
             allow_files = True,
         ),
         "_buildifier": attr.label(
-            default = "@com_github_bazelbuild_buildtools//buildifier",
+            default = "@buildifier_prebuilt//:buildifier",
             executable = True,
             cfg = "exec",
         ),
