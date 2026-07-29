@@ -83,6 +83,11 @@ type Args struct {
 	// default generated MODULE.bazel file.
 	ModuleFileSuffix string
 
+	// SkipHostGoSDK disables wrapping the Go SDK of the enclosing build as
+	// @go_sdk. Tests that declare an SDK under that name themselves have to
+	// set it.
+	SkipHostGoSDK bool
+
 	// SetUp is a function that is executed inside the context of the testing
 	// workspace. It is executed once and only once before the beginning of
 	// all tests. If SetUp returns a non-nil error, execution is halted and
@@ -406,7 +411,7 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 			TestedModuleName:     testedModuleName,
 			TestedModuleRepoName: testedModuleRepoName,
 			TestedModulePath:     strings.ReplaceAll(testedRepoDir, "\\", "\\\\"),
-			GoSDKPath:            goSDKPath,
+			GoSDKPath:            goSDKPathOrEmpty(args, goSDKPath),
 			RulesCCVersion:       rulesCCVersion(),
 			Nogo:                 args.Nogo,
 			NogoIncludes:         args.NogoIncludes,
@@ -419,6 +424,15 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 	}
 
 	return mainDir, cleanup, nil
+}
+
+// goSDKPathOrEmpty returns the empty string for tests that declare their own Go
+// SDK, which makes the module file template omit the wrapped host SDK.
+func goSDKPathOrEmpty(args Args, goSDKPath string) string {
+	if args.SkipHostGoSDK {
+		return ""
+	}
+	return goSDKPath
 }
 
 // rulesCCVersion picks the oldest rules_cc that works with the Bazel version
@@ -527,11 +541,14 @@ _new_local_repository(
     build_file_content = "",
 )
 
-# Named to not collide with the "go_sdk" the suffix may declare itself.
+# The extension proxy is named to not collide with a "go_sdk" the suffix may
+# declare itself.
 _host_go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk")
 _host_go_sdk.wrap(
+    name = "go_sdk",
     root_file = "@local_go_sdk//:ROOT",
 )
+use_repo(_host_go_sdk, "go_sdk")
 {{if .Nogo}}
 # Custom nogo analyzers need the analysis framework, which the WORKSPACE setup
 # used to provide via go_rules_dependencies.

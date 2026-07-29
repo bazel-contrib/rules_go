@@ -44,7 +44,7 @@ go_binary(
 # to inherit from the host platform.
 platform(
   name = "host_cgo",
-  parents = ["@local_config_platform//:host"],
+  parents = ["@platforms//host"],
   constraint_values = [
     "@io_bazel_rules_go//go/toolchain:cgo_on",
   ],
