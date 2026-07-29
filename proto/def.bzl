@@ -24,6 +24,7 @@ load(
     "//go:def.bzl",
     "GoInfo",
     "go_context",
+    "go_rule",
 )
 load(
     "//go/private:common.bzl",
@@ -184,7 +185,7 @@ def _go_proto_library_impl(ctx):
         ])
     return providers + [OutputGroupInfo(**output_groups)]
 
-go_proto_library = rule(
+go_proto_library = go_rule(
     implementation = _go_proto_library_impl,
     attrs = {
         "proto": attr.label(
@@ -220,7 +221,7 @@ go_proto_library = rule(
         "_allowlist_function_transition": attr.label(
             default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
         ),
-    } | CGO_ATTRS,
+    },
     # go-protoc-bin is built via cfg = "exec" and lands on the first registered
     # exec platform, while the Go toolchain may have constraints on the exec
     # platform. Because of the possible differences in platform resolution,
@@ -233,8 +234,6 @@ go_proto_library = rule(
     exec_groups = {
         "internal_use_only_go_proto_gen": exec_group(),
     },
-    fragments = CGO_FRAGMENTS,
-    toolchains = [GO_TOOLCHAIN] + CGO_TOOLCHAINS,
 )
 # go_proto_library is a rule that takes a proto_library (in the proto
 # attribute) and produces a go library for it.

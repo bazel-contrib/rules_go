@@ -93,7 +93,7 @@ CGO_TOOLCHAINS = [
 ]
 CGO_FRAGMENTS = ["apple", "cpp"]
 
-def go_rule(implementation, attrs = None, fragments = None, toolchains = None, **kwargs):
+def go_rule(implementation, attrs = {}, fragments = [], toolchains = [], **kwargs):
     """Declares a rule with the toolchains and fragments required by go_context.
 
     Args:
@@ -106,19 +106,11 @@ def go_rule(implementation, attrs = None, fragments = None, toolchains = None, *
     Returns:
         A rule that can call go_context.
     """
-    rule_attrs = (attrs or {}) | CGO_ATTRS
-    rule_fragments = list(fragments or [])
-    for fragment in CGO_FRAGMENTS:
-        if fragment not in rule_fragments:
-            rule_fragments.append(fragment)
-
-    rule_toolchains = [GO_TOOLCHAIN] + CGO_TOOLCHAINS + list(toolchains or [])
-
     return rule(
         implementation = implementation,
-        attrs = rule_attrs,
-        fragments = rule_fragments,
-        toolchains = rule_toolchains,
+        attrs = attrs | CGO_ATTRS,
+        fragments = fragments + CGO_FRAGMENTS,
+        toolchains = [GO_TOOLCHAIN] + CGO_TOOLCHAINS + toolchains,
         **kwargs
     )
 

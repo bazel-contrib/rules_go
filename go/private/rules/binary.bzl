@@ -26,10 +26,9 @@ load(
 )
 load(
     "//go/private:context.bzl",
-    "CGO_ATTRS",
-    "CGO_FRAGMENTS",
     "CGO_TOOLCHAINS",
     "go_context",
+    "go_rule",
     "maybe_needs_cc_toolchain",
     "new_go_info",
 )
@@ -497,9 +496,7 @@ def _go_binary_kwargs(go_cc_aspects = []):
             "_bincov": attr.label(
                 default = "//go/tools/bzltestutil/bincov",
             ),
-        } | CGO_ATTRS,
-        "fragments": CGO_FRAGMENTS,
-        "toolchains": [GO_TOOLCHAIN] + CGO_TOOLCHAINS,
+        },
         "exec_groups": {
             "go_link": exec_group(
                 toolchains = [GO_TOOLCHAIN] + CGO_TOOLCHAINS,
@@ -516,8 +513,8 @@ def _go_binary_kwargs(go_cc_aspects = []):
         """,
     }
 
-go_binary = rule(executable = True, **_go_binary_kwargs())
-go_non_executable_binary = rule(executable = False, **_go_binary_kwargs(
+go_binary = go_rule(executable = True, **_go_binary_kwargs())
+go_non_executable_binary = go_rule(executable = False, **_go_binary_kwargs(
     go_cc_aspects = [_go_cc_aspect],
 ))
 

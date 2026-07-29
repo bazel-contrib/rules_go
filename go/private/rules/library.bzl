@@ -14,7 +14,6 @@
 
 load(
     "//go/private:common.bzl",
-    "GO_TOOLCHAIN",
     "asm_exts",
     "cgo_exts",
     "go_exts",
@@ -22,10 +21,8 @@ load(
 )
 load(
     "//go/private:context.bzl",
-    "CGO_ATTRS",
-    "CGO_FRAGMENTS",
-    "CGO_TOOLCHAINS",
     "go_context",
+    "go_rule",
     "maybe_needs_cc_toolchain",
     "new_go_info",
 )
@@ -76,7 +73,7 @@ def _go_library_impl(ctx):
         ),
     ]
 
-go_library = rule(
+go_library = go_rule(
     _go_library_impl,
     attrs = {
         "data": attr.label_list(
@@ -200,9 +197,7 @@ go_library = rule(
         "_allowlist_function_transition": attr.label(
             default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
         ),
-    } | CGO_ATTRS,
-    fragments = CGO_FRAGMENTS,
-    toolchains = [GO_TOOLCHAIN] + CGO_TOOLCHAINS,
+    },
     provides = [GoArchive, GoInfo],
     doc = """This builds a Go library from a set of source files that are all part of
     the same package.
@@ -233,7 +228,7 @@ def _go_tool_library_impl(ctx):
         archive,
     ]
 
-go_tool_library = rule(
+go_tool_library = go_rule(
     _go_tool_library_impl,
     attrs = {
         "data": attr.label_list(allow_files = True),
@@ -246,9 +241,7 @@ go_tool_library = rule(
         "x_defs": attr.string_dict(),
         "_go_config": attr.label(default = "//:go_config"),
         "_stdlib": attr.label(default = "//:stdlib"),
-    } | CGO_ATTRS,
-    fragments = CGO_FRAGMENTS,
-    toolchains = [GO_TOOLCHAIN] + CGO_TOOLCHAINS,
+    },
 )
 # This is used instead of `go_library` for dependencies of the `nogo` rule and
 # packages that are depended on implicitly by code generated within the Go rules.

@@ -25,16 +25,10 @@ load(
     "//go:def.bzl",
     "GoInfo",
     "go_context",
-)
-load(
-    "//go/private:common.bzl",
-    "GO_TOOLCHAIN",
+    "go_rule",
 )
 load(
     "//go/private:context.bzl",
-    "CGO_ATTRS",
-    "CGO_FRAGMENTS",
-    "CGO_TOOLCHAINS",
     "new_go_info",
 )
 load(
@@ -247,7 +241,7 @@ def _go_proto_compiler_impl(ctx):
         go_info,
     ]
 
-_go_proto_compiler = rule(
+_go_proto_compiler = go_rule(
     implementation = _go_proto_compiler_impl,
     attrs = {
         "deps": attr.label_list(providers = [GoInfo]),
@@ -273,7 +267,7 @@ _go_proto_compiler = rule(
         "_go_context_data": attr.label(
             default = "//:go_context_data",
         ),
-    } | CGO_ATTRS | _if_legacy_toolchain({
+    } | _if_legacy_toolchain({
         "_legacy_proto_toolchain": attr.label(
             # Setting cfg = "exec" here as the legacy_proto_toolchain target
             # already needs to apply the non_go_tool_transition. Flipping the
@@ -283,8 +277,7 @@ _go_proto_compiler = rule(
             default = "//proto/private:legacy_proto_toolchain",
         ),
     }),
-    fragments = CGO_FRAGMENTS,
-    toolchains = [GO_TOOLCHAIN] + CGO_TOOLCHAINS + _use_toolchain(_PROTO_TOOLCHAIN_TYPE),
+    toolchains = _use_toolchain(_PROTO_TOOLCHAIN_TYPE),
 )
 
 def go_proto_compiler(name, **kwargs):
