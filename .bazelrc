@@ -20,8 +20,10 @@ build:windows --compiler=mingw-gcc
 # NOTE(bazelbuild/bazel#10529): bazel doesn't register the mingw toolchain automatically.
 # We also need the host and target platforms to have the mingw constraint value.
 build:windows --extra_toolchains=@local_config_cc//:cc-toolchain-x64_windows_mingw
-build:windows --host_platform=@io_bazel_rules_go//go/toolchain:windows_amd64_cgo
-build:windows --platforms=@io_bazel_rules_go//go/toolchain:windows_amd64_cgo
+# Not @io_bazel_rules_go: a module's own repo_name is only an apparent name for
+# other modules, and WORKSPACE no longer provides it as of Bazel 9.
+build:windows --host_platform=//go/toolchain:windows_amd64_cgo
+build:windows --platforms=//go/toolchain:windows_amd64_cgo
 build:windows --incompatible_enable_cc_toolchain_resolution
 
 build:check --all_incompatible_changes
@@ -41,7 +43,10 @@ build:incompatible --incompatible_enforce_config_setting_visibility
 build:incompatible --incompatible_disallow_empty_glob
 build:incompatible --incompatible_disable_starlark_host_transitions
 build:incompatible --nolegacy_external_runfiles
-build:incompatible --incompatible_enable_proto_toolchain_resolution
-build:incompatible --incompatible_auto_exec_groups
+# Neither --incompatible_enable_proto_toolchain_resolution nor
+# --incompatible_auto_exec_groups is enabled here: together they fail in
+# protobuf's protoc authenticity check, which calls ctx.actions.run_shell
+# without a toolchain, and proto toolchain resolution is on by default as of
+# Bazel 9. The bcr_tests_proto CI task covers proto toolchain resolution.
 # Also enable all incompatible flags in go_bazel_test by default.
-test:incompatible --test_env=GO_BAZEL_TEST_BAZELFLAGS='--incompatible_disallow_empty_glob --incompatible_load_proto_rules_from_bzl --incompatible_enable_cc_toolchain_resolution --incompatible_config_setting_private_default_visibility --incompatible_enforce_config_setting_visibility --incompatible_disable_starlark_host_transitions --nolegacy_external_runfiles --incompatible_enable_proto_toolchain_resolution  --incompatible_auto_exec_groups'
+test:incompatible --test_env=GO_BAZEL_TEST_BAZELFLAGS='--incompatible_disallow_empty_glob --incompatible_load_proto_rules_from_bzl --incompatible_enable_cc_toolchain_resolution --incompatible_config_setting_private_default_visibility --incompatible_enforce_config_setting_visibility --incompatible_disable_starlark_host_transitions --nolegacy_external_runfiles'
