@@ -325,20 +325,6 @@ func compileArchive(
 		}
 	}
 
-	if cgoGoSrcsForNogoPath != "" {
-		// The directory is a declared output, so it has to exist and be
-		// non-empty even when no cgo sources are generated: local execution
-		// creates it implicitly, but remote execution drops empty directories,
-		// which fails the build. Consumers filter the marker out by extension.
-		if err := os.MkdirAll(cgoGoSrcsForNogoPath, 0o777); err != nil {
-			return err
-		}
-		marker := filepath.Join(cgoGoSrcsForNogoPath, "empty.marker")
-		if err := os.WriteFile(marker, nil, 0o666); err != nil {
-			return err
-		}
-	}
-
 	// If we have cgo, generate separate C and go files, and compile the
 	// C files.
 	var objFiles []string
