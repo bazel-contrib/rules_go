@@ -491,6 +491,18 @@ _host_go_sdk.wrap(
     root_file = "@local_go_sdk//:ROOT",
 )
 {{if .Nogo}}
+# Custom nogo analyzers need the analysis framework, which the WORKSPACE setup
+# used to provide via go_rules_dependencies.
+bazel_dep(name = "gazelle", version = "0.51.3")
+
+_nogo_go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
+_nogo_go_deps.module(
+    path = "golang.org/x/tools",
+    sum = "h1:qIpSLOxeCYGg9TrcJokLBG4KFA6d795g0xkBkiESGlo=",
+    version = "v0.34.0",
+)
+use_repo(_nogo_go_deps, "org_golang_x_tools")
+
 _host_go_sdk.nogo(
     nogo = "{{.Nogo}}",
     {{ if .NogoIncludes }}

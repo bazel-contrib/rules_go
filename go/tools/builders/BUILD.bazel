@@ -63,10 +63,16 @@ go_test(
         "stdliblist.go",
         "stdliblist_test.go",
     ],
-    data = ["@go_default_sdk//:files"],
+    data = [
+        "@go_default_sdk//:files",
+        "@go_default_sdk//:host_compatible_root_file",
+    ],
     rundir = ".",
     x_defs = {
         "rulesGoStdlibPrefix": RULES_GO_STDLIB_PREFIX,
+        # The SDK's directory in the runfiles tree is its canonical repository
+        # name, which isn't known statically.
+        "goSDKRootFileRlocationPath": "$(rlocationpath @go_default_sdk//:host_compatible_root_file)",
     },
 )
 

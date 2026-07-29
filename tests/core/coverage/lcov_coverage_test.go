@@ -27,6 +27,7 @@ func TestMain(m *testing.M) {
 	bazel_testing.TestMain(m, bazel_testing.Args{
 		Main: `
 -- src/BUILD.bazel --
+load("@rules_java//java:java_binary.bzl", "java_binary")
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
@@ -140,6 +141,9 @@ func TestTool(t *testing.T) {
 	}
 }
 
+`,
+		ModuleFileSuffix: `
+bazel_dep(name = "rules_java", version = "8.6.1")
 `,
 	})
 }

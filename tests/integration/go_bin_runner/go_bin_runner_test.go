@@ -27,6 +27,8 @@ func TestMain(m *testing.M) {
 	bazel_testing.TestMain(m, bazel_testing.Args{
 		Main: `
 -- BUILD.bazel --
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+
 sh_binary(
     name = "go_version",
     srcs = ["go_version.sh"],
@@ -55,7 +57,11 @@ source "${RUNFILES_DIR:-/dev/null}/$f" 2>/dev/null || \
 # --- end runfiles.bash initialization v2 ---
 
 $(rlocation "$GO") version
-`})
+`,
+		ModuleFileSuffix: `
+bazel_dep(name = "rules_shell", version = "0.3.0")
+`,
+	})
 }
 
 func TestGoEnv(t *testing.T) {
@@ -73,9 +79,12 @@ func TestGoEnv(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// The SDK's canonical repository name isn't known statically, so only
+	// check that GOROOT points into the output base's external directory.
 	goRoot := strings.TrimSpace(string(goEnvOut))
-	if goRoot != filepath.Join(outputBase, "external", "go_sdk") {
-		t.Fatalf("GOROOT was not equal to %s", filepath.Join(outputBase, "external", "go_sdk"))
+	externalDir := filepath.Join(outputBase, "external")
+	if filepath.Dir(goRoot) != externalDir || !strings.Contains(filepath.Base(goRoot), "go_sdk") {
+		t.Fatalf("GOROOT %s was not a Go SDK below %s", goRoot, externalDir)
 	}
 }
 
