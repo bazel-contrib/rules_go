@@ -24,7 +24,9 @@ import (
 func TestMain(m *testing.M) {
 	bazel_testing.TestMain(m, bazel_testing.Args{
 		Main: `
--- other_repo/WORKSPACE --
+-- other_repo/MODULE.bazel --
+module(name = "other_repo")
+bazel_dep(name = "rules_go", repo_name = "io_bazel_rules_go")
 -- other_repo/pkg/BUILD.bazel --
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
@@ -142,9 +144,10 @@ func main() {
 	external_generated_lib.PrintRepo()
 }
 `,
-		WorkspaceSuffix: `
-local_repository(
-    name = "other_repo",
+		ModuleFileSuffix: `
+bazel_dep(name = "other_repo", version = "0.0.0")
+local_path_override(
+    module_name = "other_repo",
     path = "other_repo",
 )
 `,
@@ -153,8 +156,8 @@ local_repository(
 
 var expectedOutputLegacy = regexp.MustCompile(`^pkg/internal_source_lib.go: ''
 bazel-out/[^/]+/bin/pkg/internal_generated_lib.go: ''
-external/other_repo/pkg/external_source_lib.go: 'other_repo'
-bazel-out/[^/]+/bin/external/other_repo/pkg/external_generated_lib.go: 'other_repo'
+external/other_repo\+/pkg/external_source_lib.go: 'other_repo\+'
+bazel-out/[^/]+/bin/external/other_repo\+/pkg/external_generated_lib.go: 'other_repo\+'
 $`)
 
 func TestCurrentRepository(t *testing.T) {

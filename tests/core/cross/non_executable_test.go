@@ -27,6 +27,8 @@ func TestMain(m *testing.M) {
 	bazel_testing.TestMain(m, bazel_testing.Args{
 		Main: `
 -- src/BUILD.bazel --
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_cross_binary")
 load(":rules.bzl", "no_runfiles_check")
 

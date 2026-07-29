@@ -61,15 +61,15 @@ const (
 // Args is a list of arguments to TestMain. It's defined as a struct so
 // that new optional arguments may be added without breaking compatibility.
 type Args struct {
-	// Main is a text archive containing files in the main workspace.
+	// Main is a text archive containing files in the main module.
 	// The text archive format is parsed by
 	// //go/tools/internal/txtar:go_default_library, which is copied from
-	// cmd/go/internal/txtar. If this archive does not contain a WORKSPACE file,
-	// a default file will be synthesized.
+	// cmd/go/internal/txtar. If this archive does not contain a MODULE.bazel
+	// file, a default file will be synthesized.
 	Main string
 
-	// Nogo is the nogo target to pass to go_register_toolchains. By default,
-	// nogo is not used.
+	// Nogo is the nogo target to register with the go_sdk extension. By
+	// default, nogo is not used.
 	Nogo string
 
 	// NogoIncludes is the list of targets to include for Nogo linting.
@@ -78,17 +78,8 @@ type Args struct {
 	// NogoExcludes is the list of targets to include for Nogo linting.
 	NogoExcludes []string
 
-	// WorkspacePrefix is a string that should be inserted at the beginning
-	// of the default generated WORKSPACE file.
-	WorkspacePrefix string
-
-	// WorkspaceSuffix is a string that should be appended to the end
-	// of the default generated WORKSPACE file.
-	WorkspaceSuffix string
-
-	// ModuleFileSuffix is a string that should be appended to the end of a
-	// default generated MODULE.bazel file. If this is empty, no such file is
-	// generated.
+	// ModuleFileSuffix is a string that should be appended to the end of the
+	// default generated MODULE.bazel file.
 	ModuleFileSuffix string
 
 	// SetUp is a function that is executed inside the context of the testing
@@ -365,23 +356,11 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 		return "", cleanup, fmt.Errorf("building main workspace: %v", err)
 	}
 
-	// Tests that customize the generated WORKSPACE file, or bring their own,
-	// can't be expressed with a MODULE.bazel file and keep using WORKSPACE.
-	// Bazel 9 no longer supports it, so those only run on older versions.
-	_, workspaceErr := os.Stat(filepath.Join(mainDir, "WORKSPACE"))
-	useWorkspace := args.WorkspacePrefix != "" || args.WorkspaceSuffix != "" || workspaceErr == nil
-
 	// Create a .bazelrc file with the contents of GO_BAZEL_TEST_BAZELFLAGS is set.
 	// The test can override this with its own .bazelrc or with flags in commands.
 	bazelrcPath := filepath.Join(mainDir, ".bazelrc")
 	bazelrcBuf := &bytes.Buffer{}
-	if useWorkspace {
-		// Bazel 8 disables WORKSPACE by default, so asking for it explicitly is
-		// required to not end up with neither dependency system enabled.
-		fmt.Fprintf(bazelrcBuf, "common --noenable_bzlmod --enable_workspace\n")
-	} else {
-		fmt.Fprintf(bazelrcBuf, "common --enable_bzlmod\n")
-	}
+	fmt.Fprintf(bazelrcBuf, "common --enable_bzlmod\n")
 	if outputUserRoot != "" {
 		fmt.Fprintf(bazelrcBuf, "startup --output_user_root=%s\n", outputUserRoot)
 	}
@@ -403,36 +382,8 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 	}
 	goSDKPath := strings.ReplaceAll(filepath.Dir(goRootFileRealPath), "\\", "\\\\")
 
-	// If there's no WORKSPACE file, create one.
-	workspacePath := filepath.Join(mainDir, "WORKSPACE")
-	if _, err = os.Stat(workspacePath); os.IsNotExist(err) && useWorkspace {
-		var w *os.File
-		w, err = os.Create(workspacePath)
-		if err != nil {
-			return "", cleanup, err
-		}
-		defer func() {
-			if cerr := w.Close(); err == nil && cerr != nil {
-				err = cerr
-			}
-		}()
-		info := workspaceTemplateInfo{
-			TestedModuleRepoName: testedModuleRepoName,
-			TestedModulePath:     strings.ReplaceAll(testedRepoDir, "\\", "\\\\"),
-			Prefix:               args.WorkspacePrefix,
-			Suffix:               args.WorkspaceSuffix,
-			Nogo:                 args.Nogo,
-			NogoIncludes:         args.NogoIncludes,
-			NogoExcludes:         args.NogoExcludes,
-			GoSDKPath:            goSDKPath,
-		}
-		if err := defaultWorkspaceTpl.Execute(w, info); err != nil {
-			return "", cleanup, err
-		}
-	}
-
 	// If there's no MODULE.bazel file, create one.
-	if !useWorkspace {
+	{
 		moduleBazelPath := filepath.Join(mainDir, "MODULE.bazel")
 		if _, err = os.Stat(moduleBazelPath); err == nil {
 			if args.ModuleFileSuffix != "" {
@@ -502,76 +453,6 @@ func loadName(bazelFilePath string) (string, error) {
 	return name, nil
 }
 
-type workspaceTemplateInfo struct {
-	TestedModuleRepoName string
-	TestedModulePath     string
-	GoSDKPath            string
-	Nogo                 string
-	NogoIncludes         []string
-	NogoExcludes         []string
-	Prefix               string
-	Suffix               string
-}
-
-var defaultWorkspaceTpl = template.Must(template.New("").Parse(`
-local_repository(
-    name = "{{.TestedModuleRepoName}}",
-    path = "{{.TestedModulePath}}",
-)
-
-{{.Prefix}}
-
-new_local_repository(
-    name = "local_go_sdk",
-    path = "{{.GoSDKPath}}",
-    build_file_content = "",
-)
-
-load("@io_bazel_rules_go//go:deps.bzl", "go_rules_dependencies", "go_register_toolchains", "go_wrap_sdk", "go_register_nogo")
-
-go_rules_dependencies()
-
-go_wrap_sdk(
-    name = "go_sdk",
-    root_file = "@local_go_sdk//:ROOT",
-)
-
-go_register_toolchains()
-
-{{if .Nogo}}
-go_register_nogo(
-	nogo = "{{.Nogo}}",
-	{{ if .NogoIncludes }}
-	includes = [
-	{{range .NogoIncludes }}
-		"{{ . }}",
-	{{ end }}
-	],
-	{{ end}}
-	{{ if .NogoExcludes }}
-	excludes = [
-	{{range .NogoExcludes }}
-		"{{ . }}",
-	{{ end }}
-	],
-	{{ else }}
-	excludes = None,
-	{{ end}}
-)
-{{end}}
-
-# Create the host platform repository transitively required by rules_go.
-load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
-load("@platforms//host:extension.bzl", "host_platform_repo")
-
-maybe(
-	host_platform_repo,
-	name = "host_platform",
-)
-
-{{.Suffix}}
-`))
-
 type moduleFileTemplateInfo struct {
 	TestedModuleName     string
 	TestedModuleRepoName string
@@ -590,21 +471,27 @@ local_path_override(
     path = "{{.TestedModulePath}}",
 )
 
-{{if .GoSDKPath}}
-new_local_repository = use_repo_rule("@bazel_tools//tools/build_defs/repo:local.bzl", "new_local_repository")
+# Test workspaces used to get this for free from the WORKSPACE setup. Keep the
+# version in sync with the one in //:MODULE.bazel, the compatibility level has
+# to match.
+bazel_dep(name = "rules_cc", version = "0.2.18")
 
-new_local_repository(
+{{if .GoSDKPath}}
+_new_local_repository = use_repo_rule("@bazel_tools//tools/build_defs/repo:local.bzl", "new_local_repository")
+
+_new_local_repository(
     name = "local_go_sdk",
     path = "{{.GoSDKPath}}",
     build_file_content = "",
 )
 
-go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk")
-go_sdk.wrap(
+# Named to not collide with the "go_sdk" the suffix may declare itself.
+_host_go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk")
+_host_go_sdk.wrap(
     root_file = "@local_go_sdk//:ROOT",
 )
 {{if .Nogo}}
-go_sdk.nogo(
+_host_go_sdk.nogo(
     nogo = "{{.Nogo}}",
     {{ if .NogoIncludes }}
     includes = [

@@ -56,18 +56,15 @@ func F() {}
 	})
 }
 
-const origWrapSDK = `go_wrap_sdk(
-    name = "go_sdk",
+const origWrapSDK = `_host_go_sdk.wrap(
     root_file = "@local_go_sdk//:ROOT",
-)
+)`
 
-go_register_toolchains()`
-
-const toolchain120 = `go_register_toolchains(version = "1.20rc1")`
+const toolchain120 = `_host_go_sdk.download(version = "1.20rc1")`
 
 func TestBoringcryptoExperimentPresent(t *testing.T) {
-	mustReplaceInFile(t, "WORKSPACE", origWrapSDK, toolchain120)
-	defer mustReplaceInFile(t, "WORKSPACE", toolchain120, origWrapSDK)
+	mustReplaceInFile(t, "MODULE.bazel", origWrapSDK, toolchain120)
+	defer mustReplaceInFile(t, "MODULE.bazel", toolchain120, origWrapSDK)
 
 	cmd := bazel_testing.BazelCmd("build", "//:program")
 	cmd.Stdout = os.Stdout

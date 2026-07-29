@@ -77,7 +77,9 @@ func File() string {
 	_, file, _, _ := runtime.Caller(0)
 	return file
 }
--- other_repo/WORKSPACE --
+-- other_repo/MODULE.bazel --
+module(name = "other_repo")
+bazel_dep(name = "rules_go", repo_name = "io_bazel_rules_go")
 -- other_repo/BUILD.bazel --
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
@@ -115,9 +117,10 @@ func File() string {
 	return file
 }
 `,
-	WorkspaceSuffix: `
-local_repository(
-    name = "other_repo",
+		ModuleFileSuffix: `
+bazel_dep(name = "other_repo", version = "0.0.0")
+local_path_override(
+    module_name = "other_repo",
     path = "other_repo",
 )
 `,
@@ -128,15 +131,15 @@ local_repository(
 var expectedDefault = `
 main.go
 maincgo.go
-external/other_repo/other.go
-external/other_repo/othercgo.go
+external/other_repo+/other.go
+external/other_repo+/othercgo.go
 `
 
 var expectedSibling = `
 main.go
 maincgo.go
-../other_repo/other.go
-../other_repo/othercgo.go
+../other_repo+/other.go
+../other_repo+/othercgo.go
 `
 
 func TestTrimpath(t *testing.T) {

@@ -28,6 +28,8 @@ func TestMain(m *testing.M) {
 	bazel_testing.TestMain(m, bazel_testing.Args{
 		Main: `
 -- BUILD.bazel --
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
 load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
 load("@com_google_protobuf//bazel:proto_library.bzl", "proto_library")
@@ -124,41 +126,6 @@ message Foo {
 		ModuleFileSuffix: `
 bazel_dep(name = "protobuf", version = "29.0-rc2", repo_name = "com_google_protobuf")
 bazel_dep(name = "toolchains_protoc", version = "0.3.4")
-`,
-		WorkspacePrefix: `
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-
-# The non-polyfill version of this is needed by rules_proto below.
-http_archive(
-    name = "bazel_features",
-    sha256 = "d7787da289a7fb497352211ad200ec9f698822a9e0757a4976fd9f713ff372b3",
-    strip_prefix = "bazel_features-1.9.1",
-    url = "https://github.com/bazel-contrib/bazel_features/releases/download/v1.9.1/bazel_features-v1.9.1.tar.gz",
-)
-
-load("@bazel_features//:deps.bzl", "bazel_features_deps")
-
-bazel_features_deps()
-
-http_archive(
-    name = "rules_cc",
-    sha256 = "bbf1ae2f83305b7053b11e4467d317a7ba3517a12cef608543c1b1c5bf48a4df",
-    strip_prefix = "rules_cc-0.0.16",
-    urls = ["https://github.com/bazelbuild/rules_cc/releases/download/0.0.16/rules_cc-0.0.16.tar.gz"],
-)
-`,
-		WorkspaceSuffix: `
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-
-http_archive(
-    name = "com_google_protobuf",
-    integrity = "sha256-zl0At4RQoMpAC/NgrADA1ZnMIl8EnZhqJ+mk45bFqEo=",
-    strip_prefix = "protobuf-29.0-rc2",
-    urls = [
-        "https://github.com/protocolbuffers/protobuf/archive/v29.0-rc2.tar.gz",
-        "https://mirror.bazel.build/github.com/protocolbuffers/protobuf/archive/v29.0-rc2.tar.gz",
-    ],
-)
 `,
 	})
 }
