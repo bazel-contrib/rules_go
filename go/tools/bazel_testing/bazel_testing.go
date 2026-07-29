@@ -382,12 +382,11 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 		return "", cleanup, fmt.Errorf("unknown runfile %s: %v", goRootFile, err)
 	}
 	// TODO: This is only necessary because of https://github.com/golang/go/issues/59924.
-	// Resolving is best effort: without a runfiles symlink tree, as on Windows,
-	// the path is already the real one.
-	if goRootFileRealPath, err := filepath.EvalSymlinks(goRootFilePath); err == nil {
-		goRootFilePath = goRootFileRealPath
+	goRootFileRealPath, err := filepath.EvalSymlinks(goRootFilePath)
+	if err != nil {
+		return "", cleanup, fmt.Errorf("unknown runfile %s: %v", goRootFile, err)
 	}
-	goSDKPath := strings.ReplaceAll(filepath.Dir(goRootFilePath), "\\", "\\\\")
+	goSDKPath := strings.ReplaceAll(filepath.Dir(goRootFileRealPath), "\\", "\\\\")
 
 	// If there's no MODULE.bazel file, create one.
 	{

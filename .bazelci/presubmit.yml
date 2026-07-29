@@ -13,18 +13,35 @@ matrix:
     - 9.*
 
 tasks:
-  debian11_min_bazel:
+  debian11_bazel6:
     platform: debian11
-    bazel: 7.2.1 # test minimum supported version of bazel
+    bazel: 7.2.1 # test minimum supported version of bazel that works with our bzlmod setup
     build_targets:
       - "//..."
+      - "-//tests/core/go_binary:goos_pure_bin"
+      - "-//tests/core/cross:go_cross_binary_test"
     build_flags:
       - "--per_file_copt=external/.*@-w"
       - "--host_per_file_copt=external/.*@-w"
     test_targets:
       - "//..."
+      # Nogo includes/excludes doesn't work before bazel 7
+      - "-//tests/core/nogo/includes_excludes:includes_exclude_test"
+      - "-//tests/core/nogo/bzlmod:includes_exclude_test"
+      # _repo_mapping is missing
+      - "-//tests/runfiles:runfiles_test"
       # TODO: Investigate why this fails.
       - "-//tests/core/starlark/cgo:missing_cc_toolchain_explicit_pure_off_test"
+      # TODO: Bzlmod setup requires at least Bazel 7.
+      - "-//tests/core/cross:proto_test"
+      - "-//tests/core/from_go_mod_file:from_go_mod_file_test"
+      - "-//tests/core/from_go_work_file:from_go_work_file_test"
+      - "-//tests/core/transition:hermeticity_test"
+      - "-//tests/integration/gazelle:gazelle_test"
+      # Requires https://github.com/bazelbuild/bazel/commit/ceddfb1ece1f8ed7ff81558fa1751e6526df031b.
+      - "-//tests/core/go_binary:configurable_attribute_good_test"
+      - "-//tests/core/go_binary:goos_pure_bin"
+      - "-//tests/core/cross:go_cross_binary_test"
     test_flags:
       - "--per_file_copt=external/.*@-w"
       - "--host_per_file_copt=external/.*@-w"
@@ -77,7 +94,7 @@ tasks:
       - "//..."
       - "-//tests/core/cgo:provide_external_symbol"
   bcr_tests:
-    name: BCR test module (Bazel {bazel})
+    name: BCR test module
     platform: ${{ platform }}
     bazel: ${{ bazel }}
     working_directory: tests/bcr

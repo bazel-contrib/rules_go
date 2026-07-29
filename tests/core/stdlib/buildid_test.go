@@ -86,11 +86,9 @@ func TestEmptyBuildID(t *testing.T) {
 		// don't use it, which fails in the test sandbox as neither GOCACHE nor
 		// HOME is set.
 		cmd.Env = append(os.Environ(), "GOCACHE="+t.TempDir())
-		var stderr bytes.Buffer
-		cmd.Stderr = &stderr
 		out, err := cmd.Output()
 		if err != nil {
-			t.Errorf("%s: %v: %s", path, err, stderr.Bytes())
+			t.Error(err)
 		}
 		if len(bytes.TrimSpace(out)) > 0 {
 			t.Errorf("%s: unexpected buildid: %s", path, out)
