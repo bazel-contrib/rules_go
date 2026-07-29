@@ -371,10 +371,7 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 		fmt.Fprintf(bazelrcBuf, "startup --output_user_root=%s\n", outputUserRoot)
 	}
 	if flags := os.Getenv("GO_BAZEL_TEST_BAZELFLAGS"); flags != "" {
-		// These are build options and can refer to repositories by their
-		// apparent name, which commands that don't load the module graph, such
-		// as info, fail to resolve.
-		fmt.Fprintf(bazelrcBuf, "build %s\n", flags)
+		fmt.Fprintf(bazelrcBuf, "common %s\n", flags)
 	}
 	if err := os.WriteFile(bazelrcPath, bazelrcBuf.Bytes(), 0666); err != nil {
 		return "", cleanup, err

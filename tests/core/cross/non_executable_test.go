@@ -78,7 +78,7 @@ def _no_runfiles_check_impl(ctx):
     runfiles = ctx.attr.target[DefaultInfo].default_runfiles.files.to_list()
     for runfile in runfiles:
         # As of Bazel 9, cc_binary adds a stub used by bazel run.
-        if runfile.short_path not in ["src/main", "src/main.exe", "src/fake_executable_for_bazel_run"]:
+        if runfile.short_path not in ["src/main", "src/main.exe", "src/fake_executable_for_bazel_run", "src/fake_executable_for_bazel_run.bat"]:
             fail("Unexpected runfile: %s" % runfile.short_path)
 
 no_runfiles_check = rule(

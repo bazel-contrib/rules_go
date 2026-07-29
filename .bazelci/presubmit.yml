@@ -18,6 +18,9 @@ tasks:
     bazel: 7.2.1 # test minimum supported version of bazel that works with our bzlmod setup
     build_targets:
       - "//..."
+      # Stardoc's output depends on the Bazel version, so the checked-in docs
+      # can only match one. See the dedicated docs task below.
+      - "-//docs:all"
       - "-//tests/core/go_binary:goos_pure_bin"
       - "-//tests/core/cross:go_cross_binary_test"
     build_flags:
@@ -25,6 +28,7 @@ tasks:
       - "--host_per_file_copt=external/.*@-w"
     test_targets:
       - "//..."
+      - "-//docs:all"
       # Nogo includes/excludes doesn't work before bazel 7
       - "-//tests/core/nogo/includes_excludes:includes_exclude_test"
       - "-//tests/core/nogo/bzlmod:includes_exclude_test"
@@ -93,6 +97,11 @@ tasks:
     test_targets:
       - "//..."
       - "-//tests/core/cgo:provide_external_symbol"
+      # The zig toolchain doesn't make shared libraries loadable at runtime.
+      - "-//tests/core/c_linkmodes:c-shared_test"
+      - "-//tests/core/cgo:generated_dylib_test"
+      - "-//tests/legacy/examples/cgo:cgo_lib_test"
+      - "-//tests/legacy/examples/cgo/example_command:example_command_test"
   bcr_tests:
     name: BCR test module
     platform: ${{ platform }}
@@ -197,8 +206,11 @@ tasks:
       # On Windows CI, bazel (bazelisk) needs %LocalAppData% to find the cache directory.
       # We invoke bazel in tests, so the tests need this, too.
       - "--test_env=LOCALAPPDATA"
-      # go_bazel_test runs bazel in a test workspace. It needs the same flags as above.
-      - "--test_env=GO_BAZEL_TEST_BAZELFLAGS=--cpu=x64_windows --compiler=mingw-gcc --extra_toolchains=@local_config_cc//:cc-toolchain-x64_windows_mingw --action_env=PATH --host_platform=@io_bazel_rules_go//go/toolchain:windows_amd64_cgo --incompatible_enable_cc_toolchain_resolution"
+      # go_bazel_test runs bazel in a test workspace. It needs the same flags as
+      # above. The platform is referred to by canonical name because bazel info,
+      # which the tests use to locate their test logs, doesn't apply the main
+      # repository mapping to labels on the command line.
+      - "--test_env=GO_BAZEL_TEST_BAZELFLAGS=--cpu=x64_windows --compiler=mingw-gcc --extra_toolchains=@local_config_cc//:cc-toolchain-x64_windows_mingw --action_env=PATH --host_platform=@@rules_go+//go/toolchain:windows_amd64_cgo --incompatible_enable_cc_toolchain_resolution --cxxopt=-std=c++17 --host_cxxopt=-std=c++17"
       - "--test_env=PATH"
     test_targets:
       - "//..."
@@ -285,8 +297,11 @@ tasks:
       # On Windows CI, bazel (bazelisk) needs %LocalAppData% to find the cache directory.
       # We invoke bazel in tests, so the tests need this, too.
       - "--test_env=LOCALAPPDATA"
-      # go_bazel_test runs bazel in a test workspace. It needs the same flags as above.
-      - "--test_env=GO_BAZEL_TEST_BAZELFLAGS=--cpu=x64_windows --compiler=mingw-gcc --extra_toolchains=@local_config_cc//:cc-toolchain-x64_windows_mingw --action_env=PATH --host_platform=@io_bazel_rules_go//go/toolchain:windows_amd64_cgo --incompatible_enable_cc_toolchain_resolution"
+      # go_bazel_test runs bazel in a test workspace. It needs the same flags as
+      # above. The platform is referred to by canonical name because bazel info,
+      # which the tests use to locate their test logs, doesn't apply the main
+      # repository mapping to labels on the command line.
+      - "--test_env=GO_BAZEL_TEST_BAZELFLAGS=--cpu=x64_windows --compiler=mingw-gcc --extra_toolchains=@local_config_cc//:cc-toolchain-x64_windows_mingw --action_env=PATH --host_platform=@@rules_go+//go/toolchain:windows_amd64_cgo --incompatible_enable_cc_toolchain_resolution --cxxopt=-std=c++17 --host_cxxopt=-std=c++17"
       - "--test_env=PATH"
   ubuntu_basic_gazelle_example:
     name: Basic Gazelle example on Ubuntu
@@ -323,6 +338,9 @@ tasks:
       # On Windows CI, bazel (bazelisk) needs %LocalAppData% to find the cache directory.
       # We invoke bazel in tests, so the tests need this, too.
       - "--test_env=LOCALAPPDATA"
-      # go_bazel_test runs bazel in a test workspace. It needs the same flags as above.
-      - "--test_env=GO_BAZEL_TEST_BAZELFLAGS=--cpu=x64_windows --compiler=mingw-gcc --extra_toolchains=@local_config_cc//:cc-toolchain-x64_windows_mingw --action_env=PATH --host_platform=@io_bazel_rules_go//go/toolchain:windows_amd64_cgo --incompatible_enable_cc_toolchain_resolution"
+      # go_bazel_test runs bazel in a test workspace. It needs the same flags as
+      # above. The platform is referred to by canonical name because bazel info,
+      # which the tests use to locate their test logs, doesn't apply the main
+      # repository mapping to labels on the command line.
+      - "--test_env=GO_BAZEL_TEST_BAZELFLAGS=--cpu=x64_windows --compiler=mingw-gcc --extra_toolchains=@local_config_cc//:cc-toolchain-x64_windows_mingw --action_env=PATH --host_platform=@@rules_go+//go/toolchain:windows_amd64_cgo --incompatible_enable_cc_toolchain_resolution --cxxopt=-std=c++17 --host_cxxopt=-std=c++17"
       - "--test_env=PATH"

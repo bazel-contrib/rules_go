@@ -156,8 +156,8 @@ local_path_override(
 
 var expectedOutputLegacy = regexp.MustCompile(`^pkg/internal_source_lib.go: ''
 bazel-out/[^/]+/bin/pkg/internal_generated_lib.go: ''
-external/other_repo\+/pkg/external_source_lib.go: 'other_repo\+'
-bazel-out/[^/]+/bin/external/other_repo\+/pkg/external_generated_lib.go: 'other_repo\+'
+external/other_repo[+~]/pkg/external_source_lib.go: 'other_repo[+~]'
+bazel-out/[^/]+/bin/external/other_repo[+~]/pkg/external_generated_lib.go: 'other_repo[+~]'
 $`)
 
 func TestCurrentRepository(t *testing.T) {
