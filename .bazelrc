@@ -25,6 +25,10 @@ build:windows --extra_toolchains=@local_config_cc//:cc-toolchain-x64_windows_min
 build:windows --host_platform=//go/toolchain:windows_amd64_cgo
 build:windows --platforms=//go/toolchain:windows_amd64_cgo
 build:windows --incompatible_enable_cc_toolchain_resolution
+# Abseil, which protobuf builds against, requires C++17. The mingw toolchain
+# defaults to an older standard.
+build:windows --cxxopt=-std=c++17
+build:windows --host_cxxopt=-std=c++17
 
 build:check --all_incompatible_changes
 

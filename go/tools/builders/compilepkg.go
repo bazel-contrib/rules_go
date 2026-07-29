@@ -325,6 +325,15 @@ func compileArchive(
 		}
 	}
 
+	if cgoGoSrcsForNogoPath != "" {
+		// The directory is a declared output, so it has to exist even when no
+		// cgo sources are generated. Local execution creates it implicitly,
+		// remote execution does not.
+		if err := os.MkdirAll(cgoGoSrcsForNogoPath, 0o777); err != nil {
+			return err
+		}
+	}
+
 	// If we have cgo, generate separate C and go files, and compile the
 	// C files.
 	var objFiles []string
