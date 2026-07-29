@@ -236,6 +236,9 @@ tasks:
       - "-//tests/legacy/test_chdir:go_default_test"
       - "-//tests/legacy/test_rundir:go_default_test"
       - "-//tests/legacy/transitive_data:go_default_test"
+      # Asserts on the repository directory name, which contains characters
+      # its vmodule glob matching doesn't handle on Windows.
+      - "-@com_github_golang_glog//:glog_test"
       - "-@org_golang_x_crypto//sha3:sha3_test"
       - "-@org_golang_x_sys//windows/svc:svc_test"
       - "-@org_golang_x_text//language:language_test"
