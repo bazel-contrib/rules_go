@@ -343,10 +343,14 @@ func TestCrossBuild(t *testing.T) {
 }
 
 func testCrossBuild(t *testing.T, extraArgs ...string) {
-	if err := bazel_testing.RunBazel(append(
-		[]string{"build", "--collect_code_coverage", "--instrumentation_filter=-//:b", "//:a_test_cross"},
-		extraArgs...,
-	)...); err != nil {
+	args := []string{"build", "--collect_code_coverage", "--instrumentation_filter=-//:b", "//:a_test_cross"}
+	if bazel_testing.BazelMajorVersion() >= 9 {
+		// Bazel 9 resolves a test toolchain that forces the execution platform
+		// to satisfy the target platform's constraints, which a cross-compiled
+		// test can't satisfy. This target is only built, never run.
+		args = append(args, "--@bazel_tools//tools/test:incompatible_use_default_test_toolchain=false")
+	}
+	if err := bazel_testing.RunBazel(append(args, extraArgs...)...); err != nil {
 		t.Fatal(err)
 	}
 }

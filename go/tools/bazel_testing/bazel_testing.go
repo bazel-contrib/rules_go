@@ -447,6 +447,13 @@ func rulesCCVersion() string {
 	return "0.2.13"
 }
 
+// BazelMajorVersion returns the major version of the bazel binary the test runs
+// against, or 0 if it can't be determined. Tests use it to pass flags that only
+// exist in some versions.
+func BazelMajorVersion() int {
+	return bazelMajorVersion()
+}
+
 // bazelMajorVersion returns the major version of the bazel binary on PATH, or 0
 // if it can't be determined.
 func bazelMajorVersion() int {
@@ -530,7 +537,7 @@ local_path_override(
 )
 
 # Test workspaces used to get this for free from the WORKSPACE setup.
-bazel_dep(name = "platforms", version = "0.0.11")
+bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "rules_cc", version = "{{.RulesCCVersion}}")
 
 {{if .GoSDKPath}}

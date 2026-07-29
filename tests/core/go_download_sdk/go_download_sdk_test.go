@@ -16,6 +16,7 @@ package go_download_sdk_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -314,7 +315,7 @@ go_sdk.download(
     version = "1.26.0",
     ` + test.bootstrapAttr + `
 )
-use_repo(go_sdk, "go_sdk_toolchains")
+use_repo(go_sdk, "go_toolchains")
 `)
 			if err := os.WriteFile("MODULE.bazel", buf.Bytes(), 0666); err != nil {
 				t.Fatal(err)
@@ -325,24 +326,18 @@ use_repo(go_sdk, "go_sdk_toolchains")
 				}
 			}()
 
-			if err := bazel_testing.RunBazel("query", "@go_sdk_toolchains//:all"); err != nil {
+			if err := bazel_testing.RunBazel("query", "@go_toolchains//:all"); err != nil {
 				t.Fatal(err)
 			}
 
-			toolchainsBuildLocation, err := bazel_testing.BazelOutput("query", "--output=location", "@go_sdk_toolchains//:BUILD.bazel")
-			if err != nil {
-				t.Fatal(err)
-			}
-			// The repository directory is named after its canonical name, so
-			// take the path Bazel reports rather than constructing it.
-			toolchainsBuildFile, _, _ := strings.Cut(strings.TrimSpace(string(toolchainsBuildLocation)), ":")
+			toolchainsBuildFile := filepath.Join(repoDir(t, "go_toolchains"), "BUILD.bazel")
 			toolchainsBuildData, err := os.ReadFile(toolchainsBuildFile)
 			if err != nil {
 				t.Fatalf("reading %s: %v", toolchainsBuildFile, err)
 			}
 
 			if bytes.Contains(toolchainsBuildData, []byte(`sdk_source = `)) {
-				t.Fatalf("go_sdk_toolchains should not require an sdk_source build setting when go_sdk.download(%s):\n%s", test.bootstrapAttr, toolchainsBuildData)
+				t.Fatalf("go_toolchains should not require an sdk_source build setting when go_sdk.download(%s):\n%s", test.bootstrapAttr, toolchainsBuildData)
 			}
 		})
 	}
@@ -408,7 +403,7 @@ go_sdk.download(
     version = "1.26.0",
     experimental_build_compiler_from_source = True,
 )
-use_repo(go_sdk, "go_sdk_toolchains")
+use_repo(go_sdk, "go_host_compatible_sdk_label", "go_sdk")
 `)
 	if err := os.WriteFile("MODULE.bazel", buf.Bytes(), 0666); err != nil {
 		t.Fatal(err)
@@ -426,13 +421,7 @@ use_repo(go_sdk, "go_sdk_toolchains")
 		t.Fatal(err)
 	}
 
-	outputBase, err := bazel_testing.BazelOutput("info", "output_base")
-	if err != nil {
-		t.Fatal(err)
-	}
-	outputBasePath := strings.TrimSpace(string(outputBase))
-
-	defsPath := filepath.Join(outputBasePath, "external", "go_host_compatible_sdk_label", "defs.bzl")
+	defsPath := filepath.Join(repoDir(t, "go_host_compatible_sdk_label"), "defs.bzl")
 	defsData, err := os.ReadFile(defsPath)
 	if err != nil {
 		t.Fatalf("reading %s: %v", defsPath, err)
@@ -441,7 +430,7 @@ use_repo(go_sdk, "go_sdk_toolchains")
 		t.Fatalf("go_host_compatible_sdk_label should point to :host_compatible_root_file:\n%s", defsData)
 	}
 
-	sdkBuildPath := filepath.Join(outputBasePath, "external", "go_sdk", "BUILD.bazel")
+	sdkBuildPath := filepath.Join(repoDir(t, "go_sdk"), "BUILD.bazel")
 	sdkBuildData, err := os.ReadFile(sdkBuildPath)
 	if err != nil {
 		t.Fatalf("reading %s: %v", sdkBuildPath, err)
@@ -469,81 +458,12 @@ use_repo(go_sdk, "go_sdk_toolchains")
 	}
 }
 
-func TestCustomGoSDKHostCompatibleLabelBackwardCompatibility(t *testing.T) {
-	origModuleData, err := os.ReadFile("MODULE.bazel")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	i := bytes.Index(origModuleData, []byte("_host_go_sdk = use_extension"))
-	if i < 0 {
-		t.Fatal("could not find the default Go SDK declaration")
-	}
-
-	customSDKPath, err := filepath.Abs("custom_go_sdk")
-	if err != nil {
-		t.Fatalf("resolving custom SDK path: %v", err)
-	}
-	if err := os.MkdirAll(customSDKPath, 0777); err != nil {
-		t.Fatalf("creating custom SDK path: %v", err)
-	}
-	defer func() {
-		if err := os.RemoveAll(customSDKPath); err != nil {
-			t.Errorf("removing custom SDK path: %v", err)
-		}
-	}()
-	if err := os.WriteFile(filepath.Join(customSDKPath, "ROOT"), nil, 0666); err != nil {
-		t.Fatalf("creating custom SDK ROOT file: %v", err)
-	}
-
-	buf := &bytes.Buffer{}
-	buf.Write(origModuleData[:i])
-	buf.WriteString("go_sdk = use_extension(\"@io_bazel_rules_go//go:extensions.bzl\", \"go_sdk\")\n")
-	buf.WriteString(`
-load("@bazel_tools//tools/build_defs/repo:local.bzl", "new_local_repository")
-
-new_local_repository(
-    name = "go_sdk",
-    path = "`)
-	buf.WriteString(filepath.ToSlash(customSDKPath))
-	buf.WriteString(`",
-    build_file_content = """package(default_visibility = ["//visibility:public"])
-exports_files(["ROOT"])
-""",
-)
-
-`)
-	if err := os.WriteFile("MODULE.bazel", buf.Bytes(), 0666); err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err := os.WriteFile("MODULE.bazel", origModuleData, 0666); err != nil {
-			t.Errorf("error restoring MODULE.bazel: %v", err)
-		}
-	}()
-
-	if err := bazel_testing.RunBazel(
-		"query",
-		"set(@go_host_compatible_sdk_label//:all @go_sdk//:ROOT)",
-	); err != nil {
-		t.Fatal(err)
-	}
-
-	outputBase, err := bazel_testing.BazelOutput("info", "output_base")
-	if err != nil {
-		t.Fatal(err)
-	}
-	outputBasePath := strings.TrimSpace(string(outputBase))
-
-	defsPath := filepath.Join(outputBasePath, "external", "go_host_compatible_sdk_label", "defs.bzl")
-	defsData, err := os.ReadFile(defsPath)
-	if err != nil {
-		t.Fatalf("reading %s: %v", defsPath, err)
-	}
-	if !bytes.Contains(defsData, []byte(`HOST_COMPATIBLE_SDK = Label("@go_sdk//:ROOT")`)) {
-		t.Fatalf("go_host_compatible_sdk_label should point to :ROOT for custom go_sdk repos:\n%s", defsData)
-	}
-}
+// TestCustomGoSDKHostCompatibleLabelBackwardCompatibility used to cover
+// go_register_toolchains picking up a user-declared @go_sdk repository that
+// only exposes :ROOT. That is WORKSPACE-only behavior in
+// //go/private:repositories.bzl and can't be expressed in a MODULE.bazel test
+// workspace; TestExperimentalBootstrapHostCompatibleSDKRoot covers the Bzlmod
+// path.
 
 func TestExperimentalBootstrapWithBzlmod(t *testing.T) {
 	origModuleData, err := os.ReadFile("MODULE.bazel")
@@ -598,4 +518,27 @@ use_repo(go_sdk, "go_sdk")
 	); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// repoDir returns the directory of an external repository. Its name below the
+// output base is the canonical repository name, which isn't known statically.
+func repoDir(t *testing.T, repo string) string {
+	t.Helper()
+	outputBase, err := bazel_testing.BazelOutput("info", "output_base")
+	if err != nil {
+		t.Fatal(err)
+	}
+	mapping, err := bazel_testing.BazelOutput("mod", "dump_repo_mapping", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var apparentToCanonical map[string]string
+	if err := json.Unmarshal(mapping, &apparentToCanonical); err != nil {
+		t.Fatalf("parsing repo mapping: %v", err)
+	}
+	canonical, ok := apparentToCanonical[repo]
+	if !ok {
+		t.Fatalf("no repository visible as %q", repo)
+	}
+	return filepath.Join(strings.TrimSpace(string(outputBase)), "external", canonical)
 }
