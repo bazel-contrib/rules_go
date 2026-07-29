@@ -21,6 +21,11 @@ load(
     "BuildSettingInfo",
 )
 load(
+    "@io_bazel_rules_nogo//:scope.bzl",
+    NOGO_EXCLUDES = "EXCLUDES",
+    NOGO_INCLUDES = "INCLUDES",
+)
+load(
     "@rules_cc//cc:action_names.bzl",
     "CPP_COMPILE_ACTION_NAME",
     "CPP_LINK_DYNAMIC_LIBRARY_ACTION_NAME",
@@ -33,11 +38,6 @@ load(
 load(
     "@rules_cc//cc:find_cc_toolchain.bzl",
     "find_cc_toolchain",
-)
-load(
-    "@io_bazel_rules_nogo//:scope.bzl",
-    NOGO_EXCLUDES = "EXCLUDES",
-    NOGO_INCLUDES = "INCLUDES",
 )
 load("@rules_cc//cc/common:cc_common.bzl", "cc_common")
 load(
@@ -92,6 +92,35 @@ CGO_TOOLCHAINS = [
     config_common.toolchain_type(CPP_TOOLCHAIN_TYPE, mandatory = False),
 ]
 CGO_FRAGMENTS = ["apple", "cpp"]
+
+def go_rule(implementation, attrs = None, fragments = None, toolchains = None, **kwargs):
+    """Declares a rule with the toolchains and fragments required by go_context.
+
+    Args:
+        implementation: The implementation function passed to rule.
+        attrs: Additional rule attributes.
+        fragments: Additional configuration fragments.
+        toolchains: Additional toolchain requirements.
+        **kwargs: Additional keyword arguments passed to rule.
+
+    Returns:
+        A rule that can call go_context.
+    """
+    rule_attrs = (attrs or {}) | CGO_ATTRS
+    rule_fragments = list(fragments or [])
+    for fragment in CGO_FRAGMENTS:
+        if fragment not in rule_fragments:
+            rule_fragments.append(fragment)
+
+    rule_toolchains = [GO_TOOLCHAIN] + CGO_TOOLCHAINS + list(toolchains or [])
+
+    return rule(
+        implementation = implementation,
+        attrs = rule_attrs,
+        fragments = rule_fragments,
+        toolchains = rule_toolchains,
+        **kwargs
+    )
 
 # cgo requires a gcc/clang style compiler.
 # We use a denylist instead of an allowlist:
@@ -589,6 +618,13 @@ def go_context(
     )
 
     needs_cgo_context = maybe_needs_cc_toolchain or go_config_info != None
+    if not cgo_disabled and go_config_info != None and CPP_TOOLCHAIN_TYPE not in ctx.toolchains:
+        fail((
+            "{} calls go_context() without declaring the C++ toolchain, " +
+            "configuration fragments, and attributes required by rules_go. " +
+            "Define this rule with go_rule(...) instead of rule(...): " +
+            "load(\"@io_bazel_rules_go//go:def.bzl\", \"go_context\", \"go_rule\")."
+        ).format(ctx.label))
     if not cgo_disabled and needs_cgo_context and CPP_TOOLCHAIN_TYPE in ctx.toolchains:
         cgo_context_info = cgo_context_data_impl(ctx)
 

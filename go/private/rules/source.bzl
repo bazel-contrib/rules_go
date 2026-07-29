@@ -13,12 +13,9 @@
 # limitations under the License.
 
 load(
-    "//go/private:common.bzl",
-    "GO_TOOLCHAIN",
-)
-load(
     "//go/private:context.bzl",
     "go_context",
+    "go_rule",
     "new_go_info",
 )
 load(
@@ -40,7 +37,7 @@ def _go_source_impl(ctx):
         ),
     ]
 
-go_source = rule(
+go_source = go_rule(
     implementation = _go_source_impl,
     attrs = {
         "data": attr.label_list(
@@ -83,7 +80,6 @@ go_source = rule(
         ),
         "_go_config": attr.label(default = "//:go_config"),
     },
-    toolchains = [GO_TOOLCHAIN],
     provides = [GoInfo],
     doc = """This declares a set of source files and related dependencies that can be embedded into one of the
     other rules.

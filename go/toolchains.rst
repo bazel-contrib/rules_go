@@ -275,28 +275,26 @@ The SDK will use the bootstrapped compiler/linker binaries directly.
 Writing new Go rules
 ~~~~~~~~~~~~~~~~~~~~
 
-If you are writing a new Bazel rule that uses the Go toolchain, you need to
-do several things to ensure you have full access to the toolchain and common
-dependencies.
+If you are writing a new Bazel rule that uses the Go toolchain, declare it with
+``go_rule`` instead of ``rule``. ``go_rule`` adds the Go toolchain, the optional
+C/C++ toolchain, the Apple and C++ configuration fragments, and the implicit
+attributes needed by ``go_context``. The C/C++ toolchain remains optional so
+that pure Go and cross-compiling rules do not require a C/C++ toolchain.
 
-* Declare a dependency on a toolchain of type
-  ``@io_bazel_rules_go//go:toolchain``. Bazel will select an appropriate,
-  registered toolchain automatically.
-* Declare an implicit attribute named ``_go_context_data`` that defaults to
-  ``@io_bazel_rules_go//:go_context_data``. This target gathers configuration
-  information and several common dependencies.
-* Use the ``go_context`` function to gain access to `the context`_. This is
-  your main interface to the Go toolchain.
+Declare an implicit attribute named ``_go_context_data`` that defaults to
+``@io_bazel_rules_go//:go_context_data`` when the rule needs the standard
+library and target Go configuration. Rules that only need the Go SDK can omit
+this attribute. Use ``go_context`` to gain access to `the context`_.
 
 .. code:: bzl
 
-    load("@io_bazel_rules_go//go:def.bzl", "go_context")
+    load("@io_bazel_rules_go//go:def.bzl", "go_context", "go_rule")
 
     def _my_rule_impl(ctx):
         go = go_context(ctx)
         ...
 
-    my_rule = rule(
+    my_rule = go_rule(
         implementation = _my_rule_impl,
         attrs = {
             ...
@@ -304,7 +302,6 @@ dependencies.
                 default = "@io_bazel_rules_go//:go_context_data",
             ),
         },
-        toolchains = ["@io_bazel_rules_go//go:toolchain"],
     )
 
 
