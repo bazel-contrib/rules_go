@@ -130,12 +130,6 @@ tasks:
       - "//..."
       - "-//docs:all"
   rbe_ubuntu2404:
-    # TODO: Run on the default Bazel version again once the remote executor
-    # reports empty output directories. GoCompilePkg declares one for the
-    # cgo-generated sources, which stays empty whenever cgo is enabled on a
-    # package that turns out not to use it. Bazel 8 and 9 fail the build when a
-    # declared output doesn't come back, Bazel 7 tolerates it.
-    bazel: 7.*
     build_flags:
       - "--per_file_copt=external/.*@-w"
       - "--host_per_file_copt=external/.*@-w"
