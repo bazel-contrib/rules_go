@@ -530,6 +530,7 @@ local_path_override(
 )
 
 # Test workspaces used to get this for free from the WORKSPACE setup.
+bazel_dep(name = "platforms", version = "0.0.11")
 bazel_dep(name = "rules_cc", version = "{{.RulesCCVersion}}")
 
 {{if .GoSDKPath}}
@@ -545,10 +546,13 @@ _new_local_repository(
 # declare itself.
 _host_go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk")
 _host_go_sdk.wrap(
-    name = "go_sdk",
     root_file = "@local_go_sdk//:ROOT",
 )
-use_repo(_host_go_sdk, "go_sdk")
+
+# The wrap tag has no name attribute; "main___wrap_0" is what the go_sdk
+# extension derives for the first wrap tag of a root module. Expose it as
+# @go_sdk, which is the name fixtures used under WORKSPACE.
+use_repo(_host_go_sdk, go_sdk = "main___wrap_0")
 {{if .Nogo}}
 # Custom nogo analyzers need the analysis framework, which the WORKSPACE setup
 # used to provide via go_rules_dependencies.

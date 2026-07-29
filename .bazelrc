@@ -43,10 +43,10 @@ build:incompatible --incompatible_enforce_config_setting_visibility
 build:incompatible --incompatible_disallow_empty_glob
 build:incompatible --incompatible_disable_starlark_host_transitions
 build:incompatible --nolegacy_external_runfiles
-# Neither --incompatible_enable_proto_toolchain_resolution nor
-# --incompatible_auto_exec_groups is enabled here: together they fail in
-# protobuf's protoc authenticity check, which calls ctx.actions.run_shell
-# without a toolchain, and proto toolchain resolution is on by default as of
-# Bazel 9. The bcr_tests_proto CI task covers proto toolchain resolution.
+# TODO: Add --incompatible_auto_exec_groups back once protobuf's protoc
+# authenticity check passes a toolchain to ctx.actions.run_shell. Until then it
+# fails together with proto toolchain resolution, which is on by default as of
+# Bazel 9, so neither flag can be enabled here. The bcr_tests_proto CI task
+# covers proto toolchain resolution in the meantime.
 # Also enable all incompatible flags in go_bazel_test by default.
 test:incompatible --test_env=GO_BAZEL_TEST_BAZELFLAGS='--incompatible_disallow_empty_glob --incompatible_load_proto_rules_from_bzl --incompatible_enable_cc_toolchain_resolution --incompatible_config_setting_private_default_visibility --incompatible_enforce_config_setting_visibility --incompatible_disable_starlark_host_transitions --nolegacy_external_runfiles'

@@ -251,7 +251,16 @@ func Test(t *testing.T) {
 		// nominally different per workspace (but in these tests, the go_sdk paths are all set to the same
 		// path in WORKSPACE) -- so if this path is in the builder binary, then builds between workspaces
 		// would be partially non cacheable.
-		builder_file, err := os.Open(filepath.Join(dirs[0], "bazel-bin", "external", "go_sdk", "builder"))
+		// The SDK's directory below bazel-bin/external is its canonical
+		// repository name, which isn't known statically.
+		builderPaths, err := filepath.Glob(filepath.Join(dirs[0], "bazel-bin", "external", "*go_sdk*", "builder"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(builderPaths) != 1 {
+			t.Fatalf("expected exactly one builder binary, got %v", builderPaths)
+		}
+		builder_file, err := os.Open(builderPaths[0])
 		if err != nil {
 			t.Fatal(err)
 		}

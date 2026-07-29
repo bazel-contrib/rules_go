@@ -28,7 +28,6 @@ func TestMain(m *testing.M) {
 		Main: `
 -- src/BUILD.bazel --
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
-
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_cross_binary")
 load(":rules.bzl", "no_runfiles_check")
 
@@ -78,7 +77,8 @@ int main() {}
 def _no_runfiles_check_impl(ctx):
     runfiles = ctx.attr.target[DefaultInfo].default_runfiles.files.to_list()
     for runfile in runfiles:
-        if runfile.short_path not in ["src/main", "src/main.exe"]:
+        # As of Bazel 9, cc_binary adds a stub used by bazel run.
+        if runfile.short_path not in ["src/main", "src/main.exe", "src/fake_executable_for_bazel_run"]:
             fail("Unexpected runfile: %s" % runfile.short_path)
 
 no_runfiles_check = rule(

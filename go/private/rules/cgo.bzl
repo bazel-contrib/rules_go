@@ -13,7 +13,6 @@
 # limitations under the License.
 
 load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
-load("//go/private/actions:utils.bzl", "quote_opts")
 load(
     "//go/private:common.bzl",
     "get_versioned_shared_lib_extension",
@@ -26,6 +25,7 @@ load(
     "extldflags_from_cc_toolchain",
     "runtime_libs_from_cc_toolchain",
 )
+load("//go/private/actions:utils.bzl", "quote_opts")
 
 _CXX_SOURCE_EXTENSIONS = {
     "cc": None,
