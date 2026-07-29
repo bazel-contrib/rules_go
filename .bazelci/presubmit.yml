@@ -209,8 +209,10 @@ tasks:
       # go_bazel_test runs bazel in a test workspace. It needs the same flags as
       # above. The platform is referred to by canonical name because bazel info,
       # which the tests use to locate their test logs, doesn't apply the main
-      # repository mapping to labels on the command line.
-      - "--test_env=GO_BAZEL_TEST_BAZELFLAGS=--cpu=x64_windows --compiler=mingw-gcc --extra_toolchains=@local_config_cc//:cc-toolchain-x64_windows_mingw --action_env=PATH --host_platform=@@rules_go+//go/toolchain:windows_amd64_cgo --incompatible_enable_cc_toolchain_resolution --cxxopt=-std=c++17 --host_cxxopt=-std=c++17"
+      # repository mapping to labels on the command line. Fixtures that build
+      # protobuf from source need C++17 and a statically linked runtime, which
+      # protoc otherwise can't find when it is run as a build tool.
+      - "--test_env=GO_BAZEL_TEST_BAZELFLAGS=--cpu=x64_windows --compiler=mingw-gcc --extra_toolchains=@local_config_cc//:cc-toolchain-x64_windows_mingw --action_env=PATH --host_platform=@@rules_go+//go/toolchain:windows_amd64_cgo --incompatible_enable_cc_toolchain_resolution --cxxopt=-std=c++17 --host_cxxopt=-std=c++17 --host_linkopt=-static-libstdc++ --host_linkopt=-static-libgcc"
       - "--test_env=PATH"
     test_targets:
       - "//..."
@@ -300,8 +302,10 @@ tasks:
       # go_bazel_test runs bazel in a test workspace. It needs the same flags as
       # above. The platform is referred to by canonical name because bazel info,
       # which the tests use to locate their test logs, doesn't apply the main
-      # repository mapping to labels on the command line.
-      - "--test_env=GO_BAZEL_TEST_BAZELFLAGS=--cpu=x64_windows --compiler=mingw-gcc --extra_toolchains=@local_config_cc//:cc-toolchain-x64_windows_mingw --action_env=PATH --host_platform=@@rules_go+//go/toolchain:windows_amd64_cgo --incompatible_enable_cc_toolchain_resolution --cxxopt=-std=c++17 --host_cxxopt=-std=c++17"
+      # repository mapping to labels on the command line. Fixtures that build
+      # protobuf from source need C++17 and a statically linked runtime, which
+      # protoc otherwise can't find when it is run as a build tool.
+      - "--test_env=GO_BAZEL_TEST_BAZELFLAGS=--cpu=x64_windows --compiler=mingw-gcc --extra_toolchains=@local_config_cc//:cc-toolchain-x64_windows_mingw --action_env=PATH --host_platform=@@rules_go+//go/toolchain:windows_amd64_cgo --incompatible_enable_cc_toolchain_resolution --cxxopt=-std=c++17 --host_cxxopt=-std=c++17 --host_linkopt=-static-libstdc++ --host_linkopt=-static-libgcc"
       - "--test_env=PATH"
   ubuntu_basic_gazelle_example:
     name: Basic Gazelle example on Ubuntu
@@ -341,6 +345,8 @@ tasks:
       # go_bazel_test runs bazel in a test workspace. It needs the same flags as
       # above. The platform is referred to by canonical name because bazel info,
       # which the tests use to locate their test logs, doesn't apply the main
-      # repository mapping to labels on the command line.
-      - "--test_env=GO_BAZEL_TEST_BAZELFLAGS=--cpu=x64_windows --compiler=mingw-gcc --extra_toolchains=@local_config_cc//:cc-toolchain-x64_windows_mingw --action_env=PATH --host_platform=@@rules_go+//go/toolchain:windows_amd64_cgo --incompatible_enable_cc_toolchain_resolution --cxxopt=-std=c++17 --host_cxxopt=-std=c++17"
+      # repository mapping to labels on the command line. Fixtures that build
+      # protobuf from source need C++17 and a statically linked runtime, which
+      # protoc otherwise can't find when it is run as a build tool.
+      - "--test_env=GO_BAZEL_TEST_BAZELFLAGS=--cpu=x64_windows --compiler=mingw-gcc --extra_toolchains=@local_config_cc//:cc-toolchain-x64_windows_mingw --action_env=PATH --host_platform=@@rules_go+//go/toolchain:windows_amd64_cgo --incompatible_enable_cc_toolchain_resolution --cxxopt=-std=c++17 --host_cxxopt=-std=c++17 --host_linkopt=-static-libstdc++ --host_linkopt=-static-libgcc"
       - "--test_env=PATH"
