@@ -60,11 +60,22 @@ const origWrapSDK = `_host_go_sdk.wrap(
     root_file = "@local_go_sdk//:ROOT",
 )`
 
-const toolchain120 = `_host_go_sdk.download(version = "1.20rc1")`
+const toolchain120 = `_host_go_sdk.download(
+    name = "go_sdk",
+    version = "1.20rc1",
+)`
+
+// The wrapped SDK's repository name is derived by the extension, the downloaded
+// one is named explicitly.
+const origUseRepo = `use_repo(_host_go_sdk, go_sdk = "main___wrap_0")`
+
+const downloadUseRepo = `use_repo(_host_go_sdk, "go_sdk")`
 
 func TestBoringcryptoExperimentPresent(t *testing.T) {
 	mustReplaceInFile(t, "MODULE.bazel", origWrapSDK, toolchain120)
 	defer mustReplaceInFile(t, "MODULE.bazel", toolchain120, origWrapSDK)
+	mustReplaceInFile(t, "MODULE.bazel", origUseRepo, downloadUseRepo)
+	defer mustReplaceInFile(t, "MODULE.bazel", downloadUseRepo, origUseRepo)
 
 	cmd := bazel_testing.BazelCmd("build", "//:program")
 	cmd.Stdout = os.Stdout

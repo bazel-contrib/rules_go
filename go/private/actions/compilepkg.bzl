@@ -43,6 +43,11 @@ def _facts(v):
 def _embedroot_arg(src):
     return src.root.path
 
+def _go_srcs_only(f):
+    # The cgo sources directory carries a marker file so that it is never
+    # empty, which remote execution requires of declared output directories.
+    return f.path if f.extension == "go" else None
+
 def _embedlookupdir_arg(src):
     root_relative = src.dirname[len(src.root.path):]
     if root_relative.startswith("/"):
@@ -249,7 +254,7 @@ def _run_nogo(
     nogo_args = go.tool_args(go)
     if cgo_go_srcs:
         inputs_direct.append(cgo_go_srcs)
-        nogo_args.add_all([cgo_go_srcs], before_each = "-ignore_src")
+        nogo_args.add_all([cgo_go_srcs], before_each = "-ignore_src", map_each = _go_srcs_only)
 
     nogo_args.add_all(archives, before_each = "-facts", map_each = _facts)
     if not out_validation:
