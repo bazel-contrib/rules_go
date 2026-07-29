@@ -541,6 +541,11 @@ local_path_override(
 bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "rules_cc", version = "{{.RulesCCVersion}}")
 
+# GO_BAZEL_TEST_BAZELFLAGS refers to this repository on Windows, where the
+# mingw toolchain has to be requested explicitly.
+_cc_configure = use_extension("@rules_cc//cc:extensions.bzl", "cc_configure_extension")
+use_repo(_cc_configure, "local_config_cc")
+
 {{if .GoSDKPath}}
 _new_local_repository = use_repo_rule("@bazel_tools//tools/build_defs/repo:local.bzl", "new_local_repository")
 
