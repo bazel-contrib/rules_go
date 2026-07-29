@@ -54,8 +54,21 @@ tasks:
       - "--config=incompatible"
     build_targets:
       - "//..."
+      # Stardoc's output depends on the Bazel version, so the checked-in docs
+      # can only match one. See the dedicated docs task below.
+      - "-//docs:all"
     test_targets:
       - "//..."
+      - "-//docs:all"
+  docs:
+    # Runs with the default Bazel version from .bazelversion, which is the one
+    # the checked-in docs are generated with.
+    name: Docs
+    platform: ubuntu2404
+    build_targets:
+      - "//docs/..."
+    test_targets:
+      - "//docs/..."
   debian11_zig_cc:
     platform: debian11
     build_flags:
@@ -112,6 +125,7 @@ tasks:
       - "--extra_toolchains=@local_config_apple_cc_toolchains//:all"
     build_targets:
       - "//..."
+      - "-//docs:all"
       - "--"
     test_flags:
       - "--apple_crosstool_top=@local_config_apple_cc//:toolchain"
@@ -120,6 +134,7 @@ tasks:
       - "--extra_toolchains=@local_config_apple_cc_toolchains//:all"
     test_targets:
       - "//..."
+      - "-//docs:all"
   rbe_ubuntu2404:
     build_flags:
       - "--per_file_copt=external/.*@-w"

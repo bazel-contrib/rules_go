@@ -360,11 +360,22 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 		return "", cleanup, err
 	}
 
+	// Extract test files for the main repository.
+	if err := extractTxtar(mainDir, args.Main); err != nil {
+		return "", cleanup, fmt.Errorf("building main workspace: %v", err)
+	}
+
+	// Tests that customize the generated WORKSPACE file, or bring their own,
+	// can't be expressed with a MODULE.bazel file and keep using WORKSPACE.
+	// Bazel 9 no longer supports it, so those only run on older versions.
+	_, workspaceErr := os.Stat(filepath.Join(mainDir, "WORKSPACE"))
+	useWorkspace := args.WorkspacePrefix != "" || args.WorkspaceSuffix != "" || workspaceErr == nil
+
 	// Create a .bazelrc file with the contents of GO_BAZEL_TEST_BAZELFLAGS is set.
 	// The test can override this with its own .bazelrc or with flags in commands.
 	bazelrcPath := filepath.Join(mainDir, ".bazelrc")
 	bazelrcBuf := &bytes.Buffer{}
-	if args.ModuleFileSuffix == "" {
+	if useWorkspace {
 		// Bazel 8 disables WORKSPACE by default, so asking for it explicitly is
 		// required to not end up with neither dependency system enabled.
 		fmt.Fprintf(bazelrcBuf, "common --noenable_bzlmod --enable_workspace\n")
@@ -381,14 +392,20 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 		return "", cleanup, err
 	}
 
-	// Extract test files for the main repository.
-	if err := extractTxtar(mainDir, args.Main); err != nil {
-		return "", cleanup, fmt.Errorf("building main workspace: %v", err)
+	goRootFilePath, err := runfiles.Rlocation(goRootFile)
+	if err != nil {
+		return "", cleanup, fmt.Errorf("unknown runfile %s: %v", goRootFile, err)
 	}
+	// TODO: This is only necessary because of https://github.com/golang/go/issues/59924.
+	goRootFileRealPath, err := filepath.EvalSymlinks(goRootFilePath)
+	if err != nil {
+		return "", cleanup, fmt.Errorf("unknown runfile %s: %v", goRootFile, err)
+	}
+	goSDKPath := strings.ReplaceAll(filepath.Dir(goRootFileRealPath), "\\", "\\\\")
 
 	// If there's no WORKSPACE file, create one.
 	workspacePath := filepath.Join(mainDir, "WORKSPACE")
-	if _, err = os.Stat(workspacePath); os.IsNotExist(err) {
+	if _, err = os.Stat(workspacePath); os.IsNotExist(err) && useWorkspace {
 		var w *os.File
 		w, err = os.Create(workspacePath)
 		if err != nil {
@@ -399,15 +416,6 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 				err = cerr
 			}
 		}()
-		goRootFilePath, err := runfiles.Rlocation(goRootFile)
-		if err != nil {
-			return "", cleanup, fmt.Errorf("unknown runfile %s: %v", goRootFile, err)
-		}
-		// TODO: This is only necessary because of https://github.com/golang/go/issues/59924.
-		goRootFileRealPath, err := filepath.EvalSymlinks(goRootFilePath)
-		if err != nil {
-			return "", cleanup, fmt.Errorf("unknown runfile %s: %v", goRootFile, err)
-		}
 		info := workspaceTemplateInfo{
 			TestedModuleRepoName: testedModuleRepoName,
 			TestedModulePath:     strings.ReplaceAll(testedRepoDir, "\\", "\\\\"),
@@ -416,18 +424,21 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 			Nogo:                 args.Nogo,
 			NogoIncludes:         args.NogoIncludes,
 			NogoExcludes:         args.NogoExcludes,
-			GoSDKPath:            strings.ReplaceAll(filepath.Dir(goRootFileRealPath), "\\", "\\\\"),
+			GoSDKPath:            goSDKPath,
 		}
 		if err := defaultWorkspaceTpl.Execute(w, info); err != nil {
 			return "", cleanup, err
 		}
 	}
 
-	// If a MODULE.bazel file is requested, create one.
-	if args.ModuleFileSuffix != "" {
+	// If there's no MODULE.bazel file, create one.
+	if !useWorkspace {
 		moduleBazelPath := filepath.Join(mainDir, "MODULE.bazel")
 		if _, err = os.Stat(moduleBazelPath); err == nil {
-			return "", cleanup, fmt.Errorf("ModuleFileSuffix set but MODULE.bazel exists")
+			if args.ModuleFileSuffix != "" {
+				return "", cleanup, fmt.Errorf("ModuleFileSuffix set but MODULE.bazel exists")
+			}
+			return mainDir, cleanup, nil
 		}
 		var w *os.File
 		w, err = os.Create(moduleBazelPath)
@@ -443,6 +454,10 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 			TestedModuleName:     testedModuleName,
 			TestedModuleRepoName: testedModuleRepoName,
 			TestedModulePath:     strings.ReplaceAll(testedRepoDir, "\\", "\\\\"),
+			GoSDKPath:            goSDKPath,
+			Nogo:                 args.Nogo,
+			NogoIncludes:         args.NogoIncludes,
+			NogoExcludes:         args.NogoExcludes,
 			Suffix:               args.ModuleFileSuffix,
 		}
 		if err := defaultModuleBazelTpl.Execute(w, info); err != nil {
@@ -561,16 +576,53 @@ type moduleFileTemplateInfo struct {
 	TestedModuleName     string
 	TestedModuleRepoName string
 	TestedModulePath     string
+	GoSDKPath            string
+	Nogo                 string
+	NogoIncludes         []string
+	NogoExcludes         []string
 	Suffix               string
 }
 
-// TODO: Also reuse the current Go SDK as in the WORKSPACE file.
 var defaultModuleBazelTpl = template.Must(template.New("").Parse(`
 bazel_dep(name = "{{.TestedModuleName}}", repo_name = "{{.TestedModuleRepoName}}")
 local_path_override(
     module_name = "{{.TestedModuleName}}",
     path = "{{.TestedModulePath}}",
 )
+
+{{if .GoSDKPath}}
+new_local_repository = use_repo_rule("@bazel_tools//tools/build_defs/repo:local.bzl", "new_local_repository")
+
+new_local_repository(
+    name = "local_go_sdk",
+    path = "{{.GoSDKPath}}",
+    build_file_content = "",
+)
+
+go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk")
+go_sdk.wrap(
+    root_file = "@local_go_sdk//:ROOT",
+)
+{{if .Nogo}}
+go_sdk.nogo(
+    nogo = "{{.Nogo}}",
+    {{ if .NogoIncludes }}
+    includes = [
+    {{range .NogoIncludes }}
+        "{{ . }}",
+    {{ end }}
+    ],
+    {{ end}}
+    {{ if .NogoExcludes }}
+    excludes = [
+    {{range .NogoExcludes }}
+        "{{ . }}",
+    {{ end }}
+    ],
+    {{ end}}
+)
+{{end}}
+{{end}}
 {{.Suffix}}
 `))
 

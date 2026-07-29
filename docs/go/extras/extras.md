@@ -33,7 +33,7 @@ This rule has moved. See [gazelle rule] in the Gazelle repository.
 load("@rules_go//docs/go/extras:extras.bzl", "gomock")
 
 gomock(<a href="#gomock-name">name</a>, <a href="#gomock-out">out</a>, <a href="#gomock-library">library</a>, <a href="#gomock-source_importpath">source_importpath</a>, <a href="#gomock-source">source</a>, <a href="#gomock-interfaces">interfaces</a>, <a href="#gomock-package">package</a>, <a href="#gomock-self_package">self_package</a>, <a href="#gomock-aux_files">aux_files</a>,
-       <a href="#gomock-mockgen_tool">mockgen_tool</a>, <a href="#gomock-mockgen_args">mockgen_args</a>, <a href="#gomock-imports">imports</a>, <a href="#gomock-copyright_file">copyright_file</a>, <a href="#gomock-mock_names">mock_names</a>, <a href="#gomock-kwargs">kwargs</a>)
+       <a href="#gomock-mockgen_tool">mockgen_tool</a>, <a href="#gomock-mockgen_args">mockgen_args</a>, <a href="#gomock-imports">imports</a>, <a href="#gomock-copyright_file">copyright_file</a>, <a href="#gomock-mock_names">mock_names</a>, <a href="#gomock-kwargs">**kwargs</a>)
 </pre>
 
 Calls [mockgen](https://github.com/golang/mock) to generates a Go file containing mocks from the given library.
