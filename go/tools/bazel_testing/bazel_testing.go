@@ -32,6 +32,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"text/template"
@@ -406,6 +407,7 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 			TestedModuleRepoName: testedModuleRepoName,
 			TestedModulePath:     strings.ReplaceAll(testedRepoDir, "\\", "\\\\"),
 			GoSDKPath:            goSDKPath,
+			RulesCCVersion:       rulesCCVersion(),
 			Nogo:                 args.Nogo,
 			NogoIncludes:         args.NogoIncludes,
 			NogoExcludes:         args.NogoExcludes,
@@ -417,6 +419,47 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 	}
 
 	return mainDir, cleanup, nil
+}
+
+// rulesCCVersion picks the oldest rules_cc that works with the Bazel version
+// under test. Bazel 7 cannot load rules_cc 0.2.14 and later, which introduced
+// the compatibility proxy, while the C++ toolchain of releases before 0.2.18
+// emits a malformed -fuse-ld flag on macOS. Bazel 9 selects a new enough
+// version through its own dependencies either way.
+func rulesCCVersion() string {
+	if bazelMajorVersion() >= 8 {
+		return "0.2.18"
+	}
+	return "0.2.13"
+}
+
+// bazelMajorVersion returns the major version of the bazel binary on PATH, or 0
+// if it can't be determined.
+func bazelMajorVersion() int {
+	// --version can't be combined with other startup options, so this doesn't
+	// go through BazelCmd.
+	cmd := exec.Command("bazel", "--version")
+	for _, e := range os.Environ() {
+		if strings.HasPrefix(e, "TEST_") || strings.HasPrefix(e, "RUNFILES_") {
+			continue
+		}
+		cmd.Env = append(cmd.Env, e)
+	}
+	out, err := cmd.Output()
+	if err != nil {
+		return 0
+	}
+	// The output has the form "bazel <version>".
+	fields := strings.Fields(string(out))
+	if len(fields) < 2 {
+		return 0
+	}
+	major, _, _ := strings.Cut(fields[1], ".")
+	n, err := strconv.Atoi(major)
+	if err != nil {
+		return 0
+	}
+	return n
 }
 
 func extractTxtar(dir, txt string) error {
@@ -458,6 +501,7 @@ type moduleFileTemplateInfo struct {
 	TestedModuleRepoName string
 	TestedModulePath     string
 	GoSDKPath            string
+	RulesCCVersion       string
 	Nogo                 string
 	NogoIncludes         []string
 	NogoExcludes         []string
@@ -471,10 +515,8 @@ local_path_override(
     path = "{{.TestedModulePath}}",
 )
 
-# Test workspaces used to get this for free from the WORKSPACE setup. Keep the
-# version in sync with the one in //:MODULE.bazel, the compatibility level has
-# to match.
-bazel_dep(name = "rules_cc", version = "0.2.18")
+# Test workspaces used to get this for free from the WORKSPACE setup.
+bazel_dep(name = "rules_cc", version = "{{.RulesCCVersion}}")
 
 {{if .GoSDKPath}}
 _new_local_repository = use_repo_rule("@bazel_tools//tools/build_defs/repo:local.bzl", "new_local_repository")

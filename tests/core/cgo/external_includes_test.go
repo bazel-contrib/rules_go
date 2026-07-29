@@ -26,7 +26,7 @@ func TestMain(m *testing.M) {
 -- other_repo/MODULE.bazel --
 module(name = "other_repo")
 bazel_dep(name = "rules_go", repo_name = "io_bazel_rules_go")
-bazel_dep(name = "rules_cc", version = "0.2.18")
+bazel_dep(name = "rules_cc", version = "0.1.5")
 -- other_repo/cc/BUILD.bazel --
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 

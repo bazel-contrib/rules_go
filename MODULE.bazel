@@ -12,7 +12,7 @@ bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "rules_proto", version = "7.0.2")
 bazel_dep(name = "protobuf", version = "29.0", repo_name = "com_google_protobuf")
 bazel_dep(name = "rules_shell", version = "0.3.0")
-bazel_dep(name = "rules_cc", version = "0.2.18")
+bazel_dep(name = "rules_cc", version = "0.1.5")
 
 go_sdk = use_extension("//go:extensions.bzl", "go_sdk")
 
@@ -178,7 +178,7 @@ bazel_dep(name = "bazel_ci_rules", version = "1.0.0", dev_dependency = True)
 # For testing the compatibility with a hermetic cc toolchain. Users should not
 # have to enable it. Referenced by the debian11_zig_cc CI task via
 # --extra_toolchains.
-bazel_dep(name = "hermetic_cc_toolchain", version = "4.2.0", dev_dependency = True)
+bazel_dep(name = "hermetic_cc_toolchain", version = "4.0.1", dev_dependency = True)
 
 zig_toolchains = use_extension("@hermetic_cc_toolchain//toolchain:ext.bzl", "toolchains", dev_dependency = True)
 use_repo(zig_toolchains, "zig_sdk")
