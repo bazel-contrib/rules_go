@@ -70,8 +70,12 @@ tasks:
       - "--test_env=ZIG_CC=1"
     build_targets:
       - "//..."
+      # Deliberately links against a symbol defined by a dependent, which the
+      # zig linker rejects.
+      - "-//tests/core/cgo:provide_external_symbol"
     test_targets:
       - "//..."
+      - "-//tests/core/cgo:provide_external_symbol"
   bcr_tests:
     name: BCR test module (Bazel {bazel})
     platform: ${{ platform }}
