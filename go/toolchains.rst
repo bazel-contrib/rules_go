@@ -275,11 +275,16 @@ The SDK will use the bootstrapped compiler/linker binaries directly.
 Writing new Go rules
 ~~~~~~~~~~~~~~~~~~~~
 
-If you are writing a new Bazel rule that uses the Go toolchain, declare it with
-``go_rule`` instead of ``rule``. ``go_rule`` adds the Go toolchain, the optional
-C/C++ toolchain, the Apple and C++ configuration fragments, and the implicit
-attributes needed by ``go_context``. The C/C++ toolchain remains optional so
-that pure Go and cross-compiling rules do not require a C/C++ toolchain.
+If you are writing a new Bazel rule that may compile or link Go code with cgo,
+declare it with ``go_rule`` instead of ``rule``. ``go_rule`` adds the Go
+toolchain, the optional C/C++ toolchain, the Apple and C++ configuration
+fragments, and the implicit attributes needed by ``go_context``. The C/C++
+toolchain remains optional so that pure Go and cross-compiling rules do not
+require a C/C++ toolchain.
+
+Rules that only use the Go SDK or generate Go sources can use ``rule``, declare
+only the ``@io_bazel_rules_go//go:toolchain`` toolchain, and call
+``go_context(ctx, maybe_needs_cc_toolchain = False)``.
 
 Declare an implicit attribute named ``_go_context_data`` that defaults to
 ``@io_bazel_rules_go//:go_context_data`` when the rule needs the standard

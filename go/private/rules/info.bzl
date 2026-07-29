@@ -13,9 +13,12 @@
 # limitations under the License.
 
 load(
+    "//go/private:common.bzl",
+    "GO_TOOLCHAIN",
+)
+load(
     "//go/private:context.bzl",
     "go_context",
-    "go_rule",
 )
 
 def _dirname(file):
@@ -42,7 +45,7 @@ def _go_info_impl(ctx):
         runfiles = ctx.runfiles([report]),
     )]
 
-_go_info = go_rule(
+_go_info = rule(
     implementation = _go_info_impl,
     attrs = {
         "_go_info": attr.label(
@@ -54,6 +57,7 @@ _go_info = go_rule(
             default = "//:go_context_data",
         ),
     },
+    toolchains = [GO_TOOLCHAIN],
 )
 
 def go_info():

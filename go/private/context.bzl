@@ -609,18 +609,24 @@ def go_context(
         ctx.target_platform_has_constraint(attr._pure_constraint[platform_common.ConstraintValueInfo])
     )
 
+    has_cc_toolchain = CPP_TOOLCHAIN_TYPE in ctx.toolchains
+    requires_cc_toolchain = maybe_needs_cc_toolchain and (
+        _sources_use_cgo(attr, []) or getattr(attr, "pure", None) == "off"
+    )
     needs_cgo_context = maybe_needs_cc_toolchain or go_config_info != None
-    if not cgo_disabled and go_config_info != None and CPP_TOOLCHAIN_TYPE not in ctx.toolchains:
+    if not cgo_disabled and requires_cc_toolchain and go_config_info != None and not has_cc_toolchain:
         fail((
             "{} calls go_context() without declaring the C++ toolchain, " +
             "configuration fragments, and attributes required by rules_go. " +
             "Define this rule with go_rule(...) instead of rule(...): " +
             "load(\"@io_bazel_rules_go//go:def.bzl\", \"go_context\", \"go_rule\")."
         ).format(ctx.label))
-    if not cgo_disabled and needs_cgo_context and CPP_TOOLCHAIN_TYPE in ctx.toolchains:
+    if not cgo_disabled and needs_cgo_context and has_cc_toolchain:
         cgo_context_info = cgo_context_data_impl(ctx)
 
     cgo_available = cgo_context_info != None
+    if not has_cc_toolchain:
+        cgo_available = not cgo_disabled
 
     if goos == "auto" and goarch == "auto" and cgo_available and go_config_info != None and not go_config_info.pure:
         # Fast-path to reuse the GoConfigInfo as-is

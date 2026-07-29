@@ -15,7 +15,6 @@
 load(
     "@io_bazel_rules_go//go:def.bzl",
     "go_context",
-    "go_rule",
 )
 load(
     "//go/private:context.bzl",
@@ -55,7 +54,7 @@ def _gen_library_impl(ctx):
         DefaultInfo(files = depset([archive.data.file])),
     ]
 
-generated_embeded = go_rule(
+generated_embeded = rule(
     _gen_library_impl,
     attrs = {
         "importpath": attr.string(mandatory = True),
@@ -70,4 +69,5 @@ generated_embeded = go_rule(
         ),
         "libname": attr.string(default = "lib"),
     },
+    toolchains = ["@io_bazel_rules_go//go:toolchain"],
 )
