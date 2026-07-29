@@ -73,9 +73,14 @@ tasks:
       # Deliberately links against a symbol defined by a dependent, which the
       # zig linker rejects.
       - "-//tests/core/cgo:provide_external_symbol"
+      # Deprecated and unused by rules_go, but building it means building
+      # protobuf from source, whose upb generator uses linker section symbols
+      # the zig linker doesn't provide.
+      - "-//proto:protoc"
     test_targets:
       - "//..."
       - "-//tests/core/cgo:provide_external_symbol"
+      - "-//proto:protoc"
   bcr_tests:
     name: BCR test module (Bazel {bazel})
     platform: ${{ platform }}
