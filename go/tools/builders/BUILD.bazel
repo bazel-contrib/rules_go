@@ -3,6 +3,15 @@ load("//go/private:common.bzl", "RULES_GO_STDLIB_PREFIX")
 load("//go/private/rules:transition.bzl", "go_reset_target")
 
 go_test(
+    name = "cgo_response_test",
+    size = "small",
+    srcs = [
+        "cgo_response.go",
+        "cgo_response_test.go",
+    ],
+)
+
+go_test(
     name = "filter_test",
     size = "small",
     srcs = [
@@ -84,7 +93,6 @@ go_test(
     name = "nogo_version_test",
     size = "small",
     srcs = [
-        "nogo_goversions_go117.go",
         "nogo_goversions_go118.go",
         "nogo_goversions_go121.go",
         "nogo_goversions_go122.go",
@@ -103,6 +111,7 @@ filegroup(
         "builder.go",
         "cc.go",
         "cgo2.go",
+        "cgo_response.go",
         "compilepkg.go",
         "constants.go",
         "cover.go",
@@ -136,13 +145,10 @@ go_source(
         "env.go",
         "flags.go",
         "nogo_fix.go",
-        "nogo_goversions_go117.go",
         "nogo_goversions_go118.go",
         "nogo_goversions_go121.go",
         "nogo_goversions_go122.go",
         "nogo_main.go",
-        "nogo_typeparams_go117.go",
-        "nogo_typeparams_go118.go",
         "nogo_version.go",
         "nolint.go",
     ],

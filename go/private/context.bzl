@@ -21,6 +21,11 @@ load(
     "BuildSettingInfo",
 )
 load(
+    "@io_bazel_rules_nogo//:scope.bzl",
+    NOGO_EXCLUDES = "EXCLUDES",
+    NOGO_INCLUDES = "INCLUDES",
+)
+load(
     "@rules_cc//cc:action_names.bzl",
     "CPP_COMPILE_ACTION_NAME",
     "CPP_LINK_DYNAMIC_LIBRARY_ACTION_NAME",
@@ -33,11 +38,6 @@ load(
 load(
     "@rules_cc//cc:find_cc_toolchain.bzl",
     "find_cc_toolchain",
-)
-load(
-    "@io_bazel_rules_nogo//:scope.bzl",
-    NOGO_EXCLUDES = "EXCLUDES",
-    NOGO_INCLUDES = "INCLUDES",
 )
 load("@rules_cc//cc/common:cc_common.bzl", "cc_common")
 load(
@@ -92,6 +92,27 @@ CGO_TOOLCHAINS = [
     config_common.toolchain_type(CPP_TOOLCHAIN_TYPE, mandatory = False),
 ]
 CGO_FRAGMENTS = ["apple", "cpp"]
+
+def go_rule(implementation, attrs = {}, fragments = [], toolchains = [], **kwargs):
+    """Declares a rule with the toolchains and fragments required by go_context.
+
+    Args:
+        implementation: The implementation function passed to rule.
+        attrs: Additional rule attributes.
+        fragments: Additional configuration fragments.
+        toolchains: Additional toolchain requirements.
+        **kwargs: Additional keyword arguments passed to rule.
+
+    Returns:
+        A rule that can call go_context.
+    """
+    return rule(
+        implementation = implementation,
+        attrs = attrs | CGO_ATTRS,
+        fragments = fragments + CGO_FRAGMENTS,
+        toolchains = [GO_TOOLCHAIN] + CGO_TOOLCHAINS + toolchains,
+        **kwargs
+    )
 
 # cgo requires a gcc/clang style compiler.
 # We use a denylist instead of an allowlist:
@@ -224,7 +245,10 @@ def _builder_args(go, command = None):
     if command:
         args.add(command)
     sdk_root_file = go.sdk.root_file
-    args.add("-sdk", sdk_root_file.dirname)
+
+    # Use a file rather than sdk_root_file.dirname as the latter is just a
+    # string and thus not subject to path mapping.
+    args.add_all("-sdk", [sdk_root_file], map_each = _dirname, expand_directories = False)
 
     # Path mapping can't map the values of environment variables, so we need to pass GOROOT to the
     # action via an argument instead.
@@ -588,6 +612,13 @@ def go_context(
     needs_cgo_context = maybe_needs_cc_toolchain or go_config_info != None
     if not cgo_disabled and needs_cgo_context and CPP_TOOLCHAIN_TYPE in ctx.toolchains:
         cgo_context_info = cgo_context_data_impl(ctx)
+    elif not cgo_disabled and maybe_needs_cc_toolchain and _sources_use_cgo(attr, []):
+        fail((
+            "{} calls go_context() without declaring the C++ toolchain, " +
+            "configuration fragments, and attributes required by rules_go. " +
+            "Define this rule with go_rule(...) instead of rule(...): " +
+            "load(\"@io_bazel_rules_go//go:def.bzl\", \"go_context\", \"go_rule\")."
+        ).format(ctx.label))
 
     cgo_available = cgo_context_info != None
 

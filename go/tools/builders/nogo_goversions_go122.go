@@ -1,5 +1,4 @@
 //go:build go1.22
-// +build go1.22
 
 /* Copyright 2026 The Bazel Authors. All rights reserved.
 
@@ -22,13 +21,6 @@ import (
 	"go/ast"
 	"go/types"
 )
-
-// Go 1.22 is the first SDK where nogo can use both types.Config.GoVersion and
-// types.Info.FileVersions. Keeping that logic in a version-gated file avoids
-// compile-time references to newer go/types fields from older SDK builds.
-func initGoVersionConfig(config *types.Config, goVersion string) {
-	config.GoVersion = goVersion
-}
 
 func normalizeGoVersionForTypes(goVersion string) string {
 	return goVersion

@@ -9,11 +9,8 @@ go_binary(
 go_library(
     name = "releaser_lib",
     srcs = [
-        "boilerplate.go",
         "file.go",
-        "git.go",
         "github.go",
-        "prepare.go",
         "releaser.go",
         "run.go",
         "upgradedep.go",
@@ -31,14 +28,7 @@ go_library(
 
 go_test(
     name = "releaser_test",
-    srcs = [
-        "boilerplate_test.go",
-        "upgradedep_test.go",
-    ],
-    data = glob(["testdata/**"]),
+    srcs = ["upgradedep_test.go"],
     embed = [":releaser_lib"],
-    deps = [
-        "//go/runfiles",
-        "@com_github_bazelbuild_buildtools//build:go_default_library",
-    ],
+    deps = ["@com_github_bazelbuild_buildtools//build:go_default_library"],
 )

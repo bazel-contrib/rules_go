@@ -18,18 +18,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
 )
 
 // buildEmbedcfgFile writes an embedcfg file to be read by the compiler.
-// An embedcfg file can be used in Go 1.16 or higher if the "embed" package
-// is imported and there are one or more //go:embed comments in .go files.
+// An embedcfg file is used if the "embed" package is imported and there are
+// one or more //go:embed comments in .go files.
 // The embedcfg file maps //go:embed patterns to actual file names.
 //
 // The embedcfg file will be created in workDir, and its name is returned.
@@ -42,16 +40,6 @@ import (
 // outside those directories are ignored, since they can't be matched by any
 // valid pattern.
 func buildEmbedcfgFile(goSrcs []fileInfo, embedSrcs, embedRootDirs []string, workDir string) (string, error) {
-	// Check whether this package uses embedding and whether the toolchain
-	// supports it (Go 1.16+). With Go 1.15 and lower, we'll try to compile
-	// without an embedcfg file, and the compiler will complain the "embed"
-	// package is missing.
-	var major, minor int
-	if n, err := fmt.Sscanf(runtime.Version(), "go%d.%d", &major, &minor); n != 2 || err != nil {
-		// Can't parse go version. Maybe it's a development version; fall through.
-	} else if major < 1 || (major == 1 && minor < 16) {
-		return "", nil
-	}
 	importEmbed := false
 	haveEmbed := false
 	for _, src := range goSrcs {
@@ -112,7 +100,7 @@ func buildEmbedcfgFile(goSrcs []fileInfo, embedSrcs, embedRootDirs []string, wor
 		return "", err
 	}
 	embedcfgName := filepath.Join(workDir, "embedcfg")
-	if err := ioutil.WriteFile(embedcfgName, embedcfgData, 0o666); err != nil {
+	if err := os.WriteFile(embedcfgName, embedcfgData, 0o666); err != nil {
 		return "", err
 	}
 	return embedcfgName, nil

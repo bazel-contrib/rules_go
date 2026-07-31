@@ -1,0 +1,32 @@
+# Cut a release whenever a new tag is pushed to the repo.
+name: Release
+on:
+  push:
+    tags:
+      - "v*.*.*"
+permissions:
+  id-token: write
+  attestations: write
+  contents: write
+jobs:
+  release:
+    uses: bazel-contrib/.github/.github/workflows/release_ruleset.yaml@v7.7.0
+    with:
+      release_files: rules_go-*.zip
+      prerelease: false
+      tag_name: ${{ github.ref_name }}
+      draft: true
+  publish:
+    needs: release
+    uses: ./.github/workflows/publish.yaml
+    with:
+      tag_name: ${{ github.ref_name }}
+    secrets:
+      publish_token: ${{ secrets.publish_token || secrets.BCR_PUBLISH_TOKEN }}
+  finalize:
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
+        with:
+          tag_name: ${{ github.ref_name }}

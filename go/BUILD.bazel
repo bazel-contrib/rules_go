@@ -69,3 +69,30 @@ bzl_library(
         "//go/private:sdk",
     ],
 )
+
+bzl_library(
+    name = "go_binary",
+    srcs = ["go_binary.bzl"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/private/rules:wrappers",
+    ],
+)
+
+bzl_library(
+    name = "go_library",
+    srcs = ["go_library.bzl"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/private/rules:library",
+    ],
+)
+
+bzl_library(
+    name = "go_test",
+    srcs = ["go_test.bzl"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/private/rules:test",
+    ],
+)

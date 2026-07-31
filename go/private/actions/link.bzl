@@ -184,6 +184,7 @@ def emit_link(
         archive.libs,
         archive.cgo_deps,
         archive.cgo_link_inputs,
+        go.stdlib.cgo_link_inputs,
         go.cc_toolchain_files,
         go.sdk.tools,
         go.stdlib.libs,

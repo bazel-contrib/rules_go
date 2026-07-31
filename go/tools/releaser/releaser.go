@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// releaser is a tool for maintaining rules_go and Gazelle. It automates
-// multiple tasks related to preparing releases, like upgrading dependencies,
-// and uploading release artifacts.
+// releaser is a tool for maintaining rules_go. It automates the process of
+// upgrading dependencies declared in go_rules_dependencies. Releases
+// themselves are performed by the GitHub Actions workflows in
+// .github/workflows, which run when a release tag is pushed.
 package main
 
 import (
@@ -42,7 +43,6 @@ type command struct {
 
 var commands = []*command{
 	&helpCmd,
-	&prepareCmd,
 	&upgradeDepCmd,
 }
 

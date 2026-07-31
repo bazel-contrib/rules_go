@@ -522,10 +522,13 @@ func load(packagePath, goVersion string, imp *importer, filenames []string) (*go
 	}
 	pkg := &goPackage{fset: imp.fset, syntax: syntax}
 
-	config := types.Config{Importer: imp}
-	initGoVersionConfig(&config, goVersion)
+	config := types.Config{
+		GoVersion: goVersion,
+		Importer:  imp,
+	}
 	info := &types.Info{
 		Types:      make(map[ast.Expr]types.TypeAndValue),
+		Instances:  make(map[*ast.Ident]types.Instance),
 		Uses:       make(map[*ast.Ident]types.Object),
 		Defs:       make(map[*ast.Ident]types.Object),
 		Implicits:  make(map[ast.Node]types.Object),
@@ -534,7 +537,6 @@ func load(packagePath, goVersion string, imp *importer, filenames []string) (*go
 	}
 
 	initFileVersions(info)
-	initInstanceInfo(info)
 
 	types, err := config.Check(packagePath, pkg.fset, syntax, info)
 	if err != nil {

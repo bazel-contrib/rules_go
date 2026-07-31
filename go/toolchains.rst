@@ -47,6 +47,8 @@ containing sources for the Go toolchain and standard library and pre-compiled
 binaries for the same. You can download this from by visiting the `Go website`_
 and downloading a `binary distribution`_.
 
+rules_go requires Go SDK 1.18 or later.
+
 There are several Bazel rules for obtaining and configuring a Go SDK:
 
 * `go_download_sdk`_: downloads a toolchain for a specific version of Go for a
@@ -273,28 +275,31 @@ The SDK will use the bootstrapped compiler/linker binaries directly.
 Writing new Go rules
 ~~~~~~~~~~~~~~~~~~~~
 
-If you are writing a new Bazel rule that uses the Go toolchain, you need to
-do several things to ensure you have full access to the toolchain and common
-dependencies.
+If you are writing a new Bazel rule that may compile or link Go code with cgo,
+declare it with ``go_rule`` instead of ``rule``. ``go_rule`` adds the Go
+toolchain, the optional C/C++ toolchain, the Apple and C++ configuration
+fragments, and the implicit attributes needed by ``go_context``. The C/C++
+toolchain remains optional so that pure Go and cross-compiling rules do not
+require a C/C++ toolchain.
 
-* Declare a dependency on a toolchain of type
-  ``@io_bazel_rules_go//go:toolchain``. Bazel will select an appropriate,
-  registered toolchain automatically.
-* Declare an implicit attribute named ``_go_context_data`` that defaults to
-  ``@io_bazel_rules_go//:go_context_data``. This target gathers configuration
-  information and several common dependencies.
-* Use the ``go_context`` function to gain access to `the context`_. This is
-  your main interface to the Go toolchain.
+Rules that only use the Go SDK or generate Go sources can use ``rule``, declare
+only the ``@io_bazel_rules_go//go:toolchain`` toolchain, and call
+``go_context(ctx, maybe_needs_cc_toolchain = False)``.
+
+Declare an implicit attribute named ``_go_context_data`` that defaults to
+``@io_bazel_rules_go//:go_context_data`` when the rule needs the standard
+library and target Go configuration. Rules that only need the Go SDK can omit
+this attribute. Use ``go_context`` to gain access to `the context`_.
 
 .. code:: bzl
 
-    load("@io_bazel_rules_go//go:def.bzl", "go_context")
+    load("@io_bazel_rules_go//go:def.bzl", "go_context", "go_rule")
 
     def _my_rule_impl(ctx):
         go = go_context(ctx)
         ...
 
-    my_rule = rule(
+    my_rule = go_rule(
         implementation = _my_rule_impl,
         attrs = {
             ...
@@ -302,7 +307,6 @@ dependencies.
                 default = "@io_bazel_rules_go//:go_context_data",
             ),
         },
-        toolchains = ["@io_bazel_rules_go//go:toolchain"],
     )
 
 
@@ -313,7 +317,7 @@ go_register_toolchains
 ~~~~~~~~~~~~~~~~~~~~~~
 
 Installs the Go toolchains. If :param:`version` is specified, it sets the
-SDK version to use (for example, :value:`"1.15.5"`).
+SDK version to use (for example, :value:`"1.18.1"`).
 
 +--------------------------------+-----------------------------+-----------------------------------+
 | **Name**                       | **Type**                    | **Default value**                 |
@@ -325,7 +329,7 @@ SDK version to use (for example, :value:`"1.15.5"`).
 | If a toolchain was already declared with `go_download_sdk`_ or a similar rule,                   |
 | this parameter may not be set.                                                                   |
 |                                                                                                  |
-| Normally this is set to a Go version like :value:`"1.15.5"`. It may also be                      |
+| Normally this is set to a Go version like :value:`"1.18.1"`. It may also be                      |
 | set to :value:`"host"`, which will cause rules_go to use the Go toolchain                        |
 | installed on the host system (found using ``GOROOT`` or ``PATH``).                               |
 |                                                                                                  |
@@ -373,7 +377,7 @@ This downloads a Go SDK for use in toolchains.
 +--------------------------------+-----------------------------+---------------------------------------------+
 | :param:`version`               | :type:`string`              | :value:`latest Go version`                  |
 +--------------------------------+-----------------------------+---------------------------------------------+
-| The version of Go to download, for example ``1.12.5``. If unspecified,                                     |
+| The version of Go to download, for example ``1.18.1``. If unspecified,                                     |
 | ``go_download_sdk`` will list available versions of Go from golang.org, then                               |
 | pick the highest version. If ``version`` is specified but ``sdks`` is                                      |
 | unspecified, ``go_download_sdk`` will list available versions on golang.org                                |

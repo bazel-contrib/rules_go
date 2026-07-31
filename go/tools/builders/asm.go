@@ -22,7 +22,6 @@ import (
 	"regexp"
 	"runtime"
 	"strconv"
-	"strings"
 )
 
 var ASM_DEFINES = []string{
@@ -31,29 +30,12 @@ var ASM_DEFINES = []string{
 	"-D", "GOOS_GOARCH_" + build.Default.GOOS + "_" + build.Default.GOARCH,
 }
 
-// buildSymabisFile generates a file from assembly files that is consumed
-// by the compiler. This is only needed in go1.12+ when there is at least one
-// .s file. If the symabis file is not needed, no file will be generated,
+// buildSymabisFile generates a file from assembly files that is consumed by
+// the compiler. If there are no assembly files, no file will be generated,
 // and "", nil will be returned.
 func buildSymabisFile(goenv *env, packagePath string, sFiles, hFiles []fileInfo, asmhdr string) (string, error) {
 	if len(sFiles) == 0 {
 		return "", nil
-	}
-
-	// Check version. The symabis file is only required and can only be built
-	// starting at go1.12.
-	version := runtime.Version()
-	if strings.HasPrefix(version, "go1.") {
-		minor := version[len("go1."):]
-		if i := strings.IndexByte(minor, '.'); i >= 0 {
-			minor = minor[:i]
-		}
-		n, err := strconv.Atoi(minor)
-		if err == nil && n <= 11 {
-			return "", nil
-		}
-		// Fall through if the version can't be parsed. It's probably a newer
-		// development version.
 	}
 
 	// Create an empty go_asm.h file. The compiler will write this later, but

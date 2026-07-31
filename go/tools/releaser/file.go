@@ -19,8 +19,6 @@ import (
 	"archive/zip"
 	"compress/gzip"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -274,20 +272,6 @@ func copyFile(toFile, fromFile string) (err error) {
 	}()
 	_, err = io.Copy(w, r)
 	return err
-}
-
-func sha256SumFile(name string) (string, error) {
-	r, err := os.Open(name)
-	if err != nil {
-		return "", err
-	}
-	defer r.Close()
-	h := sha256.New()
-	if _, err := io.Copy(h, r); err != nil {
-		return "", err
-	}
-	sum := h.Sum(nil)
-	return hex.EncodeToString(sum), nil
 }
 
 // copyFileToMirror uploads a file to the GCS bucket backing mirror.bazel.build.
