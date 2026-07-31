@@ -87,9 +87,14 @@ def _build_stdlib_list_json(go):
         arguments = [args],
         env = _build_env(go),
         toolchain = GO_TOOLCHAIN_LABEL,
-        execution_requirements = SUPPORTS_PATH_MAPPING_REQUIREMENT,
+        execution_requirements = _stdlib_execution_requirements(go),
     )
     return out, cache_dir
+
+def _stdlib_execution_requirements(go):
+    # Non-pure stdlib actions run cgo and pass C toolchain paths through
+    # CGO_CFLAGS/CGO_LDFLAGS. Bazel does not path-map environment values.
+    return SUPPORTS_PATH_MAPPING_REQUIREMENT if go.mode.pure else {}
 
 def _build_env(go):
     env = go.env
@@ -174,7 +179,7 @@ def _build_stdlib(go):
         arguments = [args],
         env = _build_env(go),
         toolchain = GO_TOOLCHAIN_LABEL,
-        execution_requirements = SUPPORTS_PATH_MAPPING_REQUIREMENT,
+        execution_requirements = _stdlib_execution_requirements(go),
     )
     list_json, cache_dir = _build_stdlib_list_json(go)
     return GoStdLib(
