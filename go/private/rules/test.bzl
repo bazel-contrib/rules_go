@@ -28,10 +28,9 @@ load(
 )
 load(
     "//go/private:context.bzl",
-    "CGO_ATTRS",
-    "CGO_FRAGMENTS",
     "CGO_TOOLCHAINS",
     "go_context",
+    "go_rule",
     "maybe_needs_cc_toolchain",
     "new_go_info",
 )
@@ -491,11 +490,9 @@ _go_test_kwargs = {
         "_allowlist_function_transition": attr.label(
             default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
         ),
-    } | CGO_ATTRS,
+    },
     "executable": True,
     "test": True,
-    "fragments": CGO_FRAGMENTS,
-    "toolchains": [GO_TOOLCHAIN] + CGO_TOOLCHAINS,
     "exec_groups": {
         "go_link": exec_group(
             toolchains = [GO_TOOLCHAIN] + CGO_TOOLCHAINS,
@@ -540,7 +537,7 @@ _go_test_kwargs = {
     """,
 }
 
-go_test = rule(**_go_test_kwargs)
+go_test = go_rule(**_go_test_kwargs)
 
 def _recompile_external_deps(go, external_go_info, internal_archive, library_labels):
     """Recompiles some archives in order to split internal and external tests.

@@ -58,8 +58,7 @@ As package upgrades happen outside of Bazel's control, this will lead to non-rep
 
 When using `go_sdk.from_file()`, exactly one of `go_mod` or `go_work` must be specified.
 Version extraction follows the same precedence for both file types: the `toolchain` directive takes precedence
-over the `go` directive. If neither directive is present, `go.mod` has an implicit `go 1.16` line while
-`go.work` has an implicit `go 1.18` line as per [Go Toolchains](https://go.dev/doc/toolchain#config) documentation.
+over the `go` directive. If neither directive is present, rules_go selects its minimum supported SDK, Go 1.18.
 
 You can register multiple Go SDKs and select which one to use on a per-target basis using [`go_cross_binary`](rules.md#go_cross_binary).
 As long as you specify the `version` of an SDK, it will be downloaded lazily, that is, only when it is actually needed during a particular build.

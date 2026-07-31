@@ -34,7 +34,6 @@ import (
 	"flag"
 	"fmt"
 	"go/ast"
-	"go/build"
 	"go/doc"
 	"go/parser"
 	"go/token"
@@ -73,16 +72,6 @@ type Cases struct {
 	Covered     string
 	CoverFormat string
 	Pkgname     string
-}
-
-// Version returns whether v is a supported Go version (like "go1.18").
-func (c *Cases) Version(v string) bool {
-	for _, r := range build.Default.ReleaseTags {
-		if v == r {
-			return true
-		}
-	}
-	return false
 }
 
 const testMainTpl = `
@@ -131,13 +120,11 @@ var benchmarks = []testing.InternalBenchmark{
 {{end}}
 }
 
-{{if .Version "go1.18"}}
 var fuzzTargets = []testing.InternalFuzzTarget{
 {{range .FuzzTargets}}
   {"{{.Name}}", {{.Package}}.{{.Name}} },
 {{end}}
 }
-{{end}}
 
 var examples = []testing.InternalExample{
 {{range .Examples}}
@@ -205,11 +192,7 @@ func main() {
 		testdeps.CoverMarkProfileEmittedFunc = cfile.MarkProfileEmitted
 	{{end}}
 
-  {{if .Version "go1.18"}}
 	m := testing.MainStart(testdeps.TestDeps{}, testsInShard(), benchmarks, fuzzTargets, examples)
-  {{else}}
-	m := testing.MainStart(testdeps.TestDeps{}, testsInShard(), benchmarks, examples)
-  {{end}}
 
 	if filter := os.Getenv("TESTBRIDGE_TEST_ONLY"); filter != "" {
 		filters := strings.Split(filter, ",")

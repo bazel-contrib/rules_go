@@ -87,11 +87,11 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk")
 
 go_download_sdk(
     name = "go_sdk",
-    version = "1.16",
+    version = "1.18",
 )
 
 `,
-			optToWantVersion: map[string]string{"": "go1.16"},
+			optToWantVersion: map[string]string{"": "go1.18"},
 		},
 		{
 			desc: "custom_archives",
@@ -101,14 +101,14 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk")
 go_download_sdk(
     name = "go_sdk",
     sdks = {
-        "darwin_amd64": ("go1.16.darwin-amd64.tar.gz", "6000a9522975d116bf76044967d7e69e04e982e9625330d9a539a8b45395f9a8"),
-        "darwin_arm64": ("go1.16.darwin-arm64.tar.gz", "4dac57c00168d30bbd02d95131d5de9ca88e04f2c5a29a404576f30ae9b54810"),
-        "linux_amd64": ("go1.16.linux-amd64.tar.gz", "013a489ebb3e24ef3d915abe5b94c3286c070dfe0818d5bca8108f1d6e8440d2"),
-        "windows_amd64": ("go1.16.windows-amd64.zip", "5cc88fa506b3d5c453c54c3ea218fc8dd05d7362ae1de15bb67986b72089ce93"),
+        "darwin_amd64": ("go1.18.darwin-amd64.tar.gz", "70bb4a066997535e346c8bfa3e0dfe250d61100b17ccc5676274642447834969"),
+        "darwin_arm64": ("go1.18.darwin-arm64.tar.gz", "9cab6123af9ffade905525d79fc9ee76651e716c85f1f215872b5f2976782480"),
+        "linux_amd64": ("go1.18.linux-amd64.tar.gz", "e85278e98f57cdb150fe8409e6e5df5343ecb13cebf03a5d5ff12bd55a80264f"),
+        "windows_amd64": ("go1.18.windows-amd64.zip", "65c5c0c709a7ca1b357091b10b795b439d8b50e579d3893edab4c7e9b384f435"),
     },
 )
 `,
-			optToWantVersion: map[string]string{"": "go1.16"},
+			optToWantVersion: map[string]string{"": "go1.18"},
 		},
 		{
 			desc: "multiple_sdks",
@@ -117,24 +117,24 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk", "go_host_sdk")
 
 go_download_sdk(
     name = "go_sdk",
-    version = "1.16",
+    version = "1.18",
 )
 go_download_sdk(
-    name = "go_sdk_1_17",
-    version = "1.17",
+    name = "go_sdk_1_19",
+    version = "1.19",
 )
 go_download_sdk(
-    name = "go_sdk_1_17_1",
-    version = "1.17.1",
+    name = "go_sdk_1_19_1",
+    version = "1.19.1",
 )
 `,
 			optToWantVersion: map[string]string{
-				"": "go1.16",
-				"--@io_bazel_rules_go//go/toolchain:sdk_version=remote": "go1.16",
-				"--@io_bazel_rules_go//go/toolchain:sdk_version=1":      "go1.16",
-				"--@io_bazel_rules_go//go/toolchain:sdk_version=1.17":   "go1.17",
-				"--@io_bazel_rules_go//go/toolchain:sdk_version=1.17.0": "go1.17",
-				"--@io_bazel_rules_go//go/toolchain:sdk_version=1.17.1": "go1.17.1",
+				"": "go1.18",
+				"--@io_bazel_rules_go//go/toolchain:sdk_version=remote": "go1.18",
+				"--@io_bazel_rules_go//go/toolchain:sdk_version=1":      "go1.18",
+				"--@io_bazel_rules_go//go/toolchain:sdk_version=1.19":   "go1.19",
+				"--@io_bazel_rules_go//go/toolchain:sdk_version=1.19.0": "go1.19",
+				"--@io_bazel_rules_go//go/toolchain:sdk_version=1.19.1": "go1.19.1",
 			},
 		},
 		{
@@ -162,12 +162,12 @@ go_download_sdk(
     version = "1.23.5",
 )
 go_download_sdk(
-    name = "go_sdk_1_17",
-    version = "1.17",
+    name = "go_sdk_1_18",
+    version = "1.18",
 )
 go_download_sdk(
-    name = "go_sdk_1_17_1",
-    version = "1.17.1",
+    name = "go_sdk_1_18_1",
+    version = "1.18.1",
 )
 go_download_sdk(
     name = "go_sdk_with_experiments",
@@ -177,8 +177,8 @@ go_download_sdk(
 `,
 			optToWantVersion: map[string]string{
 				"": "go1.23.5",
-				"--@io_bazel_rules_go//go/toolchain:sdk_name=go_sdk_1_17_1":           "go1.17.1",
-				"--@io_bazel_rules_go//go/toolchain:sdk_name=go_sdk_1_17":             "go1.17",
+				"--@io_bazel_rules_go//go/toolchain:sdk_name=go_sdk_1_18_1":           "go1.18.1",
+				"--@io_bazel_rules_go//go/toolchain:sdk_name=go_sdk_1_18":             "go1.18",
 				"--@io_bazel_rules_go//go/toolchain:sdk_name=go_sdk":                  "go1.23.5",
 				"--@io_bazel_rules_go//go/toolchain:sdk_name=go_sdk_with_experiments": "go1.23.5 X:rangefunc",
 			},

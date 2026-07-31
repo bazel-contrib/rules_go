@@ -14,15 +14,12 @@
 
 load(
     "//go/private:common.bzl",
-    "GO_TOOLCHAIN",
     "GO_TOOLCHAIN_LABEL",
 )
 load(
     "//go/private:context.bzl",
-    "CGO_ATTRS",
-    "CGO_FRAGMENTS",
-    "CGO_TOOLCHAINS",
     "go_context",
+    "go_rule",
     "maybe_needs_cc_toolchain",
     "new_go_info",
 )
@@ -94,7 +91,7 @@ def _nogo_impl(ctx):
         executable = executable,
     )]
 
-_nogo = rule(
+_nogo = go_rule(
     implementation = _nogo_impl,
     attrs = {
         "deps": attr.label_list(
@@ -118,9 +115,7 @@ _nogo = rule(
         "_allowlist_function_transition": attr.label(
             default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
         ),
-    } | CGO_ATTRS,
-    fragments = CGO_FRAGMENTS,
-    toolchains = [GO_TOOLCHAIN] + CGO_TOOLCHAINS,
+    },
     cfg = go_tool_transition,
 )
 

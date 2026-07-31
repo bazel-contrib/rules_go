@@ -23,7 +23,7 @@ def version_from_go_mod(module_ctx, go_mod_label):
     Returns:
       a string containing the version of the Go SDK defined in go.mod
     """
-    return _version_from_go_file(module_ctx, go_mod_label, "go.mod", "1.16")
+    return _version_from_go_file(module_ctx, go_mod_label, "go.mod", "1.18")
 
 def version_from_go_work(module_ctx, go_work_label):
     """Returns a version string from a go.work file.
@@ -79,9 +79,8 @@ def _version_from_go_file(module_ctx, file_label, expected_filename, default_ver
         # https://go.dev/doc/toolchain: "a go.mod that says go 1.21.0 with no toolchain line is interpreted as if it had a toolchain go1.21.0 line."
         version = state["go"]
     if not version:
-        # https://go.dev/doc/toolchain#config: "For compatibility reasons, if the go line is omitted from a go.mod file,
-        # the module is considered to have an implicit go 1.16 line, and if the go line is omitted from a go.work file,
-        # the workspace is considered to have an implicit go 1.18 line."
+        # The Go language version defaults to 1.16 for go.mod and 1.18 for
+        # go.work, but rules_go cannot select an SDK older than Go 1.18.
         version = default_version
 
     return version

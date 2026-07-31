@@ -91,13 +91,13 @@ use (
 		{
 			desc: "go only",
 			go_work: `
-go 1.16
+go 1.18
 
 use (
     .  // unused, just here to test the go.work parser
 )
 `,
-			want: "go1.16",
+			want: "go1.18",
 		},
 		{
 			desc: "missing go",

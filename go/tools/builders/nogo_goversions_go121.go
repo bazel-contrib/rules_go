@@ -1,5 +1,4 @@
 //go:build go1.21 && !go1.22
-// +build go1.21,!go1.22
 
 /* Copyright 2026 The Bazel Authors. All rights reserved.
 
@@ -19,13 +18,6 @@ limitations under the License.
 package main
 
 import "go/types"
-
-// Go 1.21 accepts the normalized Go version string directly in
-// types.Config.GoVersion, but Info.FileVersions still is not available until
-// Go 1.22, so we keep the split from newer SDKs.
-func initGoVersionConfig(config *types.Config, goVersion string) {
-	config.GoVersion = goVersion
-}
 
 func normalizeGoVersionForTypes(goVersion string) string {
 	return goVersion

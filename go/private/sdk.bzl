@@ -17,7 +17,7 @@ load("//go/private:common.bzl", "executable_path")
 load("//go/private:nogo.bzl", "go_register_nogo")
 load("//go/private:platforms.bzl", "GOARCH_CONSTRAINTS", "GOOS_CONSTRAINTS")
 
-MIN_SUPPORTED_VERSION = (1, 14, 0)
+MIN_SUPPORTED_VERSION = (1, 18, 0)
 
 def _go_host_sdk_impl(ctx):
     goroot = _detect_host_sdk(ctx)
@@ -569,9 +569,9 @@ def _parse_versions_json(data):
             JSON, is spaced and indented, and is in a particular format.
 
     Return:
-        A dict mapping version strings (like "1.15.5") to dicts mapping
+        A dict mapping version strings (like "1.18.1") to dicts mapping
         platform names (like "linux_amd64") to pairs of filenames
-        (like "go1.15.5.linux-amd64.tar.gz") and hex-encoded SHA-256 sums.
+        (like "go1.18.1.linux-amd64.tar.gz") and hex-encoded SHA-256 sums.
     """
     sdks = json.decode(data)
     return {
@@ -612,7 +612,7 @@ def fetch_sdks_by_version(ctx, allow_fail = False):
     return _parse_versions_json(data)
 
 def parse_version(version):
-    """Parses a version string like "1.15.5" and returns a tuple of numbers or None"""
+    """Parses a version string like "1.18.1" and returns a tuple of numbers or None"""
     l, r = 0, 0
     parsed = []
     for c in version.elems():
@@ -686,13 +686,13 @@ def go_register_toolchains(version = None, nogo = None, go_version = None, exper
         fail("go_register_toolchains: version set after go sdk rule declared ({})".format(", ".join([r["name"] for r in sdk_rules])))
     if len(sdk_rules) == 0:
         if not version:
-            fail('go_register_toolchains: version must be a string like "1.15.5" or "host"')
+            fail('go_register_toolchains: version must be a string like "1.18.1" or "host"')
         elif version == "host":
             go_host_sdk(name = "go_sdk", experiments = experiments)
         else:
             pv = parse_version(version)
             if not pv:
-                fail('go_register_toolchains: version must be a string like "1.15.5" or "host"')
+                fail('go_register_toolchains: version must be a string like "1.18.1" or "host"')
             if _version_less(pv, MIN_SUPPORTED_VERSION):
                 print("DEPRECATED: Go versions before {} are not supported and may not work".format(_version_string(MIN_SUPPORTED_VERSION)))
             go_download_sdk(

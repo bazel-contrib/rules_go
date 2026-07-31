@@ -420,7 +420,7 @@ func compileArchive(
 		}
 	}
 
-	// If there are Go assembly files and this is go1.12+: generate symbol ABIs.
+	// If there are Go assembly files, generate symbol ABIs.
 	// This excludes Cgo packages: they use the C compiler for assembly.
 	asmHdrPath := ""
 	if len(srcs.sSrcs) > 0 {

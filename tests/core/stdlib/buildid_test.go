@@ -1,6 +1,3 @@
-//go:build go1.10
-// +build go1.10
-
 /* Copyright 2018 The Bazel Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");

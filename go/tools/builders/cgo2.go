@@ -428,8 +428,8 @@ func cCompile(goenv *env, src, cc string, flags []string, out string) error {
 
 func defaultCFlags(workDir string) []string {
 	flags := []string{
-		"-fdebug-prefix-map=" + abs(".") + "=.",
-		"-fdebug-prefix-map=" + workDir + "=.",
+		"-ffile-prefix-map=" + abs(".") + "=.",
+		"-ffile-prefix-map=" + workDir + "=.",
 	}
 	goos, goarch := os.Getenv("GOOS"), os.Getenv("GOARCH")
 	switch {

@@ -70,8 +70,7 @@ You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 	// Now switch to the newly created GOROOT
 	os.Setenv("GOROOT", output)
 
-	// Create a temporary cache directory. "go build" requires this starting
-	// in Go 1.12.
+	// Create a temporary cache directory for "go build".
 	cachePath := filepath.Join(output, ".gocache")
 	os.Setenv("GOCACHE", cachePath)
 	defer os.RemoveAll(cachePath)
@@ -148,19 +147,9 @@ You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 		asmflags = append(asmflags, "-dynlink")
 	}
 
-	// Since Go 1.10, an all= prefix indicates the flags should apply to the package
-	// and its dependencies, rather than just the package itself. This was the
-	// default behavior before Go 1.10.
-	allSlug := ""
-	for _, t := range build.Default.ReleaseTags {
-		if t == "go1.10" {
-			allSlug = "all="
-			break
-		}
-	}
-	installArgs = append(installArgs, "-gcflags="+allSlug+strings.Join(gcflags, " "))
-	installArgs = append(installArgs, "-ldflags="+allSlug+strings.Join(ldflags, " "))
-	installArgs = append(installArgs, "-asmflags="+allSlug+strings.Join(asmflags, " "))
+	installArgs = append(installArgs, "-gcflags=all="+strings.Join(gcflags, " "))
+	installArgs = append(installArgs, "-ldflags=all="+strings.Join(ldflags, " "))
+	installArgs = append(installArgs, "-asmflags=all="+strings.Join(asmflags, " "))
 
 	if err := absCCCompiler(cgoEnvVars, cgoAbsEnvFlags); err != nil {
 		return fmt.Errorf("error modifying cgo environment to absolute path: %v", err)

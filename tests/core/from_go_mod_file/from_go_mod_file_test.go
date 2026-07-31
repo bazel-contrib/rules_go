@@ -59,7 +59,7 @@ go_sdk.from_file(name = "sdk_under_test", go_mod = "//:go.mod")
 }
 
 func Test(t *testing.T) {
-	for _, test := range []struct{
+	for _, test := range []struct {
 		desc, go_mod, want string
 	}{
 		{
@@ -97,13 +97,13 @@ require (
 			go_mod: `
 module test
 
-go 1.16
+go 1.18
 
 require (
     github.com/bazelbuild/rules_go v0.53.0  // unused, just here to test the go.mod parser
 )
 `,
-			want: "go1.16",
+			want: "go1.18",
 		},
 		{
 			desc: "missing go",
@@ -114,7 +114,7 @@ require (
     github.com/bazelbuild/rules_go v0.53.0  // unused, just here to test the go.mod parser
 )
 `,
-			want: "go1.16",
+			want: "go1.18",
 		},
 	} {
 		t.Run(test.desc, func(t *testing.T) {
