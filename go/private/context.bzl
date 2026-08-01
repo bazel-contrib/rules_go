@@ -631,7 +631,7 @@ def go_context(
         mode_kwargs = structs.to_dict(go_config_info)
         mode_kwargs["goos"] = toolchain.default_goos if goos == "auto" else goos
         mode_kwargs["goarch"] = toolchain.default_goarch if goarch == "auto" else goarch
-        if not cgo_available:
+        if not cgo_available and (maybe_needs_cc_toolchain or CPP_TOOLCHAIN_TYPE in ctx.toolchains):
             if getattr(ctx.attr, "pure", None) == "off":
                 fail("{} has pure explicitly set to off, but no C++ toolchain could be found for its platform".format(ctx.label))
             mode_kwargs["pure"] = True
