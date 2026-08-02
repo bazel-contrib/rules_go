@@ -342,15 +342,8 @@ func genTestMain(args []string) error {
 			if fn.Recv != nil {
 				continue
 			}
-			if fn.Name.Name == "TestMain" {
-				// TestMain is not, itself, a test
-				pkgs[pkg] = true
-				cases.TestMain = fmt.Sprintf("%s.%s", pkg, fn.Name.Name)
-				continue
-			}
-
-			// Here we check the signature of the Test* function. To
-			// be considered a test:
+			// Here we check the signature of the TestMain / Test* function.
+			// To be considered a test:
 
 			// 1. The function should have a single argument.
 			if len(fn.Type.Params.List) != 1 {
@@ -377,6 +370,20 @@ func genTestMain(args []string) error {
 			// parameter being *testing.T. Instead we assert that it
 			// should be *<something>.T. This is because the import
 			// could have been aliased as a different identifier.
+
+			// `go test` decides whether a func named TestMain is the package
+			// entry point from its signature, not from its name: only
+			// func TestMain(*testing.M) is the entry point that wraps the run.
+			// A func TestMain(*testing.T) is an ordinary test that merely
+			// happens to be named TestMain, so it falls through to the Test*
+			// case below. See $GOROOT/src/cmd/go/internal/load/test.go, the
+			// TestMain case of testFuncs.load.
+			if fn.Name.Name == "TestMain" && selExpr.Sel.Name == "M" {
+				// TestMain is not, itself, a test
+				pkgs[pkg] = true
+				cases.TestMain = fmt.Sprintf("%s.%s", pkg, fn.Name.Name)
+				continue
+			}
 
 			if strings.HasPrefix(fn.Name.Name, "Test") {
 				if selExpr.Sel.Name != "T" {

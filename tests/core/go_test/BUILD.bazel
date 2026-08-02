@@ -78,6 +78,12 @@ go_test(
 )
 
 go_test(
+    name = "testmain_signature_test",
+    size = "small",
+    srcs = ["testmain_signature_test.go"],
+)
+
+go_test(
     name = "external_importmap_test",
     size = "small",
     srcs = ["external_importmap_test.go"],
