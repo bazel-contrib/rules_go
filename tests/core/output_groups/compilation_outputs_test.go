@@ -22,8 +22,9 @@ func TestCompilationOutputs(t *testing.T) {
 		exe = ".exe"
 	}
 	expectedFiles := map[string]bool{
-		"compilation_outputs_test" + exe:                   true, // test binary; not relevant
-		"compilation_outputs_test" + exe + ".repo_mapping": true, // test binary repo mapping; not relevant
+		"compilation_outputs_test" + exe:                       true, // test binary; not relevant
+		"compilation_outputs_test" + exe + ".repo_mapping":     true, // test binary repo mapping; not relevant
+		"compilation_outputs_test" + exe + ".package_repo_map": true, // test binary package repo map; not relevant
 
 		"lib.a":                    false, // :lib archive
 		"lib_test.internal.a":      false, // :lib_test internal archive

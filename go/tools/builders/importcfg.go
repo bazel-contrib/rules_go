@@ -30,6 +30,11 @@ import (
 type archive struct {
 	label, importPath, packagePath, file string
 	importPathAliases                    []string
+
+	// repoName is the canonical name of the Bazel repository containing the
+	// package's sources. It is only set for archives passed to the link
+	// action.
+	repoName string
 }
 
 // checkImports verifies that each import in files refers to a
@@ -257,15 +262,34 @@ func (m *archiveMultiFlag) String() string {
 
 func (m *archiveMultiFlag) Set(v string) error {
 	parts := strings.Split(v, "=")
-	if len(parts) != 3 {
+	if len(parts) < 3 {
 		return fmt.Errorf("badly formed -arc flag: %s", v)
 	}
-	importPaths := strings.Split(parts[0], ":")
-	a := archive{
-		importPath:        importPaths[0],
-		importPathAliases: importPaths[1:],
-		packagePath:       parts[1],
-		file:              abs(parts[2]),
+	var a archive
+	if len(parts) == 3 {
+		// importpaths=packagePath=file, passed to compile actions.
+		importPaths := strings.Split(parts[0], ":")
+		a = archive{
+			importPath:        importPaths[0],
+			importPathAliases: importPaths[1:],
+			packagePath:       parts[1],
+			file:              abs(parts[2]),
+		}
+	} else {
+		// label=packagePath=file=repoName, passed to link actions. The label
+		// may itself contain '=' characters, so split off the other fields
+		// from the right.
+		label := strings.Join(parts[:len(parts)-3], "=")
+		a = archive{
+			label: label,
+			// TODO(zbarsky): The label is passed in place of the import path
+			// by the link action. Keep mirroring it into importPath, which
+			// is used in the duplicate package error message.
+			importPath:  label,
+			packagePath: parts[len(parts)-3],
+			file:        abs(parts[len(parts)-2]),
+			repoName:    parts[len(parts)-1],
+		}
 	}
 	*m = append(*m, a)
 	return nil

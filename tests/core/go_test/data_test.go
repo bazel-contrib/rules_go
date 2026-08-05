@@ -27,7 +27,7 @@ func TestVisibleRunfiles(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		if base := filepath.Base(path); info.IsDir() || base == "data_test" || base == "data_test.exe" {
+		if base := filepath.Base(path); info.IsDir() || base == "data_test" || base == "data_test.exe" || strings.HasSuffix(base, ".package_repo_map") {
 			return nil
 		}
 		got = append(got, filepath.ToSlash(path))
