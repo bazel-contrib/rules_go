@@ -114,6 +114,22 @@ func main() {
 package unattached
 
 // not mentioned in any target
+
+-- race/BUILD.bazel --
+load("@io_bazel_rules_go//go:def.bzl", "go_test")
+
+go_test(
+    name = "race_test",
+    srcs = ["race_test.go"],
+    race = "on",
+)
+
+-- race/race_test.go --
+package race
+
+import "testing"
+
+func TestRace(t *testing.T) {}
 `,
 	})
 }
@@ -383,6 +399,33 @@ func TestIncompatible(t *testing.T) {
 
 func TestUnattached(t *testing.T) {
 	runForTestExpectError(t, "found no labels matching the requests", packages.DriverRequest{}, ".", "file=unattached.go")
+}
+
+// TestStdlibRaceMode is a reproducer test (see related issue) to check that a
+// race-mode target does not leave stdlib file lists in an unbuildable state.
+func TestStdlibRaceMode(t *testing.T) {
+	const raceConstPkg = "internal/runtime/sys" 
+	const raceConstFile = "consts_race.go"
+	resp := runForTest(t, packages.DriverRequest{Tests: true}, "race", "./...")
+
+	var pkg *packages.Package
+	for _, p := range resp.Packages {
+		if p.PkgPath == raceConstPkg {
+			pkg = p
+			break
+		}
+	}
+	if pkg == nil {
+		t.Fatalf("response does not contain %s", raceConstPkg)
+	}
+
+	for _, file := range pkg.CompiledGoFiles {
+		if path.Base(file) == raceConstFile {
+			return
+		}
+	}
+
+	t.Errorf("%s: expected to contain '%s' in gotten pkg.goCompiledGoFiles: %v", raceConstPkg, raceConstFile, pkg.CompiledGoFiles)
 }
 
 func runForTest(
