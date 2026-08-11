@@ -54,6 +54,34 @@ go_library(
     ],
     visibility = ["//visibility:public"],
 )
+
+# The recorded source paths of this library are relative to the repository
+# root rather than the execroot, so the repository name cannot be recovered
+# from them and CurrentRepository has to consult the package repository map.
+go_library(
+    name = "external_trimmed_lib",
+    srcs = ["external_trimmed_lib.go"],
+    gc_goopts = ["-trimpath=external"],
+    importpath = "example.com/runfiles/external_trimmed_lib",
+    deps = [
+        "@io_bazel_rules_go//go/runfiles",
+    ],
+    visibility = ["//visibility:public"],
+)
+-- other_repo/pkg/external_trimmed_lib.go --
+package external_trimmed_lib
+
+import (
+	"fmt"
+	"runtime"
+
+	"github.com/bazelbuild/rules_go/go/runfiles"
+)
+
+func PrintRepo() {
+	_, file, _, _ := runtime.Caller(0)
+	fmt.Printf("%s: '%s'\n", file, runfiles.CurrentRepository())
+}
 -- other_repo/pkg/external_source_lib.go --
 package external_source_lib
 
@@ -123,6 +151,7 @@ go_binary(
         "//pkg:internal_generated_lib",
         "@other_repo//pkg:external_source_lib",
         "@other_repo//pkg:external_generated_lib",
+        "@other_repo//pkg:external_trimmed_lib",
     ],
 )
 -- main.go --
@@ -133,6 +162,7 @@ import (
 	"example.com/runfiles/internal_source_lib"
 	"example.com/runfiles/external_generated_lib"
 	"example.com/runfiles/external_source_lib"
+	"example.com/runfiles/external_trimmed_lib"
 )
 
 func main() {
@@ -140,6 +170,7 @@ func main() {
 	internal_generated_lib.PrintRepo()
 	external_source_lib.PrintRepo()
 	external_generated_lib.PrintRepo()
+	external_trimmed_lib.PrintRepo()
 }
 `,
 		WorkspaceSuffix: `
@@ -151,10 +182,11 @@ local_repository(
 	})
 }
 
-var expectedOutputLegacy = regexp.MustCompile(`^pkg/internal_source_lib.go: ''
+var expectedOutput = regexp.MustCompile(`^pkg/internal_source_lib.go: ''
 bazel-out/[^/]+/bin/pkg/internal_generated_lib.go: ''
 external/other_repo/pkg/external_source_lib.go: 'other_repo'
 bazel-out/[^/]+/bin/external/other_repo/pkg/external_generated_lib.go: 'other_repo'
+other_repo/pkg/external_trimmed_lib.go: 'other_repo'
 $`)
 
 func TestCurrentRepository(t *testing.T) {
@@ -162,7 +194,7 @@ func TestCurrentRepository(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !expectedOutputLegacy.Match(out) {
-		t.Fatalf("got: %q, want: %q", string(out), expectedOutputLegacy.String())
+	if !expectedOutput.Match(out) {
+		t.Fatalf("got: %q, want: %q", string(out), expectedOutput.String())
 	}
 }

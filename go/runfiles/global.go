@@ -68,11 +68,30 @@ func CallerRepository() string {
 }
 
 func callerRepository(skip int) string {
-	_, file, _, _ := runtime.Caller(skip + 1)
-	if match := legacyExternalGeneratedFile.FindStringSubmatch(file); match != nil {
+	var pc [1]uintptr
+	if runtime.Callers(skip+2, pc[:]) < 1 {
+		return ""
+	}
+	frame, _ := runtime.CallersFrames(pc[:]).Next()
+
+	// The name of the caller's function is prefixed with the package path
+	// the caller's package was compiled with (the value of the compiler's
+	// -p flag). rules_go emits a file mapping these package paths to
+	// repository names into the runfiles of each binary. Unlike the file
+	// path check below, this works regardless of how the source paths
+	// recorded in the binary have been rewritten (e.g. via -trimpath).
+	if repo, ok := functionRepository(frame.Function); ok {
+		return repo
+	}
+
+	// Fall back to inspecting the source file path of the caller, which
+	// works for binaries built with rules_go versions that don't emit a
+	// package repository map, as long as source paths are recorded relative
+	// to the execroot.
+	if match := legacyExternalGeneratedFile.FindStringSubmatch(frame.File); match != nil {
 		return match[1]
 	}
-	if match := legacyExternalFile.FindStringSubmatch(file); match != nil {
+	if match := legacyExternalFile.FindStringSubmatch(frame.File); match != nil {
 		return match[1]
 	}
 	// If a file is not in an external repository, it is in the main repository,

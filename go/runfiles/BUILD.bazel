@@ -21,6 +21,7 @@ go_library(
         "fs.go",
         "global.go",
         "manifest.go",
+        "package_repo_map.go",
         "runfiles.go",
     ],
     importpath = "github.com/bazelbuild/rules_go/go/runfiles",
@@ -58,4 +59,10 @@ go_test(
         "rlocationpath_xdefs_example_test.go",
     ],
     deps = [":runfiles"],
+)
+
+go_test(
+    name = "package_repo_map_test",
+    srcs = ["package_repo_map_test.go"],
+    embed = [":runfiles"],
 )

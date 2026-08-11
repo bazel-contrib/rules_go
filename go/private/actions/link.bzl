@@ -35,7 +35,12 @@ load(
 )
 
 def _format_archive(d):
-    return "{}={}={}".format(d.label, d.importmap, d.file.path)
+    return "{}={}={}={}".format(d.label, d.importmap, d.file.path, d.label.workspace_name)
+
+def _rlocation_path(go, file):
+    if file.short_path.startswith("../"):
+        return file.short_path[len("../"):]
+    return go._ctx.workspace_name + "/" + file.short_path
 
 def emit_link(
         go,
@@ -128,6 +133,19 @@ def emit_link(
     builder_args.add_all(arcs, before_each = "-arc", map_each = _format_archive)
     builder_args.add("-package_list", go.sdk.package_list)
 
+    # Write a map from the package path of each linked package to the
+    # canonical name of the Bazel repository containing its sources. The
+    # runfiles library reads this file at runtime to implement
+    # CurrentRepository without relying on the format of the source file
+    # paths recorded in the binary.
+    package_repo_map = go.actions.declare_file(
+        executable.basename + ".package_repo_map",
+        sibling = executable,
+    )
+    builder_args.add("-package_repo_map", package_repo_map)
+    builder_args.add("-package_repo_map_rlocation", _rlocation_path(go, package_repo_map))
+    builder_args.add("-main_repo", archive.data.label.workspace_name)
+
     # Build a list of rpaths for dynamic libraries we need to find.
     # rpaths are relative paths from the binary to directories where libraries
     # are stored. Binaries that require these will only work when installed in
@@ -193,7 +211,7 @@ def emit_link(
 
     go.actions.run(
         inputs = inputs,
-        outputs = [executable],
+        outputs = [executable, package_repo_map],
         mnemonic = "GoLink",
         executable = go.toolchain._builder,
         arguments = [builder_args, "--", tool_args],
@@ -201,6 +219,8 @@ def emit_link(
         toolchain = GO_TOOLCHAIN_LABEL,
         exec_group = exec_group,
     )
+
+    return package_repo_map
 
 def _extract_extldflags(gc_linkopts, extldflags):
     """Extracts -extldflags from gc_linkopts and combines them into a single list.

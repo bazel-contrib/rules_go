@@ -54,7 +54,7 @@ def emit_binary(
         else:
             extension = goos_to_extension(go.mode.goos)
         executable = go.declare_file(go, path = name, ext = extension)
-    go.link(
+    package_repo_map = go.link(
         go,
         archive = archive,
         test_archives = test_archives,
@@ -69,6 +69,6 @@ def emit_binary(
         for d in archive.cgo_deps.to_list()
         if has_shared_lib_extension(d.basename)
     ]
-    runfiles = go._ctx.runfiles(files = cgo_dynamic_deps).merge(archive.runfiles)
+    runfiles = go._ctx.runfiles(files = cgo_dynamic_deps + [package_repo_map]).merge(archive.runfiles)
 
     return archive, executable, runfiles
