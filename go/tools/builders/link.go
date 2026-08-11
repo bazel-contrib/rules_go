@@ -48,6 +48,7 @@ func link(args []string) error {
 	flags.Var(&archives, "arc", "Label, package path, and file name of a dependency, separated by '='")
 	packageList := flags.String("package_list", "", "The file containing the list of standard library packages")
 	buildmode := flags.String("buildmode", "", "Build mode used.")
+	forceExternalIfCgo := flags.Bool("force-external-if-cgo", false, "Walk import graph; inject -linkmode external if runtime/cgo is transitively imported.")
 	flags.Var(&xdefs, "X", "A string variable to replace in the linked binary (repeated).")
 	flags.Var(&stamps, "stamp", "The name of a file with stamping values.")
 	if err := flags.Parse(builderArgs); err != nil {
@@ -90,13 +91,27 @@ func link(args []string) error {
 		}
 	}
 
-	// Build an importcfg file.
-	importcfgName, err := buildImportcfgFileForLink(archives, *packageList, goenv.installSuffix, filepath.Dir(*outFile))
+	// Build an importcfg file and get the package-to-archive-path mapping.
+	importcfgName, pkgToFile, err := buildImportcfgFileForLink(archives, *packageList, goenv.installSuffix, filepath.Dir(*outFile))
 	if err != nil {
 		return err
 	}
 	if !goenv.shouldPreserveWorkDir {
 		defer os.Remove(importcfgName)
+	}
+
+	// If -force-external-if-cgo is set, walk the import graph starting from
+	// the main archive to determine if runtime/cgo is transitively imported.
+	// If so, inject -linkmode external into toolArgs so the C linker is used,
+	// which is required for static builds containing cgo code. See #2168.
+	if *forceExternalIfCgo {
+		hasCgo, err := importGraphHasCgo(*main, pkgToFile)
+		if err != nil {
+			return fmt.Errorf("import graph walk: %v", err)
+		}
+		if hasCgo {
+			toolArgs = append([]string{"-linkmode", "external"}, toolArgs...)
+		}
 	}
 
 	// generate any additional link options we need
