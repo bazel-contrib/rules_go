@@ -167,15 +167,41 @@ func buildImportcfgFileForLink(archives []archive, stdPackageListPath, installSu
 	}
 	defer stdPackageListFile.Close()
 	scanner := bufio.NewScanner(stdPackageListFile)
+	listedPackages := map[string]bool{}
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" {
 			continue
 		}
+		listedPackages[line] = true
 		fmt.Fprintf(buf, "packagefile %s=%s.a\n", line, filepath.Join(prefix, filepath.FromSlash(line)))
 	}
 	if err := scanner.Err(); err != nil {
 		return "", err
+	}
+	// When GOFIPS140=v1.0.0 is set, the stdlib builder copies versioned FIPS
+	// snapshot .a files into pkg/<platform>/ that are not in the static SDK
+	// package list. Scan the pkg directory for any extra .a files and add them
+	// to the importcfg so the linker can resolve them.
+	if _, statErr := os.Stat(prefix); statErr == nil {
+		filepath.Walk(prefix, func(path string, info os.FileInfo, err error) error {
+			if err != nil || info.IsDir() {
+				return nil
+			}
+			if filepath.Ext(path) != ".a" {
+				return nil
+			}
+			rel, err := filepath.Rel(prefix, path)
+			if err != nil {
+				return nil
+			}
+			pkgPath := strings.TrimSuffix(filepath.ToSlash(rel), ".a")
+			if listedPackages[pkgPath] {
+				return nil
+			}
+			fmt.Fprintf(buf, "packagefile %s=%s\n", pkgPath, path)
+			return nil
+		})
 	}
 	depsSeen := map[string]string{}
 	for _, arc := range archives {

@@ -61,6 +61,7 @@ def _should_use_sdk_stdlib(go):
             not go.mode.msan and
             not go.mode.pure and
             not go.mode.gc_goopts and
+            not go.sdk.gofips140 and  # FIPS stdlib must be rebuilt from source
             go.mode.linkmode in (LINKMODE_NORMAL, LINKMODE_PIE))
 
 def _build_stdlib_list_json(go):

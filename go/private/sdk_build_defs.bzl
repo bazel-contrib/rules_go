@@ -38,6 +38,7 @@ STDLIB_SRCS_EXCLUDE = [
 def define_sdk_repository_targets(
         *,
         experiments,
+        gofips140 = "",
         exec_compatible_with,
         files_srcs,
         go,
@@ -51,6 +52,7 @@ def define_sdk_repository_targets(
         name = "go_sdk",
         srcs = go_sdk_srcs,
         experiments = experiments,
+        gofips140 = gofips140,
         go = go,
         goarch = goarch,
         goos = goos,
