@@ -61,6 +61,8 @@ func main() {
 		action = link
 	case "gennogomain":
 		action = genNogoMain
+	case "preprofile":
+		action = preprofile
 	case "stdlib":
 		action = stdlib
 	case "stdliblist":

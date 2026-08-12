@@ -143,6 +143,7 @@ filegroup(
         "link.go",
         "nogo.go",
         "nogo_validation.go",
+        "preprofile.go",
         "read.go",
         "replicate.go",
         "stdlib.go",
