@@ -156,6 +156,14 @@ tasks:
       - "//..."
       - "-//docs:all"
   rbe_ubuntu2404:
+    # GoCompilePkg declares an output directory for the cgo-generated sources
+    # that stays empty whenever cgo is enabled on a package that turns out not
+    # to use it. The remote executor backing this task doesn't report empty
+    # output directories, and Bazel 8 and 9 fail the build when a declared
+    # output doesn't come back, while Bazel 7 tolerates it.
+    # TODO: Run the full Bazel matrix here once that is fixed:
+    # https://github.com/bazelbuild/bazel/issues/28286
+    bazel: 7.*
     build_flags:
       - "--per_file_copt=external/.*@-w"
       - "--host_per_file_copt=external/.*@-w"

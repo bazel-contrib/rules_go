@@ -325,23 +325,6 @@ func compileArchive(
 		}
 	}
 
-	if cgoGoSrcsForNogoPath != "" {
-		// The directory is a declared output, so it has to exist even when no
-		// cgo sources are generated, which happens whenever cgo is enabled on a
-		// package that turns out not to use it. It also has to be non-empty:
-		// remote execution doesn't report empty output directories, which fails
-		// the build as of Bazel 8.
-		// TODO: Drop the marker file once Bazel reports empty output
-		// directories. Its only consumer filters it out by extension.
-		if err := os.MkdirAll(cgoGoSrcsForNogoPath, 0o777); err != nil {
-			return err
-		}
-		marker := filepath.Join(cgoGoSrcsForNogoPath, "empty.marker")
-		if err := os.WriteFile(marker, nil, 0o666); err != nil {
-			return err
-		}
-	}
-
 	// If we have cgo, generate separate C and go files, and compile the
 	// C files.
 	var objFiles []string
