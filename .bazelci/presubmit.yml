@@ -163,7 +163,10 @@ tasks:
     # output doesn't come back, while Bazel 7 tolerates it.
     # TODO: Run the full Bazel matrix here once that is fixed:
     # https://github.com/bazelbuild/bazel/issues/28286
-    bazel: 7.*
+    # The version is exact because rbe_preconfig only ships toolchain configs
+    # for the versions it knows and silently falls back to the newest one,
+    # which doesn't work with the rules_cc Bazel 7 resolves.
+    bazel: 7.7.0
     build_flags:
       - "--per_file_copt=external/.*@-w"
       - "--host_per_file_copt=external/.*@-w"
