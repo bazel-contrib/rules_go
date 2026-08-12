@@ -44,7 +44,7 @@ buildifier={buildifier}
 #   name-conventions: we have non-compliant providers. We might change them
 #       eventually, but we'll need to keep the old symbols for compatibility.
 #   print: used for warnings.
-# The list also excludes warnings buildifier 8 no longer knows: load-on-top,
+# The list also excludes warnings buildifier 8 doesn't know: load-on-top,
 # native-cc, native-java and same-origin-load.
 warnings=attr-cfg,attr-license,attr-non-empty,attr-output-default,attr-single-file,build-args-kwargs,constant-glob,ctx-actions,ctx-args,depset-iteration,depset-union,dict-concatenation,duplicated-name,filetype,git-repository,http-archive,integer-division,keyword-positional-params,load,native-android,native-build,native-package,native-proto,native-py,no-effect,output-group,overly-nested-depset,package-name,package-on-top,positional-args,redefined-variable,repository-name,return-value,rule-impl-return,string-iteration,uninitialized,unreachable,unused-variable
 

@@ -458,13 +458,6 @@ use_repo(go_sdk, "go_host_compatible_sdk_label", "go_sdk")
 	}
 }
 
-// TestCustomGoSDKHostCompatibleLabelBackwardCompatibility used to cover
-// go_register_toolchains picking up a user-declared @go_sdk repository that
-// only exposes :ROOT. That is WORKSPACE-only behavior in
-// //go/private:repositories.bzl and can't be expressed in a MODULE.bazel test
-// workspace; TestExperimentalBootstrapHostCompatibleSDKRoot covers the Bzlmod
-// path.
-
 func TestExperimentalBootstrapWithBzlmod(t *testing.T) {
 	origModuleData, err := os.ReadFile("MODULE.bazel")
 	hadModule := err == nil

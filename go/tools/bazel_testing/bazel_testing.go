@@ -537,7 +537,7 @@ local_path_override(
     path = "{{.TestedModulePath}}",
 )
 
-# Test workspaces used to get this for free from the WORKSPACE setup.
+# Provided by default so that fixtures don't have to declare them themselves.
 bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "rules_cc", version = "{{.RulesCCVersion}}")
 
@@ -564,11 +564,11 @@ _host_go_sdk.wrap(
 
 # The wrap tag has no name attribute; "main___wrap_0" is what the go_sdk
 # extension derives for the first wrap tag of a root module. Expose it as
-# @go_sdk, which is the name fixtures used under WORKSPACE.
+# @go_sdk, which is the name fixtures refer to it by.
 use_repo(_host_go_sdk, go_sdk = "main___wrap_0")
 {{if .Nogo}}
-# Custom nogo analyzers need the analysis framework, which the WORKSPACE setup
-# used to provide via go_rules_dependencies.
+# Custom nogo analyzers need the analysis framework, which is provided by the
+# golang.org/x/tools module fetched via gazelle's go_deps below.
 bazel_dep(name = "gazelle", version = "0.51.3")
 
 _nogo_go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
