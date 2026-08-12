@@ -114,8 +114,8 @@ func TestNotIncluded(t *testing.T) {
 func TestIncluded(t *testing.T) {
 	if err := bazel_testing.RunBazel("build", "//go:lib"); err == nil {
 		t.Fatal("Expected build to fail")
-	} else if !strings.Contains(err.Error(), "lib.go:6:3: self-assignment of foo to foo (assign)") {
-		t.Fatalf("Expected error to contain \"lib.go:6:3: self-assignment of foo to foo (assign)\", got %s", err)
+	} else if !strings.Contains(err.Error(), "lib.go:6:3: self-assignment of foo (assign)") {
+		t.Fatalf("Expected error to contain \"lib.go:6:3: self-assignment of foo (assign)\", got %s", err)
 	}
 }
 
