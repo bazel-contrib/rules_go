@@ -357,11 +357,6 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 		return "", cleanup, err
 	}
 
-	// Extract test files for the main repository.
-	if err := extractTxtar(mainDir, args.Main); err != nil {
-		return "", cleanup, fmt.Errorf("building main workspace: %v", err)
-	}
-
 	// Create a .bazelrc file with the contents of GO_BAZEL_TEST_BAZELFLAGS is set.
 	// The test can override this with its own .bazelrc or with flags in commands.
 	bazelrcPath := filepath.Join(mainDir, ".bazelrc")
@@ -375,6 +370,11 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 	}
 	if err := os.WriteFile(bazelrcPath, bazelrcBuf.Bytes(), 0666); err != nil {
 		return "", cleanup, err
+	}
+
+	// Extract test files for the main repository.
+	if err := extractTxtar(mainDir, args.Main); err != nil {
+		return "", cleanup, fmt.Errorf("building main workspace: %v", err)
 	}
 
 	goRootFilePath, err := runfiles.Rlocation(goRootFile)
