@@ -17,7 +17,7 @@ load("//go/private:common.bzl", "executable_path")
 load("//go/private:nogo.bzl", "go_register_nogo")
 load("//go/private:platforms.bzl", "GOARCH_CONSTRAINTS", "GOOS_CONSTRAINTS")
 
-MIN_SUPPORTED_VERSION = (1, 18, 0)
+MIN_SUPPORTED_VERSION = (1, 20, 0)
 
 def _go_host_sdk_impl(ctx):
     goroot = _detect_host_sdk(ctx)
@@ -524,7 +524,7 @@ def _detect_sdk_platform(ctx, goroot):
 def _detect_sdk_version(ctx, goroot):
     version_file_path = goroot + "/VERSION"
     if ctx.path(version_file_path).exists:
-        # VERSION file has version prefixed by go, eg. go1.18.3
+        # VERSION file has version prefixed by go, eg. go1.20.3
         # 1.21: The version is the first line
         version_line = ctx.read(version_file_path).splitlines()[0]
         version = version_line[2:]
@@ -539,8 +539,8 @@ def _detect_sdk_version(ctx, goroot):
     if result.return_code != 0:
         fail("Could not detect SDK version: '%s version' exited with exit code %d" % (go_binary_path, result.return_code))
 
-    # go version output is of the form "go version go1.18.3 linux/amd64" or "go
-    # version devel go1.19-fd1b5904ae Tue Mar 22 21:38:10 2022 +0000
+    # go version output is of the form "go version go1.20.3 linux/amd64" or "go
+    # version devel go1.21-fd1b5904ae Tue Mar 22 21:38:10 2022 +0000
     # linux/amd64". See the following links for how this output is generated:
     # - https://github.com/golang/go/blob/2bdb5c57f1efcbddab536028d053798e35de6226/src/cmd/go/internal/version/version.go#L75
     # - https://github.com/golang/go/blob/2bdb5c57f1efcbddab536028d053798e35de6226/src/cmd/dist/build.go#L333
@@ -569,9 +569,9 @@ def _parse_versions_json(data):
             JSON, is spaced and indented, and is in a particular format.
 
     Return:
-        A dict mapping version strings (like "1.18.1") to dicts mapping
+        A dict mapping version strings (like "1.20.1") to dicts mapping
         platform names (like "linux_amd64") to pairs of filenames
-        (like "go1.18.1.linux-amd64.tar.gz") and hex-encoded SHA-256 sums.
+        (like "go1.20.1.linux-amd64.tar.gz") and hex-encoded SHA-256 sums.
     """
     sdks = json.decode(data)
     return {
@@ -612,7 +612,7 @@ def fetch_sdks_by_version(ctx, allow_fail = False):
     return _parse_versions_json(data)
 
 def parse_version(version):
-    """Parses a version string like "1.18.1" and returns a tuple of numbers or None"""
+    """Parses a version string like "1.20.1" and returns a tuple of numbers or None"""
     l, r = 0, 0
     parsed = []
     for c in version.elems():
@@ -686,13 +686,13 @@ def go_register_toolchains(version = None, nogo = None, go_version = None, exper
         fail("go_register_toolchains: version set after go sdk rule declared ({})".format(", ".join([r["name"] for r in sdk_rules])))
     if len(sdk_rules) == 0:
         if not version:
-            fail('go_register_toolchains: version must be a string like "1.18.1" or "host"')
+            fail('go_register_toolchains: version must be a string like "1.20.1" or "host"')
         elif version == "host":
             go_host_sdk(name = "go_sdk", experiments = experiments)
         else:
             pv = parse_version(version)
             if not pv:
-                fail('go_register_toolchains: version must be a string like "1.18.1" or "host"')
+                fail('go_register_toolchains: version must be a string like "1.20.1" or "host"')
             if _version_less(pv, MIN_SUPPORTED_VERSION):
                 print("DEPRECATED: Go versions before {} are not supported and may not work".format(_version_string(MIN_SUPPORTED_VERSION)))
             go_download_sdk(

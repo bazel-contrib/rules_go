@@ -23,7 +23,7 @@ def version_from_go_mod(module_ctx, go_mod_label):
     Returns:
       a string containing the version of the Go SDK defined in go.mod
     """
-    return _version_from_go_file(module_ctx, go_mod_label, "go.mod", "1.18")
+    return _version_from_go_file(module_ctx, go_mod_label, "go.mod", "1.20")
 
 def version_from_go_work(module_ctx, go_work_label):
     """Returns a version string from a go.work file.
@@ -36,7 +36,7 @@ def version_from_go_work(module_ctx, go_work_label):
     Returns:
       a string containing the version of the Go SDK defined in go.work
     """
-    return _version_from_go_file(module_ctx, go_work_label, "go.work", "1.18")
+    return _version_from_go_file(module_ctx, go_work_label, "go.work", "1.20")
 
 def _version_from_go_file(module_ctx, file_label, expected_filename, default_version):
     _check_filename(file_label.name, expected_filename)
@@ -80,7 +80,7 @@ def _version_from_go_file(module_ctx, file_label, expected_filename, default_ver
         version = state["go"]
     if not version:
         # The Go language version defaults to 1.16 for go.mod and 1.18 for
-        # go.work, but rules_go cannot select an SDK older than Go 1.18.
+        # go.work, but rules_go cannot select an SDK older than Go 1.20.
         version = default_version
 
     return version

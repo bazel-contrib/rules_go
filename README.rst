@@ -162,7 +162,7 @@ only tested on those listed above.
 
 Note: Since version v0.51.0, rules_go requires Bazel ≥ 6.5.0 to work.
 
-rules_go requires a Go SDK ≥ 1.18.
+rules_go requires a Go SDK ≥ 1.20.
 
 The ``master`` branch is only guaranteed to work with the latest version of Bazel.
 
@@ -447,7 +447,7 @@ How do I test a beta version of the Go SDK?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 rules_go only supports official releases of the Go SDK. However, you can still
-test beta and RC versions by passing a ``version`` like ``"1.19beta1"`` to
+test beta and RC versions by passing a ``version`` like ``"1.21rc2"`` to
 `go_register_toolchains`_. See also `go_download_sdk`_.
 
 .. code:: bzl
@@ -456,4 +456,4 @@ test beta and RC versions by passing a ``version`` like ``"1.19beta1"`` to
 
   go_rules_dependencies()
 
-  go_register_toolchains(version = "1.19beta1")
+  go_register_toolchains(version = "1.21rc2")

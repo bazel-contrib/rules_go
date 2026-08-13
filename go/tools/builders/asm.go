@@ -16,12 +16,8 @@ package main
 
 import (
 	"go/build"
-	"io/ioutil"
 	"os"
 	"path/filepath"
-	"regexp"
-	"runtime"
-	"strconv"
 )
 
 var ASM_DEFINES = []string{
@@ -51,7 +47,7 @@ func buildSymabisFile(goenv *env, packagePath string, sFiles, hFiles []fileInfo,
 
 	// Create a temporary output file. The caller is responsible for deleting it.
 	var symabisName string
-	symabisFile, err := ioutil.TempFile("", "symabis")
+	symabisFile, err := os.CreateTemp("", "symabis")
 	if err != nil {
 		return "", err
 	}
@@ -76,11 +72,9 @@ func buildSymabisFile(goenv *env, packagePath string, sFiles, hFiles []fileInfo,
 			seenHdrDirs[hdrDir] = true
 		}
 	}
-	// The package path has to be specified as of Go 1.22 or the resulting
-	// object will be unlinkable, but the -p flag is only required in
-	// preparing symabis since Go1.22, however, go build has been
-	// emitting -p for both symabi and actual assembly since at least Go1.19
-	if packagePath != "" && isGo119OrHigher() {
+	// Go emits -p when preparing symabis so that the package path is available
+	// to the assembler.
+	if packagePath != "" {
 		asmargs = append(asmargs, "-p", packagePath)
 	}
 	asmargs = append(asmargs, ASM_DEFINES...)
@@ -96,10 +90,7 @@ func buildSymabisFile(goenv *env, packagePath string, sFiles, hFiles []fileInfo,
 func asmFile(goenv *env, srcPath, packagePath string, asmFlags []string, outPath string) error {
 	args := goenv.goTool("asm")
 	args = append(args, asmFlags...)
-	// The package path has to be specified as of Go 1.19 or the resulting
-	// object will be unlinkable, but the -p flag is also only available
-	// since Go 1.19.
-	if packagePath != "" && isGo119OrHigher() {
+	if packagePath != "" {
 		args = append(args, "-p", packagePath)
 	}
 	args = append(args, ASM_DEFINES...)
@@ -108,20 +99,4 @@ func asmFile(goenv *env, srcPath, packagePath string, asmFlags []string, outPath
 	args = append(args, "--", srcPath)
 	absArgs(args, []string{"-I", "-o", "-trimpath"})
 	return goenv.runCommand(args)
-}
-
-var goMinorVersionRegexp = regexp.MustCompile(`^go1\.(\d+)`)
-
-func isGo119OrHigher() bool {
-	match := goMinorVersionRegexp.FindStringSubmatch(runtime.Version())
-	if match == nil {
-		// Developer version or something with an unparseable version string,
-		// assume Go 1.19 or higher.
-		return true
-	}
-	minorVersion, err := strconv.Atoi(match[1])
-	if err != nil {
-		return true
-	}
-	return minorVersion >= 19
 }

@@ -15,7 +15,7 @@
 package from_go_mod_file_test
 
 import (
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel_testing"
@@ -97,13 +97,13 @@ require (
 			go_mod: `
 module test
 
-go 1.18
+go 1.20
 
 require (
     github.com/bazelbuild/rules_go v0.53.0  // unused, just here to test the go.mod parser
 )
 `,
-			want: "go1.18",
+			want: "go1.20",
 		},
 		{
 			desc: "missing go",
@@ -114,11 +114,11 @@ require (
     github.com/bazelbuild/rules_go v0.53.0  // unused, just here to test the go.mod parser
 )
 `,
-			want: "go1.18",
+			want: "go1.20",
 		},
 	} {
 		t.Run(test.desc, func(t *testing.T) {
-			if err := ioutil.WriteFile("go.mod", []byte(test.go_mod), 0o666); err != nil {
+			if err := os.WriteFile("go.mod", []byte(test.go_mod), 0o666); err != nil {
 				t.Fatal(err)
 			}
 			args := []string{

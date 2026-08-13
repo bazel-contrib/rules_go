@@ -24,8 +24,6 @@ load(
 )
 load(
     "//go/private:mode.bzl",
-    "LINKMODE_NORMAL",
-    "LINKMODE_PIE",
     "extldflags_from_cc_toolchain",
     "link_mode_arg",
 )
@@ -33,7 +31,6 @@ load(
     "//go/private:providers.bzl",
     "GoStdLib",
 )
-load("//go/private:sdk.bzl", "parse_version")
 load("//go/private/actions:utils.bzl", "quote_opts")
 
 def emit_stdlib(go):
@@ -46,22 +43,8 @@ def emit_stdlib(go):
         A list of providers containing GoInfo and GoStdLib.
     """
     go_info = new_go_info(go, {}, coverage_instrumented = False)
-    stdlib = _sdk_stdlib(go) if _should_use_sdk_stdlib(go) else _build_stdlib(go)
+    stdlib = _build_stdlib(go)
     return [go_info, stdlib]
-
-def _should_use_sdk_stdlib(go):
-    version = parse_version(go.sdk.version)
-    if version and version[0] <= 1 and version[1] <= 19 and go.sdk.experiments:
-        # The precompiled stdlib shipped with 1.19 or below doesn't have experiments
-        return False
-    return (go.sdk.libs and  # go.sdk.libs is non-empty if sdk ships with precompiled .a files
-            go.mode.goos == go.sdk.goos and
-            go.mode.goarch == go.sdk.goarch and
-            not go.mode.race and  # TODO(jayconrod): use precompiled race
-            not go.mode.msan and
-            not go.mode.pure and
-            not go.mode.gc_goopts and
-            go.mode.linkmode in (LINKMODE_NORMAL, LINKMODE_PIE))
 
 def _build_stdlib_list_json(go):
     sdk = go.sdk
@@ -122,16 +105,6 @@ def _build_env(go):
 
     return env
 
-def _sdk_stdlib(go):
-    list_json, cache_dir = _build_stdlib_list_json(go)
-    return GoStdLib(
-        _list_json = list_json,
-        cgo_link_inputs = depset(),
-        cache_dir = depset([cache_dir]),
-        libs = go.sdk.libs,
-        root_file = go.sdk.root_file,
-    )
-
 def _dirname(file):
     return file.dirname
 
@@ -150,11 +123,9 @@ def _build_stdlib(go):
     if not go.mode.pure:
         args.add("-package", "runtime/cgo")
 
-    version = parse_version(go.sdk.version)
-    if version and version[0] >= 1 and version[1] >= 20:
-        # For bzltestutil's coverage support - `cmd/internal/cov` only introduced in go 1.20
-        args.add("-package", "cmd/internal/cov")
-        args.add("-package", "cmd/internal/bio")
+    # For bzltestutil's coverage support.
+    args.add("-package", "cmd/internal/cov")
+    args.add("-package", "cmd/internal/bio")
 
     link_mode_flag = link_mode_arg(go.mode)
     if link_mode_flag:

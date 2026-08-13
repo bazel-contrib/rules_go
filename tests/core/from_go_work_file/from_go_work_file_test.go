@@ -15,7 +15,7 @@
 package from_go_work_file_test
 
 import (
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel_testing"
@@ -91,13 +91,13 @@ use (
 		{
 			desc: "go only",
 			go_work: `
-go 1.18
+go 1.20
 
 use (
     .  // unused, just here to test the go.work parser
 )
 `,
-			want: "go1.18",
+			want: "go1.20",
 		},
 		{
 			desc: "missing go",
@@ -106,11 +106,11 @@ use (
     .  // unused, just here to test the go.work parser
 )
 `,
-			want: "go1.18",
+			want: "go1.20",
 		},
 	} {
 		t.Run(test.desc, func(t *testing.T) {
-			if err := ioutil.WriteFile("go.work", []byte(test.go_work), 0o666); err != nil {
+			if err := os.WriteFile("go.work", []byte(test.go_work), 0o666); err != nil {
 				t.Fatal(err)
 			}
 			args := []string{

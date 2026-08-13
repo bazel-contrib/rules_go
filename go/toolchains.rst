@@ -47,7 +47,7 @@ containing sources for the Go toolchain and standard library and pre-compiled
 binaries for the same. You can download this from by visiting the `Go website`_
 and downloading a `binary distribution`_.
 
-rules_go requires Go SDK 1.18 or later.
+rules_go requires Go SDK 1.20 or later.
 
 There are several Bazel rules for obtaining and configuring a Go SDK:
 
@@ -75,9 +75,9 @@ ensure that you have declared a Go SDK of that version using one of the above ru
 (`go_download_sdk`_, `go_host_sdk`_, `go_local_sdk`_, `go_wrap_sdk`_). Then you
 can specify the sdk version to build with when running a ``bazel build`` by passing
 the flag ``--@io_bazel_rules_go//go/toolchain:sdk_version="version"`` where
-``"version"`` is the SDK version you would like to build with, eg. ``"1.18.3"``.
+``"version"`` is the SDK version you would like to build with, eg. ``"1.20.3"``.
 The SDK version can omit the patch, or include a prerelease part, eg. ``"1"``,
-``"1.18"``, ``"1.18.0"``, and ``"1.19.0beta1"`` are all valid values for ``sdk_version``.
+``"1.20"``, ``"1.20.1"``, and ``"1.21rc2"`` are all valid values for ``sdk_version``.
 When ``go_host_sdk`` is used, ``"version"`` can be set to ``host`` to refer to the host Go SDK.
 It can also be set ``remote`` to match any non-host version.
 
@@ -317,7 +317,7 @@ go_register_toolchains
 ~~~~~~~~~~~~~~~~~~~~~~
 
 Installs the Go toolchains. If :param:`version` is specified, it sets the
-SDK version to use (for example, :value:`"1.18.1"`).
+SDK version to use (for example, :value:`"1.20.1"`).
 
 +--------------------------------+-----------------------------+-----------------------------------+
 | **Name**                       | **Type**                    | **Default value**                 |
@@ -329,7 +329,7 @@ SDK version to use (for example, :value:`"1.18.1"`).
 | If a toolchain was already declared with `go_download_sdk`_ or a similar rule,                   |
 | this parameter may not be set.                                                                   |
 |                                                                                                  |
-| Normally this is set to a Go version like :value:`"1.18.1"`. It may also be                      |
+| Normally this is set to a Go version like :value:`"1.20.1"`. It may also be                      |
 | set to :value:`"host"`, which will cause rules_go to use the Go toolchain                        |
 | installed on the host system (found using ``GOROOT`` or ``PATH``).                               |
 |                                                                                                  |
@@ -377,7 +377,7 @@ This downloads a Go SDK for use in toolchains.
 +--------------------------------+-----------------------------+---------------------------------------------+
 | :param:`version`               | :type:`string`              | :value:`latest Go version`                  |
 +--------------------------------+-----------------------------+---------------------------------------------+
-| The version of Go to download, for example ``1.18.1``. If unspecified,                                     |
+| The version of Go to download, for example ``1.20.1``. If unspecified,                                     |
 | ``go_download_sdk`` will list available versions of Go from golang.org, then                               |
 | pick the highest version. If ``version`` is specified but ``sdks`` is                                      |
 | unspecified, ``go_download_sdk`` will list available versions on golang.org                                |
@@ -443,7 +443,7 @@ This downloads a Go SDK for use in toolchains.
         name = "go_sdk",
         goos = "linux",
         goarch = "amd64",
-        version = "1.18.1",
+        version = "1.20.1",
         sdks = {
             # NOTE: In most cases the whole sdks attribute is not needed.
             # There are 2 "common" reasons you might want it:
@@ -454,8 +454,8 @@ This downloads a Go SDK for use in toolchains.
             # 2. You want to avoid the dependency on the index file for the
             #    SHA-256 checksums. In this case, You can get the expected
             #    filenames and checksums from https://go.dev/dl/
-            "linux_amd64": ("go1.18.1.linux-amd64.tar.gz", "b3b815f47ababac13810fc6021eb73d65478e0b2db4b09d348eefad9581a2334"),
-            "darwin_amd64": ("go1.18.1.darwin-amd64.tar.gz", "3703e9a0db1000f18c0c7b524f3d378aac71219b4715a6a4c5683eb639f41a4d"),
+            "linux_amd64": ("go1.20.1.linux-amd64.tar.gz", "000a5b1fca4f75895f78befeb2eecf10bfff3c428597f3f1e69133b63b911b02"),
+            "darwin_amd64": ("go1.20.1.darwin-amd64.tar.gz", "a300a45e801ab459f3008aae5bb9efbe9a6de9bcd12388f5ca9bbd14f70236de"),
         },
         patch_strip = 1,
         patches = [

@@ -108,7 +108,7 @@ _go_cross_kwargs = {
         "sdk_version": attr.string(
             doc = """The golang SDK version to use for compiling the `target`.
             Supports specifying major, minor, and/or patch versions, eg. `"1"`,
-            `"1.18"`, or `"1.18.1"`. The first Go SDK provider installed in the
+            `"1.20"`, or `"1.20.1"`. The first Go SDK provider installed in the
             repo's workspace (via `go_download_sdk`, `go_wrap_sdk`, etc) that
             matches the specified version will be used for compiling the given
             `target`. If unspecified, the `target` will be compiled with the same

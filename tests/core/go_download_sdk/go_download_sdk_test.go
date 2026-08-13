@@ -16,7 +16,6 @@ package go_download_sdk_test
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -87,11 +86,11 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk")
 
 go_download_sdk(
     name = "go_sdk",
-    version = "1.18",
+    version = "1.20",
 )
 
 `,
-			optToWantVersion: map[string]string{"": "go1.18"},
+			optToWantVersion: map[string]string{"": "go1.20"},
 		},
 		{
 			desc: "custom_archives",
@@ -101,14 +100,14 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk")
 go_download_sdk(
     name = "go_sdk",
     sdks = {
-        "darwin_amd64": ("go1.18.darwin-amd64.tar.gz", "70bb4a066997535e346c8bfa3e0dfe250d61100b17ccc5676274642447834969"),
-        "darwin_arm64": ("go1.18.darwin-arm64.tar.gz", "9cab6123af9ffade905525d79fc9ee76651e716c85f1f215872b5f2976782480"),
-        "linux_amd64": ("go1.18.linux-amd64.tar.gz", "e85278e98f57cdb150fe8409e6e5df5343ecb13cebf03a5d5ff12bd55a80264f"),
-        "windows_amd64": ("go1.18.windows-amd64.zip", "65c5c0c709a7ca1b357091b10b795b439d8b50e579d3893edab4c7e9b384f435"),
+        "darwin_amd64": ("go1.20.darwin-amd64.tar.gz", "777025500f62d14bb5a4923072cd97431887961d24de08433a60c2fe1120531d"),
+        "darwin_arm64": ("go1.20.darwin-arm64.tar.gz", "32864d6fe888714ca7b421b5997269c7f6349d7e2675c3a399133e521787608b"),
+        "linux_amd64": ("go1.20.linux-amd64.tar.gz", "5a9ebcc65c1cce56e0d2dc616aff4c4cedcfbda8cc6f0288cc08cda3b18dcbf1"),
+        "windows_amd64": ("go1.20.windows-amd64.zip", "e8f6d8bbcf3df58d2ba29818e13b04c2e42ba2e4d90d580720b21c34d10bbf68"),
     },
 )
 `,
-			optToWantVersion: map[string]string{"": "go1.18"},
+			optToWantVersion: map[string]string{"": "go1.20"},
 		},
 		{
 			desc: "multiple_sdks",
@@ -117,24 +116,24 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk", "go_host_sdk")
 
 go_download_sdk(
     name = "go_sdk",
-    version = "1.18",
+    version = "1.20",
 )
 go_download_sdk(
-    name = "go_sdk_1_19",
-    version = "1.19",
+    name = "go_sdk_1_21_0",
+    version = "1.21.0",
 )
 go_download_sdk(
-    name = "go_sdk_1_19_1",
-    version = "1.19.1",
+    name = "go_sdk_1_21_1",
+    version = "1.21.1",
 )
 `,
 			optToWantVersion: map[string]string{
-				"": "go1.18",
-				"--@io_bazel_rules_go//go/toolchain:sdk_version=remote": "go1.18",
-				"--@io_bazel_rules_go//go/toolchain:sdk_version=1":      "go1.18",
-				"--@io_bazel_rules_go//go/toolchain:sdk_version=1.19":   "go1.19",
-				"--@io_bazel_rules_go//go/toolchain:sdk_version=1.19.0": "go1.19",
-				"--@io_bazel_rules_go//go/toolchain:sdk_version=1.19.1": "go1.19.1",
+				"": "go1.20",
+				"--@io_bazel_rules_go//go/toolchain:sdk_version=remote": "go1.20",
+				"--@io_bazel_rules_go//go/toolchain:sdk_version=1":      "go1.20",
+				"--@io_bazel_rules_go//go/toolchain:sdk_version=1.21":   "go1.21.0",
+				"--@io_bazel_rules_go//go/toolchain:sdk_version=1.21.0": "go1.21.0",
+				"--@io_bazel_rules_go//go/toolchain:sdk_version=1.21.1": "go1.21.1",
 			},
 		},
 		{
@@ -162,12 +161,12 @@ go_download_sdk(
     version = "1.23.5",
 )
 go_download_sdk(
-    name = "go_sdk_1_18",
-    version = "1.18",
+    name = "go_sdk_1_20",
+    version = "1.20",
 )
 go_download_sdk(
-    name = "go_sdk_1_18_1",
-    version = "1.18.1",
+    name = "go_sdk_1_20_1",
+    version = "1.20.1",
 )
 go_download_sdk(
     name = "go_sdk_with_experiments",
@@ -177,15 +176,15 @@ go_download_sdk(
 `,
 			optToWantVersion: map[string]string{
 				"": "go1.23.5",
-				"--@io_bazel_rules_go//go/toolchain:sdk_name=go_sdk_1_18_1":           "go1.18.1",
-				"--@io_bazel_rules_go//go/toolchain:sdk_name=go_sdk_1_18":             "go1.18",
+				"--@io_bazel_rules_go//go/toolchain:sdk_name=go_sdk_1_20_1":           "go1.20.1",
+				"--@io_bazel_rules_go//go/toolchain:sdk_name=go_sdk_1_20":             "go1.20",
 				"--@io_bazel_rules_go//go/toolchain:sdk_name=go_sdk":                  "go1.23.5",
 				"--@io_bazel_rules_go//go/toolchain:sdk_name=go_sdk_with_experiments": "go1.23.5 X:rangefunc",
 			},
 		},
 	} {
 		t.Run(test.desc, func(t *testing.T) {
-			origWorkspaceData, err := ioutil.ReadFile("WORKSPACE")
+			origWorkspaceData, err := os.ReadFile("WORKSPACE")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -203,11 +202,11 @@ go_rules_dependencies()
 
 go_register_toolchains()
 `)
-			if err := ioutil.WriteFile("WORKSPACE", buf.Bytes(), 0666); err != nil {
+			if err := os.WriteFile("WORKSPACE", buf.Bytes(), 0666); err != nil {
 				t.Fatal(err)
 			}
 			defer func() {
-				if err := ioutil.WriteFile("WORKSPACE", origWorkspaceData, 0666); err != nil {
+				if err := os.WriteFile("WORKSPACE", origWorkspaceData, 0666); err != nil {
 					t.Errorf("error restoring WORKSPACE: %v", err)
 				}
 			}()
@@ -239,7 +238,7 @@ go_register_toolchains()
 }
 
 func TestPatch(t *testing.T) {
-	origWorkspaceData, err := ioutil.ReadFile("WORKSPACE")
+	origWorkspaceData, err := os.ReadFile("WORKSPACE")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -265,7 +264,7 @@ go_rules_dependencies()
 
 go_register_toolchains()
 `)
-	if err := ioutil.WriteFile("WORKSPACE", buf.Bytes(), 0666); err != nil {
+	if err := os.WriteFile("WORKSPACE", buf.Bytes(), 0666); err != nil {
 		t.Fatal(err)
 	}
 
@@ -284,11 +283,11 @@ index 5306bcb..d110a19 100644
  // by Lstat, in directory order. Subsequent calls on the same file will yield
 `)
 
-	if err := ioutil.WriteFile("test.patch", patchContent, 0666); err != nil {
+	if err := os.WriteFile("test.patch", patchContent, 0666); err != nil {
 		t.Fatal(err)
 	}
 	defer func() {
-		if err := ioutil.WriteFile("WORKSPACE", origWorkspaceData, 0666); err != nil {
+		if err := os.WriteFile("WORKSPACE", origWorkspaceData, 0666); err != nil {
 			t.Errorf("error restoring WORKSPACE: %v", err)
 		}
 	}()
@@ -311,7 +310,7 @@ func TestExperimentalBuildCompilerFromSourceDoesNotRequireToolchainBuildSetting(
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			origWorkspaceData, err := ioutil.ReadFile("WORKSPACE")
+			origWorkspaceData, err := os.ReadFile("WORKSPACE")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -336,11 +335,11 @@ go_rules_dependencies()
 
 go_register_toolchains()
 `)
-			if err := ioutil.WriteFile("WORKSPACE", buf.Bytes(), 0666); err != nil {
+			if err := os.WriteFile("WORKSPACE", buf.Bytes(), 0666); err != nil {
 				t.Fatal(err)
 			}
 			defer func() {
-				if err := ioutil.WriteFile("WORKSPACE", origWorkspaceData, 0666); err != nil {
+				if err := os.WriteFile("WORKSPACE", origWorkspaceData, 0666); err != nil {
 					t.Errorf("error restoring WORKSPACE: %v", err)
 				}
 			}()
@@ -368,7 +367,7 @@ go_register_toolchains()
 }
 
 func TestExperimentalBootstrapWithRulesShellToolchains(t *testing.T) {
-	origWorkspaceData, err := ioutil.ReadFile("WORKSPACE")
+	origWorkspaceData, err := os.ReadFile("WORKSPACE")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -397,11 +396,11 @@ rules_shell_toolchains()
 
 go_register_toolchains()
 `)
-	if err := ioutil.WriteFile("WORKSPACE", buf.Bytes(), 0666); err != nil {
+	if err := os.WriteFile("WORKSPACE", buf.Bytes(), 0666); err != nil {
 		t.Fatal(err)
 	}
 	defer func() {
-		if err := ioutil.WriteFile("WORKSPACE", origWorkspaceData, 0666); err != nil {
+		if err := os.WriteFile("WORKSPACE", origWorkspaceData, 0666); err != nil {
 			t.Errorf("error restoring WORKSPACE: %v", err)
 		}
 	}()
@@ -415,7 +414,7 @@ go_register_toolchains()
 }
 
 func TestExperimentalBootstrapHostCompatibleSDKRoot(t *testing.T) {
-	origWorkspaceData, err := ioutil.ReadFile("WORKSPACE")
+	origWorkspaceData, err := os.ReadFile("WORKSPACE")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -440,11 +439,11 @@ go_rules_dependencies()
 
 go_register_toolchains()
 `)
-	if err := ioutil.WriteFile("WORKSPACE", buf.Bytes(), 0666); err != nil {
+	if err := os.WriteFile("WORKSPACE", buf.Bytes(), 0666); err != nil {
 		t.Fatal(err)
 	}
 	defer func() {
-		if err := ioutil.WriteFile("WORKSPACE", origWorkspaceData, 0666); err != nil {
+		if err := os.WriteFile("WORKSPACE", origWorkspaceData, 0666); err != nil {
 			t.Errorf("error restoring WORKSPACE: %v", err)
 		}
 	}()
@@ -500,7 +499,7 @@ go_register_toolchains()
 }
 
 func TestCustomGoSDKHostCompatibleLabelBackwardCompatibility(t *testing.T) {
-	origWorkspaceData, err := ioutil.ReadFile("WORKSPACE")
+	origWorkspaceData, err := os.ReadFile("WORKSPACE")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -543,11 +542,11 @@ exports_files(["ROOT"])
 
 go_rules_dependencies()
 `)
-	if err := ioutil.WriteFile("WORKSPACE", buf.Bytes(), 0666); err != nil {
+	if err := os.WriteFile("WORKSPACE", buf.Bytes(), 0666); err != nil {
 		t.Fatal(err)
 	}
 	defer func() {
-		if err := ioutil.WriteFile("WORKSPACE", origWorkspaceData, 0666); err != nil {
+		if err := os.WriteFile("WORKSPACE", origWorkspaceData, 0666); err != nil {
 			t.Errorf("error restoring WORKSPACE: %v", err)
 		}
 	}()
@@ -576,14 +575,14 @@ go_rules_dependencies()
 }
 
 func TestExperimentalBootstrapWithBzlmod(t *testing.T) {
-	origModuleData, err := ioutil.ReadFile("MODULE.bazel")
+	origModuleData, err := os.ReadFile("MODULE.bazel")
 	hadModule := err == nil
 	if err != nil && !os.IsNotExist(err) {
 		t.Fatal(err)
 	}
 	defer func() {
 		if hadModule {
-			if err := ioutil.WriteFile("MODULE.bazel", origModuleData, 0666); err != nil {
+			if err := os.WriteFile("MODULE.bazel", origModuleData, 0666); err != nil {
 				t.Errorf("error restoring MODULE.bazel: %v", err)
 			}
 			return
@@ -616,7 +615,7 @@ go_sdk.download(
 )
 use_repo(go_sdk, "go_sdk")
 `
-	if err := ioutil.WriteFile("MODULE.bazel", []byte(moduleData), 0666); err != nil {
+	if err := os.WriteFile("MODULE.bazel", []byte(moduleData), 0666); err != nil {
 		t.Fatal(err)
 	}
 

@@ -31,32 +31,32 @@ var testCases = []testcase{
 	{
 		Name:            "major_version",
 		SDKVersion:      "1",
-		expectedVersion: "go1.18",
+		expectedVersion: "go1.20",
 	},
 	{
 		Name:            "minor_version",
-		SDKVersion:      "1.18",
-		expectedVersion: "go1.18",
+		SDKVersion:      "1.20",
+		expectedVersion: "go1.20",
 	},
 	{
 		Name:            "patch_version",
-		SDKVersion:      "1.18.0",
-		expectedVersion: "go1.18",
+		SDKVersion:      "1.20.0",
+		expectedVersion: "go1.20",
 	},
 	{
-		Name:            "1_19_minor_version",
-		SDKVersion:      "1.19",
-		expectedVersion: "go1.19",
+		Name:            "1_21_minor_version",
+		SDKVersion:      "1.21",
+		expectedVersion: "go1.21.0",
 	},
 	{
-		Name:            "1_19_patch_version",
-		SDKVersion:      "1.19.1",
-		expectedVersion: "go1.19.1",
+		Name:            "1_21_patch_version",
+		SDKVersion:      "1.21.1",
+		expectedVersion: "go1.21.1",
 	},
 	{
-		Name:            "1_19_release_candidate",
-		SDKVersion:      "1.19rc1",
-		expectedVersion: "go1.19rc1",
+		Name:            "1_21_release_candidate",
+		SDKVersion:      "1.21rc2",
+		expectedVersion: "go1.21rc2",
 	},
 }
 
@@ -105,19 +105,19 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk")
 
 go_download_sdk(
     name = "go_sdk",
-    version = "1.18",
+    version = "1.20",
 )
 go_download_sdk(
-    name = "go_sdk_1_19",
-    version = "1.19",
+    name = "go_sdk_1_21_0",
+    version = "1.21.0",
 )
 go_download_sdk(
-    name = "go_sdk_1_19_1",
-    version = "1.19.1",
+    name = "go_sdk_1_21_1",
+    version = "1.21.1",
 )
 go_download_sdk(
-    name = "go_sdk_1_19_rc1",
-    version = "1.19rc1",
+    name = "go_sdk_1_21_rc2",
+    version = "1.21rc2",
 )
 `,
 	})

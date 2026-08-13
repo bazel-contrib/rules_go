@@ -440,7 +440,7 @@ go_cross_transition = transition(
 # This should be updated to contain the union of all tags relevant for all
 # versions of Go that are still relevant.
 #
-# Currently supported versions: 1.18..1.23
+# Currently supported versions: 1.20..1.23
 #
 # To regenerate, run and paste the output of
 #     bazel run //go/tools/internal/stdlib_tags:stdlib_tags -- path/to/go_sdk_1/src ...
@@ -457,7 +457,6 @@ _TAG_AFFECTS_STDLIB = {
     "faketime": None,
     "gc": None,
     "gccgo": None,
-    "gen": None,  # Removed in Go 1.20
     "generate": None,
     "gofuzz": None,  # Removed in Go 1.23
     "icu": None,  # Added in Go 1.23
@@ -479,8 +478,6 @@ _TAG_AFFECTS_STDLIB = {
     "sh": None,
     "shbe": None,
     "static": None,  # Added in Go 1.21
-    "tablegen": None,  # Removed in Go 1.19
-    "testgo": None,  # Removed in Go 1.19
     "timetzdata": None,
     "tools": None,  # Added in Go 1.21
 }
