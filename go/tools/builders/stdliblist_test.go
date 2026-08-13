@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -23,8 +22,8 @@ func Test_stdliblist_noexport(t *testing.T) {
 	outJSON := filepath.Join(testDir, "out.json")
 
 	test_args := []string{
-		fmt.Sprintf("-out=%s", outJSON),
-		fmt.Sprintf("-sdk=../%s", sdkDir()),
+		"-out=" + outJSON,
+		"-sdk=../" + sdkDir(),
 	}
 
 	if err := stdliblist(test_args); err != nil {
@@ -61,8 +60,8 @@ func Test_stdliblist_export(t *testing.T) {
 	testDir := t.TempDir()
 	outJSON := filepath.Join(testDir, "out.json")
 	test_args := []string{
-		fmt.Sprintf("-out=%s", outJSON),
-		fmt.Sprintf("-sdk=../%s", sdkDir()),
+		"-out=" + outJSON,
+		"-sdk=../" + sdkDir(),
 		"-export",
 	}
 	// Disable CGO otherwise, this takes forever to build.
