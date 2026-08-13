@@ -91,11 +91,13 @@ tasks:
       - "--test_env=ZIG_CC=1"
     build_targets:
       - "//..."
+      - "-//docs:all"
       # Deliberately links against a symbol defined by a dependent, which the
       # zig linker rejects.
       - "-//tests/core/cgo:provide_external_symbol"
     test_targets:
       - "//..."
+      - "-//docs:all"
       - "-//tests/core/cgo:provide_external_symbol"
       # The zig toolchain doesn't make shared libraries loadable at runtime.
       - "-//tests/core/c_linkmodes:c-shared_test"
@@ -172,6 +174,7 @@ tasks:
       - "--host_per_file_copt=external/.*@-w"
     build_targets:
       - "//..."
+      - "-//docs:all"
     test_flags:
       - "--per_file_copt=external/.*@-w"
       - "--host_per_file_copt=external/.*@-w"
@@ -186,6 +189,7 @@ tasks:
     test_targets:
       - "--"
       - "//..."
+      - "-//docs:all"
       - "-//tests/core/stdlib:buildid_test"
       # Source directories in runfiles are not supported with RBE.
       - "-//tests/runfiles:runfiles_test"
