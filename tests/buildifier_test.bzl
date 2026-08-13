@@ -66,7 +66,7 @@ exit $ok
         executable = script,
         # The prebuilt buildifier is a wrapper that needs its own runfiles.
         default_runfiles = ctx.runfiles(
-            files = [script, ctx.executable._buildifier] + files,
+            files = [script] + files,
         ).merge(ctx.attr._buildifier[DefaultInfo].default_runfiles),
     )]
 
