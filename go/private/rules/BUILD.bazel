@@ -2,6 +2,7 @@ load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 load("@bazel_skylib//rules:common_settings.bzl", "string_setting")
 load(
     ":transition.bzl",
+    "TOOL_INHERITED_SETTING_KEYS",
     "TRANSITIONED_GO_SETTING_KEYS",
 )
 
@@ -14,6 +15,9 @@ exports_files([
     string_setting(
         name = "original_" + setting.split(":")[1],
         build_setting_default = "",
+        # Must have the same scope as the setting it records, or
+        # go_tool_transition can't tell a command-line value from an attribute.
+        scope = "universal" if setting in TOOL_INHERITED_SETTING_KEYS else None,
         visibility = ["//visibility:private"],
     )
     for setting in TRANSITIONED_GO_SETTING_KEYS

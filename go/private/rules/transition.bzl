@@ -59,6 +59,22 @@ _SETTING_KEY_TO_ORIGINAL_SETTING_KEY = {
     for setting in TRANSITIONED_GO_SETTING_KEYS
 }
 
+# Settings that go_tool_transition inherits from the command line instead of
+# resetting: whether a binary has to be linked statically or without cgo is a
+# property of the platform it runs on, so it applies to Go tool binaries as much
+# as to the target the user requested.
+TOOL_INHERITED_SETTING_KEYS = [
+    "//go/config:static",
+    "//go/config:pure",
+]
+
+def _setting_before_go_transition(settings, key):
+    """Returns the value of key from before the last go_transition."""
+    original_value = settings[_SETTING_KEY_TO_ORIGINAL_SETTING_KEY[key]]
+    if original_value:
+        return json.decode(original_value)
+    return settings[key]
+
 def _go_transition_impl(settings, attr):
     # NOTE: Keep the list of rules_go settings set by this transition in sync
     # with POTENTIALLY_TRANSITIONED_SETTINGS.
@@ -213,8 +229,14 @@ def _go_tool_transition_impl(settings, _attr):
     doesn't change the platform (goos, goarch), but tool binaries should also
     have `cfg = "exec"` so tool binaries should be built for the execution
     platform.
+
+    The settings in TOOL_INHERITED_SETTING_KEYS are an exception: they keep the
+    value they had before the last go_transition.
     """
-    return dict(settings, **_reset_transition_dict)
+    new_settings = dict(settings, **_reset_transition_dict)
+    for key in TOOL_INHERITED_SETTING_KEYS:
+        new_settings[key] = _setting_before_go_transition(settings, key)
+    return new_settings
 
 go_tool_transition = transition(
     implementation = _go_tool_transition_impl,
@@ -229,7 +251,9 @@ def _non_go_tool_transition_impl(settings, _attr):
     nogo settings to their default values. This is used for all tools that are
     not themselves targets created from rules_go rules and thus do not read
     these settings. Resetting all of them to defaults prevents unnecessary
-    configuration changes for these targets that could cause rebuilds.
+    configuration changes for these targets that could cause rebuilds. Unlike
+    go_tool_transition, it also resets TOOL_INHERITED_SETTING_KEYS: how a Go
+    binary is linked is irrelevant for a tool that isn't one.
 
     Examples: This transition is applied to attributes referencing proto_library
     targets or protoc directly.
@@ -327,6 +351,11 @@ target configuration and neither the tools nor the code they potentially
 generate should be subject to Nogo's static analysis. This is helpful, for example, so
 a tool isn't built as a shared library with race instrumentation. This acts as an
 intermediate rule that allows users to apply these transitions.
+
+The '//go/config:static' and '//go/config:pure' settings are an exception: they are
+inherited from the value set on the command line, as they determine whether the tool
+can run on the execution platform. The 'static' and 'pure' attributes of an enclosing
+rule are still reset.
 """,
 )
 
@@ -369,12 +398,7 @@ def _non_go_transition_impl(settings, _attr):
     """
     new_settings = {}
     for key, original_key in _SETTING_KEY_TO_ORIGINAL_SETTING_KEY.items():
-        original_value = settings[original_key]
-        if original_value:
-            # Reset to the original value of the setting before go_transition.
-            new_settings[key] = json.decode(original_value)
-        else:
-            new_settings[key] = settings[key]
+        new_settings[key] = _setting_before_go_transition(settings, key)
 
         # Reset the value of the helper setting to its default for two reasons:
         # 1. Performance: This ensures that the Go settings of non-Go
