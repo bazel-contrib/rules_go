@@ -5,9 +5,10 @@ matrix:
     - ubuntu2004_arm64
     - macos_arm64
     - windows
-  # Only BCR tests use all Bazel versions. Others use the default.
+  # The full suite only runs on Bazel 8 and 9. Bazel 7 can't load the rules_cc
+  # release that fixes the malformed -fuse-ld flag its macOS toolchain emits,
+  # so it is only covered by the minimum version task below.
   bazel:
-    - 7.*
     - 8.*
     - 9.*
 
@@ -17,6 +18,9 @@ tasks:
     bazel: 7.2.1 # test minimum supported version of bazel that works with our bzlmod setup
     build_targets:
       - "//..."
+      # Stardoc's output depends on the Bazel version, so the checked-in docs
+      # can only match one. See the dedicated docs task below.
+      - "-//docs:all"
       - "-//tests/core/go_binary:goos_pure_bin"
       - "-//tests/core/cross:go_cross_binary_test"
     build_flags:
@@ -24,6 +28,7 @@ tasks:
       - "--host_per_file_copt=external/.*@-w"
     test_targets:
       - "//..."
+      - "-//docs:all"
       # Nogo includes/excludes doesn't work before bazel 7
       - "-//tests/core/nogo/includes_excludes:includes_exclude_test"
       - "-//tests/core/nogo/bzlmod:includes_exclude_test"
@@ -45,6 +50,9 @@ tasks:
       - "--per_file_copt=external/.*@-w"
       - "--host_per_file_copt=external/.*@-w"
   ubuntu2404:
+    name: "Bazel {bazel}"
+    platform: ubuntu2404
+    bazel: ${{ bazel }}
     # enable some unflipped incompatible flags on this platform to ensure we don't regress.
     build_flags:
       - "--config=incompatible"
@@ -52,10 +60,28 @@ tasks:
       - "--config=incompatible"
     build_targets:
       - "//..."
+      # Stardoc's output depends on the Bazel version, so the checked-in docs
+      # can only match one. See the dedicated docs task below.
+      - "-//docs:all"
     test_targets:
       - "//..."
+      - "-//docs:all"
+  docs:
+    # Runs with the default Bazel version from .bazelversion, which is the one
+    # the checked-in docs are generated with.
+    name: Docs
+    platform: ubuntu2404
+    build_targets:
+      - "//docs/..."
+    test_targets:
+      - "//docs/..."
   debian11_zig_cc:
     platform: debian11
+    # TODO: Run on the default Bazel version again once hermetic_cc_toolchain
+    # can be upgraded to a release that works with Bazel 9. Those require a
+    # rules_cc that Bazel 7 cannot load, which would take the minimum version
+    # task below down with them.
+    bazel: 8.*
     build_flags:
       - "--config=incompatible"
       - "--extra_toolchains=@zig_sdk//toolchain:linux_amd64_gnu.2.31"
@@ -65,8 +91,19 @@ tasks:
       - "--test_env=ZIG_CC=1"
     build_targets:
       - "//..."
+      - "-//docs:all"
+      # Deliberately links against a symbol defined by a dependent, which the
+      # zig linker rejects.
+      - "-//tests/core/cgo:provide_external_symbol"
     test_targets:
       - "//..."
+      - "-//docs:all"
+      - "-//tests/core/cgo:provide_external_symbol"
+      # The zig toolchain doesn't make shared libraries loadable at runtime.
+      - "-//tests/core/c_linkmodes:c-shared_test"
+      - "-//tests/core/cgo:generated_dylib_test"
+      - "-//tests/legacy/examples/cgo:cgo_lib_test"
+      - "-//tests/legacy/examples/cgo/example_command:example_command_test"
   bcr_tests:
     name: BCR test module
     platform: ${{ platform }}
@@ -97,25 +134,47 @@ tasks:
     test_targets:
       - "//..."
   macos_arm64:
+    name: "Bazel {bazel}"
+    platform: macos_arm64
+    bazel: ${{ bazel }}
     build_flags:
       - "--apple_crosstool_top=@local_config_apple_cc//:toolchain"
       - "--crosstool_top=@local_config_apple_cc//:toolchain"
       - "--host_crosstool_top=@local_config_apple_cc//:toolchain"
+      # The --*crosstool_top flags above are no-ops as of Bazel 9, which always
+      # selects the C++ toolchain via toolchain resolution. objc_library needs
+      # the Apple CC toolchain either way.
+      - "--extra_toolchains=@local_config_apple_cc_toolchains//:all"
     build_targets:
       - "//..."
+      - "-//docs:all"
       - "--"
     test_flags:
       - "--apple_crosstool_top=@local_config_apple_cc//:toolchain"
       - "--crosstool_top=@local_config_apple_cc//:toolchain"
       - "--host_crosstool_top=@local_config_apple_cc//:toolchain"
+      - "--extra_toolchains=@local_config_apple_cc_toolchains//:all"
     test_targets:
       - "//..."
+      - "-//docs:all"
   rbe_ubuntu2404:
+    # GoCompilePkg declares an output directory for the cgo-generated sources
+    # that stays empty whenever cgo is enabled on a package that turns out not
+    # to use it. The remote executor backing this task doesn't report empty
+    # output directories, and Bazel 8 and 9 fail the build when a declared
+    # output doesn't come back, while Bazel 7 tolerates it.
+    # TODO: Run the full Bazel matrix here once that is fixed:
+    # https://github.com/bazelbuild/bazel/issues/28286
+    # The version is exact because rbe_preconfig only ships toolchain configs
+    # for the versions it knows and silently falls back to the newest one,
+    # which doesn't work with the rules_cc Bazel 7 resolves.
+    bazel: 7.7.0
     build_flags:
       - "--per_file_copt=external/.*@-w"
       - "--host_per_file_copt=external/.*@-w"
     build_targets:
       - "//..."
+      - "-//docs:all"
     test_flags:
       - "--per_file_copt=external/.*@-w"
       - "--host_per_file_copt=external/.*@-w"
@@ -130,10 +189,14 @@ tasks:
     test_targets:
       - "--"
       - "//..."
+      - "-//docs:all"
       - "-//tests/core/stdlib:buildid_test"
       # Source directories in runfiles are not supported with RBE.
       - "-//tests/runfiles:runfiles_test"
   windows:
+    name: "Bazel {bazel}"
+    platform: windows
+    bazel: ${{ bazel }}
     build_flags:
       - '--action_env=PATH=C:\tools\msys64\usr\bin;C:\tools\msys64\bin;C:\tools\msys64\mingw64\bin;C:\python3\Scripts\;C:\python3;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0;C:\Windows\System32\OpenSSH;C:\ProgramData\GooGet;C:\Program Files\Google\Compute Engine\metadata_scripts;C:\Program Files (x86)\Google\Cloud SDK\google-cloud-sdk\bin;C:\Program Files\Google\Compute Engine\sysprep;C:\ProgramData\chocolatey\bin;C:\Program Files\Git\cmd;C:\tools\msys64\usr\bin;c:\openjdk\bin;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit\;C:\Program Files\CMake\bin;c:\ninja;c:\bazel;c:\buildkite'
     build_targets:
@@ -158,8 +221,12 @@ tasks:
       # On Windows CI, bazel (bazelisk) needs %LocalAppData% to find the cache directory.
       # We invoke bazel in tests, so the tests need this, too.
       - "--test_env=LOCALAPPDATA"
-      # go_bazel_test runs bazel in a test workspace. It needs the same flags as above.
-      - "--test_env=GO_BAZEL_TEST_BAZELFLAGS=--cpu=x64_windows --compiler=mingw-gcc --extra_toolchains=@local_config_cc//:cc-toolchain-x64_windows_mingw --action_env=PATH --host_platform=@io_bazel_rules_go//go/toolchain:windows_amd64_cgo --incompatible_enable_cc_toolchain_resolution"
+      # go_bazel_test runs bazel in a test workspace. It needs the same flags as
+      # above. The platform is referred to by canonical name because bazel info,
+      # which the tests use to locate their test logs, doesn't apply the main
+      # repository mapping to labels on the command line. Fixtures that build
+      # protobuf from source need C++17.
+      - "--test_env=GO_BAZEL_TEST_BAZELFLAGS=--cpu=x64_windows --compiler=mingw-gcc --extra_toolchains=@local_config_cc//:cc-toolchain-x64_windows_mingw --action_env=PATH --host_platform=@@rules_go+//go/toolchain:windows_amd64_cgo --incompatible_enable_cc_toolchain_resolution --cxxopt=-std=c++17 --host_cxxopt=-std=c++17"
       - "--test_env=PATH"
     test_targets:
       - "//..."
@@ -168,6 +235,9 @@ tasks:
       - "-//tests/core/cgo:generated_dylib_client"
       - "-//tests/core/cgo:generated_dylib_test"
       - "-//tests/core/cgo:generated_versioned_dylib_test"
+      # Builds protobuf from source, and the mingw toolchain links protoc
+      # against a DLL that isn't resolvable when Bazel runs it as a build tool.
+      - "-//tests/core/cross:proto_test"
       - "-//tests/core/coverage:coverage_test"
       - "-//tests/core/coverage:issue3017_test"
       - "-//tests/core/coverage:issue4414_test"
@@ -197,6 +267,9 @@ tasks:
       - "-//tests/legacy/test_chdir:go_default_test"
       - "-//tests/legacy/test_rundir:go_default_test"
       - "-//tests/legacy/transitive_data:go_default_test"
+      # Asserts on the repository directory name, which contains characters
+      # its vmodule glob matching doesn't handle on Windows.
+      - "-@com_github_golang_glog//:glog_test"
       - "-@org_golang_x_crypto//sha3:sha3_test"
       - "-@org_golang_x_sys//windows/svc:svc_test"
       - "-@org_golang_x_text//language:language_test"
@@ -243,8 +316,12 @@ tasks:
       # On Windows CI, bazel (bazelisk) needs %LocalAppData% to find the cache directory.
       # We invoke bazel in tests, so the tests need this, too.
       - "--test_env=LOCALAPPDATA"
-      # go_bazel_test runs bazel in a test workspace. It needs the same flags as above.
-      - "--test_env=GO_BAZEL_TEST_BAZELFLAGS=--cpu=x64_windows --compiler=mingw-gcc --extra_toolchains=@local_config_cc//:cc-toolchain-x64_windows_mingw --action_env=PATH --host_platform=@io_bazel_rules_go//go/toolchain:windows_amd64_cgo --incompatible_enable_cc_toolchain_resolution"
+      # go_bazel_test runs bazel in a test workspace. It needs the same flags as
+      # above. The platform is referred to by canonical name because bazel info,
+      # which the tests use to locate their test logs, doesn't apply the main
+      # repository mapping to labels on the command line. Fixtures that build
+      # protobuf from source need C++17.
+      - "--test_env=GO_BAZEL_TEST_BAZELFLAGS=--cpu=x64_windows --compiler=mingw-gcc --extra_toolchains=@local_config_cc//:cc-toolchain-x64_windows_mingw --action_env=PATH --host_platform=@@rules_go+//go/toolchain:windows_amd64_cgo --incompatible_enable_cc_toolchain_resolution --cxxopt=-std=c++17 --host_cxxopt=-std=c++17"
       - "--test_env=PATH"
   ubuntu_basic_gazelle_example:
     name: Basic Gazelle example on Ubuntu
@@ -281,6 +358,10 @@ tasks:
       # On Windows CI, bazel (bazelisk) needs %LocalAppData% to find the cache directory.
       # We invoke bazel in tests, so the tests need this, too.
       - "--test_env=LOCALAPPDATA"
-      # go_bazel_test runs bazel in a test workspace. It needs the same flags as above.
-      - "--test_env=GO_BAZEL_TEST_BAZELFLAGS=--cpu=x64_windows --compiler=mingw-gcc --extra_toolchains=@local_config_cc//:cc-toolchain-x64_windows_mingw --action_env=PATH --host_platform=@io_bazel_rules_go//go/toolchain:windows_amd64_cgo --incompatible_enable_cc_toolchain_resolution"
+      # go_bazel_test runs bazel in a test workspace. It needs the same flags as
+      # above. The platform is referred to by canonical name because bazel info,
+      # which the tests use to locate their test logs, doesn't apply the main
+      # repository mapping to labels on the command line. Fixtures that build
+      # protobuf from source need C++17.
+      - "--test_env=GO_BAZEL_TEST_BAZELFLAGS=--cpu=x64_windows --compiler=mingw-gcc --extra_toolchains=@local_config_cc//:cc-toolchain-x64_windows_mingw --action_env=PATH --host_platform=@@rules_go+//go/toolchain:windows_amd64_cgo --incompatible_enable_cc_toolchain_resolution --cxxopt=-std=c++17 --host_cxxopt=-std=c++17"
       - "--test_env=PATH"

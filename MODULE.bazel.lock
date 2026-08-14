@@ -1,33 +1,43 @@
 {
-  "lockFileVersion": 13,
+  "lockFileVersion": 28,
   "registryFileHashes": {
     "https://bcr.bazel.build/bazel_registry.json": "8a28e4aff06ee60aed2a8c281907fb8bcbf3b753c91fb5a5c57da3215d5b3497",
-    "https://bcr.bazel.build/modules/abseil-cpp/20210324.2/MODULE.bazel": "7cd0312e064fde87c8d1cd79ba06c876bd23630c83466e9500321be55c96ace2",
-    "https://bcr.bazel.build/modules/abseil-cpp/20211102.0/MODULE.bazel": "70390338f7a5106231d20620712f7cccb659cd0e9d073d1991c038eb9fc57589",
     "https://bcr.bazel.build/modules/abseil-cpp/20230125.1/MODULE.bazel": "89047429cb0207707b2dface14ba7f8df85273d484c2572755be4bab7ce9c3a0",
-    "https://bcr.bazel.build/modules/abseil-cpp/20230802.0.bcr.1/MODULE.bazel": "1c8cec495288dccd14fdae6e3f95f772c1c91857047a098fad772034264cc8cb",
     "https://bcr.bazel.build/modules/abseil-cpp/20230802.0/MODULE.bazel": "d253ae36a8bd9ee3c5955384096ccb6baf16a1b1e93e858370da0a3b94f77c16",
     "https://bcr.bazel.build/modules/abseil-cpp/20230802.1/MODULE.bazel": "fa92e2eb41a04df73cdabeec37107316f7e5272650f81d6cc096418fe647b915",
-    "https://bcr.bazel.build/modules/abseil-cpp/20240116.1/MODULE.bazel": "37bcdb4440fbb61df6a1c296ae01b327f19e9bb521f9b8e26ec854b6f97309ed",
-    "https://bcr.bazel.build/modules/abseil-cpp/20240116.1/source.json": "9be551b8d4e3ef76875c0d744b5d6a504a27e3ae67bc6b28f46415fd2d2957da",
-    "https://bcr.bazel.build/modules/apple_support/1.23.1/MODULE.bazel": "53763fed456a968cf919b3240427cf3a9d5481ec5466abc9d5dc51bc70087442",
+    "https://bcr.bazel.build/modules/abseil-cpp/20240116.2/MODULE.bazel": "73939767a4686cd9a520d16af5ab440071ed75cec1a876bf2fcfaf1f71987a16",
+    "https://bcr.bazel.build/modules/abseil-cpp/20250127.1/MODULE.bazel": "c4a89e7ceb9bf1e25cf84a9f830ff6b817b72874088bf5141b314726e46a57c1",
+    "https://bcr.bazel.build/modules/abseil-cpp/20250512.1/MODULE.bazel": "d209fdb6f36ffaf61c509fcc81b19e81b411a999a934a032e10cd009a0226215",
+    "https://bcr.bazel.build/modules/abseil-cpp/20250814.1/MODULE.bazel": "51f2312901470cdab0dbdf3b88c40cd21c62a7ed58a3de45b365ddc5b11bcab2",
+    "https://bcr.bazel.build/modules/abseil-cpp/20250814.1/source.json": "cea3901d7e299da7320700abbaafe57a65d039f10d0d7ea601c4a66938ea4b0c",
+    "https://bcr.bazel.build/modules/apple_support/1.11.1/MODULE.bazel": "1843d7cd8a58369a444fc6000e7304425fba600ff641592161d9f15b179fb896",
+    "https://bcr.bazel.build/modules/apple_support/1.15.1/MODULE.bazel": "a0556fefca0b1bb2de8567b8827518f94db6a6e7e7d632b4c48dc5f865bc7c85",
+    "https://bcr.bazel.build/modules/apple_support/1.21.0/MODULE.bazel": "ac1824ed5edf17dee2fdd4927ada30c9f8c3b520be1b5fd02a5da15bc10bff3e",
+    "https://bcr.bazel.build/modules/apple_support/1.21.1/MODULE.bazel": "5809fa3efab15d1f3c3c635af6974044bac8a4919c62238cce06acee8a8c11f1",
+    "https://bcr.bazel.build/modules/apple_support/1.24.2/MODULE.bazel": "0e62471818affb9f0b26f128831d5c40b074d32e6dda5a0d3852847215a41ca4",
     "https://bcr.bazel.build/modules/apple_support/1.24.3/MODULE.bazel": "f490627de467ca6de2bc313482d8890584673142b811c7ac20329a57191cc7a3",
     "https://bcr.bazel.build/modules/apple_support/1.24.3/source.json": "d86580223e2e89ec48313489e2212b3a302c75e3196e8f49f5e497078072986f",
     "https://bcr.bazel.build/modules/bazel_ci_rules/1.0.0/MODULE.bazel": "0f92c944b9c466066ed484cfc899cf43fca765df78caca18984c62479f7925eb",
     "https://bcr.bazel.build/modules/bazel_ci_rules/1.0.0/source.json": "3405a2a7f9f827a44934b01470faeac1b56fb1304955c98ee9fcd03ad2ca5dcc",
     "https://bcr.bazel.build/modules/bazel_features/1.1.1/MODULE.bazel": "27b8c79ef57efe08efccbd9dd6ef70d61b4798320b8d3c134fd571f78963dbcd",
+    "https://bcr.bazel.build/modules/bazel_features/1.10.0/MODULE.bazel": "f75e8807570484a99be90abcd52b5e1f390362c258bcb73106f4544957a48101",
     "https://bcr.bazel.build/modules/bazel_features/1.11.0/MODULE.bazel": "f9382337dd5a474c3b7d334c2f83e50b6eaedc284253334cf823044a26de03e8",
     "https://bcr.bazel.build/modules/bazel_features/1.15.0/MODULE.bazel": "d38ff6e517149dc509406aca0db3ad1efdd890a85e049585b7234d04238e2a4d",
     "https://bcr.bazel.build/modules/bazel_features/1.17.0/MODULE.bazel": "039de32d21b816b47bd42c778e0454217e9c9caac4a3cf8e15c7231ee3ddee4d",
     "https://bcr.bazel.build/modules/bazel_features/1.18.0/MODULE.bazel": "1be0ae2557ab3a72a57aeb31b29be347bcdc5d2b1eb1e70f39e3851a7e97041a",
     "https://bcr.bazel.build/modules/bazel_features/1.19.0/MODULE.bazel": "59adcdf28230d220f0067b1f435b8537dd033bfff8db21335ef9217919c7fb58",
+    "https://bcr.bazel.build/modules/bazel_features/1.21.0/MODULE.bazel": "675642261665d8eea09989aa3b8afb5c37627f1be178382c320d1b46afba5e3b",
     "https://bcr.bazel.build/modules/bazel_features/1.24.0/MODULE.bazel": "4796b4c25b47053e9bbffa792b3792d07e228ff66cd0405faef56a978708acd4",
     "https://bcr.bazel.build/modules/bazel_features/1.27.0/MODULE.bazel": "621eeee06c4458a9121d1f104efb80f39d34deff4984e778359c60eaf1a8cb65",
     "https://bcr.bazel.build/modules/bazel_features/1.28.0/MODULE.bazel": "4b4200e6cbf8fa335b2c3f43e1d6ef3e240319c33d43d60cc0fbd4b87ece299d",
+    "https://bcr.bazel.build/modules/bazel_features/1.3.0/MODULE.bazel": "cdcafe83ec318cda34e02948e81d790aab8df7a929cec6f6969f13a489ccecd9",
+    "https://bcr.bazel.build/modules/bazel_features/1.30.0/MODULE.bazel": "a14b62d05969a293b80257e72e597c2da7f717e1e69fa8b339703ed6731bec87",
+    "https://bcr.bazel.build/modules/bazel_features/1.33.0/MODULE.bazel": "8b8dc9d2a4c88609409c3191165bccec0e4cb044cd7a72ccbe826583303459f6",
     "https://bcr.bazel.build/modules/bazel_features/1.36.0/MODULE.bazel": "596cb62090b039caf1cad1d52a8bc35cf188ca9a4e279a828005e7ee49a1bec3",
-    "https://bcr.bazel.build/modules/bazel_features/1.36.0/source.json": "279625cafa5b63cc0a8ee8448d93bc5ac1431f6000c50414051173fd22a6df3c",
     "https://bcr.bazel.build/modules/bazel_features/1.4.1/MODULE.bazel": "e45b6bb2350aff3e442ae1111c555e27eac1d915e77775f6fdc4b351b758b5d7",
-    "https://bcr.bazel.build/modules/bazel_features/1.9.0/MODULE.bazel": "885151d58d90d8d9c811eb75e3288c11f850e1d6b481a8c9f766adee4712358b",
+    "https://bcr.bazel.build/modules/bazel_features/1.42.1/MODULE.bazel": "275a59b5406ff18c01739860aa70ad7ccb3cfb474579411decca11c93b951080",
+    "https://bcr.bazel.build/modules/bazel_features/1.45.0/MODULE.bazel": "7daec6d87ab0703417486d4cb948af0b06f55d4d7c08cbb5978c80e79b538edf",
+    "https://bcr.bazel.build/modules/bazel_features/1.45.0/source.json": "635e4536e09ff125b8972e0fa239c135fde5f18701f7d5115680560651dfb41d",
     "https://bcr.bazel.build/modules/bazel_features/1.9.1/MODULE.bazel": "8f679097876a9b609ad1f60249c49d68bfab783dd9be012faf9d82547b14815a",
     "https://bcr.bazel.build/modules/bazel_skylib/1.0.3/MODULE.bazel": "bcb0fd896384802d1ad283b4e4eb4d718eebd8cb820b0a2c3a347fb971afd9d8",
     "https://bcr.bazel.build/modules/bazel_skylib/1.1.1/MODULE.bazel": "1add3e7d93ff2e6998f9e118022c84d163917d912f5afafb3058e3d2f1545b5e",
@@ -38,12 +48,14 @@
     "https://bcr.bazel.build/modules/bazel_skylib/1.4.2/MODULE.bazel": "3bd40978e7a1fac911d5989e6b09d8f64921865a45822d8b09e815eaa726a651",
     "https://bcr.bazel.build/modules/bazel_skylib/1.5.0/MODULE.bazel": "32880f5e2945ce6a03d1fbd588e9198c0a959bb42297b2cfaf1685b7bc32e138",
     "https://bcr.bazel.build/modules/bazel_skylib/1.6.1/MODULE.bazel": "8fdee2dbaace6c252131c00e1de4b165dc65af02ea278476187765e1a617b917",
-    "https://bcr.bazel.build/modules/bazel_skylib/1.7.0/MODULE.bazel": "0db596f4563de7938de764cc8deeabec291f55e8ec15299718b93c4423e9796d",
     "https://bcr.bazel.build/modules/bazel_skylib/1.7.1/MODULE.bazel": "3120d80c5861aa616222ec015332e5f8d3171e062e3e804a2a0253e1be26e59b",
     "https://bcr.bazel.build/modules/bazel_skylib/1.8.1/MODULE.bazel": "88ade7293becda963e0e3ea33e7d54d3425127e0a326e0d17da085a5f1f03ff6",
-    "https://bcr.bazel.build/modules/bazel_skylib/1.8.1/source.json": "7ebaefba0b03efe59cac88ed5bbc67bcf59a3eff33af937345ede2a38b2d368a",
-    "https://bcr.bazel.build/modules/buildozer/7.1.2/MODULE.bazel": "2e8dd40ede9c454042645fd8d8d0cd1527966aa5c919de86661e62953cd73d84",
-    "https://bcr.bazel.build/modules/buildozer/7.1.2/source.json": "c9028a501d2db85793a6996205c8de120944f50a0d570438fcae0457a5f9d1f8",
+    "https://bcr.bazel.build/modules/bazel_skylib/1.8.2/MODULE.bazel": "69ad6927098316848b34a9142bcc975e018ba27f08c4ff403f50c1b6e646ca67",
+    "https://bcr.bazel.build/modules/bazel_skylib/1.8.2/source.json": "34a3c8bcf233b835eb74be9d628899bb32999d3e0eadef1947a0a562a2b16ffb",
+    "https://bcr.bazel.build/modules/buildifier_prebuilt/8.5.1.3/MODULE.bazel": "033a5e73ebb940aee2cadba01b8c3d6682ea228ad64647f4c2a45f55bfe04435",
+    "https://bcr.bazel.build/modules/buildifier_prebuilt/8.5.1.3/source.json": "86ae47fcfc649ec06a5523b8ef4362b2aaabc108aae8c1de77e639550d702523",
+    "https://bcr.bazel.build/modules/buildozer/8.5.1/MODULE.bazel": "a35d9561b3fc5b18797c330793e99e3b834a473d5fbd3d7d7634aafc9bdb6f8f",
+    "https://bcr.bazel.build/modules/buildozer/8.5.1/source.json": "e3386e6ff4529f2442800dee47ad28d3e6487f36a1f75ae39ae56c70f0cd2fbd",
     "https://bcr.bazel.build/modules/gazelle/0.51.3/MODULE.bazel": "618a729142f66de1e2cb776d026413763be5b80d5e3d29ffb9d3d90c5defde90",
     "https://bcr.bazel.build/modules/gazelle/0.51.3/source.json": "fbe5312a01fb4a2a58caff4a0d40dcf384b6f0bda75e85546663360da1d7538a",
     "https://bcr.bazel.build/modules/google_benchmark/1.8.2/MODULE.bazel": "a70cf1bba851000ba93b58ae2f6d76490a9feb74192e57ab8e8ff13c34ec50cb",
@@ -51,42 +63,47 @@
     "https://bcr.bazel.build/modules/googleapis-rules-registry/1.0.0/source.json": "cf611c836a60e98e2e2ab2de8004f119e9f06878dcf4ea2d95a437b1b7a89fe9",
     "https://bcr.bazel.build/modules/googleapis/0.0.0-20241220-5e258e33/MODULE.bazel": "571b018644920302f5a69520b91dae189c17d566e730a1b87c9dbeefe39bd6a5",
     "https://bcr.bazel.build/modules/googleapis/0.0.0-20241220-5e258e33/source.json": "2172f9bad88838c509e92489545b6ec41d99fb0de8cf7b2a2da61dae7587a0e4",
-    "https://bcr.bazel.build/modules/googletest/1.11.0/MODULE.bazel": "3a83f095183f66345ca86aa13c58b59f9f94a2f81999c093d4eeaa2d262d12f4",
     "https://bcr.bazel.build/modules/googletest/1.14.0.bcr.1/MODULE.bazel": "22c31a561553727960057361aa33bf20fb2e98584bc4fec007906e27053f80c6",
-    "https://bcr.bazel.build/modules/googletest/1.14.0.bcr.1/source.json": "41e9e129f80d8c8bf103a7acc337b76e54fad1214ac0a7084bf24f4cd924b8b4",
     "https://bcr.bazel.build/modules/googletest/1.14.0/MODULE.bazel": "cfbcbf3e6eac06ef9d85900f64424708cc08687d1b527f0ef65aa7517af8118f",
-    "https://bcr.bazel.build/modules/jsoncpp/1.9.5/MODULE.bazel": "31271aedc59e815656f5736f282bb7509a97c7ecb43e927ac1a37966e0578075",
-    "https://bcr.bazel.build/modules/jsoncpp/1.9.5/source.json": "4108ee5085dd2885a341c7fab149429db457b3169b86eb081fa245eadf69169d",
+    "https://bcr.bazel.build/modules/googletest/1.15.2/MODULE.bazel": "6de1edc1d26cafb0ea1a6ab3f4d4192d91a312fd2d360b63adaa213cd00b2108",
+    "https://bcr.bazel.build/modules/googletest/1.17.0/MODULE.bazel": "dbec758171594a705933a29fcf69293d2468c49ec1f2ebca65c36f504d72df46",
+    "https://bcr.bazel.build/modules/googletest/1.17.0/source.json": "38e4454b25fc30f15439c0378e57909ab1fd0a443158aa35aec685da727cd713",
+    "https://bcr.bazel.build/modules/hermetic_cc_toolchain/4.0.1/MODULE.bazel": "0809d28e562d804e478c683b06a9f3adeedccfdb42a426c2cc69e39cbc7e3bf3",
+    "https://bcr.bazel.build/modules/hermetic_cc_toolchain/4.0.1/source.json": "527d73a9964cd34ceeb73a1d5e5d04d9e6238401363c783c1f3021d5b25b8a63",
+    "https://bcr.bazel.build/modules/jsoncpp/1.9.6/MODULE.bazel": "2f8d20d3b7d54143213c4dfc3d98225c42de7d666011528dc8fe91591e2e17b0",
+    "https://bcr.bazel.build/modules/jsoncpp/1.9.6/source.json": "a04756d367a2126c3541682864ecec52f92cdee80a35735a3cb249ce015ca000",
     "https://bcr.bazel.build/modules/libpfm/4.11.0/MODULE.bazel": "45061ff025b301940f1e30d2c16bea596c25b176c8b6b3087e92615adbd52902",
+    "https://bcr.bazel.build/modules/nlohmann_json/3.6.1/MODULE.bazel": "6f7b417dcc794d9add9e556673ad25cb3ba835224290f4f848f8e2db1e1fca74",
+    "https://bcr.bazel.build/modules/nlohmann_json/3.6.1/source.json": "f448c6e8963fdfa7eb831457df83ad63d3d6355018f6574fb017e8169deb43a9",
     "https://bcr.bazel.build/modules/package_metadata/0.0.3/MODULE.bazel": "77890552ecea9e284b5424c9de827a58099348763a4359e975c359a83d4faa83",
     "https://bcr.bazel.build/modules/package_metadata/0.0.5/MODULE.bazel": "ef4f9439e3270fdd6b9fd4dbc3d2f29d13888e44c529a1b243f7a31dfbc2e8e4",
     "https://bcr.bazel.build/modules/package_metadata/0.0.5/source.json": "2326db2f6592578177751c3e1f74786b79382cd6008834c9d01ec865b9126a85",
     "https://bcr.bazel.build/modules/platforms/0.0.10/MODULE.bazel": "8cb8efaf200bdeb2150d93e162c40f388529a25852b332cec879373771e48ed5",
+    "https://bcr.bazel.build/modules/platforms/0.0.11/MODULE.bazel": "0daefc49732e227caa8bfa834d65dc52e8cc18a2faf80df25e8caea151a9413f",
     "https://bcr.bazel.build/modules/platforms/0.0.4/MODULE.bazel": "9b328e31ee156f53f3c416a64f8491f7eb731742655a47c9eec4703a71644aee",
-    "https://bcr.bazel.build/modules/platforms/0.0.5/MODULE.bazel": "5733b54ea419d5eaf7997054bb55f6a1d0b5ff8aedf0176fef9eea44f3acda37",
     "https://bcr.bazel.build/modules/platforms/0.0.6/MODULE.bazel": "ad6eeef431dc52aefd2d77ed20a4b353f8ebf0f4ecdd26a807d2da5aa8cd0615",
     "https://bcr.bazel.build/modules/platforms/0.0.7/MODULE.bazel": "72fd4a0ede9ee5c021f6a8dd92b503e089f46c227ba2813ff183b71616034814",
     "https://bcr.bazel.build/modules/platforms/0.0.8/MODULE.bazel": "9f142c03e348f6d263719f5074b21ef3adf0b139ee4c5133e2aa35664da9eb2d",
     "https://bcr.bazel.build/modules/platforms/0.0.9/MODULE.bazel": "4a87a60c927b56ddd67db50c89acaa62f4ce2a1d2149ccb63ffd871d5ce29ebc",
+    "https://bcr.bazel.build/modules/platforms/1.0.0/MODULE.bazel": "f05feb42b48f1b3c225e4ccf351f367be0371411a803198ec34a389fb22aa580",
     "https://bcr.bazel.build/modules/platforms/1.1.0/MODULE.bazel": "1c0c09f5bdcf4b3f924720d2478a3711cb39f4977019ca5988685e5b7e18b3d2",
     "https://bcr.bazel.build/modules/platforms/1.1.0/source.json": "fcf351c47596c939140ab0d333dfdd08ed1ea6ce33c2fe70c12493a301cf1344",
-    "https://bcr.bazel.build/modules/protobuf/21.7/MODULE.bazel": "a5a29bb89544f9b97edce05642fac225a808b5b7be74038ea3640fae2f8e66a7",
-    "https://bcr.bazel.build/modules/protobuf/27.0/MODULE.bazel": "7873b60be88844a0a1d8f80b9d5d20cfbd8495a689b8763e76c6372998d3f64c",
-    "https://bcr.bazel.build/modules/protobuf/27.1/MODULE.bazel": "703a7b614728bb06647f965264967a8ef1c39e09e8f167b3ca0bb1fd80449c0d",
-    "https://bcr.bazel.build/modules/protobuf/29.0/MODULE.bazel": "319dc8bf4c679ff87e71b1ccfb5a6e90a6dbc4693501d471f48662ac46d04e4e",
-    "https://bcr.bazel.build/modules/protobuf/29.1/MODULE.bazel": "557c3457560ff49e122ed76c0bc3397a64af9574691cb8201b4e46d4ab2ecb95",
-    "https://bcr.bazel.build/modules/protobuf/29.1/source.json": "04cca85dce26b895ed037d98336d860367fe09919208f2ad383f0df1aff63199",
-    "https://bcr.bazel.build/modules/protobuf/3.19.0/MODULE.bazel": "6b5fbb433f760a99a22b18b6850ed5784ef0e9928a72668b66e4d7ccd47db9b0",
-    "https://bcr.bazel.build/modules/protobuf/3.19.6/MODULE.bazel": "9233edc5e1f2ee276a60de3eaa47ac4132302ef9643238f23128fea53ea12858",
+    "https://bcr.bazel.build/modules/protobuf/33.4/MODULE.bazel": "114775b816b38b6d0ca620450d6b02550c60ceedfdc8d9a229833b34a223dc42",
+    "https://bcr.bazel.build/modules/protobuf/33.4/source.json": "555f8686b4c7d6b5ba731fbea13bf656b4bfd9a7ff629c1d9d3f6e1d6155de79",
     "https://bcr.bazel.build/modules/pybind11_bazel/2.11.1/MODULE.bazel": "88af1c246226d87e65be78ed49ecd1e6f5e98648558c14ce99176da041dc378e",
-    "https://bcr.bazel.build/modules/pybind11_bazel/2.11.1/source.json": "be4789e951dd5301282729fe3d4938995dc4c1a81c2ff150afc9f1b0504c6022",
+    "https://bcr.bazel.build/modules/pybind11_bazel/2.12.0/MODULE.bazel": "e6f4c20442eaa7c90d7190d8dc539d0ab422f95c65a57cc59562170c58ae3d34",
+    "https://bcr.bazel.build/modules/pybind11_bazel/2.12.0/source.json": "6900fdc8a9e95866b8c0d4ad4aba4d4236317b5c1cd04c502df3f0d33afed680",
     "https://bcr.bazel.build/modules/re2/2023-09-01/MODULE.bazel": "cb3d511531b16cfc78a225a9e2136007a48cf8a677e4264baeab57fe78a80206",
-    "https://bcr.bazel.build/modules/re2/2023-09-01/source.json": "e044ce89c2883cd957a2969a43e79f7752f9656f6b20050b62f90ede21ec6eb4",
+    "https://bcr.bazel.build/modules/re2/2024-07-02.bcr.1/MODULE.bazel": "b4963dda9b31080be1905ef085ecd7dd6cd47c05c79b9cdf83ade83ab2ab271a",
+    "https://bcr.bazel.build/modules/re2/2024-07-02.bcr.1/source.json": "2ff292be6ef3340325ce8a045ecc326e92cbfab47c7cbab4bd85d28971b97ac4",
+    "https://bcr.bazel.build/modules/re2/2024-07-02/MODULE.bazel": "0eadc4395959969297cbcf31a249ff457f2f1d456228c67719480205aa306daa",
     "https://bcr.bazel.build/modules/rules_android/0.1.1/MODULE.bazel": "48809ab0091b07ad0182defb787c4c5328bd3a278938415c00a7b69b50c4d3a8",
     "https://bcr.bazel.build/modules/rules_android/0.1.1/source.json": "e6986b41626ee10bdc864937ffb6d6bf275bb5b9c65120e6137d56e6331f089e",
+    "https://bcr.bazel.build/modules/rules_apple/3.16.0/MODULE.bazel": "0d1caf0b8375942ce98ea944be754a18874041e4e0459401d925577624d3a54a",
+    "https://bcr.bazel.build/modules/rules_apple/4.1.0/MODULE.bazel": "76e10fd4a48038d3fc7c5dc6e63b7063bbf5304a2e3bd42edda6ec660eebea68",
+    "https://bcr.bazel.build/modules/rules_apple/4.1.0/source.json": "8ee81e1708756f81b343a5eb2b2f0b953f1d25c4ab3d4a68dc02754872e80715",
     "https://bcr.bazel.build/modules/rules_cc/0.0.1/MODULE.bazel": "cb2aa0747f84c6c3a78dad4e2049c154f08ab9d166b1273835a8174940365647",
     "https://bcr.bazel.build/modules/rules_cc/0.0.10/MODULE.bazel": "ec1705118f7eaedd6e118508d3d26deba2a4e76476ada7e0e3965211be012002",
-    "https://bcr.bazel.build/modules/rules_cc/0.0.11/MODULE.bazel": "9f249c5624a4788067b96b8b896be10c7e8b4375dc46f6d8e1e51100113e0992",
     "https://bcr.bazel.build/modules/rules_cc/0.0.15/MODULE.bazel": "6704c35f7b4a72502ee81f61bf88706b54f06b3cbe5558ac17e2e14666cd5dcc",
     "https://bcr.bazel.build/modules/rules_cc/0.0.16/MODULE.bazel": "7661303b8fc1b4d7f532e54e9d6565771fea666fbdf839e0a86affcd02defe87",
     "https://bcr.bazel.build/modules/rules_cc/0.0.17/MODULE.bazel": "2ae1d8f4238ec67d7185d8861cb0a2cdf4bc608697c331b95bf990e69b62e64a",
@@ -94,109 +111,154 @@
     "https://bcr.bazel.build/modules/rules_cc/0.0.6/MODULE.bazel": "abf360251023dfe3efcef65ab9d56beefa8394d4176dd29529750e1c57eaa33f",
     "https://bcr.bazel.build/modules/rules_cc/0.0.8/MODULE.bazel": "964c85c82cfeb6f3855e6a07054fdb159aced38e99a5eecf7bce9d53990afa3e",
     "https://bcr.bazel.build/modules/rules_cc/0.0.9/MODULE.bazel": "836e76439f354b89afe6a911a7adf59a6b2518fafb174483ad78a2a2fde7b1c5",
+    "https://bcr.bazel.build/modules/rules_cc/0.1.1/MODULE.bazel": "2f0222a6f229f0bf44cd711dc13c858dad98c62d52bd51d8fc3a764a83125513",
+    "https://bcr.bazel.build/modules/rules_cc/0.1.2/MODULE.bazel": "557ddc3a96858ec0d465a87c0a931054d7dcfd6583af2c7ed3baf494407fd8d0",
     "https://bcr.bazel.build/modules/rules_cc/0.1.5/MODULE.bazel": "88dfc9361e8b5ae1008ac38f7cdfd45ad738e4fa676a3ad67d19204f045a1fd8",
+    "https://bcr.bazel.build/modules/rules_cc/0.2.0/MODULE.bazel": "b5c17f90458caae90d2ccd114c81970062946f49f355610ed89bebf954f5783c",
+    "https://bcr.bazel.build/modules/rules_cc/0.2.13/MODULE.bazel": "eecdd666eda6be16a8d9dc15e44b5c75133405e820f620a234acc4b1fdc5aa37",
+    "https://bcr.bazel.build/modules/rules_cc/0.2.17/MODULE.bazel": "1849602c86cb60da8613d2de887f9566a6d354a6df6d7009f9d04a14402f9a84",
+    "https://bcr.bazel.build/modules/rules_cc/0.2.17/source.json": "3832f45d145354049137c0090df04629d9c2b5493dc5c2bf46f1834040133a07",
     "https://bcr.bazel.build/modules/rules_cc/0.2.8/MODULE.bazel": "f1df20f0bf22c28192a794f29b501ee2018fa37a3862a1a2132ae2940a23a642",
-    "https://bcr.bazel.build/modules/rules_cc/0.2.8/source.json": "85087982aca15f31307bd52698316b28faa31bd2c3095a41f456afec0131344c",
     "https://bcr.bazel.build/modules/rules_foreign_cc/0.9.0/MODULE.bazel": "c9e8c682bf75b0e7c704166d79b599f93b72cfca5ad7477df596947891feeef6",
-    "https://bcr.bazel.build/modules/rules_fuzzing/0.5.2/MODULE.bazel": "40c97d1144356f52905566c55811f13b299453a14ac7769dfba2ac38192337a8",
-    "https://bcr.bazel.build/modules/rules_fuzzing/0.5.2/source.json": "c8b1e2c717646f1702290959a3302a178fb639d987ab61d548105019f11e527e",
     "https://bcr.bazel.build/modules/rules_java/4.0.0/MODULE.bazel": "5a78a7ae82cd1a33cef56dc578c7d2a46ed0dca12643ee45edbb8417899e6f74",
-    "https://bcr.bazel.build/modules/rules_java/5.3.5/MODULE.bazel": "a4ec4f2db570171e3e5eb753276ee4b389bae16b96207e9d3230895c99644b86",
-    "https://bcr.bazel.build/modules/rules_java/6.5.2/MODULE.bazel": "1d440d262d0e08453fa0c4d8f699ba81609ed0e9a9a0f02cd10b3e7942e61e31",
     "https://bcr.bazel.build/modules/rules_java/7.10.0/MODULE.bazel": "530c3beb3067e870561739f1144329a21c851ff771cd752a49e06e3dc9c2e71a",
     "https://bcr.bazel.build/modules/rules_java/7.12.2/MODULE.bazel": "579c505165ee757a4280ef83cda0150eea193eed3bef50b1004ba88b99da6de6",
     "https://bcr.bazel.build/modules/rules_java/7.2.0/MODULE.bazel": "06c0334c9be61e6cef2c8c84a7800cef502063269a5af25ceb100b192453d4ab",
     "https://bcr.bazel.build/modules/rules_java/7.6.1/MODULE.bazel": "2f14b7e8a1aa2f67ae92bc69d1ec0fa8d9f827c4e17ff5e5f02e91caa3b2d0fe",
-    "https://bcr.bazel.build/modules/rules_java/7.6.5/MODULE.bazel": "481164be5e02e4cab6e77a36927683263be56b7e36fef918b458d7a8a1ebadb1",
+    "https://bcr.bazel.build/modules/rules_java/8.5.1/MODULE.bazel": "d8a9e38cc5228881f7055a6079f6f7821a073df3744d441978e7a43e20226939",
     "https://bcr.bazel.build/modules/rules_java/8.6.0/MODULE.bazel": "9c064c434606d75a086f15ade5edb514308cccd1544c2b2a89bbac4310e41c71",
     "https://bcr.bazel.build/modules/rules_java/8.6.1/MODULE.bazel": "f4808e2ab5b0197f094cabce9f4b006a27766beb6a9975931da07099560ca9c2",
-    "https://bcr.bazel.build/modules/rules_java/8.6.1/source.json": "f18d9ad3c4c54945bf422ad584fa6c5ca5b3116ff55a5b1bc77e5c1210be5960",
-    "https://bcr.bazel.build/modules/rules_jvm_external/4.4.2/MODULE.bazel": "a56b85e418c83eb1839819f0b515c431010160383306d13ec21959ac412d2fe7",
-    "https://bcr.bazel.build/modules/rules_jvm_external/5.1/MODULE.bazel": "33f6f999e03183f7d088c9be518a63467dfd0be94a11d0055fe2d210f89aa909",
+    "https://bcr.bazel.build/modules/rules_java/9.1.0/MODULE.bazel": "ee63f27e36a3fada80342869361182f120a9819c74320e8e65b1e04ba0cd7a9d",
+    "https://bcr.bazel.build/modules/rules_java/9.1.0/source.json": "da589573c1dee2c9ac4a568b301269a2e8191110ff0345c1a959fa7ea6c4dfd6",
     "https://bcr.bazel.build/modules/rules_jvm_external/5.2/MODULE.bazel": "d9351ba35217ad0de03816ef3ed63f89d411349353077348a45348b096615036",
     "https://bcr.bazel.build/modules/rules_jvm_external/6.3/MODULE.bazel": "c998e060b85f71e00de5ec552019347c8bca255062c990ac02d051bb80a38df0",
     "https://bcr.bazel.build/modules/rules_jvm_external/6.6/MODULE.bazel": "153042249c7060536dc95b6bb9f9bb8063b8a0b0cb7acdb381bddbc2374aed55",
-    "https://bcr.bazel.build/modules/rules_jvm_external/6.6/source.json": "b1d7ffc3877e5a76e6e48e6bce459cbb1712c90eba14861b112bd299587a534d",
+    "https://bcr.bazel.build/modules/rules_jvm_external/6.7/MODULE.bazel": "e717beabc4d091ecb2c803c2d341b88590e9116b8bf7947915eeb33aab4f96dd",
+    "https://bcr.bazel.build/modules/rules_jvm_external/6.7/source.json": "5426f412d0a7fc6b611643376c7e4a82dec991491b9ce5cb1cfdd25fe2e92be4",
     "https://bcr.bazel.build/modules/rules_kotlin/1.9.6/MODULE.bazel": "d269a01a18ee74d0335450b10f62c9ed81f2321d7958a2934e44272fe82dcef3",
     "https://bcr.bazel.build/modules/rules_kotlin/1.9.6/source.json": "2faa4794364282db7c06600b7e5e34867a564ae91bda7cae7c29c64e9466b7d5",
     "https://bcr.bazel.build/modules/rules_license/0.0.3/MODULE.bazel": "627e9ab0247f7d1e05736b59dbb1b6871373de5ad31c3011880b4133cafd4bd0",
     "https://bcr.bazel.build/modules/rules_license/0.0.7/MODULE.bazel": "088fbeb0b6a419005b89cf93fe62d9517c0a2b8bb56af3244af65ecfe37e7d5d",
     "https://bcr.bazel.build/modules/rules_license/1.0.0/MODULE.bazel": "a7fda60eefdf3d8c827262ba499957e4df06f659330bbe6cdbdb975b768bb65c",
     "https://bcr.bazel.build/modules/rules_license/1.0.0/source.json": "a52c89e54cc311196e478f8382df91c15f7a2bfdf4c6cd0e2675cc2ff0b56efb",
-    "https://bcr.bazel.build/modules/rules_pkg/0.7.0/MODULE.bazel": "df99f03fc7934a4737122518bb87e667e62d780b610910f0447665a7e2be62dc",
     "https://bcr.bazel.build/modules/rules_pkg/1.0.1/MODULE.bazel": "5b1df97dbc29623bccdf2b0dcd0f5cb08e2f2c9050aab1092fd39a41e82686ff",
     "https://bcr.bazel.build/modules/rules_pkg/1.0.1/source.json": "bd82e5d7b9ce2d31e380dd9f50c111d678c3bdaca190cb76b0e1c71b05e1ba8a",
     "https://bcr.bazel.build/modules/rules_proto/4.0.0/MODULE.bazel": "a7a7b6ce9bee418c1a760b3d84f83a299ad6952f9903c67f19e4edd964894e06",
     "https://bcr.bazel.build/modules/rules_proto/5.3.0-21.7/MODULE.bazel": "e8dff86b0971688790ae75528fe1813f71809b5afd57facb44dad9e8eca631b7",
+    "https://bcr.bazel.build/modules/rules_proto/6.0.0-rc1/MODULE.bazel": "1e5b502e2e1a9e825eef74476a5a1ee524a92297085015a052510b09a1a09483",
     "https://bcr.bazel.build/modules/rules_proto/6.0.2/MODULE.bazel": "ce916b775a62b90b61888052a416ccdda405212b6aaeb39522f7dc53431a5e73",
     "https://bcr.bazel.build/modules/rules_proto/7.0.2/MODULE.bazel": "bf81793bd6d2ad89a37a40693e56c61b0ee30f7a7fdbaf3eabbf5f39de47dea2",
     "https://bcr.bazel.build/modules/rules_proto/7.1.0/MODULE.bazel": "002d62d9108f75bb807cd56245d45648f38275cb3a99dcd45dfb864c5d74cb96",
     "https://bcr.bazel.build/modules/rules_proto/7.1.0/source.json": "39f89066c12c24097854e8f57ab8558929f9c8d474d34b2c00ac04630ad8940e",
-    "https://bcr.bazel.build/modules/rules_python/0.10.2/MODULE.bazel": "cc82bc96f2997baa545ab3ce73f196d040ffb8756fd2d66125a530031cd90e5f",
-    "https://bcr.bazel.build/modules/rules_python/0.22.1/MODULE.bazel": "26114f0c0b5e93018c0c066d6673f1a2c3737c7e90af95eff30cfee38d0bbac7",
     "https://bcr.bazel.build/modules/rules_python/0.23.1/MODULE.bazel": "49ffccf0511cb8414de28321f5fcf2a31312b47c40cc21577144b7447f2bf300",
     "https://bcr.bazel.build/modules/rules_python/0.25.0/MODULE.bazel": "72f1506841c920a1afec76975b35312410eea3aa7b63267436bfb1dd91d2d382",
-    "https://bcr.bazel.build/modules/rules_python/0.28.0/MODULE.bazel": "cba2573d870babc976664a912539b320cbaa7114cd3e8f053c720171cde331ed",
     "https://bcr.bazel.build/modules/rules_python/0.31.0/MODULE.bazel": "93a43dc47ee570e6ec9f5779b2e64c1476a6ce921c48cc9a1678a91dd5f8fd58",
-    "https://bcr.bazel.build/modules/rules_python/0.31.0/source.json": "a41c836d4065888eef4377f2f27b6eea0fedb9b5adb1bab1970437373fe90dc7",
-    "https://bcr.bazel.build/modules/rules_python/0.4.0/MODULE.bazel": "9208ee05fd48bf09ac60ed269791cf17fb343db56c8226a720fbb1cdf467166c",
+    "https://bcr.bazel.build/modules/rules_python/0.33.2/MODULE.bazel": "3e036c4ad8d804a4dad897d333d8dce200d943df4827cb849840055be8d2e937",
+    "https://bcr.bazel.build/modules/rules_python/1.3.0/MODULE.bazel": "8361d57eafb67c09b75bf4bbe6be360e1b8f4f18118ab48037f2bd50aa2ccb13",
+    "https://bcr.bazel.build/modules/rules_python/1.6.0/MODULE.bazel": "7e04ad8f8d5bea40451cf80b1bd8262552aa73f841415d20db96b7241bd027d8",
+    "https://bcr.bazel.build/modules/rules_python/1.7.0/MODULE.bazel": "d01f995ecd137abf30238ad9ce97f8fc3ac57289c8b24bd0bf53324d937a14f8",
+    "https://bcr.bazel.build/modules/rules_python/1.7.0/source.json": "028a084b65dcf8f4dc4f82f8778dbe65df133f234b316828a82e060d81bdce32",
     "https://bcr.bazel.build/modules/rules_shell/0.2.0/MODULE.bazel": "fda8a652ab3c7d8fee214de05e7a9916d8b28082234e8d2c0094505c5268ed3c",
     "https://bcr.bazel.build/modules/rules_shell/0.3.0/MODULE.bazel": "de4402cd12f4cc8fda2354fce179fdb068c0b9ca1ec2d2b17b3e21b24c1a937b",
-    "https://bcr.bazel.build/modules/rules_shell/0.3.0/source.json": "c55ed591aa5009401ddf80ded9762ac32c358d2517ee7820be981e2de9756cf3",
-    "https://bcr.bazel.build/modules/stardoc/0.5.1/MODULE.bazel": "1a05d92974d0c122f5ccf09291442580317cdd859f07a8655f1db9a60374f9f8",
+    "https://bcr.bazel.build/modules/rules_shell/0.6.1/MODULE.bazel": "72e76b0eea4e81611ef5452aa82b3da34caca0c8b7b5c0c9584338aa93bae26b",
+    "https://bcr.bazel.build/modules/rules_shell/0.6.1/source.json": "20ec05cd5e592055e214b2da8ccb283c7f2a421ea0dc2acbf1aa792e11c03d0c",
+    "https://bcr.bazel.build/modules/rules_swift/1.16.0/MODULE.bazel": "4a09f199545a60d09895e8281362b1ff3bb08bbde69c6fc87aff5b92fcc916ca",
+    "https://bcr.bazel.build/modules/rules_swift/2.1.1/MODULE.bazel": "494900a80f944fc7aa61500c2073d9729dff0b764f0e89b824eb746959bc1046",
+    "https://bcr.bazel.build/modules/rules_swift/2.4.0/MODULE.bazel": "1639617eb1ede28d774d967a738b4a68b0accb40650beadb57c21846beab5efd",
+    "https://bcr.bazel.build/modules/rules_swift/3.1.2/MODULE.bazel": "72c8f5cf9d26427cee6c76c8e3853eb46ce6b0412a081b2b6db6e8ad56267400",
+    "https://bcr.bazel.build/modules/rules_swift/3.1.2/source.json": "e85761f3098a6faf40b8187695e3de6d97944e98abd0d8ce579cb2daf6319a66",
     "https://bcr.bazel.build/modules/stardoc/0.5.3/MODULE.bazel": "c7f6948dae6999bf0db32c1858ae345f112cacf98f174c7a8bb707e41b974f1c",
     "https://bcr.bazel.build/modules/stardoc/0.7.0/MODULE.bazel": "05e3d6d30c099b6770e97da986c53bd31844d7f13d41412480ea265ac9e8079c",
+    "https://bcr.bazel.build/modules/stardoc/0.7.2/MODULE.bazel": "fc152419aa2ea0f51c29583fab1e8c99ddefd5b3778421845606ee628629e0e5",
     "https://bcr.bazel.build/modules/stardoc/0.8.0/MODULE.bazel": "bbad4298d7ba185684f5fcd71b049c95b0575d1248891fd80b8d7077d647c9d8",
     "https://bcr.bazel.build/modules/stardoc/0.8.0/source.json": "7321db37080ee8a445dc60e8516a98ab3a27884d1457b892485d73759ccb7f4d",
+    "https://bcr.bazel.build/modules/swift_argument_parser/1.3.1.1/MODULE.bazel": "5e463fbfba7b1701d957555ed45097d7f984211330106ccd1352c6e0af0dcf91",
+    "https://bcr.bazel.build/modules/swift_argument_parser/1.3.1.2/MODULE.bazel": "75aab2373a4bbe2a1260b9bf2a1ebbdbf872d3bd36f80bff058dccd82e89422f",
+    "https://bcr.bazel.build/modules/swift_argument_parser/1.3.1.2/source.json": "5fba48bbe0ba48761f9e9f75f92876cafb5d07c0ce059cc7a8027416de94a05b",
     "https://bcr.bazel.build/modules/toolchains_llvm/0.10.3/MODULE.bazel": "d4bae4c78eeea299c8acb374a86cb4f321977bed73d973ec3e795107082d02b8",
     "https://bcr.bazel.build/modules/toolchains_llvm/0.10.3/source.json": "0e0533c5714c52de0c82ef774b4c56bccb992aa07bd7908735ab158da85460b4",
-    "https://bcr.bazel.build/modules/toolchains_protoc/0.6.0/MODULE.bazel": "bb8da2b2ccee5fde3142d237afe049239da114b56dd4a566fadeb937a30b33b4",
-    "https://bcr.bazel.build/modules/toolchains_protoc/0.6.0/source.json": "7617b931b9de333cada607ad11c74f3770fe7231e56f2166eb12181365cf1278",
-    "https://bcr.bazel.build/modules/upb/0.0.0-20220923-a547704/MODULE.bazel": "7298990c00040a0e2f121f6c32544bab27d4452f80d9ce51349b1a28f3005c43",
     "https://bcr.bazel.build/modules/with_cfg.bzl/0.14.1/MODULE.bazel": "aa0ef3f6c67dd35db7ac38c76785dc02f48b53f34e16b20487e70f51b5324d0a",
     "https://bcr.bazel.build/modules/with_cfg.bzl/0.14.1/source.json": "4666d3035f69063ecd136f3f0c68e424f1b1dd97ffc9cceb679522c0be38761b",
-    "https://bcr.bazel.build/modules/zlib/1.2.11/MODULE.bazel": "07b389abc85fdbca459b69e2ec656ae5622873af3f845e1c9d80fe179f3effa0",
-    "https://bcr.bazel.build/modules/zlib/1.2.12/MODULE.bazel": "3b1a8834ada2a883674be8cbd36ede1b6ec481477ada359cd2d3ddc562340b27",
-    "https://bcr.bazel.build/modules/zlib/1.3.1.bcr.3/MODULE.bazel": "af322bc08976524477c79d1e45e241b6efbeb918c497e8840b8ab116802dda79",
-    "https://bcr.bazel.build/modules/zlib/1.3.1.bcr.3/source.json": "2be409ac3c7601245958cd4fcdff4288be79ed23bd690b4b951f500d54ee6e7d",
-    "https://bcr.bazel.build/modules/zlib/1.3.1/MODULE.bazel": "751c9940dcfe869f5f7274e1295422a34623555916eb98c174c1e945594bf198"
+    "https://bcr.bazel.build/modules/zlib/1.3.1.bcr.5/MODULE.bazel": "eec517b5bbe5492629466e11dae908d043364302283de25581e3eb944326c4ca",
+    "https://bcr.bazel.build/modules/zlib/1.3.1.bcr.5/source.json": "22bc55c47af97246cfc093d0acf683a7869377de362b5d1c552c2c2e16b7a806"
   },
   "selectedYankedVersions": {},
   "moduleExtensions": {
-    "@@rules_java~//java:rules_java_deps.bzl%compatibility_proxy": {
+    "//.bazelci:extensions.bzl%bazelci": {
       "general": {
-        "bzlTransitiveDigest": "wz/gaA3xHNx01lt9KMTpLRTOGQHRWnTsAPhRfjdk21k=",
-        "usagesDigest": "I6+CGVbSrNp2QwSmF31WrXKCF4JkXIiGHgmLdJ7jzeQ=",
-        "recordedFileInputs": {},
-        "recordedDirentsInputs": {},
-        "envVariables": {},
+        "bzlTransitiveDigest": "jSO1JqBdO2HLwDGQyM0kUYlre+YS6LYn+lmOCn9EwFE=",
+        "usagesDigest": "ocYkjoY5EeO97oyjEa6/LYQWVTn6SAx+5pEfkrAcTvc=",
+        "recordedInputs": [
+          "REPO_MAPPING:,bazel_ci_rules bazel_ci_rules+"
+        ],
         "generatedRepoSpecs": {
-          "compatibility_proxy": {
-            "bzlFile": "@@rules_java~//java:rules_java_deps.bzl",
-            "ruleClassName": "_compatibility_proxy_repo_rule",
-            "attributes": {}
+          "buildkite_config": {
+            "repoRuleId": "@@bazel_ci_rules+//:rbe_repo.bzl%rbe_preconfig",
+            "attributes": {
+              "toolchain": "ubuntu2204"
+            }
           }
-        },
-        "recordedRepoMappingEntries": [
-          [
-            "rules_java~",
-            "bazel_tools",
-            "bazel_tools"
-          ]
-        ]
+        }
       }
     },
-    "@@rules_kotlin~//src/main/starlark/core/repositories:bzlmod_setup.bzl%rules_kotlin_extensions": {
+    "//tests/legacy/examples/proto/gogo:extensions.bzl%gogo": {
       "general": {
-        "bzlTransitiveDigest": "eecmTsmdIQveoA97hPtH3/Ej/kugbdCI24bhXIXaly8=",
-        "usagesDigest": "aJF6fLy82rR95Ff5CZPAqxNoFgOMLMN5ImfBS0nhnkg=",
-        "recordedFileInputs": {},
-        "recordedDirentsInputs": {},
-        "envVariables": {},
+        "bzlTransitiveDigest": "dlyNJ0znvxlOVZ2OB9J5cAs2Re1B2+24dHf6ILs29Pk=",
+        "usagesDigest": "yH8iUNaZJln2xOBI6qOPXdTLjnN+TB71O14LoHkWBek=",
+        "recordedInputs": [],
+        "generatedRepoSpecs": {
+          "gogo_special_proto": {
+            "repoRuleId": "@@//proto:gogo.bzl%gogo_special_proto",
+            "attributes": {}
+          }
+        }
+      }
+    },
+    "//tests/legacy/test_chdir:extensions.bzl%test_chdir": {
+      "general": {
+        "bzlTransitiveDigest": "1jkhjRrPOH/G09Tu7Ggz3xPiOsTvRcyg2qZkuZfKtGU=",
+        "usagesDigest": "3gh5AYATJVxCO3yjELHL683xTX4caTXOMtU7w380n1w=",
+        "recordedInputs": [],
+        "generatedRepoSpecs": {
+          "test_chdir_remote": {
+            "repoRuleId": "@@//tests/legacy/test_chdir:remote.bzl%_test_chdir_remote",
+            "attributes": {}
+          }
+        }
+      }
+    },
+    "@@pybind11_bazel+//:internal_configure.bzl%internal_configure_extension": {
+      "general": {
+        "bzlTransitiveDigest": "NRXra7941UfmNUyIxnLt82V5hULluVGL2nBsijTl4j4=",
+        "usagesDigest": "D1r3lfzMuUBFxgG8V6o0bQTLMk3GkaGOaPzw53wrwyw=",
+        "recordedInputs": [
+          "REPO_MAPPING:pybind11_bazel+,bazel_tools bazel_tools",
+          "FILE:@@pybind11_bazel+//MODULE.bazel e6f4c20442eaa7c90d7190d8dc539d0ab422f95c65a57cc59562170c58ae3d34"
+        ],
+        "generatedRepoSpecs": {
+          "pybind11": {
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
+            "attributes": {
+              "build_file": "@@pybind11_bazel+//:pybind11-BUILD.bazel",
+              "strip_prefix": "pybind11-2.12.0",
+              "urls": [
+                "https://github.com/pybind/pybind11/archive/v2.12.0.zip"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "@@rules_kotlin+//src/main/starlark/core/repositories:bzlmod_setup.bzl%rules_kotlin_extensions": {
+      "general": {
+        "bzlTransitiveDigest": "+Kp6j204mBZ3mxlIDDR0gBoP45BZ4jYRhRAcB8sU0qc=",
+        "usagesDigest": "QI2z8ZUR+mqtbwsf2fLqYdJAkPOHdOV+tF2yVAUgRzw=",
+        "recordedInputs": [
+          "REPO_MAPPING:rules_kotlin+,bazel_tools bazel_tools"
+        ],
         "generatedRepoSpecs": {
           "com_github_jetbrains_kotlin_git": {
-            "bzlFile": "@@rules_kotlin~//src/main/starlark/core/repositories:compiler.bzl",
-            "ruleClassName": "kotlin_compiler_git_repository",
+            "repoRuleId": "@@rules_kotlin+//src/main/starlark/core/repositories:compiler.bzl%kotlin_compiler_git_repository",
             "attributes": {
               "urls": [
                 "https://github.com/JetBrains/kotlin/releases/download/v1.9.23/kotlin-compiler-1.9.23.zip"
@@ -205,16 +267,14 @@
             }
           },
           "com_github_jetbrains_kotlin": {
-            "bzlFile": "@@rules_kotlin~//src/main/starlark/core/repositories:compiler.bzl",
-            "ruleClassName": "kotlin_capabilities_repository",
+            "repoRuleId": "@@rules_kotlin+//src/main/starlark/core/repositories:compiler.bzl%kotlin_capabilities_repository",
             "attributes": {
               "git_repository_name": "com_github_jetbrains_kotlin_git",
               "compiler_version": "1.9.23"
             }
           },
           "com_github_google_ksp": {
-            "bzlFile": "@@rules_kotlin~//src/main/starlark/core/repositories:ksp.bzl",
-            "ruleClassName": "ksp_compiler_plugin_repository",
+            "repoRuleId": "@@rules_kotlin+//src/main/starlark/core/repositories:ksp.bzl%ksp_compiler_plugin_repository",
             "attributes": {
               "urls": [
                 "https://github.com/google/ksp/releases/download/1.9.23-1.0.20/artifacts.zip"
@@ -224,8 +284,7 @@
             }
           },
           "com_github_pinterest_ktlint": {
-            "bzlFile": "@@bazel_tools//tools/build_defs/repo:http.bzl",
-            "ruleClassName": "http_file",
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_file",
             "attributes": {
               "sha256": "01b2e0ef893383a50dbeb13970fe7fa3be36ca3e83259e01649945b09d736985",
               "urls": [
@@ -235,8 +294,7 @@
             }
           },
           "rules_android": {
-            "bzlFile": "@@bazel_tools//tools/build_defs/repo:http.bzl",
-            "ruleClassName": "http_archive",
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
             "attributes": {
               "sha256": "cd06d15dd8bb59926e4d65f9003bfc20f9da4b2519985c27e190cddc8b7a7806",
               "strip_prefix": "rules_android-0.1.1",
@@ -245,1033 +303,218 @@
               ]
             }
           }
-        },
-        "recordedRepoMappingEntries": [
-          [
-            "rules_kotlin~",
-            "bazel_tools",
-            "bazel_tools"
-          ]
-        ]
+        }
       }
     },
-    "@@rules_python~//python/extensions:python.bzl%python": {
+    "@@rules_python+//python/extensions:config.bzl%config": {
       "general": {
-        "bzlTransitiveDigest": "NKPsijGE1IrFTzT0W0yfAohwWNIZt6eB23MGn2bM1OU=",
-        "usagesDigest": "ATOseWU5EE5A0RV+r4ACrYJ9g+Rp7OdaFygles1jsNk=",
-        "recordedFileInputs": {},
-        "recordedDirentsInputs": {},
-        "envVariables": {
-          "RULES_PYTHON_BZLMOD_DEBUG": null
-        },
-        "generatedRepoSpecs": {
-          "python_3_8_aarch64-apple-darwin": {
-            "bzlFile": "@@rules_python~//python:repositories.bzl",
-            "ruleClassName": "python_repository",
-            "attributes": {
-              "sha256": "1825b1f7220bc93ff143f2e70b5c6a79c6469e0eeb40824e07a7277f59aabfda",
-              "patches": [],
-              "platform": "aarch64-apple-darwin",
-              "python_version": "3.8.18",
-              "release_filename": "20231002/cpython-3.8.18+20231002-aarch64-apple-darwin-install_only.tar.gz",
-              "urls": [
-                "https://github.com/indygreg/python-build-standalone/releases/download/20231002/cpython-3.8.18+20231002-aarch64-apple-darwin-install_only.tar.gz"
-              ],
-              "distutils_content": "",
-              "strip_prefix": "python",
-              "coverage_tool": "",
-              "ignore_root_user_error": false
-            }
-          },
-          "python_3_8_aarch64-unknown-linux-gnu": {
-            "bzlFile": "@@rules_python~//python:repositories.bzl",
-            "ruleClassName": "python_repository",
-            "attributes": {
-              "sha256": "236a300f386ead02ca98dbddbc026ff4ef4de6701a394106e291ff8b75445ee1",
-              "patches": [],
-              "platform": "aarch64-unknown-linux-gnu",
-              "python_version": "3.8.18",
-              "release_filename": "20231002/cpython-3.8.18+20231002-aarch64-unknown-linux-gnu-install_only.tar.gz",
-              "urls": [
-                "https://github.com/indygreg/python-build-standalone/releases/download/20231002/cpython-3.8.18+20231002-aarch64-unknown-linux-gnu-install_only.tar.gz"
-              ],
-              "distutils_content": "",
-              "strip_prefix": "python",
-              "coverage_tool": "",
-              "ignore_root_user_error": false
-            }
-          },
-          "python_3_8_x86_64-apple-darwin": {
-            "bzlFile": "@@rules_python~//python:repositories.bzl",
-            "ruleClassName": "python_repository",
-            "attributes": {
-              "sha256": "fcf04532e644644213977242cd724fe5e84c0a5ac92ae038e07f1b01b474fca3",
-              "patches": [],
-              "platform": "x86_64-apple-darwin",
-              "python_version": "3.8.18",
-              "release_filename": "20231002/cpython-3.8.18+20231002-x86_64-apple-darwin-install_only.tar.gz",
-              "urls": [
-                "https://github.com/indygreg/python-build-standalone/releases/download/20231002/cpython-3.8.18+20231002-x86_64-apple-darwin-install_only.tar.gz"
-              ],
-              "distutils_content": "",
-              "strip_prefix": "python",
-              "coverage_tool": "",
-              "ignore_root_user_error": false
-            }
-          },
-          "python_3_8_x86_64-pc-windows-msvc": {
-            "bzlFile": "@@rules_python~//python:repositories.bzl",
-            "ruleClassName": "python_repository",
-            "attributes": {
-              "sha256": "a9d203e78caed94de368d154e841610cef6f6b484738573f4ae9059d37e898a5",
-              "patches": [],
-              "platform": "x86_64-pc-windows-msvc",
-              "python_version": "3.8.18",
-              "release_filename": "20231002/cpython-3.8.18+20231002-x86_64-pc-windows-msvc-shared-install_only.tar.gz",
-              "urls": [
-                "https://github.com/indygreg/python-build-standalone/releases/download/20231002/cpython-3.8.18+20231002-x86_64-pc-windows-msvc-shared-install_only.tar.gz"
-              ],
-              "distutils_content": "",
-              "strip_prefix": "python",
-              "coverage_tool": "",
-              "ignore_root_user_error": false
-            }
-          },
-          "python_3_8_x86_64-unknown-linux-gnu": {
-            "bzlFile": "@@rules_python~//python:repositories.bzl",
-            "ruleClassName": "python_repository",
-            "attributes": {
-              "sha256": "1e8a3babd1500111359b0f5675d770984bcbcb2cc8890b117394f0ed342fb9ec",
-              "patches": [],
-              "platform": "x86_64-unknown-linux-gnu",
-              "python_version": "3.8.18",
-              "release_filename": "20231002/cpython-3.8.18+20231002-x86_64-unknown-linux-gnu-install_only.tar.gz",
-              "urls": [
-                "https://github.com/indygreg/python-build-standalone/releases/download/20231002/cpython-3.8.18+20231002-x86_64-unknown-linux-gnu-install_only.tar.gz"
-              ],
-              "distutils_content": "",
-              "strip_prefix": "python",
-              "coverage_tool": "",
-              "ignore_root_user_error": false
-            }
-          },
-          "python_3_8_host": {
-            "bzlFile": "@@rules_python~//python/private:toolchains_repo.bzl",
-            "ruleClassName": "host_toolchain",
-            "attributes": {
-              "python_version": "3.8.18",
-              "user_repository_name": "python_3_8",
-              "platforms": [
-                "aarch64-apple-darwin",
-                "aarch64-unknown-linux-gnu",
-                "x86_64-apple-darwin",
-                "x86_64-pc-windows-msvc",
-                "x86_64-unknown-linux-gnu"
-              ]
-            }
-          },
-          "python_3_8": {
-            "bzlFile": "@@rules_python~//python/private:toolchains_repo.bzl",
-            "ruleClassName": "toolchain_aliases",
-            "attributes": {
-              "python_version": "3.8.18",
-              "user_repository_name": "python_3_8",
-              "platforms": [
-                "aarch64-apple-darwin",
-                "aarch64-unknown-linux-gnu",
-                "x86_64-apple-darwin",
-                "x86_64-pc-windows-msvc",
-                "x86_64-unknown-linux-gnu"
-              ]
-            }
-          },
-          "python_3_9_aarch64-apple-darwin": {
-            "bzlFile": "@@rules_python~//python:repositories.bzl",
-            "ruleClassName": "python_repository",
-            "attributes": {
-              "sha256": "fdc4054837e37b69798c2ef796222a480bc1f80e8ad3a01a95d0168d8282a007",
-              "patches": [],
-              "platform": "aarch64-apple-darwin",
-              "python_version": "3.9.18",
-              "release_filename": "20231002/cpython-3.9.18+20231002-aarch64-apple-darwin-install_only.tar.gz",
-              "urls": [
-                "https://github.com/indygreg/python-build-standalone/releases/download/20231002/cpython-3.9.18+20231002-aarch64-apple-darwin-install_only.tar.gz"
-              ],
-              "distutils_content": "",
-              "strip_prefix": "python",
-              "coverage_tool": "",
-              "ignore_root_user_error": false
-            }
-          },
-          "python_3_9_aarch64-unknown-linux-gnu": {
-            "bzlFile": "@@rules_python~//python:repositories.bzl",
-            "ruleClassName": "python_repository",
-            "attributes": {
-              "sha256": "1e0a3e8ce8e58901a259748c0ab640d2b8294713782d14229e882c6898b2fb36",
-              "patches": [],
-              "platform": "aarch64-unknown-linux-gnu",
-              "python_version": "3.9.18",
-              "release_filename": "20231002/cpython-3.9.18+20231002-aarch64-unknown-linux-gnu-install_only.tar.gz",
-              "urls": [
-                "https://github.com/indygreg/python-build-standalone/releases/download/20231002/cpython-3.9.18+20231002-aarch64-unknown-linux-gnu-install_only.tar.gz"
-              ],
-              "distutils_content": "",
-              "strip_prefix": "python",
-              "coverage_tool": "",
-              "ignore_root_user_error": false
-            }
-          },
-          "python_3_9_ppc64le-unknown-linux-gnu": {
-            "bzlFile": "@@rules_python~//python:repositories.bzl",
-            "ruleClassName": "python_repository",
-            "attributes": {
-              "sha256": "101c38b22fb2f5a0945156da4259c8e9efa0c08de9d7f59afa51e7ce6e22a1cc",
-              "patches": [],
-              "platform": "ppc64le-unknown-linux-gnu",
-              "python_version": "3.9.18",
-              "release_filename": "20231002/cpython-3.9.18+20231002-ppc64le-unknown-linux-gnu-install_only.tar.gz",
-              "urls": [
-                "https://github.com/indygreg/python-build-standalone/releases/download/20231002/cpython-3.9.18+20231002-ppc64le-unknown-linux-gnu-install_only.tar.gz"
-              ],
-              "distutils_content": "",
-              "strip_prefix": "python",
-              "coverage_tool": "",
-              "ignore_root_user_error": false
-            }
-          },
-          "python_3_9_s390x-unknown-linux-gnu": {
-            "bzlFile": "@@rules_python~//python:repositories.bzl",
-            "ruleClassName": "python_repository",
-            "attributes": {
-              "sha256": "eee31e55ffbc1f460d7b17f05dd89e45a2636f374a6f8dc29ea13d0497f7f586",
-              "patches": [],
-              "platform": "s390x-unknown-linux-gnu",
-              "python_version": "3.9.18",
-              "release_filename": "20231002/cpython-3.9.18+20231002-s390x-unknown-linux-gnu-install_only.tar.gz",
-              "urls": [
-                "https://github.com/indygreg/python-build-standalone/releases/download/20231002/cpython-3.9.18+20231002-s390x-unknown-linux-gnu-install_only.tar.gz"
-              ],
-              "distutils_content": "",
-              "strip_prefix": "python",
-              "coverage_tool": "",
-              "ignore_root_user_error": false
-            }
-          },
-          "python_3_9_x86_64-apple-darwin": {
-            "bzlFile": "@@rules_python~//python:repositories.bzl",
-            "ruleClassName": "python_repository",
-            "attributes": {
-              "sha256": "82231cb77d4a5c8081a1a1d5b8ae440abe6993514eb77a926c826e9a69a94fb1",
-              "patches": [],
-              "platform": "x86_64-apple-darwin",
-              "python_version": "3.9.18",
-              "release_filename": "20231002/cpython-3.9.18+20231002-x86_64-apple-darwin-install_only.tar.gz",
-              "urls": [
-                "https://github.com/indygreg/python-build-standalone/releases/download/20231002/cpython-3.9.18+20231002-x86_64-apple-darwin-install_only.tar.gz"
-              ],
-              "distutils_content": "",
-              "strip_prefix": "python",
-              "coverage_tool": "",
-              "ignore_root_user_error": false
-            }
-          },
-          "python_3_9_x86_64-pc-windows-msvc": {
-            "bzlFile": "@@rules_python~//python:repositories.bzl",
-            "ruleClassName": "python_repository",
-            "attributes": {
-              "sha256": "02ea7bb64524886bd2b05d6b6be4401035e4ba4319146f274f0bcd992822cd75",
-              "patches": [],
-              "platform": "x86_64-pc-windows-msvc",
-              "python_version": "3.9.18",
-              "release_filename": "20231002/cpython-3.9.18+20231002-x86_64-pc-windows-msvc-shared-install_only.tar.gz",
-              "urls": [
-                "https://github.com/indygreg/python-build-standalone/releases/download/20231002/cpython-3.9.18+20231002-x86_64-pc-windows-msvc-shared-install_only.tar.gz"
-              ],
-              "distutils_content": "",
-              "strip_prefix": "python",
-              "coverage_tool": "",
-              "ignore_root_user_error": false
-            }
-          },
-          "python_3_9_x86_64-unknown-linux-gnu": {
-            "bzlFile": "@@rules_python~//python:repositories.bzl",
-            "ruleClassName": "python_repository",
-            "attributes": {
-              "sha256": "f3ff38b1ccae7dcebd8bbf2e533c9a984fac881de0ffd1636fbb61842bd924de",
-              "patches": [],
-              "platform": "x86_64-unknown-linux-gnu",
-              "python_version": "3.9.18",
-              "release_filename": "20231002/cpython-3.9.18+20231002-x86_64-unknown-linux-gnu-install_only.tar.gz",
-              "urls": [
-                "https://github.com/indygreg/python-build-standalone/releases/download/20231002/cpython-3.9.18+20231002-x86_64-unknown-linux-gnu-install_only.tar.gz"
-              ],
-              "distutils_content": "",
-              "strip_prefix": "python",
-              "coverage_tool": "",
-              "ignore_root_user_error": false
-            }
-          },
-          "python_3_9_host": {
-            "bzlFile": "@@rules_python~//python/private:toolchains_repo.bzl",
-            "ruleClassName": "host_toolchain",
-            "attributes": {
-              "python_version": "3.9.18",
-              "user_repository_name": "python_3_9",
-              "platforms": [
-                "aarch64-apple-darwin",
-                "aarch64-unknown-linux-gnu",
-                "ppc64le-unknown-linux-gnu",
-                "s390x-unknown-linux-gnu",
-                "x86_64-apple-darwin",
-                "x86_64-pc-windows-msvc",
-                "x86_64-unknown-linux-gnu"
-              ]
-            }
-          },
-          "python_3_9": {
-            "bzlFile": "@@rules_python~//python/private:toolchains_repo.bzl",
-            "ruleClassName": "toolchain_aliases",
-            "attributes": {
-              "python_version": "3.9.18",
-              "user_repository_name": "python_3_9",
-              "platforms": [
-                "aarch64-apple-darwin",
-                "aarch64-unknown-linux-gnu",
-                "ppc64le-unknown-linux-gnu",
-                "s390x-unknown-linux-gnu",
-                "x86_64-apple-darwin",
-                "x86_64-pc-windows-msvc",
-                "x86_64-unknown-linux-gnu"
-              ]
-            }
-          },
-          "python_3_10_aarch64-apple-darwin": {
-            "bzlFile": "@@rules_python~//python:repositories.bzl",
-            "ruleClassName": "python_repository",
-            "attributes": {
-              "sha256": "fd027b1dedf1ea034cdaa272e91771bdf75ddef4c8653b05d224a0645aa2ca3c",
-              "patches": [],
-              "platform": "aarch64-apple-darwin",
-              "python_version": "3.10.13",
-              "release_filename": "20231002/cpython-3.10.13+20231002-aarch64-apple-darwin-install_only.tar.gz",
-              "urls": [
-                "https://github.com/indygreg/python-build-standalone/releases/download/20231002/cpython-3.10.13+20231002-aarch64-apple-darwin-install_only.tar.gz"
-              ],
-              "distutils_content": "",
-              "strip_prefix": "python",
-              "coverage_tool": "",
-              "ignore_root_user_error": false
-            }
-          },
-          "python_3_10_aarch64-unknown-linux-gnu": {
-            "bzlFile": "@@rules_python~//python:repositories.bzl",
-            "ruleClassName": "python_repository",
-            "attributes": {
-              "sha256": "8675915ff454ed2f1597e27794bc7df44f5933c26b94aa06af510fe91b58bb97",
-              "patches": [],
-              "platform": "aarch64-unknown-linux-gnu",
-              "python_version": "3.10.13",
-              "release_filename": "20231002/cpython-3.10.13+20231002-aarch64-unknown-linux-gnu-install_only.tar.gz",
-              "urls": [
-                "https://github.com/indygreg/python-build-standalone/releases/download/20231002/cpython-3.10.13+20231002-aarch64-unknown-linux-gnu-install_only.tar.gz"
-              ],
-              "distutils_content": "",
-              "strip_prefix": "python",
-              "coverage_tool": "",
-              "ignore_root_user_error": false
-            }
-          },
-          "python_3_10_ppc64le-unknown-linux-gnu": {
-            "bzlFile": "@@rules_python~//python:repositories.bzl",
-            "ruleClassName": "python_repository",
-            "attributes": {
-              "sha256": "f3f9c43eec1a0c3f72845d0b705da17a336d3906b7df212d2640b8f47e8ff375",
-              "patches": [],
-              "platform": "ppc64le-unknown-linux-gnu",
-              "python_version": "3.10.13",
-              "release_filename": "20231002/cpython-3.10.13+20231002-ppc64le-unknown-linux-gnu-install_only.tar.gz",
-              "urls": [
-                "https://github.com/indygreg/python-build-standalone/releases/download/20231002/cpython-3.10.13+20231002-ppc64le-unknown-linux-gnu-install_only.tar.gz"
-              ],
-              "distutils_content": "",
-              "strip_prefix": "python",
-              "coverage_tool": "",
-              "ignore_root_user_error": false
-            }
-          },
-          "python_3_10_s390x-unknown-linux-gnu": {
-            "bzlFile": "@@rules_python~//python:repositories.bzl",
-            "ruleClassName": "python_repository",
-            "attributes": {
-              "sha256": "859f6cfe9aedb6e8858892fdc124037e83ab05f28d42a7acd314c6a16d6bd66c",
-              "patches": [],
-              "platform": "s390x-unknown-linux-gnu",
-              "python_version": "3.10.13",
-              "release_filename": "20231002/cpython-3.10.13+20231002-s390x-unknown-linux-gnu-install_only.tar.gz",
-              "urls": [
-                "https://github.com/indygreg/python-build-standalone/releases/download/20231002/cpython-3.10.13+20231002-s390x-unknown-linux-gnu-install_only.tar.gz"
-              ],
-              "distutils_content": "",
-              "strip_prefix": "python",
-              "coverage_tool": "",
-              "ignore_root_user_error": false
-            }
-          },
-          "python_3_10_x86_64-apple-darwin": {
-            "bzlFile": "@@rules_python~//python:repositories.bzl",
-            "ruleClassName": "python_repository",
-            "attributes": {
-              "sha256": "be0b19b6af1f7d8c667e5abef5505ad06cf72e5a11bb5844970c395a7e5b1275",
-              "patches": [],
-              "platform": "x86_64-apple-darwin",
-              "python_version": "3.10.13",
-              "release_filename": "20231002/cpython-3.10.13+20231002-x86_64-apple-darwin-install_only.tar.gz",
-              "urls": [
-                "https://github.com/indygreg/python-build-standalone/releases/download/20231002/cpython-3.10.13+20231002-x86_64-apple-darwin-install_only.tar.gz"
-              ],
-              "distutils_content": "",
-              "strip_prefix": "python",
-              "coverage_tool": "",
-              "ignore_root_user_error": false
-            }
-          },
-          "python_3_10_x86_64-pc-windows-msvc": {
-            "bzlFile": "@@rules_python~//python:repositories.bzl",
-            "ruleClassName": "python_repository",
-            "attributes": {
-              "sha256": "b8d930ce0d04bda83037ad3653d7450f8907c88e24bb8255a29b8dab8930d6f1",
-              "patches": [],
-              "platform": "x86_64-pc-windows-msvc",
-              "python_version": "3.10.13",
-              "release_filename": "20231002/cpython-3.10.13+20231002-x86_64-pc-windows-msvc-shared-install_only.tar.gz",
-              "urls": [
-                "https://github.com/indygreg/python-build-standalone/releases/download/20231002/cpython-3.10.13+20231002-x86_64-pc-windows-msvc-shared-install_only.tar.gz"
-              ],
-              "distutils_content": "",
-              "strip_prefix": "python",
-              "coverage_tool": "",
-              "ignore_root_user_error": false
-            }
-          },
-          "python_3_10_x86_64-unknown-linux-gnu": {
-            "bzlFile": "@@rules_python~//python:repositories.bzl",
-            "ruleClassName": "python_repository",
-            "attributes": {
-              "sha256": "5d0429c67c992da19ba3eb58b3acd0b35ec5e915b8cae9a4aa8ca565c423847a",
-              "patches": [],
-              "platform": "x86_64-unknown-linux-gnu",
-              "python_version": "3.10.13",
-              "release_filename": "20231002/cpython-3.10.13+20231002-x86_64-unknown-linux-gnu-install_only.tar.gz",
-              "urls": [
-                "https://github.com/indygreg/python-build-standalone/releases/download/20231002/cpython-3.10.13+20231002-x86_64-unknown-linux-gnu-install_only.tar.gz"
-              ],
-              "distutils_content": "",
-              "strip_prefix": "python",
-              "coverage_tool": "",
-              "ignore_root_user_error": false
-            }
-          },
-          "python_3_10_host": {
-            "bzlFile": "@@rules_python~//python/private:toolchains_repo.bzl",
-            "ruleClassName": "host_toolchain",
-            "attributes": {
-              "python_version": "3.10.13",
-              "user_repository_name": "python_3_10",
-              "platforms": [
-                "aarch64-apple-darwin",
-                "aarch64-unknown-linux-gnu",
-                "ppc64le-unknown-linux-gnu",
-                "s390x-unknown-linux-gnu",
-                "x86_64-apple-darwin",
-                "x86_64-pc-windows-msvc",
-                "x86_64-unknown-linux-gnu"
-              ]
-            }
-          },
-          "python_3_10": {
-            "bzlFile": "@@rules_python~//python/private:toolchains_repo.bzl",
-            "ruleClassName": "toolchain_aliases",
-            "attributes": {
-              "python_version": "3.10.13",
-              "user_repository_name": "python_3_10",
-              "platforms": [
-                "aarch64-apple-darwin",
-                "aarch64-unknown-linux-gnu",
-                "ppc64le-unknown-linux-gnu",
-                "s390x-unknown-linux-gnu",
-                "x86_64-apple-darwin",
-                "x86_64-pc-windows-msvc",
-                "x86_64-unknown-linux-gnu"
-              ]
-            }
-          },
-          "python_3_11_aarch64-apple-darwin": {
-            "bzlFile": "@@rules_python~//python:repositories.bzl",
-            "ruleClassName": "python_repository",
-            "attributes": {
-              "sha256": "b042c966920cf8465385ca3522986b12d745151a72c060991088977ca36d3883",
-              "patches": [],
-              "platform": "aarch64-apple-darwin",
-              "python_version": "3.11.7",
-              "release_filename": "20240107/cpython-3.11.7+20240107-aarch64-apple-darwin-install_only.tar.gz",
-              "urls": [
-                "https://github.com/indygreg/python-build-standalone/releases/download/20240107/cpython-3.11.7+20240107-aarch64-apple-darwin-install_only.tar.gz"
-              ],
-              "distutils_content": "",
-              "strip_prefix": "python",
-              "coverage_tool": "",
-              "ignore_root_user_error": false
-            }
-          },
-          "python_3_11_aarch64-unknown-linux-gnu": {
-            "bzlFile": "@@rules_python~//python:repositories.bzl",
-            "ruleClassName": "python_repository",
-            "attributes": {
-              "sha256": "b102eaf865eb715aa98a8a2ef19037b6cc3ae7dfd4a632802650f29de635aa13",
-              "patches": [],
-              "platform": "aarch64-unknown-linux-gnu",
-              "python_version": "3.11.7",
-              "release_filename": "20240107/cpython-3.11.7+20240107-aarch64-unknown-linux-gnu-install_only.tar.gz",
-              "urls": [
-                "https://github.com/indygreg/python-build-standalone/releases/download/20240107/cpython-3.11.7+20240107-aarch64-unknown-linux-gnu-install_only.tar.gz"
-              ],
-              "distutils_content": "",
-              "strip_prefix": "python",
-              "coverage_tool": "",
-              "ignore_root_user_error": false
-            }
-          },
-          "python_3_11_ppc64le-unknown-linux-gnu": {
-            "bzlFile": "@@rules_python~//python:repositories.bzl",
-            "ruleClassName": "python_repository",
-            "attributes": {
-              "sha256": "b44e1b74afe75c7b19143413632c4386708ae229117f8f950c2094e9681d34c7",
-              "patches": [],
-              "platform": "ppc64le-unknown-linux-gnu",
-              "python_version": "3.11.7",
-              "release_filename": "20240107/cpython-3.11.7+20240107-ppc64le-unknown-linux-gnu-install_only.tar.gz",
-              "urls": [
-                "https://github.com/indygreg/python-build-standalone/releases/download/20240107/cpython-3.11.7+20240107-ppc64le-unknown-linux-gnu-install_only.tar.gz"
-              ],
-              "distutils_content": "",
-              "strip_prefix": "python",
-              "coverage_tool": "",
-              "ignore_root_user_error": false
-            }
-          },
-          "python_3_11_s390x-unknown-linux-gnu": {
-            "bzlFile": "@@rules_python~//python:repositories.bzl",
-            "ruleClassName": "python_repository",
-            "attributes": {
-              "sha256": "49520e3ff494708020f306e30b0964f079170be83e956be4504f850557378a22",
-              "patches": [],
-              "platform": "s390x-unknown-linux-gnu",
-              "python_version": "3.11.7",
-              "release_filename": "20240107/cpython-3.11.7+20240107-s390x-unknown-linux-gnu-install_only.tar.gz",
-              "urls": [
-                "https://github.com/indygreg/python-build-standalone/releases/download/20240107/cpython-3.11.7+20240107-s390x-unknown-linux-gnu-install_only.tar.gz"
-              ],
-              "distutils_content": "",
-              "strip_prefix": "python",
-              "coverage_tool": "",
-              "ignore_root_user_error": false
-            }
-          },
-          "python_3_11_x86_64-apple-darwin": {
-            "bzlFile": "@@rules_python~//python:repositories.bzl",
-            "ruleClassName": "python_repository",
-            "attributes": {
-              "sha256": "a0e615eef1fafdc742da0008425a9030b7ea68a4ae4e73ac557ef27b112836d4",
-              "patches": [],
-              "platform": "x86_64-apple-darwin",
-              "python_version": "3.11.7",
-              "release_filename": "20240107/cpython-3.11.7+20240107-x86_64-apple-darwin-install_only.tar.gz",
-              "urls": [
-                "https://github.com/indygreg/python-build-standalone/releases/download/20240107/cpython-3.11.7+20240107-x86_64-apple-darwin-install_only.tar.gz"
-              ],
-              "distutils_content": "",
-              "strip_prefix": "python",
-              "coverage_tool": "",
-              "ignore_root_user_error": false
-            }
-          },
-          "python_3_11_x86_64-pc-windows-msvc": {
-            "bzlFile": "@@rules_python~//python:repositories.bzl",
-            "ruleClassName": "python_repository",
-            "attributes": {
-              "sha256": "67077e6fa918e4f4fd60ba169820b00be7c390c497bf9bc9cab2c255ea8e6f3e",
-              "patches": [],
-              "platform": "x86_64-pc-windows-msvc",
-              "python_version": "3.11.7",
-              "release_filename": "20240107/cpython-3.11.7+20240107-x86_64-pc-windows-msvc-shared-install_only.tar.gz",
-              "urls": [
-                "https://github.com/indygreg/python-build-standalone/releases/download/20240107/cpython-3.11.7+20240107-x86_64-pc-windows-msvc-shared-install_only.tar.gz"
-              ],
-              "distutils_content": "",
-              "strip_prefix": "python",
-              "coverage_tool": "",
-              "ignore_root_user_error": false
-            }
-          },
-          "python_3_11_x86_64-unknown-linux-gnu": {
-            "bzlFile": "@@rules_python~//python:repositories.bzl",
-            "ruleClassName": "python_repository",
-            "attributes": {
-              "sha256": "4a51ce60007a6facf64e5495f4cf322e311ba9f39a8cd3f3e4c026eae488e140",
-              "patches": [],
-              "platform": "x86_64-unknown-linux-gnu",
-              "python_version": "3.11.7",
-              "release_filename": "20240107/cpython-3.11.7+20240107-x86_64-unknown-linux-gnu-install_only.tar.gz",
-              "urls": [
-                "https://github.com/indygreg/python-build-standalone/releases/download/20240107/cpython-3.11.7+20240107-x86_64-unknown-linux-gnu-install_only.tar.gz"
-              ],
-              "distutils_content": "",
-              "strip_prefix": "python",
-              "coverage_tool": "",
-              "ignore_root_user_error": false
-            }
-          },
-          "python_3_11_host": {
-            "bzlFile": "@@rules_python~//python/private:toolchains_repo.bzl",
-            "ruleClassName": "host_toolchain",
-            "attributes": {
-              "python_version": "3.11.7",
-              "user_repository_name": "python_3_11",
-              "platforms": [
-                "aarch64-apple-darwin",
-                "aarch64-unknown-linux-gnu",
-                "ppc64le-unknown-linux-gnu",
-                "s390x-unknown-linux-gnu",
-                "x86_64-apple-darwin",
-                "x86_64-pc-windows-msvc",
-                "x86_64-unknown-linux-gnu"
-              ]
-            }
-          },
-          "python_3_11": {
-            "bzlFile": "@@rules_python~//python/private:toolchains_repo.bzl",
-            "ruleClassName": "toolchain_aliases",
-            "attributes": {
-              "python_version": "3.11.7",
-              "user_repository_name": "python_3_11",
-              "platforms": [
-                "aarch64-apple-darwin",
-                "aarch64-unknown-linux-gnu",
-                "ppc64le-unknown-linux-gnu",
-                "s390x-unknown-linux-gnu",
-                "x86_64-apple-darwin",
-                "x86_64-pc-windows-msvc",
-                "x86_64-unknown-linux-gnu"
-              ]
-            }
-          },
-          "python_3_12_aarch64-apple-darwin": {
-            "bzlFile": "@@rules_python~//python:repositories.bzl",
-            "ruleClassName": "python_repository",
-            "attributes": {
-              "sha256": "f93f8375ca6ac0a35d58ff007043cbd3a88d9609113f1cb59cf7c8d215f064af",
-              "patches": [],
-              "platform": "aarch64-apple-darwin",
-              "python_version": "3.12.1",
-              "release_filename": "20240107/cpython-3.12.1+20240107-aarch64-apple-darwin-install_only.tar.gz",
-              "urls": [
-                "https://github.com/indygreg/python-build-standalone/releases/download/20240107/cpython-3.12.1+20240107-aarch64-apple-darwin-install_only.tar.gz"
-              ],
-              "distutils_content": "",
-              "strip_prefix": "python",
-              "coverage_tool": "",
-              "ignore_root_user_error": false
-            }
-          },
-          "python_3_12_aarch64-unknown-linux-gnu": {
-            "bzlFile": "@@rules_python~//python:repositories.bzl",
-            "ruleClassName": "python_repository",
-            "attributes": {
-              "sha256": "236533ef20e665007a111c2f36efb59c87ae195ad7dca223b6dc03fb07064f0b",
-              "patches": [],
-              "platform": "aarch64-unknown-linux-gnu",
-              "python_version": "3.12.1",
-              "release_filename": "20240107/cpython-3.12.1+20240107-aarch64-unknown-linux-gnu-install_only.tar.gz",
-              "urls": [
-                "https://github.com/indygreg/python-build-standalone/releases/download/20240107/cpython-3.12.1+20240107-aarch64-unknown-linux-gnu-install_only.tar.gz"
-              ],
-              "distutils_content": "",
-              "strip_prefix": "python",
-              "coverage_tool": "",
-              "ignore_root_user_error": false
-            }
-          },
-          "python_3_12_ppc64le-unknown-linux-gnu": {
-            "bzlFile": "@@rules_python~//python:repositories.bzl",
-            "ruleClassName": "python_repository",
-            "attributes": {
-              "sha256": "78051f0d1411ee62bc2af5edfccf6e8400ac4ef82887a2affc19a7ace6a05267",
-              "patches": [],
-              "platform": "ppc64le-unknown-linux-gnu",
-              "python_version": "3.12.1",
-              "release_filename": "20240107/cpython-3.12.1+20240107-ppc64le-unknown-linux-gnu-install_only.tar.gz",
-              "urls": [
-                "https://github.com/indygreg/python-build-standalone/releases/download/20240107/cpython-3.12.1+20240107-ppc64le-unknown-linux-gnu-install_only.tar.gz"
-              ],
-              "distutils_content": "",
-              "strip_prefix": "python",
-              "coverage_tool": "",
-              "ignore_root_user_error": false
-            }
-          },
-          "python_3_12_s390x-unknown-linux-gnu": {
-            "bzlFile": "@@rules_python~//python:repositories.bzl",
-            "ruleClassName": "python_repository",
-            "attributes": {
-              "sha256": "60631211c701f8d2c56e5dd7b154e68868128a019b9db1d53a264f56c0d4aee2",
-              "patches": [],
-              "platform": "s390x-unknown-linux-gnu",
-              "python_version": "3.12.1",
-              "release_filename": "20240107/cpython-3.12.1+20240107-s390x-unknown-linux-gnu-install_only.tar.gz",
-              "urls": [
-                "https://github.com/indygreg/python-build-standalone/releases/download/20240107/cpython-3.12.1+20240107-s390x-unknown-linux-gnu-install_only.tar.gz"
-              ],
-              "distutils_content": "",
-              "strip_prefix": "python",
-              "coverage_tool": "",
-              "ignore_root_user_error": false
-            }
-          },
-          "python_3_12_x86_64-apple-darwin": {
-            "bzlFile": "@@rules_python~//python:repositories.bzl",
-            "ruleClassName": "python_repository",
-            "attributes": {
-              "sha256": "eca96158c1568dedd9a0b3425375637a83764d1fa74446438293089a8bfac1f8",
-              "patches": [],
-              "platform": "x86_64-apple-darwin",
-              "python_version": "3.12.1",
-              "release_filename": "20240107/cpython-3.12.1+20240107-x86_64-apple-darwin-install_only.tar.gz",
-              "urls": [
-                "https://github.com/indygreg/python-build-standalone/releases/download/20240107/cpython-3.12.1+20240107-x86_64-apple-darwin-install_only.tar.gz"
-              ],
-              "distutils_content": "",
-              "strip_prefix": "python",
-              "coverage_tool": "",
-              "ignore_root_user_error": false
-            }
-          },
-          "python_3_12_x86_64-pc-windows-msvc": {
-            "bzlFile": "@@rules_python~//python:repositories.bzl",
-            "ruleClassName": "python_repository",
-            "attributes": {
-              "sha256": "fd5a9e0f41959d0341246d3643f2b8794f638adc0cec8dd5e1b6465198eae08a",
-              "patches": [],
-              "platform": "x86_64-pc-windows-msvc",
-              "python_version": "3.12.1",
-              "release_filename": "20240107/cpython-3.12.1+20240107-x86_64-pc-windows-msvc-shared-install_only.tar.gz",
-              "urls": [
-                "https://github.com/indygreg/python-build-standalone/releases/download/20240107/cpython-3.12.1+20240107-x86_64-pc-windows-msvc-shared-install_only.tar.gz"
-              ],
-              "distutils_content": "",
-              "strip_prefix": "python",
-              "coverage_tool": "",
-              "ignore_root_user_error": false
-            }
-          },
-          "python_3_12_x86_64-unknown-linux-gnu": {
-            "bzlFile": "@@rules_python~//python:repositories.bzl",
-            "ruleClassName": "python_repository",
-            "attributes": {
-              "sha256": "74e330b8212ca22fd4d9a2003b9eec14892155566738febc8e5e572f267b9472",
-              "patches": [],
-              "platform": "x86_64-unknown-linux-gnu",
-              "python_version": "3.12.1",
-              "release_filename": "20240107/cpython-3.12.1+20240107-x86_64-unknown-linux-gnu-install_only.tar.gz",
-              "urls": [
-                "https://github.com/indygreg/python-build-standalone/releases/download/20240107/cpython-3.12.1+20240107-x86_64-unknown-linux-gnu-install_only.tar.gz"
-              ],
-              "distutils_content": "",
-              "strip_prefix": "python",
-              "coverage_tool": "",
-              "ignore_root_user_error": false
-            }
-          },
-          "python_3_12_host": {
-            "bzlFile": "@@rules_python~//python/private:toolchains_repo.bzl",
-            "ruleClassName": "host_toolchain",
-            "attributes": {
-              "python_version": "3.12.1",
-              "user_repository_name": "python_3_12",
-              "platforms": [
-                "aarch64-apple-darwin",
-                "aarch64-unknown-linux-gnu",
-                "ppc64le-unknown-linux-gnu",
-                "s390x-unknown-linux-gnu",
-                "x86_64-apple-darwin",
-                "x86_64-pc-windows-msvc",
-                "x86_64-unknown-linux-gnu"
-              ]
-            }
-          },
-          "python_3_12": {
-            "bzlFile": "@@rules_python~//python/private:toolchains_repo.bzl",
-            "ruleClassName": "toolchain_aliases",
-            "attributes": {
-              "python_version": "3.12.1",
-              "user_repository_name": "python_3_12",
-              "platforms": [
-                "aarch64-apple-darwin",
-                "aarch64-unknown-linux-gnu",
-                "ppc64le-unknown-linux-gnu",
-                "s390x-unknown-linux-gnu",
-                "x86_64-apple-darwin",
-                "x86_64-pc-windows-msvc",
-                "x86_64-unknown-linux-gnu"
-              ]
-            }
-          },
-          "pythons_hub": {
-            "bzlFile": "@@rules_python~//python/private/bzlmod:pythons_hub.bzl",
-            "ruleClassName": "hub_repo",
-            "attributes": {
-              "default_python_version": "3.11",
-              "toolchain_prefixes": [
-                "_0000_python_3_8_",
-                "_0001_python_3_9_",
-                "_0002_python_3_10_",
-                "_0003_python_3_12_",
-                "_0004_python_3_11_"
-              ],
-              "toolchain_python_versions": [
-                "3.8",
-                "3.9",
-                "3.10",
-                "3.12",
-                "3.11"
-              ],
-              "toolchain_set_python_version_constraints": [
-                "True",
-                "True",
-                "True",
-                "True",
-                "False"
-              ],
-              "toolchain_user_repository_names": [
-                "python_3_8",
-                "python_3_9",
-                "python_3_10",
-                "python_3_12",
-                "python_3_11"
-              ]
-            }
-          },
-          "python_versions": {
-            "bzlFile": "@@rules_python~//python/private:toolchains_repo.bzl",
-            "ruleClassName": "multi_toolchain_aliases",
-            "attributes": {
-              "python_versions": {
-                "3.8": "python_3_8",
-                "3.9": "python_3_9",
-                "3.10": "python_3_10",
-                "3.11": "python_3_11",
-                "3.12": "python_3_12"
-              }
-            }
-          }
-        },
-        "recordedRepoMappingEntries": [
-          [
-            "rules_python~",
-            "bazel_skylib",
-            "bazel_skylib~"
-          ],
-          [
-            "rules_python~",
-            "bazel_tools",
-            "bazel_tools"
-          ]
-        ]
-      }
-    },
-    "@@rules_python~//python/private/bzlmod:internal_deps.bzl%internal_deps": {
-      "general": {
-        "bzlTransitiveDigest": "5gQYH7IOUlRNgdc7jspILfMHm3iqMl3ZPlJvONOn1/o=",
-        "usagesDigest": "r7vtlnQfWxEwrL+QFXux06yzeWEkq/hrcwAssoCoSLY=",
-        "recordedFileInputs": {},
-        "recordedDirentsInputs": {},
-        "envVariables": {},
+        "bzlTransitiveDigest": "dzD8Q2YmrP3fz8saWLHPmlwPLO91ImtTmP/c9JKTStM=",
+        "usagesDigest": "ZVSXMAGpD+xzVNPuvF1IoLBkty7TROO0+akMapt1pAg=",
+        "recordedInputs": [
+          "REPO_MAPPING:rules_python+,bazel_tools bazel_tools",
+          "REPO_MAPPING:rules_python+,pypi__build rules_python++config+pypi__build",
+          "REPO_MAPPING:rules_python+,pypi__click rules_python++config+pypi__click",
+          "REPO_MAPPING:rules_python+,pypi__colorama rules_python++config+pypi__colorama",
+          "REPO_MAPPING:rules_python+,pypi__importlib_metadata rules_python++config+pypi__importlib_metadata",
+          "REPO_MAPPING:rules_python+,pypi__installer rules_python++config+pypi__installer",
+          "REPO_MAPPING:rules_python+,pypi__more_itertools rules_python++config+pypi__more_itertools",
+          "REPO_MAPPING:rules_python+,pypi__packaging rules_python++config+pypi__packaging",
+          "REPO_MAPPING:rules_python+,pypi__pep517 rules_python++config+pypi__pep517",
+          "REPO_MAPPING:rules_python+,pypi__pip rules_python++config+pypi__pip",
+          "REPO_MAPPING:rules_python+,pypi__pip_tools rules_python++config+pypi__pip_tools",
+          "REPO_MAPPING:rules_python+,pypi__pyproject_hooks rules_python++config+pypi__pyproject_hooks",
+          "REPO_MAPPING:rules_python+,pypi__setuptools rules_python++config+pypi__setuptools",
+          "REPO_MAPPING:rules_python+,pypi__tomli rules_python++config+pypi__tomli",
+          "REPO_MAPPING:rules_python+,pypi__wheel rules_python++config+pypi__wheel",
+          "REPO_MAPPING:rules_python+,pypi__zipp rules_python++config+pypi__zipp"
+        ],
         "generatedRepoSpecs": {
           "rules_python_internal": {
-            "bzlFile": "@@rules_python~//python/private:internal_config_repo.bzl",
-            "ruleClassName": "internal_config_repo",
-            "attributes": {}
+            "repoRuleId": "@@rules_python+//python/private:internal_config_repo.bzl%internal_config_repo",
+            "attributes": {
+              "transition_setting_generators": {},
+              "transition_settings": []
+            }
           },
           "pypi__build": {
-            "bzlFile": "@@bazel_tools//tools/build_defs/repo:http.bzl",
-            "ruleClassName": "http_archive",
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
             "attributes": {
-              "url": "https://files.pythonhosted.org/packages/58/91/17b00d5fac63d3dca605f1b8269ba3c65e98059e1fd99d00283e42a454f0/build-0.10.0-py3-none-any.whl",
-              "sha256": "af266720050a66c893a6096a2f410989eeac74ff9a68ba194b3f6473e8e26171",
+              "url": "https://files.pythonhosted.org/packages/e2/03/f3c8ba0a6b6e30d7d18c40faab90807c9bb5e9a1e3b2fe2008af624a9c97/build-1.2.1-py3-none-any.whl",
+              "sha256": "75e10f767a433d9a86e50d83f418e83efc18ede923ee5ff7df93b6cb0306c5d4",
               "type": "zip",
-              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nload(\"@rules_python//python:defs.bzl\", \"py_library\")\n\npy_library(\n    name = \"lib\",\n    srcs = glob([\"**/*.py\"]),\n    data = glob([\"**/*\"], exclude=[\n        # These entries include those put into user-installed dependencies by\n        # data_exclude in /python/pip_install/tools/bazel.py\n        # to avoid non-determinism following pip install's behavior.\n        \"**/*.py\",\n        \"**/*.pyc\",\n        \"**/*.pyc.*\",  # During pyc creation, temp files named *.pyc.NNN are created\n        \"**/* *\",\n        \"**/*.dist-info/RECORD\",\n        \"BUILD\",\n        \"WORKSPACE\",\n    ]),\n    # This makes this directory a top-level in the python import\n    # search path for anything that depends on this.\n    imports = [\".\"],\n)\n"
+              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nload(\"@rules_python//python:py_library.bzl\", \"py_library\")\n\npy_library(\n    name = \"lib\",\n    srcs = glob([\"**/*.py\"]),\n    data = glob([\"**/*\"], exclude=[\n        # These entries include those put into user-installed dependencies by\n        # data_exclude to avoid non-determinism.\n        \"**/*.py\",\n        \"**/*.pyc\",\n        \"**/*.pyc.*\",  # During pyc creation, temp files named *.pyc.NNN are created\n        \"**/*.dist-info/RECORD\",\n        \"BUILD\",\n        \"WORKSPACE\",\n    ]),\n    # This makes this directory a top-level in the python import\n    # search path for anything that depends on this.\n    imports = [\".\"],\n)\n"
             }
           },
           "pypi__click": {
-            "bzlFile": "@@bazel_tools//tools/build_defs/repo:http.bzl",
-            "ruleClassName": "http_archive",
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
             "attributes": {
               "url": "https://files.pythonhosted.org/packages/00/2e/d53fa4befbf2cfa713304affc7ca780ce4fc1fd8710527771b58311a3229/click-8.1.7-py3-none-any.whl",
               "sha256": "ae74fb96c20a0277a1d615f1e4d73c8414f5a98db8b799a7931d1582f3390c28",
               "type": "zip",
-              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nload(\"@rules_python//python:defs.bzl\", \"py_library\")\n\npy_library(\n    name = \"lib\",\n    srcs = glob([\"**/*.py\"]),\n    data = glob([\"**/*\"], exclude=[\n        # These entries include those put into user-installed dependencies by\n        # data_exclude in /python/pip_install/tools/bazel.py\n        # to avoid non-determinism following pip install's behavior.\n        \"**/*.py\",\n        \"**/*.pyc\",\n        \"**/*.pyc.*\",  # During pyc creation, temp files named *.pyc.NNN are created\n        \"**/* *\",\n        \"**/*.dist-info/RECORD\",\n        \"BUILD\",\n        \"WORKSPACE\",\n    ]),\n    # This makes this directory a top-level in the python import\n    # search path for anything that depends on this.\n    imports = [\".\"],\n)\n"
+              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nload(\"@rules_python//python:py_library.bzl\", \"py_library\")\n\npy_library(\n    name = \"lib\",\n    srcs = glob([\"**/*.py\"]),\n    data = glob([\"**/*\"], exclude=[\n        # These entries include those put into user-installed dependencies by\n        # data_exclude to avoid non-determinism.\n        \"**/*.py\",\n        \"**/*.pyc\",\n        \"**/*.pyc.*\",  # During pyc creation, temp files named *.pyc.NNN are created\n        \"**/*.dist-info/RECORD\",\n        \"BUILD\",\n        \"WORKSPACE\",\n    ]),\n    # This makes this directory a top-level in the python import\n    # search path for anything that depends on this.\n    imports = [\".\"],\n)\n"
             }
           },
           "pypi__colorama": {
-            "bzlFile": "@@bazel_tools//tools/build_defs/repo:http.bzl",
-            "ruleClassName": "http_archive",
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
             "attributes": {
               "url": "https://files.pythonhosted.org/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl",
               "sha256": "4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6",
               "type": "zip",
-              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nload(\"@rules_python//python:defs.bzl\", \"py_library\")\n\npy_library(\n    name = \"lib\",\n    srcs = glob([\"**/*.py\"]),\n    data = glob([\"**/*\"], exclude=[\n        # These entries include those put into user-installed dependencies by\n        # data_exclude in /python/pip_install/tools/bazel.py\n        # to avoid non-determinism following pip install's behavior.\n        \"**/*.py\",\n        \"**/*.pyc\",\n        \"**/*.pyc.*\",  # During pyc creation, temp files named *.pyc.NNN are created\n        \"**/* *\",\n        \"**/*.dist-info/RECORD\",\n        \"BUILD\",\n        \"WORKSPACE\",\n    ]),\n    # This makes this directory a top-level in the python import\n    # search path for anything that depends on this.\n    imports = [\".\"],\n)\n"
+              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nload(\"@rules_python//python:py_library.bzl\", \"py_library\")\n\npy_library(\n    name = \"lib\",\n    srcs = glob([\"**/*.py\"]),\n    data = glob([\"**/*\"], exclude=[\n        # These entries include those put into user-installed dependencies by\n        # data_exclude to avoid non-determinism.\n        \"**/*.py\",\n        \"**/*.pyc\",\n        \"**/*.pyc.*\",  # During pyc creation, temp files named *.pyc.NNN are created\n        \"**/*.dist-info/RECORD\",\n        \"BUILD\",\n        \"WORKSPACE\",\n    ]),\n    # This makes this directory a top-level in the python import\n    # search path for anything that depends on this.\n    imports = [\".\"],\n)\n"
             }
           },
           "pypi__importlib_metadata": {
-            "bzlFile": "@@bazel_tools//tools/build_defs/repo:http.bzl",
-            "ruleClassName": "http_archive",
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
             "attributes": {
-              "url": "https://files.pythonhosted.org/packages/cc/37/db7ba97e676af155f5fcb1a35466f446eadc9104e25b83366e8088c9c926/importlib_metadata-6.8.0-py3-none-any.whl",
-              "sha256": "3ebb78df84a805d7698245025b975d9d67053cd94c79245ba4b3eb694abe68bb",
+              "url": "https://files.pythonhosted.org/packages/2d/0a/679461c511447ffaf176567d5c496d1de27cbe34a87df6677d7171b2fbd4/importlib_metadata-7.1.0-py3-none-any.whl",
+              "sha256": "30962b96c0c223483ed6cc7280e7f0199feb01a0e40cfae4d4450fc6fab1f570",
               "type": "zip",
-              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nload(\"@rules_python//python:defs.bzl\", \"py_library\")\n\npy_library(\n    name = \"lib\",\n    srcs = glob([\"**/*.py\"]),\n    data = glob([\"**/*\"], exclude=[\n        # These entries include those put into user-installed dependencies by\n        # data_exclude in /python/pip_install/tools/bazel.py\n        # to avoid non-determinism following pip install's behavior.\n        \"**/*.py\",\n        \"**/*.pyc\",\n        \"**/*.pyc.*\",  # During pyc creation, temp files named *.pyc.NNN are created\n        \"**/* *\",\n        \"**/*.dist-info/RECORD\",\n        \"BUILD\",\n        \"WORKSPACE\",\n    ]),\n    # This makes this directory a top-level in the python import\n    # search path for anything that depends on this.\n    imports = [\".\"],\n)\n"
+              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nload(\"@rules_python//python:py_library.bzl\", \"py_library\")\n\npy_library(\n    name = \"lib\",\n    srcs = glob([\"**/*.py\"]),\n    data = glob([\"**/*\"], exclude=[\n        # These entries include those put into user-installed dependencies by\n        # data_exclude to avoid non-determinism.\n        \"**/*.py\",\n        \"**/*.pyc\",\n        \"**/*.pyc.*\",  # During pyc creation, temp files named *.pyc.NNN are created\n        \"**/*.dist-info/RECORD\",\n        \"BUILD\",\n        \"WORKSPACE\",\n    ]),\n    # This makes this directory a top-level in the python import\n    # search path for anything that depends on this.\n    imports = [\".\"],\n)\n"
             }
           },
           "pypi__installer": {
-            "bzlFile": "@@bazel_tools//tools/build_defs/repo:http.bzl",
-            "ruleClassName": "http_archive",
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
             "attributes": {
               "url": "https://files.pythonhosted.org/packages/e5/ca/1172b6638d52f2d6caa2dd262ec4c811ba59eee96d54a7701930726bce18/installer-0.7.0-py3-none-any.whl",
               "sha256": "05d1933f0a5ba7d8d6296bb6d5018e7c94fa473ceb10cf198a92ccea19c27b53",
               "type": "zip",
-              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nload(\"@rules_python//python:defs.bzl\", \"py_library\")\n\npy_library(\n    name = \"lib\",\n    srcs = glob([\"**/*.py\"]),\n    data = glob([\"**/*\"], exclude=[\n        # These entries include those put into user-installed dependencies by\n        # data_exclude in /python/pip_install/tools/bazel.py\n        # to avoid non-determinism following pip install's behavior.\n        \"**/*.py\",\n        \"**/*.pyc\",\n        \"**/*.pyc.*\",  # During pyc creation, temp files named *.pyc.NNN are created\n        \"**/* *\",\n        \"**/*.dist-info/RECORD\",\n        \"BUILD\",\n        \"WORKSPACE\",\n    ]),\n    # This makes this directory a top-level in the python import\n    # search path for anything that depends on this.\n    imports = [\".\"],\n)\n"
+              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nload(\"@rules_python//python:py_library.bzl\", \"py_library\")\n\npy_library(\n    name = \"lib\",\n    srcs = glob([\"**/*.py\"]),\n    data = glob([\"**/*\"], exclude=[\n        # These entries include those put into user-installed dependencies by\n        # data_exclude to avoid non-determinism.\n        \"**/*.py\",\n        \"**/*.pyc\",\n        \"**/*.pyc.*\",  # During pyc creation, temp files named *.pyc.NNN are created\n        \"**/*.dist-info/RECORD\",\n        \"BUILD\",\n        \"WORKSPACE\",\n    ]),\n    # This makes this directory a top-level in the python import\n    # search path for anything that depends on this.\n    imports = [\".\"],\n)\n"
             }
           },
           "pypi__more_itertools": {
-            "bzlFile": "@@bazel_tools//tools/build_defs/repo:http.bzl",
-            "ruleClassName": "http_archive",
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
             "attributes": {
-              "url": "https://files.pythonhosted.org/packages/5a/cb/6dce742ea14e47d6f565589e859ad225f2a5de576d7696e0623b784e226b/more_itertools-10.1.0-py3-none-any.whl",
-              "sha256": "64e0735fcfdc6f3464ea133afe8ea4483b1c5fe3a3d69852e6503b43a0b222e6",
+              "url": "https://files.pythonhosted.org/packages/50/e2/8e10e465ee3987bb7c9ab69efb91d867d93959095f4807db102d07995d94/more_itertools-10.2.0-py3-none-any.whl",
+              "sha256": "686b06abe565edfab151cb8fd385a05651e1fdf8f0a14191e4439283421f8684",
               "type": "zip",
-              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nload(\"@rules_python//python:defs.bzl\", \"py_library\")\n\npy_library(\n    name = \"lib\",\n    srcs = glob([\"**/*.py\"]),\n    data = glob([\"**/*\"], exclude=[\n        # These entries include those put into user-installed dependencies by\n        # data_exclude in /python/pip_install/tools/bazel.py\n        # to avoid non-determinism following pip install's behavior.\n        \"**/*.py\",\n        \"**/*.pyc\",\n        \"**/*.pyc.*\",  # During pyc creation, temp files named *.pyc.NNN are created\n        \"**/* *\",\n        \"**/*.dist-info/RECORD\",\n        \"BUILD\",\n        \"WORKSPACE\",\n    ]),\n    # This makes this directory a top-level in the python import\n    # search path for anything that depends on this.\n    imports = [\".\"],\n)\n"
+              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nload(\"@rules_python//python:py_library.bzl\", \"py_library\")\n\npy_library(\n    name = \"lib\",\n    srcs = glob([\"**/*.py\"]),\n    data = glob([\"**/*\"], exclude=[\n        # These entries include those put into user-installed dependencies by\n        # data_exclude to avoid non-determinism.\n        \"**/*.py\",\n        \"**/*.pyc\",\n        \"**/*.pyc.*\",  # During pyc creation, temp files named *.pyc.NNN are created\n        \"**/*.dist-info/RECORD\",\n        \"BUILD\",\n        \"WORKSPACE\",\n    ]),\n    # This makes this directory a top-level in the python import\n    # search path for anything that depends on this.\n    imports = [\".\"],\n)\n"
             }
           },
           "pypi__packaging": {
-            "bzlFile": "@@bazel_tools//tools/build_defs/repo:http.bzl",
-            "ruleClassName": "http_archive",
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
             "attributes": {
-              "url": "https://files.pythonhosted.org/packages/ab/c3/57f0601a2d4fe15de7a553c00adbc901425661bf048f2a22dfc500caf121/packaging-23.1-py3-none-any.whl",
-              "sha256": "994793af429502c4ea2ebf6bf664629d07c1a9fe974af92966e4b8d2df7edc61",
+              "url": "https://files.pythonhosted.org/packages/49/df/1fceb2f8900f8639e278b056416d49134fb8d84c5942ffaa01ad34782422/packaging-24.0-py3-none-any.whl",
+              "sha256": "2ddfb553fdf02fb784c234c7ba6ccc288296ceabec964ad2eae3777778130bc5",
               "type": "zip",
-              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nload(\"@rules_python//python:defs.bzl\", \"py_library\")\n\npy_library(\n    name = \"lib\",\n    srcs = glob([\"**/*.py\"]),\n    data = glob([\"**/*\"], exclude=[\n        # These entries include those put into user-installed dependencies by\n        # data_exclude in /python/pip_install/tools/bazel.py\n        # to avoid non-determinism following pip install's behavior.\n        \"**/*.py\",\n        \"**/*.pyc\",\n        \"**/*.pyc.*\",  # During pyc creation, temp files named *.pyc.NNN are created\n        \"**/* *\",\n        \"**/*.dist-info/RECORD\",\n        \"BUILD\",\n        \"WORKSPACE\",\n    ]),\n    # This makes this directory a top-level in the python import\n    # search path for anything that depends on this.\n    imports = [\".\"],\n)\n"
+              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nload(\"@rules_python//python:py_library.bzl\", \"py_library\")\n\npy_library(\n    name = \"lib\",\n    srcs = glob([\"**/*.py\"]),\n    data = glob([\"**/*\"], exclude=[\n        # These entries include those put into user-installed dependencies by\n        # data_exclude to avoid non-determinism.\n        \"**/*.py\",\n        \"**/*.pyc\",\n        \"**/*.pyc.*\",  # During pyc creation, temp files named *.pyc.NNN are created\n        \"**/*.dist-info/RECORD\",\n        \"BUILD\",\n        \"WORKSPACE\",\n    ]),\n    # This makes this directory a top-level in the python import\n    # search path for anything that depends on this.\n    imports = [\".\"],\n)\n"
             }
           },
           "pypi__pep517": {
-            "bzlFile": "@@bazel_tools//tools/build_defs/repo:http.bzl",
-            "ruleClassName": "http_archive",
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
             "attributes": {
-              "url": "https://files.pythonhosted.org/packages/ee/2f/ef63e64e9429111e73d3d6cbee80591672d16f2725e648ebc52096f3d323/pep517-0.13.0-py3-none-any.whl",
-              "sha256": "4ba4446d80aed5b5eac6509ade100bff3e7943a8489de249654a5ae9b33ee35b",
+              "url": "https://files.pythonhosted.org/packages/25/6e/ca4a5434eb0e502210f591b97537d322546e4833dcb4d470a48c375c5540/pep517-0.13.1-py3-none-any.whl",
+              "sha256": "31b206f67165b3536dd577c5c3f1518e8fbaf38cbc57efff8369a392feff1721",
               "type": "zip",
-              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nload(\"@rules_python//python:defs.bzl\", \"py_library\")\n\npy_library(\n    name = \"lib\",\n    srcs = glob([\"**/*.py\"]),\n    data = glob([\"**/*\"], exclude=[\n        # These entries include those put into user-installed dependencies by\n        # data_exclude in /python/pip_install/tools/bazel.py\n        # to avoid non-determinism following pip install's behavior.\n        \"**/*.py\",\n        \"**/*.pyc\",\n        \"**/*.pyc.*\",  # During pyc creation, temp files named *.pyc.NNN are created\n        \"**/* *\",\n        \"**/*.dist-info/RECORD\",\n        \"BUILD\",\n        \"WORKSPACE\",\n    ]),\n    # This makes this directory a top-level in the python import\n    # search path for anything that depends on this.\n    imports = [\".\"],\n)\n"
+              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nload(\"@rules_python//python:py_library.bzl\", \"py_library\")\n\npy_library(\n    name = \"lib\",\n    srcs = glob([\"**/*.py\"]),\n    data = glob([\"**/*\"], exclude=[\n        # These entries include those put into user-installed dependencies by\n        # data_exclude to avoid non-determinism.\n        \"**/*.py\",\n        \"**/*.pyc\",\n        \"**/*.pyc.*\",  # During pyc creation, temp files named *.pyc.NNN are created\n        \"**/*.dist-info/RECORD\",\n        \"BUILD\",\n        \"WORKSPACE\",\n    ]),\n    # This makes this directory a top-level in the python import\n    # search path for anything that depends on this.\n    imports = [\".\"],\n)\n"
             }
           },
           "pypi__pip": {
-            "bzlFile": "@@bazel_tools//tools/build_defs/repo:http.bzl",
-            "ruleClassName": "http_archive",
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
             "attributes": {
-              "url": "https://files.pythonhosted.org/packages/50/c2/e06851e8cc28dcad7c155f4753da8833ac06a5c704c109313b8d5a62968a/pip-23.2.1-py3-none-any.whl",
-              "sha256": "7ccf472345f20d35bdc9d1841ff5f313260c2c33fe417f48c30ac46cccabf5be",
+              "url": "https://files.pythonhosted.org/packages/8a/6a/19e9fe04fca059ccf770861c7d5721ab4c2aebc539889e97c7977528a53b/pip-24.0-py3-none-any.whl",
+              "sha256": "ba0d021a166865d2265246961bec0152ff124de910c5cc39f1156ce3fa7c69dc",
               "type": "zip",
-              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nload(\"@rules_python//python:defs.bzl\", \"py_library\")\n\npy_library(\n    name = \"lib\",\n    srcs = glob([\"**/*.py\"]),\n    data = glob([\"**/*\"], exclude=[\n        # These entries include those put into user-installed dependencies by\n        # data_exclude in /python/pip_install/tools/bazel.py\n        # to avoid non-determinism following pip install's behavior.\n        \"**/*.py\",\n        \"**/*.pyc\",\n        \"**/*.pyc.*\",  # During pyc creation, temp files named *.pyc.NNN are created\n        \"**/* *\",\n        \"**/*.dist-info/RECORD\",\n        \"BUILD\",\n        \"WORKSPACE\",\n    ]),\n    # This makes this directory a top-level in the python import\n    # search path for anything that depends on this.\n    imports = [\".\"],\n)\n"
+              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nload(\"@rules_python//python:py_library.bzl\", \"py_library\")\n\npy_library(\n    name = \"lib\",\n    srcs = glob([\"**/*.py\"]),\n    data = glob([\"**/*\"], exclude=[\n        # These entries include those put into user-installed dependencies by\n        # data_exclude to avoid non-determinism.\n        \"**/*.py\",\n        \"**/*.pyc\",\n        \"**/*.pyc.*\",  # During pyc creation, temp files named *.pyc.NNN are created\n        \"**/*.dist-info/RECORD\",\n        \"BUILD\",\n        \"WORKSPACE\",\n    ]),\n    # This makes this directory a top-level in the python import\n    # search path for anything that depends on this.\n    imports = [\".\"],\n)\n"
             }
           },
           "pypi__pip_tools": {
-            "bzlFile": "@@bazel_tools//tools/build_defs/repo:http.bzl",
-            "ruleClassName": "http_archive",
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
             "attributes": {
-              "url": "https://files.pythonhosted.org/packages/e8/df/47e6267c6b5cdae867adbdd84b437393e6202ce4322de0a5e0b92960e1d6/pip_tools-7.3.0-py3-none-any.whl",
-              "sha256": "8717693288720a8c6ebd07149c93ab0be1fced0b5191df9e9decd3263e20d85e",
+              "url": "https://files.pythonhosted.org/packages/0d/dc/38f4ce065e92c66f058ea7a368a9c5de4e702272b479c0992059f7693941/pip_tools-7.4.1-py3-none-any.whl",
+              "sha256": "4c690e5fbae2f21e87843e89c26191f0d9454f362d8acdbd695716493ec8b3a9",
               "type": "zip",
-              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nload(\"@rules_python//python:defs.bzl\", \"py_library\")\n\npy_library(\n    name = \"lib\",\n    srcs = glob([\"**/*.py\"]),\n    data = glob([\"**/*\"], exclude=[\n        # These entries include those put into user-installed dependencies by\n        # data_exclude in /python/pip_install/tools/bazel.py\n        # to avoid non-determinism following pip install's behavior.\n        \"**/*.py\",\n        \"**/*.pyc\",\n        \"**/*.pyc.*\",  # During pyc creation, temp files named *.pyc.NNN are created\n        \"**/* *\",\n        \"**/*.dist-info/RECORD\",\n        \"BUILD\",\n        \"WORKSPACE\",\n    ]),\n    # This makes this directory a top-level in the python import\n    # search path for anything that depends on this.\n    imports = [\".\"],\n)\n"
+              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nload(\"@rules_python//python:py_library.bzl\", \"py_library\")\n\npy_library(\n    name = \"lib\",\n    srcs = glob([\"**/*.py\"]),\n    data = glob([\"**/*\"], exclude=[\n        # These entries include those put into user-installed dependencies by\n        # data_exclude to avoid non-determinism.\n        \"**/*.py\",\n        \"**/*.pyc\",\n        \"**/*.pyc.*\",  # During pyc creation, temp files named *.pyc.NNN are created\n        \"**/*.dist-info/RECORD\",\n        \"BUILD\",\n        \"WORKSPACE\",\n    ]),\n    # This makes this directory a top-level in the python import\n    # search path for anything that depends on this.\n    imports = [\".\"],\n)\n"
             }
           },
           "pypi__pyproject_hooks": {
-            "bzlFile": "@@bazel_tools//tools/build_defs/repo:http.bzl",
-            "ruleClassName": "http_archive",
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
             "attributes": {
-              "url": "https://files.pythonhosted.org/packages/d5/ea/9ae603de7fbb3df820b23a70f6aff92bf8c7770043254ad8d2dc9d6bcba4/pyproject_hooks-1.0.0-py3-none-any.whl",
-              "sha256": "283c11acd6b928d2f6a7c73fa0d01cb2bdc5f07c57a2eeb6e83d5e56b97976f8",
+              "url": "https://files.pythonhosted.org/packages/ae/f3/431b9d5fe7d14af7a32340792ef43b8a714e7726f1d7b69cc4e8e7a3f1d7/pyproject_hooks-1.1.0-py3-none-any.whl",
+              "sha256": "7ceeefe9aec63a1064c18d939bdc3adf2d8aa1988a510afec15151578b232aa2",
               "type": "zip",
-              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nload(\"@rules_python//python:defs.bzl\", \"py_library\")\n\npy_library(\n    name = \"lib\",\n    srcs = glob([\"**/*.py\"]),\n    data = glob([\"**/*\"], exclude=[\n        # These entries include those put into user-installed dependencies by\n        # data_exclude in /python/pip_install/tools/bazel.py\n        # to avoid non-determinism following pip install's behavior.\n        \"**/*.py\",\n        \"**/*.pyc\",\n        \"**/*.pyc.*\",  # During pyc creation, temp files named *.pyc.NNN are created\n        \"**/* *\",\n        \"**/*.dist-info/RECORD\",\n        \"BUILD\",\n        \"WORKSPACE\",\n    ]),\n    # This makes this directory a top-level in the python import\n    # search path for anything that depends on this.\n    imports = [\".\"],\n)\n"
+              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nload(\"@rules_python//python:py_library.bzl\", \"py_library\")\n\npy_library(\n    name = \"lib\",\n    srcs = glob([\"**/*.py\"]),\n    data = glob([\"**/*\"], exclude=[\n        # These entries include those put into user-installed dependencies by\n        # data_exclude to avoid non-determinism.\n        \"**/*.py\",\n        \"**/*.pyc\",\n        \"**/*.pyc.*\",  # During pyc creation, temp files named *.pyc.NNN are created\n        \"**/*.dist-info/RECORD\",\n        \"BUILD\",\n        \"WORKSPACE\",\n    ]),\n    # This makes this directory a top-level in the python import\n    # search path for anything that depends on this.\n    imports = [\".\"],\n)\n"
             }
           },
           "pypi__setuptools": {
-            "bzlFile": "@@bazel_tools//tools/build_defs/repo:http.bzl",
-            "ruleClassName": "http_archive",
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
             "attributes": {
-              "url": "https://files.pythonhosted.org/packages/4f/ab/0bcfebdfc3bfa8554b2b2c97a555569c4c1ebc74ea288741ea8326c51906/setuptools-68.1.2-py3-none-any.whl",
-              "sha256": "3d8083eed2d13afc9426f227b24fd1659489ec107c0e86cec2ffdde5c92e790b",
+              "url": "https://files.pythonhosted.org/packages/90/99/158ad0609729111163fc1f674a5a42f2605371a4cf036d0441070e2f7455/setuptools-78.1.1-py3-none-any.whl",
+              "sha256": "c3a9c4211ff4c309edb8b8c4f1cbfa7ae324c4ba9f91ff254e3d305b9fd54561",
               "type": "zip",
-              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nload(\"@rules_python//python:defs.bzl\", \"py_library\")\n\npy_library(\n    name = \"lib\",\n    srcs = glob([\"**/*.py\"]),\n    data = glob([\"**/*\"], exclude=[\n        # These entries include those put into user-installed dependencies by\n        # data_exclude in /python/pip_install/tools/bazel.py\n        # to avoid non-determinism following pip install's behavior.\n        \"**/*.py\",\n        \"**/*.pyc\",\n        \"**/*.pyc.*\",  # During pyc creation, temp files named *.pyc.NNN are created\n        \"**/* *\",\n        \"**/*.dist-info/RECORD\",\n        \"BUILD\",\n        \"WORKSPACE\",\n    ]),\n    # This makes this directory a top-level in the python import\n    # search path for anything that depends on this.\n    imports = [\".\"],\n)\n"
+              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nload(\"@rules_python//python:py_library.bzl\", \"py_library\")\n\npy_library(\n    name = \"lib\",\n    srcs = glob([\"**/*.py\"]),\n    data = glob([\"**/*\"], exclude=[\n        # These entries include those put into user-installed dependencies by\n        # data_exclude to avoid non-determinism.\n        \"**/*.py\",\n        \"**/*.pyc\",\n        \"**/*.pyc.*\",  # During pyc creation, temp files named *.pyc.NNN are created\n        \"**/*.dist-info/RECORD\",\n        \"BUILD\",\n        \"WORKSPACE\",\n    ]),\n    # This makes this directory a top-level in the python import\n    # search path for anything that depends on this.\n    imports = [\".\"],\n)\n"
             }
           },
           "pypi__tomli": {
-            "bzlFile": "@@bazel_tools//tools/build_defs/repo:http.bzl",
-            "ruleClassName": "http_archive",
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
             "attributes": {
               "url": "https://files.pythonhosted.org/packages/97/75/10a9ebee3fd790d20926a90a2547f0bf78f371b2f13aa822c759680ca7b9/tomli-2.0.1-py3-none-any.whl",
               "sha256": "939de3e7a6161af0c887ef91b7d41a53e7c5a1ca976325f429cb46ea9bc30ecc",
               "type": "zip",
-              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nload(\"@rules_python//python:defs.bzl\", \"py_library\")\n\npy_library(\n    name = \"lib\",\n    srcs = glob([\"**/*.py\"]),\n    data = glob([\"**/*\"], exclude=[\n        # These entries include those put into user-installed dependencies by\n        # data_exclude in /python/pip_install/tools/bazel.py\n        # to avoid non-determinism following pip install's behavior.\n        \"**/*.py\",\n        \"**/*.pyc\",\n        \"**/*.pyc.*\",  # During pyc creation, temp files named *.pyc.NNN are created\n        \"**/* *\",\n        \"**/*.dist-info/RECORD\",\n        \"BUILD\",\n        \"WORKSPACE\",\n    ]),\n    # This makes this directory a top-level in the python import\n    # search path for anything that depends on this.\n    imports = [\".\"],\n)\n"
+              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nload(\"@rules_python//python:py_library.bzl\", \"py_library\")\n\npy_library(\n    name = \"lib\",\n    srcs = glob([\"**/*.py\"]),\n    data = glob([\"**/*\"], exclude=[\n        # These entries include those put into user-installed dependencies by\n        # data_exclude to avoid non-determinism.\n        \"**/*.py\",\n        \"**/*.pyc\",\n        \"**/*.pyc.*\",  # During pyc creation, temp files named *.pyc.NNN are created\n        \"**/*.dist-info/RECORD\",\n        \"BUILD\",\n        \"WORKSPACE\",\n    ]),\n    # This makes this directory a top-level in the python import\n    # search path for anything that depends on this.\n    imports = [\".\"],\n)\n"
             }
           },
           "pypi__wheel": {
-            "bzlFile": "@@bazel_tools//tools/build_defs/repo:http.bzl",
-            "ruleClassName": "http_archive",
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
             "attributes": {
-              "url": "https://files.pythonhosted.org/packages/b8/8b/31273bf66016be6ad22bb7345c37ff350276cfd46e389a0c2ac5da9d9073/wheel-0.41.2-py3-none-any.whl",
-              "sha256": "75909db2664838d015e3d9139004ee16711748a52c8f336b52882266540215d8",
+              "url": "https://files.pythonhosted.org/packages/7d/cd/d7460c9a869b16c3dd4e1e403cce337df165368c71d6af229a74699622ce/wheel-0.43.0-py3-none-any.whl",
+              "sha256": "55c570405f142630c6b9f72fe09d9b67cf1477fcf543ae5b8dcb1f5b7377da81",
               "type": "zip",
-              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nload(\"@rules_python//python:defs.bzl\", \"py_library\")\n\npy_library(\n    name = \"lib\",\n    srcs = glob([\"**/*.py\"]),\n    data = glob([\"**/*\"], exclude=[\n        # These entries include those put into user-installed dependencies by\n        # data_exclude in /python/pip_install/tools/bazel.py\n        # to avoid non-determinism following pip install's behavior.\n        \"**/*.py\",\n        \"**/*.pyc\",\n        \"**/*.pyc.*\",  # During pyc creation, temp files named *.pyc.NNN are created\n        \"**/* *\",\n        \"**/*.dist-info/RECORD\",\n        \"BUILD\",\n        \"WORKSPACE\",\n    ]),\n    # This makes this directory a top-level in the python import\n    # search path for anything that depends on this.\n    imports = [\".\"],\n)\n"
+              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nload(\"@rules_python//python:py_library.bzl\", \"py_library\")\n\npy_library(\n    name = \"lib\",\n    srcs = glob([\"**/*.py\"]),\n    data = glob([\"**/*\"], exclude=[\n        # These entries include those put into user-installed dependencies by\n        # data_exclude to avoid non-determinism.\n        \"**/*.py\",\n        \"**/*.pyc\",\n        \"**/*.pyc.*\",  # During pyc creation, temp files named *.pyc.NNN are created\n        \"**/*.dist-info/RECORD\",\n        \"BUILD\",\n        \"WORKSPACE\",\n    ]),\n    # This makes this directory a top-level in the python import\n    # search path for anything that depends on this.\n    imports = [\".\"],\n)\n"
             }
           },
           "pypi__zipp": {
-            "bzlFile": "@@bazel_tools//tools/build_defs/repo:http.bzl",
-            "ruleClassName": "http_archive",
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
             "attributes": {
-              "url": "https://files.pythonhosted.org/packages/8c/08/d3006317aefe25ea79d3b76c9650afabaf6d63d1c8443b236e7405447503/zipp-3.16.2-py3-none-any.whl",
-              "sha256": "679e51dd4403591b2d6838a48de3d283f3d188412a9782faadf845f298736ba0",
+              "url": "https://files.pythonhosted.org/packages/da/55/a03fd7240714916507e1fcf7ae355bd9d9ed2e6db492595f1a67f61681be/zipp-3.18.2-py3-none-any.whl",
+              "sha256": "dce197b859eb796242b0622af1b8beb0a722d52aa2f57133ead08edd5bf5374e",
               "type": "zip",
-              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nload(\"@rules_python//python:defs.bzl\", \"py_library\")\n\npy_library(\n    name = \"lib\",\n    srcs = glob([\"**/*.py\"]),\n    data = glob([\"**/*\"], exclude=[\n        # These entries include those put into user-installed dependencies by\n        # data_exclude in /python/pip_install/tools/bazel.py\n        # to avoid non-determinism following pip install's behavior.\n        \"**/*.py\",\n        \"**/*.pyc\",\n        \"**/*.pyc.*\",  # During pyc creation, temp files named *.pyc.NNN are created\n        \"**/* *\",\n        \"**/*.dist-info/RECORD\",\n        \"BUILD\",\n        \"WORKSPACE\",\n    ]),\n    # This makes this directory a top-level in the python import\n    # search path for anything that depends on this.\n    imports = [\".\"],\n)\n"
+              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nload(\"@rules_python//python:py_library.bzl\", \"py_library\")\n\npy_library(\n    name = \"lib\",\n    srcs = glob([\"**/*.py\"]),\n    data = glob([\"**/*\"], exclude=[\n        # These entries include those put into user-installed dependencies by\n        # data_exclude to avoid non-determinism.\n        \"**/*.py\",\n        \"**/*.pyc\",\n        \"**/*.pyc.*\",  # During pyc creation, temp files named *.pyc.NNN are created\n        \"**/*.dist-info/RECORD\",\n        \"BUILD\",\n        \"WORKSPACE\",\n    ]),\n    # This makes this directory a top-level in the python import\n    # search path for anything that depends on this.\n    imports = [\".\"],\n)\n"
             }
           }
-        },
-        "recordedRepoMappingEntries": [
-          [
-            "rules_python~",
-            "bazel_tools",
-            "bazel_tools"
-          ]
-        ]
+        }
       }
     },
-    "@@toolchains_llvm~//toolchain/extensions:llvm.bzl%llvm": {
+    "@@rules_python+//python/uv:uv.bzl%uv": {
       "general": {
-        "bzlTransitiveDigest": "B9PVPLh42j2FSNQnarwLwKswlOvjaVMKAq4tl8gqb5E=",
-        "usagesDigest": "VV3O38TSG8zGIHzPWKMHYCOSl8yjTWPg1zorDb0O2cc=",
-        "recordedFileInputs": {},
-        "recordedDirentsInputs": {},
-        "envVariables": {},
+        "bzlTransitiveDigest": "ijW9KS7qsIY+yBVvJ+Nr1mzwQox09j13DnE3iIwaeTM=",
+        "usagesDigest": "H8dQoNZcoqP+Mu0tHZTi4KHATzvNkM5ePuEqoQdklIU=",
+        "recordedInputs": [
+          "REPO_MAPPING:rules_python+,bazel_tools bazel_tools",
+          "REPO_MAPPING:rules_python+,platforms platforms"
+        ],
+        "generatedRepoSpecs": {
+          "uv": {
+            "repoRuleId": "@@rules_python+//python/uv/private:uv_toolchains_repo.bzl%uv_toolchains_repo",
+            "attributes": {
+              "toolchain_type": "'@@rules_python+//python/uv:uv_toolchain_type'",
+              "toolchain_names": [
+                "none"
+              ],
+              "toolchain_implementations": {
+                "none": "'@@rules_python+//python:none'"
+              },
+              "toolchain_compatible_with": {
+                "none": [
+                  "@platforms//:incompatible"
+                ]
+              },
+              "toolchain_target_settings": {}
+            }
+          }
+        }
+      }
+    },
+    "@@toolchains_llvm+//toolchain/extensions:llvm.bzl%llvm": {
+      "general": {
+        "bzlTransitiveDigest": "M9ccw38jKEEiBxNPzllMqRoCvVeV0mTFw+SyYQVONSo=",
+        "usagesDigest": "qS8bWomXXKL2UItgJ9wJnogjedtHkQrmrN/+QdKuVSM=",
+        "recordedInputs": [
+          "REPO_MAPPING:toolchains_llvm+,bazel_tools bazel_tools",
+          "REPO_MAPPING:toolchains_llvm+,toolchains_llvm toolchains_llvm+"
+        ],
         "generatedRepoSpecs": {
           "llvm_toolchain_llvm": {
-            "bzlFile": "@@toolchains_llvm~//toolchain:rules.bzl",
-            "ruleClassName": "llvm",
+            "repoRuleId": "@@toolchains_llvm+//toolchain:rules.bzl%llvm",
             "attributes": {
               "alternative_llvm_sources": [],
               "auth_patterns": {},
@@ -1286,8 +529,7 @@
             }
           },
           "llvm_toolchain": {
-            "bzlFile": "@@toolchains_llvm~//toolchain:rules.bzl",
-            "ruleClassName": "toolchain",
+            "repoRuleId": "@@toolchains_llvm+//toolchain:rules.bzl%toolchain",
             "attributes": {
               "absolute_paths": false,
               "compile_flags": {},
@@ -1311,20 +553,337 @@
               "unfiltered_compile_flags": {}
             }
           }
-        },
-        "recordedRepoMappingEntries": [
-          [
-            "toolchains_llvm~",
-            "bazel_tools",
-            "bazel_tools"
-          ],
-          [
-            "toolchains_llvm~",
-            "toolchains_llvm",
-            "toolchains_llvm~"
-          ]
+        }
+      }
+    }
+  },
+  "facts": {
+    "//go:extensions.bzl%go_sdk": {
+      "1.22.12": {
+        "aix_ppc64": [
+          "go1.22.12.aix-ppc64.tar.gz",
+          "391f318f62b46b15b7fd0e4ddfc7f6babd1d7da77eb142ca421982d2e63716e9"
+        ],
+        "darwin_amd64": [
+          "go1.22.12.darwin-amd64.tar.gz",
+          "e7bbe07e96f0bd3df04225090fe1e7852ed33af37c43a23e16edbbb3b90a5b7c"
+        ],
+        "darwin_arm64": [
+          "go1.22.12.darwin-arm64.tar.gz",
+          "416c35218edb9d20990b5d8fc87be655d8b39926f15524ea35c66ee70273050d"
+        ],
+        "dragonfly_amd64": [
+          "go1.22.12.dragonfly-amd64.tar.gz",
+          "2de0317cc660a61c0940c38f88f581368f0c8902816a70b6d4380c64ad78e659"
+        ],
+        "freebsd_386": [
+          "go1.22.12.freebsd-386.tar.gz",
+          "85b00f8646e84be6ce51c753d22b68a5f4d5bbfc6a82c8ca9e7489c0c5a619d8"
+        ],
+        "freebsd_amd64": [
+          "go1.22.12.freebsd-amd64.tar.gz",
+          "a8c77e76859db3e6f3322cbe11deea5faf779e374f45df7554d2cb484ffa492a"
+        ],
+        "freebsd_arm64": [
+          "go1.22.12.freebsd-arm64.tar.gz",
+          "f56d3b2d26acd9e720f8be503d92bb7bb5d921462ff7c92463d0fa550507ed93"
+        ],
+        "freebsd_armv6l": [
+          "go1.22.12.freebsd-arm.tar.gz",
+          "dac691ce62ac6b9c78f45a0058d7656abedbe5665b3d49910cbd6ba12e20c2fb"
+        ],
+        "freebsd_riscv64": [
+          "go1.22.12.freebsd-riscv64.tar.gz",
+          "d147c0c8faaffed65240f3b4fe5e44e573928827b9292fb873c9712d567fa986"
+        ],
+        "illumos_amd64": [
+          "go1.22.12.illumos-amd64.tar.gz",
+          "e2c6493b7bf4f2bafbe3235645a1e96783ee936d197a8dd9a5b95ce7c5f5a0a6"
+        ],
+        "linux_386": [
+          "go1.22.12.linux-386.tar.gz",
+          "40d4c297bc2e964e9c96fe79bb323dce79b77b8b103fc7cc52e0a87c7849890f"
+        ],
+        "linux_amd64": [
+          "go1.22.12.linux-amd64.tar.gz",
+          "4fa4f869b0f7fc6bb1eb2660e74657fbf04cdd290b5aef905585c86051b34d43"
+        ],
+        "linux_arm64": [
+          "go1.22.12.linux-arm64.tar.gz",
+          "fd017e647ec28525e86ae8203236e0653242722a7436929b1f775744e26278e7"
+        ],
+        "linux_armv6l": [
+          "go1.22.12.linux-armv6l.tar.gz",
+          "bcd678461bb74cda217fb5aa3cc914b2021be6d828f0c6fb4e3a36c3d7312acb"
+        ],
+        "linux_loong64": [
+          "go1.22.12.linux-loong64.tar.gz",
+          "ef1644676782354369210ed6cd839ff872de886c38f287d29ac69377928edec1"
+        ],
+        "linux_mips": [
+          "go1.22.12.linux-mips.tar.gz",
+          "993c685dad0a59f9f15f76a2eb9146f741ef36d808f38985bc6748b38000746d"
+        ],
+        "linux_mips64": [
+          "go1.22.12.linux-mips64.tar.gz",
+          "d8aa3dea17e0175d6a57dfdf9b3b29a911ebe8c5ddbefd808eab61a842c00229"
+        ],
+        "linux_mips64le": [
+          "go1.22.12.linux-mips64le.tar.gz",
+          "2d473895f9c1dc8c86d51eb13f8ca49b7eea46010759fd71efed3eecacf5335b"
+        ],
+        "linux_mipsle": [
+          "go1.22.12.linux-mipsle.tar.gz",
+          "d4ba5f6215643a1d64dc159869663f71dd339598e99678e97e1c5300bb46d46d"
+        ],
+        "linux_ppc64": [
+          "go1.22.12.linux-ppc64.tar.gz",
+          "ab0b6dc2aa1096f256224398d4a34eac5257289146cdc2f3a62b9fc17709a3c5"
+        ],
+        "linux_ppc64le": [
+          "go1.22.12.linux-ppc64le.tar.gz",
+          "9573d30003b0796717a99d9e2e96c48fddd4fc0f29d840f212c503b03d7de112"
+        ],
+        "linux_riscv64": [
+          "go1.22.12.linux-riscv64.tar.gz",
+          "f03a084aabc812fdc15b29acd5e1ee18e13b3c80be22aec43990119afcaf4947"
+        ],
+        "linux_s390x": [
+          "go1.22.12.linux-s390x.tar.gz",
+          "e1b20935cc790fdc4c48c0e3e6dd11be57ac09e4eb302ba2cdf146276468b346"
+        ],
+        "netbsd_386": [
+          "go1.22.12.netbsd-386.tar.gz",
+          "e43201af6471e57c59e704a6c8285102e20b1f99066f4d9a480f14f9d0b9c72e"
+        ],
+        "netbsd_amd64": [
+          "go1.22.12.netbsd-amd64.tar.gz",
+          "777e65d0d660a2015723528bffe0e32e963c7fa0d9ef5c37717e0c854248f14c"
+        ],
+        "netbsd_arm64": [
+          "go1.22.12.netbsd-arm64.tar.gz",
+          "6499cf91a0211c65f7e3b7a8d4da42ea17fe75731e3805cbbb91daf196752641"
+        ],
+        "netbsd_armv6l": [
+          "go1.22.12.netbsd-arm.tar.gz",
+          "041bc989cb73cd4517555d49d06b9a703f96619a3da6004fc17f408315f81fc2"
+        ],
+        "openbsd_386": [
+          "go1.22.12.openbsd-386.tar.gz",
+          "537f4e4ec01e4fdcbae7f46d8f0ad03eb0588f7c79f2127048ba87fe697f336c"
+        ],
+        "openbsd_amd64": [
+          "go1.22.12.openbsd-amd64.tar.gz",
+          "8f650cfb19da085f15d2ed6b389f878cdee7889ff1e601d4d197ebfe855478b9"
+        ],
+        "openbsd_arm64": [
+          "go1.22.12.openbsd-arm64.tar.gz",
+          "9ecc79a531c7a10ca2d43480fa3ea6f5b48ab4dd77bef3ec02344899756ccac9"
+        ],
+        "openbsd_armv6l": [
+          "go1.22.12.openbsd-arm.tar.gz",
+          "e65c34ce8a1c5caa8de183f2c7c987e47c5a2a51b2c87e3c0ad5166a8235f41d"
+        ],
+        "openbsd_ppc64": [
+          "go1.22.12.openbsd-ppc64.tar.gz",
+          "fb087d00c65f0e274f92764dd901a768768cb4df2eb32a723f9520acb7866380"
+        ],
+        "plan9_386": [
+          "go1.22.12.plan9-386.tar.gz",
+          "ae20ddcd801950ddc1b7169bbc0d7bc374aa11185ccb5b92b08d82ed38da0576"
+        ],
+        "plan9_amd64": [
+          "go1.22.12.plan9-amd64.tar.gz",
+          "fe4b01ca4712d99e89871acb399c2b5efeaf2b27380747c99628d7f7901ae437"
+        ],
+        "plan9_armv6l": [
+          "go1.22.12.plan9-arm.tar.gz",
+          "91e8ad7f32007e88d042b234875fe8c02c3d39dd534bc934a60562dfd026311f"
+        ],
+        "solaris_amd64": [
+          "go1.22.12.solaris-amd64.tar.gz",
+          "852f9e617beb42397514fb1585382c456793877462ef95545609541ee2acb24b"
+        ],
+        "windows_386": [
+          "go1.22.12.windows-386.zip",
+          "9ab2e2f8bede9be98d63457f0a65d62387baa8b3f9e11af3e9a0a9eef2abf435"
+        ],
+        "windows_amd64": [
+          "go1.22.12.windows-amd64.zip",
+          "2ceda04074eac51f4b0b85a9fcca38bcd49daee24bed9ea1f29958a8e22673a6"
+        ],
+        "windows_arm64": [
+          "go1.22.12.windows-arm64.zip",
+          "6b9eaf160b155e02ffe9ed603f162ecc3264f6130c8fcf83bb77087f9807fdec"
+        ],
+        "windows_armv6l": [
+          "go1.22.12.windows-arm.zip",
+          "50c34f9057e2f8c0a6aec83f326fcaad6b43d517876589c6e325ee014d148fd7"
+        ]
+      },
+      "1.25.0": {
+        "aix_ppc64": [
+          "go1.25.0.aix-ppc64.tar.gz",
+          "e5234a7dac67bc86c528fe9752fc9d63557918627707a733ab4cac1a6faed2d4"
+        ],
+        "darwin_amd64": [
+          "go1.25.0.darwin-amd64.tar.gz",
+          "5bd60e823037062c2307c71e8111809865116714d6f6b410597cf5075dfd80ef"
+        ],
+        "darwin_arm64": [
+          "go1.25.0.darwin-arm64.tar.gz",
+          "544932844156d8172f7a28f77f2ac9c15a23046698b6243f633b0a0b00c0749c"
+        ],
+        "dragonfly_amd64": [
+          "go1.25.0.dragonfly-amd64.tar.gz",
+          "5ed3cf9a810a1483822538674f1336c06b51aa1b94d6d545a1a0319a48177120"
+        ],
+        "freebsd_386": [
+          "go1.25.0.freebsd-386.tar.gz",
+          "abea5d5c6697e6b5c224731f2158fe87c602996a2a233ac0c4730cd57bf8374e"
+        ],
+        "freebsd_amd64": [
+          "go1.25.0.freebsd-amd64.tar.gz",
+          "86e6fe0a29698d7601c4442052dac48bd58d532c51cccb8f1917df648138730b"
+        ],
+        "freebsd_arm": [
+          "go1.25.0.freebsd-arm.tar.gz",
+          "d90b78e41921f72f30e8bbc81d9dec2cff7ff384a33d8d8debb24053e4336bfe"
+        ],
+        "freebsd_arm64": [
+          "go1.25.0.freebsd-arm64.tar.gz",
+          "451d0da1affd886bfb291b7c63a6018527b269505db21ce6e14724f22ab0662e"
+        ],
+        "freebsd_riscv64": [
+          "go1.25.0.freebsd-riscv64.tar.gz",
+          "7b565f76bd8bda46549eeaaefe0e53b251e644c230577290c0f66b1ecdb3cdbe"
+        ],
+        "illumos_amd64": [
+          "go1.25.0.illumos-amd64.tar.gz",
+          "b1e1fdaab1ad25aa1c08d7a36c97d45d74b98b89c3f78c6d2145f77face54a2c"
+        ],
+        "linux_386": [
+          "go1.25.0.linux-386.tar.gz",
+          "8c602dd9d99bc9453b3995d20ce4baf382cc50855900a0ece5de9929df4a993a"
+        ],
+        "linux_amd64": [
+          "go1.25.0.linux-amd64.tar.gz",
+          "2852af0cb20a13139b3448992e69b868e50ed0f8a1e5940ee1de9e19a123b613"
+        ],
+        "linux_arm64": [
+          "go1.25.0.linux-arm64.tar.gz",
+          "05de75d6994a2783699815ee553bd5a9327d8b79991de36e38b66862782f54ae"
+        ],
+        "linux_armv6l": [
+          "go1.25.0.linux-armv6l.tar.gz",
+          "a5a8f8198fcf00e1e485b8ecef9ee020778bf32a408a4e8873371bfce458cd09"
+        ],
+        "linux_loong64": [
+          "go1.25.0.linux-loong64.tar.gz",
+          "cab86b1cf761b1cb3bac86a8877cfc92e7b036fc0d3084123d77013d61432afc"
+        ],
+        "linux_mips": [
+          "go1.25.0.linux-mips.tar.gz",
+          "d66b6fb74c3d91b9829dc95ec10ca1f047ef5e89332152f92e136cf0e2da5be1"
+        ],
+        "linux_mips64": [
+          "go1.25.0.linux-mips64.tar.gz",
+          "4082e4381a8661bc2a839ff94ba3daf4f6cde20f8fb771b5b3d4762dc84198a2"
+        ],
+        "linux_mips64le": [
+          "go1.25.0.linux-mips64le.tar.gz",
+          "70002c299ec7f7175ac2ef673b1b347eecfa54ae11f34416a6053c17f855afcc"
+        ],
+        "linux_mipsle": [
+          "go1.25.0.linux-mipsle.tar.gz",
+          "b00a3a39eff099f6df9f1c7355bf28e4589d0586f42d7d4a394efb763d145a73"
+        ],
+        "linux_ppc64": [
+          "go1.25.0.linux-ppc64.tar.gz",
+          "df166f33bd98160662560a72ff0b4ba731f969a80f088922bddcf566a88c1ec1"
+        ],
+        "linux_ppc64le": [
+          "go1.25.0.linux-ppc64le.tar.gz",
+          "0f18a89e7576cf2c5fa0b487a1635d9bcbf843df5f110e9982c64df52a983ad0"
+        ],
+        "linux_riscv64": [
+          "go1.25.0.linux-riscv64.tar.gz",
+          "c018ff74a2c48d55c8ca9b07c8e24163558ffec8bea08b326d6336905d956b67"
+        ],
+        "linux_s390x": [
+          "go1.25.0.linux-s390x.tar.gz",
+          "34e5a2e19f2292fbaf8783e3a241e6e49689276aef6510a8060ea5ef54eee408"
+        ],
+        "netbsd_386": [
+          "go1.25.0.netbsd-386.tar.gz",
+          "f8586cdb7aa855657609a5c5f6dbf523efa00c2bbd7c76d3936bec80aa6c0aba"
+        ],
+        "netbsd_amd64": [
+          "go1.25.0.netbsd-amd64.tar.gz",
+          "ae8dc1469385b86a157a423bb56304ba45730de8a897615874f57dd096db2c2a"
+        ],
+        "netbsd_arm": [
+          "go1.25.0.netbsd-arm.tar.gz",
+          "1ff7e4cc764425fc9dd6825eaee79d02b3c7cafffbb3691687c8d672ade76cb7"
+        ],
+        "netbsd_arm64": [
+          "go1.25.0.netbsd-arm64.tar.gz",
+          "e1b310739f26724216aa6d7d7208c4031f9ff54c9b5b9a796ddc8bebcb4a5f16"
+        ],
+        "openbsd_386": [
+          "go1.25.0.openbsd-386.tar.gz",
+          "4802a9b20e533da91adb84aab42e94aa56cfe3e5475d0550bed3385b182e69d8"
+        ],
+        "openbsd_amd64": [
+          "go1.25.0.openbsd-amd64.tar.gz",
+          "c016cd984bebe317b19a4f297c4f50def120dc9788490540c89f28e42f1dabe1"
+        ],
+        "openbsd_arm": [
+          "go1.25.0.openbsd-arm.tar.gz",
+          "a1e31d0bf22172ddde42edf5ec811ef81be43433df0948ece52fecb247ccfd8d"
+        ],
+        "openbsd_arm64": [
+          "go1.25.0.openbsd-arm64.tar.gz",
+          "343ea8edd8c218196e15a859c6072d0dd3246fbbb168481ab665eb4c4140458d"
+        ],
+        "openbsd_ppc64": [
+          "go1.25.0.openbsd-ppc64.tar.gz",
+          "694c14da1bcaeb5e3332d49bdc2b6d155067648f8fe1540c5de8f3cf8e157154"
+        ],
+        "openbsd_riscv64": [
+          "go1.25.0.openbsd-riscv64.tar.gz",
+          "aa510ad25cf54c06cd9c70b6d80ded69cb20188ac6e1735655eef29ff7e7885f"
+        ],
+        "plan9_386": [
+          "go1.25.0.plan9-386.tar.gz",
+          "46f8cef02086cf04bf186c5912776b56535178d4cb319cd19c9fdbdd29231986"
+        ],
+        "plan9_amd64": [
+          "go1.25.0.plan9-amd64.tar.gz",
+          "29b34391d84095e44608a228f63f2f88113a37b74a79781353ec043dfbcb427b"
+        ],
+        "plan9_arm": [
+          "go1.25.0.plan9-arm.tar.gz",
+          "0a047107d13ebe7943aaa6d54b1d7bbd2e45e68ce449b52915a818da715799c2"
+        ],
+        "solaris_amd64": [
+          "go1.25.0.solaris-amd64.tar.gz",
+          "9977f9e4351984364a3b2b78f8b88bfd1d339812356d5237678514594b7d3611"
+        ],
+        "windows_386": [
+          "go1.25.0.windows-386.zip",
+          "df9f39db82a803af0db639e3613a36681ab7a42866b1384b3f3a1045663961a7"
+        ],
+        "windows_amd64": [
+          "go1.25.0.windows-amd64.zip",
+          "89efb4f9b30812eee083cc1770fdd2913c14d301064f6454851428f9707d190b"
+        ],
+        "windows_arm64": [
+          "go1.25.0.windows-arm64.zip",
+          "27bab004c72b3d7bd05a69b6ec0fc54a309b4b78cc569dd963d8b3ec28bfdb8c"
         ]
       }
     }
-  }
+  },
+  "factsVersions": {}
 }

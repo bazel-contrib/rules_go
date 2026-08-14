@@ -18,7 +18,7 @@ toolchain(
     target_compatible_with = [
         ":os_does_not_exist",
     ],
-    toolchain = "@go_sdk//:go_linux_amd64-impl",
+    toolchain = "@go_default_sdk//:go_linux_amd64-impl",
     toolchain_type = GO_TOOLCHAIN,
 )
 

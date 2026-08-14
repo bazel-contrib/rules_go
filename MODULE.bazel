@@ -13,6 +13,20 @@ bazel_dep(name = "rules_proto", version = "7.0.2")
 bazel_dep(name = "protobuf", version = "29.0", repo_name = "com_google_protobuf")
 bazel_dep(name = "rules_shell", version = "0.3.0")
 bazel_dep(name = "rules_cc", version = "0.1.5")
+bazel_dep(name = "package_metadata", version = "0.0.5")
+
+# Only applies when rules_go is the root module, so it doesn't raise the version
+# users get. Building protobuf from source fails on Windows, and the prebuilt
+# protoc its toolchains offer is only available from protobuf 33 on.
+single_version_override(
+    module_name = "protobuf",
+    version = "33.4",
+)
+
+# Referenced by the Windows configuration in .bazelrc, which has to request the
+# mingw toolchain explicitly.
+cc_configure = use_extension("@rules_cc//cc:extensions.bzl", "cc_configure_extension", dev_dependency = True)
+use_repo(cc_configure, "local_config_cc")
 
 go_sdk = use_extension("//go:extensions.bzl", "go_sdk")
 
@@ -24,6 +38,9 @@ go_sdk.from_file(
 )
 use_repo(
     go_sdk,
+    # Referenced directly by tests that need SDK files, e.g. the time zone
+    # database.
+    "go_default_sdk",
     "go_host_compatible_sdk_label",
     "go_toolchains",
     # This name is ugly on purpose to avoid a conflict with a user-named SDK.
@@ -46,7 +63,11 @@ use_repo(
     "org_golang_google_grpc",
     "org_golang_google_grpc_cmd_protoc_gen_go_grpc",
     "org_golang_google_protobuf",
+    "org_golang_x_mod",
     "org_golang_x_net",
+    "org_golang_x_sync",
+    "org_golang_x_sys",
+    "org_golang_x_text",
     "org_golang_x_tools",
     # Exported by gazelle specifically for rules_go.
     "bazel_gazelle_go_repository_config",
@@ -59,24 +80,86 @@ use_repo(
 
 bazel_dep(name = "stardoc", version = "0.8.0", dev_dependency = True)
 
+# Used by //tests:buildifier_test.
+bazel_dep(name = "buildifier_prebuilt", version = "8.5.1.3", dev_dependency = True)
+
+dev_go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps", dev_dependency = True)
+
+# The maintainer tools under go/tools are separate Go modules so that their
+# dependencies don't end up in //:go.mod, which is also used to pick the Go SDK
+# version. go_deps only accepts a single from_file tag per module, so their
+# dependencies are listed here instead; keep them in sync with the respective
+# go.mod and go.sum files.
+#
+# Needed by //go/tools/releaser. This is the pseudo-version of the v6.4.0 tag;
+# there is no tagged module version because the module path lacks the major
+# version suffix.
+dev_go_deps.module(
+    path = "github.com/bazelbuild/buildtools",
+    sum = "h1:HTepWP/jhtWTC1gvK0RnvKCgjh4gLqiwaOwGozAXcbw=",
+    version = "v0.0.0-20231103205921-433ea8554e82",
+)
+
+# The checked-in BUILD files load from @rules_proto, which isn't visible to the
+# generated repo. Let Gazelle generate them instead. This loses the generated
+# warning tables of //buildifier, so //tests:buildifier_test uses a prebuilt
+# binary rather than this repository.
+dev_go_deps.gazelle_override(
+    build_file_generation = "on",
+    path = "github.com/bazelbuild/buildtools",
+)
+
+# Needed by //go/tools/releaser.
+dev_go_deps.module(
+    path = "github.com/google/go-github/v36",
+    sum = "h1:ndCzM616/oijwufI7nBRa+5eZHLldT+4yIB68ib5ogs=",
+    version = "v36.0.0",
+)
+dev_go_deps.module(
+    path = "github.com/google/go-querystring",
+    sum = "h1:Xkwi/a1rcvNg1PPYe5vI8GbeBY/jrVuDX5ASuANWTrk=",
+    version = "v1.0.0",
+)
+dev_go_deps.module(
+    path = "golang.org/x/oauth2",
+    sum = "h1:peZ/1z27fi9hUOFCAZaHyrpWG5lwe0RJEEEeH0ThlIs=",
+    version = "v0.36.0",
+)
+
+# Needed by //go/tools/fetch_repo.
+dev_go_deps.module(
+    path = "golang.org/x/tools/go/vcs",
+    sum = "h1:cOIJqWBl99H1dH5LWizPa+0ImeeJq3t3cJjaeOWUAL4=",
+    version = "v0.1.0-deprecated",
+)
+
+# Only used by //tests/legacy/examples/external, which demonstrates linking
+# against an external Go module. It isn't imported by //:go.mod, which doesn't
+# cover the separate Go module under tests/.
+dev_go_deps.module(
+    path = "github.com/golang/glog",
+    sum = "h1:DrW6hGnjIhtvhOIiAKT6Psh/Kd/ldepEa81DKeiRJ5I=",
+    version = "v1.2.5",
+)
+use_repo(
+    dev_go_deps,
+    "com_github_bazelbuild_buildtools",
+    "com_github_golang_glog",
+    "com_github_google_go_github_v36",
+    "org_golang_x_oauth2",
+    "org_golang_x_tools_go_vcs",
+)
+
+test_chdir = use_extension("//tests/legacy/test_chdir:extensions.bzl", "test_chdir", dev_dependency = True)
+use_repo(test_chdir, "test_chdir_remote")
+
+gogo = use_extension("//tests/legacy/examples/proto/gogo:extensions.bzl", "gogo", dev_dependency = True)
+use_repo(gogo, "gogo_special_proto")
+
 dev_go_sdk = use_extension("//go:extensions.bzl", "go_sdk", dev_dependency = True)
 dev_go_sdk.download(
     name = "rules_go_internal_compatibility_sdk",
     version = "1.22.12",
-)
-
-bazel_dep(name = "toolchains_protoc", version = "0.6.0", dev_dependency = True)
-
-protoc = use_extension("@toolchains_protoc//protoc:extensions.bzl", "protoc", dev_dependency = True)
-protoc.toolchain(
-    name = "protoc_toolchains",
-    version = "v25.3",
-)
-use_repo(protoc, "protoc_toolchains")
-
-register_toolchains(
-    "@protoc_toolchains//...",
-    dev_dependency = True,
 )
 
 # Used to transition binaries in rules_go's test suite to different configurations.
@@ -92,6 +175,12 @@ bazel_dep(name = "googleapis", version = "0.0.0-20241220-5e258e33", dev_dependen
 # Used for both testing objc interop and building on Apple platforms.
 bazel_dep(name = "apple_support", version = "1.24.3", dev_dependency = True, repo_name = "build_bazel_apple_support")
 
+# Needed to reference the Apple CC toolchain by label: objc_library requires it
+# and, unlike the legacy --*crosstool_top flags, it has to be selected via
+# toolchain resolution as of Bazel 9.
+apple_cc_configure = use_extension("@build_bazel_apple_support//crosstool:setup.bzl", "apple_cc_configure_extension", dev_dependency = True)
+use_repo(apple_cc_configure, "local_config_apple_cc", "local_config_apple_cc_toolchains")
+
 # For manual testing against an LLVM toolchain.
 # Use --extra_toolchains=@llvm_toolchain//:cc-toolchain-linux,@llvm_toolchain//:cc-toolchain-darwin
 bazel_dep(name = "toolchains_llvm", version = "0.10.3", dev_dependency = True)
@@ -103,3 +192,14 @@ llvm.toolchain(
 )
 
 bazel_dep(name = "bazel_ci_rules", version = "1.0.0", dev_dependency = True)
+
+bazelci = use_extension("//.bazelci:extensions.bzl", "bazelci", dev_dependency = True)
+use_repo(bazelci, "buildkite_config")
+
+# For testing the compatibility with a hermetic cc toolchain. Users should not
+# have to enable it. Referenced by the debian11_zig_cc CI task via
+# --extra_toolchains.
+bazel_dep(name = "hermetic_cc_toolchain", version = "4.0.1", dev_dependency = True)
+
+zig_toolchains = use_extension("@hermetic_cc_toolchain//toolchain:ext.bzl", "toolchains", dev_dependency = True)
+use_repo(zig_toolchains, "zig_sdk")

@@ -118,10 +118,14 @@ package unattached
 	})
 }
 
-const (
-	osPkgID       = "@io_bazel_rules_go//stdlib:os"
-	bzlmodOsPkgID = "@@io_bazel_rules_go//stdlib:os"
-)
+// The repository part depends on whether rules_go is used through WORKSPACE or
+// Bzlmod, and under Bzlmod on how the module was brought in, so only the
+// package and target are matched.
+const osPkgSuffix = "//stdlib:os"
+
+func isOsPkgID(id string) bool {
+	return strings.HasSuffix(id, osPkgSuffix)
+}
 
 func TestBaseFileLookup(t *testing.T) {
 	resp := runForTest(t, packages.DriverRequest{}, ".", "file=hello.go")
@@ -186,8 +190,8 @@ func TestBaseFileLookup(t *testing.T) {
 			return
 		}
 
-		if pkg.Imports["os"].ID != osPkgID && pkg.Imports["os"].ID != bzlmodOsPkgID {
-			t.Errorf("Expected os import to map to %q or %q:\n%+v", osPkgID, bzlmodOsPkgID, pkg)
+		if !isOsPkgID(pkg.Imports["os"].ID) {
+			t.Errorf("Expected os import to map to a package ending in %q:\n%+v", osPkgSuffix, pkg)
 			return
 		}
 	})
@@ -195,7 +199,7 @@ func TestBaseFileLookup(t *testing.T) {
 	t.Run("dependency", func(t *testing.T) {
 		var osPkg *packages.Package
 		for _, p := range resp.Packages {
-			if p.ID == osPkgID || p.ID == bzlmodOsPkgID {
+			if isOsPkgID(p.ID) {
 				osPkg = p
 			}
 		}

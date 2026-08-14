@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -39,7 +38,7 @@ type archive struct {
 // for standard library packages.
 func checkImports(files []fileInfo, archives []archive, stdPackageListPath string, importPath string, recompileInternalDeps []string) (map[string]*archive, error) {
 	// Read the standard package list.
-	packagesTxt, err := ioutil.ReadFile(stdPackageListPath)
+	packagesTxt, err := os.ReadFile(stdPackageListPath)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +136,7 @@ func buildImportcfgFileForCompile(imports map[string]*archive, installSuffix, di
 		}
 	}
 
-	f, err := ioutil.TempFile(dir, "importcfg")
+	f, err := os.CreateTemp(dir, "importcfg")
 	if err != nil {
 		return "", err
 	}
@@ -154,7 +153,7 @@ func buildImportcfgFileForCompile(imports map[string]*archive, installSuffix, di
 	return filename, nil
 }
 
-func buildImportcfgFileForLink(archives []archive, stdPackageListPath, installSuffix, dir string) (string, error) {
+func buildImportcfgFileForLink(archives []archive, stdPackageListPath, installSuffix, dir, modinfo string) (string, error) {
 	buf := &bytes.Buffer{}
 	goroot, ok := os.LookupEnv("GOROOT")
 	if !ok {
@@ -177,6 +176,9 @@ func buildImportcfgFileForLink(archives []archive, stdPackageListPath, installSu
 	if err := scanner.Err(); err != nil {
 		return "", err
 	}
+	if modinfo != "" {
+		fmt.Fprintf(buf, "modinfo %q\n", modinfo)
+	}
 	depsSeen := map[string]string{}
 	for _, arc := range archives {
 		if prevLabel, ok := depsSeen[arc.packagePath]; ok {
@@ -196,7 +198,7 @@ package with this path is linked.`,
 		depsSeen[arc.packagePath] = arc.importPath
 		fmt.Fprintf(buf, "packagefile %s=%s\n", arc.packagePath, arc.file)
 	}
-	f, err := ioutil.TempFile(dir, "importcfg")
+	f, err := os.CreateTemp(dir, "importcfg")
 	if err != nil {
 		return "", err
 	}

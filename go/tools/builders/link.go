@@ -21,7 +21,6 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -39,6 +38,7 @@ func link(args []string) error {
 	builderArgs, toolArgs := splitArgs(args)
 	stamps := multiFlag{}
 	xdefs := multiFlag{}
+	packageMetadataFiles := multiFlag{}
 	archives := archiveMultiFlag{}
 	flags := flag.NewFlagSet("link", flag.ExitOnError)
 	goenv := envFlags(flags)
@@ -46,6 +46,7 @@ func link(args []string) error {
 	packagePath := flags.String("p", "", "Package path of the main archive.")
 	outFile := flags.String("o", "", "Path to output file.")
 	flags.Var(&archives, "arc", "Label, package path, and file name of a dependency, separated by '='")
+	flags.Var(&packageMetadataFiles, "package_metadata", "Path to a package_metadata JSON file (repeated).")
 	packageList := flags.String("package_list", "", "The file containing the list of standard library packages")
 	buildmode := flags.String("buildmode", "", "Build mode used.")
 	flags.Var(&xdefs, "X", "A string variable to replace in the linked binary (repeated).")
@@ -70,7 +71,7 @@ func link(args []string) error {
 	// If we were given any stamp value files, read and parse them
 	stampMap := map[string]string{}
 	for _, stampfile := range stamps {
-		stampbuf, err := ioutil.ReadFile(stampfile)
+		stampbuf, err := os.ReadFile(stampfile)
 		if err != nil {
 			return fmt.Errorf("Failed reading stamp file %s: %v", stampfile, err)
 		}
@@ -91,7 +92,15 @@ func link(args []string) error {
 	}
 
 	// Build an importcfg file.
-	importcfgName, err := buildImportcfgFileForLink(archives, *packageList, goenv.installSuffix, filepath.Dir(*outFile))
+	modinfo := ""
+	if shouldEmitBuildInfo(*buildmode) {
+		modules, err := modulesFromPackageMetadataFiles(packageMetadataFiles)
+		if err != nil {
+			return err
+		}
+		modinfo = modInfoData(modules)
+	}
+	importcfgName, err := buildImportcfgFileForLink(archives, *packageList, goenv.installSuffix, filepath.Dir(*outFile), modinfo)
 	if err != nil {
 		return err
 	}

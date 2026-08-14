@@ -25,6 +25,11 @@ func TestCompilationOutputs(t *testing.T) {
 		"compilation_outputs_test" + exe:                   true, // test binary; not relevant
 		"compilation_outputs_test" + exe + ".repo_mapping": true, // test binary repo mapping; not relevant
 
+		// As of Bazel 9, filegroup forwards the runfiles of its srcs, so the
+		// executables show up next to the compilation outputs.
+		"bin" + exe:      true,
+		"lib_test" + exe: true,
+
 		"lib.a":                    false, // :lib archive
 		"lib_test.internal.a":      false, // :lib_test internal archive
 		"lib_test_test.external.a": false, // :lib_test external archive

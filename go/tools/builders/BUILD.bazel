@@ -63,10 +63,16 @@ go_test(
         "stdliblist.go",
         "stdliblist_test.go",
     ],
-    data = ["@go_sdk//:files"],
+    data = [
+        "@go_default_sdk//:files",
+        "@go_default_sdk//:host_compatible_root_file",
+    ],
     rundir = ".",
     x_defs = {
         "rulesGoStdlibPrefix": RULES_GO_STDLIB_PREFIX,
+        # The SDK's directory in the runfiles tree is its canonical repository
+        # name, which isn't known statically.
+        "goSDKRootFileRlocationPath": "$(rlocationpath @go_default_sdk//:host_compatible_root_file)",
     },
 )
 
@@ -90,6 +96,15 @@ go_test(
 )
 
 go_test(
+    name = "buildinfo_test",
+    size = "small",
+    srcs = [
+        "buildinfo.go",
+        "buildinfo_test.go",
+    ],
+)
+
+go_test(
     name = "nogo_version_test",
     size = "small",
     srcs = [
@@ -109,6 +124,7 @@ filegroup(
         "ar.go",
         "asm.go",
         "builder.go",
+        "buildinfo.go",
         "cc.go",
         "cgo2.go",
         "cgo_response.go",

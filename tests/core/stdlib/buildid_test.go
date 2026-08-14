@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"errors"
 	"io/fs"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
@@ -27,7 +28,7 @@ import (
 )
 
 func TestEmptyBuildID(t *testing.T) {
-	goPath, err := runfiles.Rlocation("go_sdk/bin/go")
+	goPath, err := runfiles.Rlocation("go_default_sdk/bin/go")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,6 +82,10 @@ func TestEmptyBuildID(t *testing.T) {
 		}
 		// It's an error if this produces any output.
 		cmd := exec.Command(goPath, "tool", "buildid", path)
+		// Go 1.25 and later initialize the build cache even for commands that
+		// don't use it, which fails in the test sandbox as neither GOCACHE nor
+		// HOME is set.
+		cmd.Env = append(os.Environ(), "GOCACHE="+t.TempDir())
 		out, err := cmd.Output()
 		if err != nil {
 			t.Error(err)

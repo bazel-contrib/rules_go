@@ -15,6 +15,7 @@
 package trimpath_test
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel_testing"
@@ -77,7 +78,9 @@ func File() string {
 	_, file, _, _ := runtime.Caller(0)
 	return file
 }
--- other_repo/WORKSPACE --
+-- other_repo/MODULE.bazel --
+module(name = "other_repo")
+bazel_dep(name = "rules_go", repo_name = "io_bazel_rules_go")
 -- other_repo/BUILD.bazel --
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
@@ -115,9 +118,10 @@ func File() string {
 	return file
 }
 `,
-	WorkspaceSuffix: `
-local_repository(
-    name = "other_repo",
+		ModuleFileSuffix: `
+bazel_dep(name = "other_repo", version = "0.0.0")
+local_path_override(
+    module_name = "other_repo",
     path = "other_repo",
 )
 `,
@@ -125,19 +129,20 @@ local_repository(
 }
 
 // These are the expected paths after applying trimpath.
-var expectedDefault = `
+// The canonical repository name separator differs between Bazel versions.
+var expectedDefault = regexp.MustCompile(`^
 main.go
 maincgo.go
-external/other_repo/other.go
-external/other_repo/othercgo.go
-`
+external/other_repo[+~]/other.go
+external/other_repo[+~]/othercgo.go
+$`)
 
-var expectedSibling = `
+var expectedSibling = regexp.MustCompile(`^
 main.go
 maincgo.go
-../other_repo/other.go
-../other_repo/othercgo.go
-`
+../other_repo[+~]/other.go
+../other_repo[+~]/othercgo.go
+$`)
 
 func TestTrimpath(t *testing.T) {
 	t.Run("default", func(t *testing.T) {
@@ -146,7 +151,7 @@ func TestTrimpath(t *testing.T) {
 			t.Fatal(err)
 		}
 		outStr := "\n" + string(out)
-		if outStr != expectedDefault {
+		if !expectedDefault.MatchString(outStr) {
 			t.Fatal("actual", outStr, "vs expected", expectedDefault)
 		}
 	})
@@ -156,7 +161,7 @@ func TestTrimpath(t *testing.T) {
 			t.Fatal(err)
 		}
 		outStr := "\n" + string(out)
-		if outStr != expectedSibling {
+		if !expectedSibling.MatchString(outStr) {
 			t.Fatal("actual", outStr, "vs expected", expectedSibling)
 		}
 	})

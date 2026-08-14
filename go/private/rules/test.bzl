@@ -78,6 +78,7 @@ def _go_test_impl(ctx):
         go,
         ctx.attr,
         testfilter = "exclude",
+        include_package_metadata = False,
     )
     internal_archive = go.archive(go, internal_go_info)
     if internal_archive.data._validation_output:
@@ -713,6 +714,7 @@ def _recompile_external_deps(go, external_go_info, internal_archive, library_lab
         # Create a stub GoInfo from the archive data.
         arc_data = label_to_arc_data[label]
         deps = [label_to_archive[d] for d in arc_data._dep_labels]
+        package_metadata = getattr(arc_data, "_package_metadata", None)
         go_info = GoInfo(
             name = arc_data.name,
             label = arc_data.label,
@@ -736,6 +738,7 @@ def _recompile_external_deps(go, external_go_info, internal_archive, library_lab
             copts = list(arc_data._copts),
             cxxopts = list(arc_data._cxxopts),
             clinkopts = list(arc_data._clinkopts),
+            _package_metadata = package_metadata,
         )
 
         # If this archive needs to be recompiled, use go.archive.
@@ -757,6 +760,10 @@ def _recompile_external_deps(go, external_go_info, internal_archive, library_lab
                 runfiles = go_info.runfiles,
                 mode = go.mode,
                 _headers = internal_archive._headers,
+                _package_metadata_files = depset(
+                    direct = [package_metadata] if package_metadata else [],
+                    transitive = [getattr(a, "_package_metadata_files", depset()) for a in deps],
+                ),
             )
         label_to_archive[label] = archive
 

@@ -25,6 +25,7 @@ load(
     NOGO_EXCLUDES = "EXCLUDES",
     NOGO_INCLUDES = "INCLUDES",
 )
+load("@package_metadata//providers:package_metadata_info.bzl", "PackageMetadataInfo")
 load(
     "@rules_cc//cc:action_names.bzl",
     "CPP_COMPILE_ACTION_NAME",
@@ -271,6 +272,16 @@ def _tool_args(go):
     args.use_param_file("-param=%s")
     return args
 
+def package_metadata_file_from_metadata(package_metadata = (), applicable_licenses = ()):
+    # Bazel may surface repo-level metadata through either spelling depending on
+    # the version and rule surface, so probe both.
+    for metadata_group in (package_metadata, applicable_licenses):
+        for metadata in metadata_group:
+            if PackageMetadataInfo in metadata:
+                return metadata[PackageMetadataInfo].metadata
+
+    return None
+
 def _merge_embed(source, embed):
     s = get_source(embed)
     source["srcs"] = s.srcs + source["srcs"]
@@ -280,6 +291,9 @@ def _merge_embed(source, embed):
     source["x_defs"].update(s.x_defs)
     source["gc_goopts"] = source["gc_goopts"] + s.gc_goopts
     source["runfiles"] = source["runfiles"].merge(s.runfiles)
+    package_metadata = getattr(s, "_package_metadata", None)
+    if not source["_package_metadata"] and package_metadata:
+        source["_package_metadata"] = package_metadata
 
     if s.cgo:
         if source["cgo"]:
@@ -362,6 +376,7 @@ def new_go_info(
         generated_srcs = [],
         pathtype = None,
         deps = None,
+        include_package_metadata = True,
         verify_resolver_deps = False):
     if not importpath:
         importpath = go.importpath
@@ -384,6 +399,13 @@ def new_go_info(
 
     if deps == None:
         deps = [get_archive(dep) for dep in getattr(attr, "deps", [])]
+
+    package_metadata = None
+    if include_package_metadata:
+        package_metadata = package_metadata_file_from_metadata(
+            getattr(attr, "package_metadata", ()),
+            getattr(attr, "applicable_licenses", ()),
+        )
 
     go_info = {
         "name": go.label.name if not name else name,
@@ -409,10 +431,14 @@ def new_go_info(
         "cxxopts": _expand_opts(go, "cxxopts", getattr(attr, "cxxopts", [])),
         "clinkopts": _expand_opts(go, "clinkopts", getattr(attr, "clinkopts", [])),
         "pgoprofile": getattr(attr, "pgoprofile", None),
+        "_package_metadata": package_metadata,
     }
 
     for e in getattr(attr, "embed", []):
         _merge_embed(go_info, e)
+
+    if not include_package_metadata:
+        go_info["_package_metadata"] = None
 
     go_info["deps"] = _dedup_archives(go_info["deps"])
 

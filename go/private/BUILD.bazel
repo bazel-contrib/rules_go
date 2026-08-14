@@ -65,6 +65,7 @@ bzl_library(
         "@bazel_skylib//lib:paths",
         "@bazel_skylib//rules:common_settings",
         "@io_bazel_rules_nogo//:scope.bzl",
+        "@package_metadata//providers:package_metadata_info.bzl",
         "@rules_cc//cc:action_names_bzl",
         "@rules_cc//cc:find_cc_toolchain_bzl",
     ],

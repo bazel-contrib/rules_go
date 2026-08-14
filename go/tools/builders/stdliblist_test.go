@@ -2,20 +2,28 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"testing"
 )
+
+// Set via x_defs. The SDK's directory in the runfiles tree is its canonical
+// repository name, which isn't known statically.
+var goSDKRootFileRlocationPath string
+
+func sdkDir() string {
+	return path.Dir(goSDKRootFileRlocationPath)
+}
 
 func Test_stdliblist_noexport(t *testing.T) {
 	testDir := t.TempDir()
 	outJSON := filepath.Join(testDir, "out.json")
 
 	test_args := []string{
-		fmt.Sprintf("-out=%s", outJSON),
-		"-sdk=../go_sdk",
+		"-out=" + outJSON,
+		"-sdk=../" + sdkDir(),
 	}
 
 	if err := stdliblist(test_args); err != nil {
@@ -40,9 +48,9 @@ func Test_stdliblist_noexport(t *testing.T) {
 			t.Errorf("ExportsFile should be empty when disabled but got: %v", result)
 		}
 		for _, gofile := range result.GoFiles {
-			// The SDK runfiles are prefixed with __BAZEL_OUTPUT_BASE__/../go_sdk, which is cleaned.
-			if !strings.HasPrefix(gofile, "go_sdk/") {
-				t.Errorf("all go files should be prefixed with go_sdk/ :%v", result)
+			// The SDK runfiles are prefixed with __BAZEL_OUTPUT_BASE__/../<sdk>, which is cleaned.
+			if !strings.HasPrefix(gofile, sdkDir()+"/") {
+				t.Errorf("all go files should be prefixed with %s/ :%v", sdkDir(), result)
 			}
 		}
 	}
@@ -52,8 +60,8 @@ func Test_stdliblist_export(t *testing.T) {
 	testDir := t.TempDir()
 	outJSON := filepath.Join(testDir, "out.json")
 	test_args := []string{
-		fmt.Sprintf("-out=%s", outJSON),
-		"-sdk=../go_sdk",
+		"-out=" + outJSON,
+		"-sdk=../" + sdkDir(),
 		"-export",
 	}
 	// Disable CGO otherwise, this takes forever to build.
@@ -82,9 +90,9 @@ func Test_stdliblist_export(t *testing.T) {
 			anyExportSet = true
 		}
 		for _, gofile := range result.GoFiles {
-			// The SDK runfiles are prefixed with __BAZEL_OUTPUT_BASE__/../go_sdk, which is cleaned.
-			if !strings.HasPrefix(gofile, "go_sdk/") {
-				t.Errorf("all go files should be prefixed with go_sdk/ :%v", result)
+			// The SDK runfiles are prefixed with __BAZEL_OUTPUT_BASE__/../<sdk>, which is cleaned.
+			if !strings.HasPrefix(gofile, sdkDir()+"/") {
+				t.Errorf("all go files should be prefixed with %s/ :%v", sdkDir(), result)
 			}
 		}
 	}

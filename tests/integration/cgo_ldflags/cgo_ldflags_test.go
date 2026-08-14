@@ -80,11 +80,6 @@ func main() {
 }
 `,
 		ModuleFileSuffix: `
-bazel_dep(name = "rules_cc", version = "0.1.5")
-
-cc_configure = use_extension("@rules_cc//cc:extensions.bzl", "cc_configure_extension")
-use_repo(cc_configure, "local_config_cc")
-
 go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk")
 go_sdk.download(
     name = "go_1_27_rc1",

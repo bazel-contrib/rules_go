@@ -11,3 +11,9 @@ go_bazel_test(
     size = "medium",
     srcs = ["hermeticity_test.go"],
 )
+
+go_bazel_test(
+    name = "tool_settings_test",
+    size = "medium",
+    srcs = ["tool_settings_test.go"],
+)

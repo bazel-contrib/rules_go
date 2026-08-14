@@ -1,3 +1,6 @@
+load("@rules_cc//cc/common:cc_common.bzl", "cc_common")
+load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
+
 def _mock_cc_deb_library_impl(ctx):
     expanded_linkopts = [
         ctx.expand_make_variables("linkopts", opt, {})

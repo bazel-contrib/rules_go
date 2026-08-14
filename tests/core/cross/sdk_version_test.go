@@ -100,22 +100,23 @@ go_cross_binary(
 
 	bazel_testing.TestMain(m, bazel_testing.Args{
 		Main: mainFilesBuilder.String(),
-		WorkspacePrefix: `
-load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk")
-
-go_download_sdk(
+		// The test declares its own @go_sdk.
+		SkipHostGoSDK: true,
+		ModuleFileSuffix: `
+go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk")
+go_sdk.download(
     name = "go_sdk",
     version = "1.20",
 )
-go_download_sdk(
+go_sdk.download(
     name = "go_sdk_1_21_0",
     version = "1.21.0",
 )
-go_download_sdk(
+go_sdk.download(
     name = "go_sdk_1_21_1",
     version = "1.21.1",
 )
-go_download_sdk(
+go_sdk.download(
     name = "go_sdk_1_21_rc2",
     version = "1.21rc2",
 )

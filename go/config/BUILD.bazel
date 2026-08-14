@@ -5,9 +5,12 @@ load(
     "string_list_flag",
 )
 
+# Universally scoped as Go tool binaries have to run on the execution platform,
+# which may only be able to run statically linked binaries.
 bool_flag(
     name = "static",
     build_setting_default = False,
+    scope = "universal",
     visibility = ["//visibility:public"],
 )
 
@@ -23,9 +26,11 @@ bool_flag(
     visibility = ["//visibility:public"],
 )
 
+# Universally scoped for the same reason as :static.
 bool_flag(
     name = "pure",
     build_setting_default = False,
+    scope = "universal",
     visibility = ["//visibility:public"],
 )
 

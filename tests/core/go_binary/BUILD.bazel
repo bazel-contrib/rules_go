@@ -23,6 +23,11 @@ go_bazel_test(
     srcs = ["configurable_attribute_good_test.go"],
 )
 
+go_bazel_test(
+    name = "buildinfo_test",
+    srcs = ["buildinfo_test.go"],
+)
+
 go_binary(
     name = "hello",
     srcs = ["hello.go"],

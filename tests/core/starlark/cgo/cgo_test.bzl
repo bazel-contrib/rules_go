@@ -2,6 +2,7 @@ load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
 load("@rules_cc//cc:cc_toolchain_config_lib.bzl", "feature", "tool_path")  # buildifier: disable=deprecated-function
 load("@rules_cc//cc:defs.bzl", "cc_toolchain")
 load("@rules_cc//cc/common:cc_common.bzl", "cc_common")
+load("@rules_cc//cc/toolchains:cc_toolchain_config_info.bzl", "CcToolchainConfigInfo")
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_cross_binary")
 
 def _test_cc_config_impl(ctx):

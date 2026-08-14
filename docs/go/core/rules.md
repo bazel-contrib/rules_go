@@ -298,6 +298,11 @@ generate should be subject to Nogo's static analysis. This is helpful, for examp
 a tool isn't built as a shared library with race instrumentation. This acts as an
 intermediate rule that allows users to apply these transitions.
 
+The '//go/config:static' and '//go/config:pure' settings are an exception: they are
+inherited from the value set on the command line, as they determine whether the tool
+can run on the execution platform. The 'static' and 'pure' attributes of an enclosing
+rule are still reset.
+
 **ATTRIBUTES**
 
 

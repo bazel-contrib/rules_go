@@ -137,10 +137,10 @@ func Test(t *testing.T) {
 			if test.nogo != "" {
 				origRegister := `nogo = "@io_bazel_rules_go//:default_nogo",`
 				customRegister := fmt.Sprintf("nogo = %q,", test.nogo)
-				if err := replaceInFile("WORKSPACE", origRegister, customRegister); err != nil {
+				if err := replaceInFile("MODULE.bazel", origRegister, customRegister); err != nil {
 					t.Fatal(err)
 				}
-				defer replaceInFile("WORKSPACE", customRegister, origRegister)
+				defer replaceInFile("MODULE.bazel", customRegister, origRegister)
 			}
 
 			cmd := bazel_testing.BazelCmd("build", test.target)
