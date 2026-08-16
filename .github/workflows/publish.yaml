@@ -19,8 +19,14 @@ on:
         description: git tag being released
         required: true
         type: string
+      repair_registry:
+        description: Repair the existing rules_go registry pull request
+        required: false
+        default: false
+        type: boolean
 jobs:
   release:
+    if: ${{ !inputs.repair_registry }}
     uses: bazel-contrib/.github/.github/workflows/release_ruleset.yaml@v7.7.0
     permissions:
       actions: read
@@ -60,3 +66,44 @@ jobs:
       - uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
         with:
           tag_name: ${{ inputs.tag_name }}
+  repair_registry:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.repair_registry }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout recovery workflow
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          path: recovery
+          persist-credentials: false
+      - name: Checkout released rules_go source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ inputs.tag_name }}
+          path: source
+          persist-credentials: false
+      - name: Checkout existing registry pull request
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: bazel-contrib/bazel-central-registry
+          ref: rules_go-v0.63.0
+          path: registry
+          token: ${{ secrets.publish_token || secrets.BCR_PUBLISH_TOKEN }}
+      - name: Correct rules_go registry entry
+        run: |
+          python3 recovery/.github/workflows/repair_bcr_registry.py \
+            --source source \
+            --registry registry \
+            --tag '${{ inputs.tag_name }}'
+          git -C source apply --check \
+            "$GITHUB_WORKSPACE/registry/modules/rules_go/0.63.0/patches/module_dot_bazel_version.patch"
+          git -C registry diff --check
+      - name: Update existing registry pull request
+        run: |
+          git -C registry add -A modules/rules_go/0.63.0
+          git -C registry \
+            -c user.name='David Zbarsky' \
+            -c user.email='dzbarsky@gmail.com' \
+            commit -m 'Fix rules_go@0.63.0 module version'
+          git -C registry push origin HEAD:refs/heads/rules_go-v0.63.0
