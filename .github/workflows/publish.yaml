@@ -20,7 +20,23 @@ on:
         required: true
         type: string
 jobs:
+  release:
+    uses: bazel-contrib/.github/.github/workflows/release_ruleset.yaml@v7.7.0
+    permissions:
+      actions: read
+      attestations: write
+      contents: write
+      id-token: write
+    with:
+      release_files: rules_go-*.zip
+      prerelease: false
+      tag_name: ${{ inputs.tag_name }}
+      draft: true
+      bazel_test_command: >-
+        sed -i 's/^TAG=${GITHUB_REF_NAME}$/TAG=${1:-${GITHUB_REF_NAME}}/' .github/workflows/release_prep.sh &&
+        bazel test --test_timeout=1200 //tests/core/cross:proto_test
   publish:
+    needs: release
     uses: bazel-contrib/publish-to-bcr/.github/workflows/publish.yaml@v1.3.0
     with:
       tag_name: ${{ inputs.tag_name }}
@@ -28,9 +44,19 @@ jobs:
       registry_fork: bazel-contrib/bazel-central-registry
       draft: false
     permissions:
+      actions: read
       attestations: write
       contents: write
       id-token: write
     secrets:
       # Necessary to push to the BCR fork, and to open a pull request against a registry
       publish_token: ${{ secrets.publish_token || secrets.BCR_PUBLISH_TOKEN }}
+  finalize:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
+        with:
+          tag_name: ${{ inputs.tag_name }}
