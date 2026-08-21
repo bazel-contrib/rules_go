@@ -274,6 +274,9 @@ tasks:
       - "-@org_golang_x_sys//windows/svc:svc_test"
       - "-@org_golang_x_text//language:language_test"
       - "-@org_golang_x_tools//cmd/splitdwarf/internal/macho:macho_test"
+      # Opens its testdata through a relative path, which resolves against a
+      # runfiles directory. Windows gets a runfiles manifest instead.
+      - "-@org_golang_x_tools//internal/stdlib:stdlib_test"
       - "-@test_chdir_remote//sub:go_default_test"
       # Plugins aren't supported on Windows.
       - "-//tests/core/go_plugin/..."
