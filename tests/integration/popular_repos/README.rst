@@ -73,7 +73,12 @@ This runs tests from the repository `golang.org/x/net <https://golang.org/x/net>
 * @org_golang_x_net//http2/h2c:h2c_test
 * @org_golang_x_net//http2/hpack:hpack_test
 * @org_golang_x_net//idna:idna_test
+* @org_golang_x_net//internal/gate:gate_test
+* @org_golang_x_net//internal/http3:http3_test
+* @org_golang_x_net//internal/httpcommon:httpcommon_test
+* @org_golang_x_net//internal/httpsfv:httpsfv_test
 * @org_golang_x_net//internal/quic/cmd/interop:interop_test
+* @org_golang_x_net//internal/quic/quicwire:quicwire_test
 * @org_golang_x_net//internal/socks:socks_test
 * @org_golang_x_net//internal/sockstest:sockstest_test
 * @org_golang_x_net//internal/timeseries:timeseries_test
@@ -167,15 +172,19 @@ This runs tests from the repository `golang.org/x/tools <https://golang.org/x/to
 * @org_golang_x_tools//cover:cover_test
 * @org_golang_x_tools//go/analysis:analysis_test
 * @org_golang_x_tools//go/analysis/passes/directive/testdata/src/a:a_test
-* @org_golang_x_tools//go/analysis/passes/internal/analysisutil:analysisutil_test
+* @org_golang_x_tools//go/analysis/passes/gofix:gofix_test
+* @org_golang_x_tools//go/analysis/passes/hostport:hostport_test
+* @org_golang_x_tools//go/analysis/passes/inline:inline_test
+* @org_golang_x_tools//go/analysis/passes/modernize:modernize_test
+* @org_golang_x_tools//go/analysis/passes/modernize/testdata/src/bloop:bloop_test
 * @org_golang_x_tools//go/ast/astutil:astutil_test
 * @org_golang_x_tools//go/callgraph:callgraph_test
 * @org_golang_x_tools//go/callgraph/vta/internal/trie:trie_test
-* @org_golang_x_tools//godoc/redirect:redirect_test
-* @org_golang_x_tools//godoc/vfs:vfs_test
-* @org_golang_x_tools//godoc/vfs/gatefs:gatefs_test
-* @org_golang_x_tools//godoc/vfs/mapfs:mapfs_test
 * @org_golang_x_tools//internal/aliases:aliases_test
+* @org_golang_x_tools//internal/analysis/analyzerutil:analyzerutil_test
+* @org_golang_x_tools//internal/analysis/driverutil:driverutil_test
+* @org_golang_x_tools//internal/astutil:astutil_test
+* @org_golang_x_tools//internal/astutil/free:free_test
 * @org_golang_x_tools//internal/bisect:bisect_test
 * @org_golang_x_tools//internal/diff:diff_test
 * @org_golang_x_tools//internal/diff/lcs:lcs_test
@@ -183,23 +192,25 @@ This runs tests from the repository `golang.org/x/tools <https://golang.org/x/to
 * @org_golang_x_tools//internal/edit:edit_test
 * @org_golang_x_tools//internal/event:event_test
 * @org_golang_x_tools//internal/event/export:export_test
-* @org_golang_x_tools//internal/event/export/ocagent:ocagent_test
-* @org_golang_x_tools//internal/event/export/ocagent/wire:wire_test
 * @org_golang_x_tools//internal/event/keys:keys_test
 * @org_golang_x_tools//internal/event/label:label_test
 * @org_golang_x_tools//internal/gopathwalk:gopathwalk_test
 * @org_golang_x_tools//internal/jsonrpc2:jsonrpc2_test
 * @org_golang_x_tools//internal/jsonrpc2/servertest:servertest_test
+* @org_golang_x_tools//internal/jsonrpc2/stack:stack_test
 * @org_golang_x_tools//internal/jsonrpc2_v2:jsonrpc2_v2_test
-* @org_golang_x_tools//internal/memoize:memoize_test
+* @org_golang_x_tools//internal/mcp/internal/oauthex:oauthex_test
+* @org_golang_x_tools//internal/mcp/internal/util:util_test
 * @org_golang_x_tools//internal/modindex:modindex_test
+* @org_golang_x_tools//internal/packagepath:packagepath_test
 * @org_golang_x_tools//internal/packagestest/testdata:testdata_test
 * @org_golang_x_tools//internal/pkgbits:pkgbits_test
 * @org_golang_x_tools//internal/proxydir:proxydir_test
+* @org_golang_x_tools//internal/refactor:refactor_test
 * @org_golang_x_tools//internal/robustio:robustio_test
-* @org_golang_x_tools//internal/stack:stack_test
-* @org_golang_x_tools//internal/tokeninternal:tokeninternal_test
+* @org_golang_x_tools//internal/stdlib:stdlib_test
 * @org_golang_x_tools//internal/typesinternal:typesinternal_test
+* @org_golang_x_tools//internal/typesinternal/typeindex:typeindex_test
 * @org_golang_x_tools//playground/socket:socket_test
 * @org_golang_x_tools//refactor/satisfy:satisfy_test
 * @org_golang_x_tools//txtar:txtar_test
@@ -211,6 +222,7 @@ ______________________
 This runs tests from the repository `github.com/golang/glog <https://github.com/golang/glog>`_
 
 * @com_github_golang_glog//:glog_test
+* @com_github_golang_glog//internal/logsink:logsink_test
 
 
 org_golang_x_sync
