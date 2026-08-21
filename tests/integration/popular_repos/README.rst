@@ -13,7 +13,6 @@ ___________________
 
 This runs tests from the repository `golang.org/x/crypto <https://golang.org/x/crypto>`_
 
-* @org_golang_x_crypto//acme:acme_test
 * @org_golang_x_crypto//acme/autocert:autocert_test
 * @org_golang_x_crypto//argon2:argon2_test
 * @org_golang_x_crypto//bcrypt:bcrypt_test

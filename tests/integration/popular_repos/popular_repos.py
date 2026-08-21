@@ -22,6 +22,7 @@ POPULAR_REPOS = [
         importpath = "golang.org/x/crypto",
         commit = "e47973b1c1089f6c67ab89261f7aa067b3d611d2",
         excludes = [
+            "acme:acme_test", # TestWithPebble shells out to the go tool and fetches a module over the network
             "internal/wycheproof:wycheproof_test", # requires build cache
             "nacl/secretbox:secretbox_test", # panics in salsa2020_amd64.s
             "ssh/agent:agent_test",

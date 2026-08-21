@@ -21,7 +21,6 @@ load("@bazel_skylib//rules:build_test.bzl", "build_test")
 test_suite(
     name = "org_golang_x_crypto",
     tests = [
-        "@org_golang_x_crypto//acme:acme_test",
         "@org_golang_x_crypto//acme/autocert:autocert_test",
         "@org_golang_x_crypto//argon2:argon2_test",
         "@org_golang_x_crypto//bcrypt:bcrypt_test",
@@ -255,6 +254,7 @@ test_suite(
 build_test(
     name = "build_only",
     targets = [
+        "@org_golang_x_crypto//acme:acme",
         "@org_golang_x_crypto//nacl/secretbox:secretbox",
         "@org_golang_x_crypto//ssh/agent:agent",
         "@org_golang_x_crypto//ssh/test:test",
