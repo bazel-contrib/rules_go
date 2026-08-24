@@ -34,6 +34,7 @@ const (
 type moduleInfo struct {
 	path    string
 	version string
+	sum     string
 }
 
 type packageMetadata struct {
@@ -111,14 +112,13 @@ func modulesFromPackageMetadataFiles(paths []string) ([]moduleInfo, error) {
 }
 
 func moduleFromPURL(purl string) (moduleInfo, bool, error) {
-	const prefix = "pkg:golang/"
-	if !strings.HasPrefix(purl, prefix) {
-		return moduleInfo{}, false, nil
+	u, err := url.Parse(purl)
+	if err != nil {
+		return moduleInfo{}, false, fmt.Errorf("parsing Go package URL: %w", err)
 	}
-
-	value := strings.TrimPrefix(purl, prefix)
-	if i := strings.IndexAny(value, "?#"); i >= 0 {
-		value = value[:i]
+	value, ok := strings.CutPrefix(u.Opaque, "golang/")
+	if u.Scheme != "pkg" || !ok {
+		return moduleInfo{}, false, nil
 	}
 	if value == "" {
 		return moduleInfo{}, false, fmt.Errorf("Go package URL has an empty module path")
@@ -137,7 +137,6 @@ func moduleFromPURL(purl string) (moduleInfo, bool, error) {
 		return moduleInfo{}, false, fmt.Errorf("Go package URL has an empty module path")
 	}
 
-	var err error
 	modulePath, err = url.PathUnescape(modulePath)
 	if err != nil {
 		return moduleInfo{}, false, fmt.Errorf("unescaping Go module path: %w", err)
@@ -152,7 +151,16 @@ func moduleFromPURL(purl string) (moduleInfo, bool, error) {
 		}
 	}
 
-	return moduleInfo{path: modulePath, version: moduleVersion}, true, nil
+	var moduleSum string
+	if u.RawQuery != "" {
+		values, err := url.ParseQuery(u.RawQuery)
+		if err != nil {
+			return moduleInfo{}, false, fmt.Errorf("parsing Go package URL qualifiers: %w", err)
+		}
+		moduleSum = values.Get("checksum")
+	}
+
+	return moduleInfo{path: modulePath, version: moduleVersion, sum: moduleSum}, true, nil
 }
 
 func buildInfoDeps(modules []moduleInfo, mainModule moduleInfo) []*debug.Module {
@@ -179,7 +187,10 @@ func buildInfoDeps(modules []moduleInfo, mainModule moduleInfo) []*debug.Module 
 		if unique[i].path != unique[j].path {
 			return unique[i].path < unique[j].path
 		}
-		return unique[i].version < unique[j].version
+		if unique[i].version != unique[j].version {
+			return unique[i].version < unique[j].version
+		}
+		return unique[i].sum < unique[j].sum
 	})
 
 	deps := make([]*debug.Module, 0, len(unique))
@@ -187,6 +198,7 @@ func buildInfoDeps(modules []moduleInfo, mainModule moduleInfo) []*debug.Module 
 		deps = append(deps, &debug.Module{
 			Path:    module.path,
 			Version: module.version,
+			Sum:     module.sum,
 		})
 	}
 	return deps

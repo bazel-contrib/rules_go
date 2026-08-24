@@ -139,6 +139,7 @@ import (
 type dep struct {
     Path    string ` + "`json:\"path\"`" + `
     Version string ` + "`json:\"version\"`" + `
+    Sum     string ` + "`json:\"sum\"`" + `
 }
 
 type output struct {
@@ -169,7 +170,7 @@ func main() {
         out.MainVersion = info.Main.Version
         out.Settings = buildSettings(info)
         for _, module := range info.Deps {
-            out.Deps = append(out.Deps, dep{Path: module.Path, Version: module.Version})
+            out.Deps = append(out.Deps, dep{Path: module.Path, Version: module.Version, Sum: module.Sum})
         }
     }
     _ = json.NewEncoder(os.Stdout).Encode(out)
@@ -348,7 +349,7 @@ load("@package_metadata//rules:package_metadata.bzl", "package_metadata")
 
 package_metadata(
     name = "package_metadata",
-    purl = "pkg:golang/github.com/google/go-cmp@v0.6.0",
+    purl = "pkg:golang/github.com/google/go-cmp@v0.6.0?checksum=h1:ofyhxvXcZhMsU5ulbFiLKl%2FXBFqE1GSq7atu8tAmTRI%3D",
     visibility = ["//:__subpackages__"],
 )
 
@@ -434,6 +435,7 @@ local_path_override(
 type dep struct {
 	Path    string `json:"path"`
 	Version string `json:"version"`
+	Sum     string `json:"sum"`
 }
 
 type withDepOutput struct {
@@ -496,9 +498,16 @@ func TestReadBuildInfoDeps(t *testing.T) {
 	for _, dep := range got.Deps {
 		if dep.Path == "github.com/google/go-cmp" && dep.Version == "v0.6.0" {
 			foundCmp = true
+			wantSum := "h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI="
+			if dep.Sum != wantSum {
+				t.Fatalf("got go-cmp Sum %q; want %q", dep.Sum, wantSum)
+			}
 		}
 		if dep.Path == "example.com/versionless" && dep.Version == "(devel)" {
 			foundUnusedDeclaredDep = true
+			if dep.Sum != "" {
+				t.Fatalf("got versionless Sum %q; want empty", dep.Sum)
+			}
 		}
 	}
 	if !foundCmp {

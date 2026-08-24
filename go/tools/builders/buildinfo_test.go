@@ -44,9 +44,15 @@ func TestModuleFromPURL(t *testing.T) {
 			wantOK: true,
 		},
 		{
-			name:   "normalizes version and strips qualifiers",
+			name:   "normalizes version and strips non-checksum qualifiers",
 			purl:   "pkg:golang/example.com/module@1.2.3?goos=linux#cmd/tool",
 			want:   moduleInfo{path: "example.com/module", version: "v1.2.3"},
+			wantOK: true,
+		},
+		{
+			name:   "preserves checksum qualifier",
+			purl:   "pkg:golang/example.com/module@1.2.3?checksum=h1:AbCd%2FEfGh%2BIjKl%3D",
+			want:   moduleInfo{path: "example.com/module", version: "v1.2.3", sum: "h1:AbCd/EfGh+IjKl="},
 			wantOK: true,
 		},
 		{
@@ -161,18 +167,23 @@ func TestBuildInfoDepsSortAndDedup(t *testing.T) {
 		{path: "github.com/google/go-cmp", version: "v0.6.0"},
 		{path: "golang.org/x/text", version: "v0.15.0"},
 		{path: "golang.org/x/text", version: "v0.16.0"},
+		{path: "example.com/module", version: "1.2.3", sum: "h1:aaa="},
+		{path: "example.com/module", version: "1.2.3", sum: "h1:aaa="},
+		{path: "example.com/module", version: "1.2.3", sum: "h1:bbb="},
 		{path: "", version: "v1.0.0"},
 		{path: "example.com/missing/version", version: ""},
 	}, moduleInfo{})
 
 	got := make([]string, 0, len(deps))
 	for _, dep := range deps {
-		got = append(got, dep.Path+"@"+dep.Version)
+		got = append(got, dep.Path+"@"+dep.Version+";"+dep.Sum)
 	}
 	want := []string{
-		"github.com/google/go-cmp@v0.6.0",
-		"golang.org/x/text@v0.15.0",
-		"golang.org/x/text@v0.16.0",
+		"example.com/module@1.2.3;h1:aaa=",
+		"example.com/module@1.2.3;h1:bbb=",
+		"github.com/google/go-cmp@v0.6.0;",
+		"golang.org/x/text@v0.15.0;",
+		"golang.org/x/text@v0.16.0;",
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got deps %v; want %v", got, want)
@@ -186,9 +197,9 @@ func TestModInfoDataRoundTrip(t *testing.T) {
 		{Key: "GOARCH", Value: "arm64"},
 	}
 	info := parseModInfoData(t, modInfoData("example.com/cmd/tool", moduleInfo{}, settings, []moduleInfo{
-		{path: "golang.org/x/sync", version: "v0.8.0"},
-		{path: "github.com/google/go-cmp", version: "v0.6.0"},
-		{path: "github.com/google/go-cmp", version: "v0.6.0"},
+		{path: "golang.org/x/sync", version: "v0.8.0", sum: "h1:3NFvSEYkUoMifnESzZl15y791HH1qU2xm6eCJU5ZPXQ="},
+		{path: "github.com/google/go-cmp", version: "v0.6.0", sum: "h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI="},
+		{path: "github.com/google/go-cmp", version: "v0.6.0", sum: "h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI="},
 	}))
 
 	if info.Path != "example.com/cmd/tool" {
@@ -200,11 +211,11 @@ func TestModInfoDataRoundTrip(t *testing.T) {
 
 	got := make([]string, 0, len(info.Deps))
 	for _, dep := range info.Deps {
-		got = append(got, dep.Path+"@"+dep.Version)
+		got = append(got, dep.Path+"@"+dep.Version+";"+dep.Sum)
 	}
 	want := []string{
-		"github.com/google/go-cmp@v0.6.0",
-		"golang.org/x/sync@v0.8.0",
+		"github.com/google/go-cmp@v0.6.0;h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=",
+		"golang.org/x/sync@v0.8.0;h1:3NFvSEYkUoMifnESzZl15y791HH1qU2xm6eCJU5ZPXQ=",
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got deps %v; want %v", got, want)
