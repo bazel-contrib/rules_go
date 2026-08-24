@@ -46,14 +46,15 @@ def baseline_coverage_kwargs(go, ctx, sources):
         return {}
 
     out_lcov = go.declare_file(go, name = ctx.label.name, ext = ".baseline.lcov")
-    _emit_baseline_coverage(go, sources = sources, out_lcov = out_lcov)
+    _emit_baseline_coverage(go, ctx, sources = sources, out_lcov = out_lcov)
     return {"baseline_coverage_files": [out_lcov]}
 
-def _emit_baseline_coverage(go, *, sources, out_lcov):
+def _emit_baseline_coverage(go, ctx, *, sources, out_lcov):
     """Emits the action that writes every coverable line in sources at count zero.
 
     Args:
         go: the Go context.
+        ctx: the rule context.
         sources: candidate source files. Non-Go files are ignored, as are Go
             files excluded by build constraints.
         out_lcov: the File to write the LCOV tracefile to.
@@ -65,17 +66,29 @@ def _emit_baseline_coverage(go, *, sources, out_lcov):
     args.add_all(go_srcs, before_each = "-src")
     args.add("-o", out_lcov)
 
+    # The source paths this action writes to the tracefile have to be the same
+    # strings the compile action writes, or the baseline's zeros land in a
+    # separate record instead of being displaced by measured data. Path mapping
+    # rewrites the paths of generated sources, so it can only be enabled where
+    # compilepkg also enables it. See the matching condition there.
+    if getattr(ctx.attr, "cgo", False) or "local" in ctx.attr.tags:
+        env = go.env
+        execution_requirements = {}
+    else:
+        # The environment carries GOOS, GOARCH and CGO_ENABLED, which decide
+        # which sources the build constraints select. GOROOT is dropped and
+        # passed as an argument by builder_args instead, since path mapping
+        # cannot map environment variable values.
+        env = go.env_for_path_mapping
+        execution_requirements = SUPPORTS_PATH_MAPPING_REQUIREMENT
+
     go.actions.run(
         inputs = depset(go_srcs, transitive = [sdk.headers, sdk.tools]),
         outputs = [out_lcov],
         mnemonic = "GoBaselineCoverage",
         executable = go.toolchain._builder,
         arguments = ["baselinecoverage", args],
-        # The environment carries GOOS, GOARCH and CGO_ENABLED, which decide
-        # which sources the build constraints select. GOROOT is dropped and
-        # passed as an argument by builder_args instead, since path mapping
-        # cannot map environment variable values.
-        env = go.env_for_path_mapping,
-        execution_requirements = SUPPORTS_PATH_MAPPING_REQUIREMENT,
+        env = env,
+        execution_requirements = execution_requirements,
         toolchain = GO_TOOLCHAIN_LABEL,
     )
