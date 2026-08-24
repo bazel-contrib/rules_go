@@ -145,12 +145,6 @@ func main() {
 	fmt.Println("nobody tests me")
 }
 `,
-		// Baseline coverage needs Bazel 9, which dropped WORKSPACE support, so
-		// this test's generated workspace must use bzlmod. A non-empty suffix is
-		// what opts it in; no extra dependencies are required.
-		ModuleFileSuffix: `
-# Intentionally empty.
-`,
 	})
 }
 
