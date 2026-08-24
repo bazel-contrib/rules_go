@@ -153,6 +153,22 @@ func coverableLines(goenv *env, workDir string, index int, srcName string) ([]in
 	if err != nil {
 		return nil, fmt.Errorf("reading coverage positions for %s: %w", srcName, err)
 	}
+	if len(blocks) == 0 {
+		// A file with no function bodies genuinely has no coverable lines, and
+		// must report LF:0. But zero blocks is also what a cover tool whose
+		// output this no longer understands would produce, and that failure
+		// would be invisible: every file would report LF:0, which is the very
+		// state this action exists to fix. Distinguish the two by asking the
+		// original source whether there was anything to instrument.
+		hasBody, err := hasFuncBody(srcName)
+		if err != nil {
+			return nil, err
+		}
+		if hasBody {
+			return nil, fmt.Errorf("no coverage blocks found for %s, but it declares a function body; "+
+				"the Go SDK's cover tool may have changed the format this parses", srcName)
+		}
+	}
 
 	seen := make(map[int]struct{})
 	for _, b := range blocks {
@@ -166,6 +182,24 @@ func coverableLines(goenv *env, workDir string, index int, srcName string) ([]in
 	}
 	sort.Ints(lines)
 	return lines, nil
+}
+
+// hasFuncBody reports whether the file declares at least one function with a
+// body, which is the minimum for cmd/cover to record a block. A body-less
+// declaration -- a forward declaration for an assembly implementation, say --
+// has nothing to instrument and does not count.
+func hasFuncBody(path string) (bool, error) {
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
+	if err != nil {
+		return false, err
+	}
+	for _, decl := range f.Decls {
+		if fn, ok := decl.(*ast.FuncDecl); ok && fn.Body != nil {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // coverBlock is one instrumented basic block's line span.
@@ -192,8 +226,10 @@ type coverBlock struct {
 // where Pos holds one triple per block: start line, end line, and the two
 // columns packed into a single word. Only the line numbers are of interest.
 //
-// A file with no functions is instrumented into a file with no such
-// declaration; that yields no blocks and is not an error.
+// The declaration is emitted even for a file with nothing to instrument, in
+// which case Pos is empty and this yields no blocks. Its absence therefore
+// means the output was not understood rather than that the file was empty.
+// Callers treat that as an error when the source had a function to instrument.
 func parseCoverPositions(path string) ([]coverBlock, error) {
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
