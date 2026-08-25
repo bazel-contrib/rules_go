@@ -51,6 +51,7 @@ def _go_toolchain_impl(ctx):
             # Internal fields -- may be read by emit functions.
             _builder = ctx.executable.builder,
             _pack = ctx.executable.pack,
+            _covdata = ctx.executable.covdata,
         ),
     ]
 
@@ -69,6 +70,12 @@ go_toolchain = rule(
             cfg = "exec",
             executable = True,
             doc = "Tool used to pack object files into archives",
+        ),
+        "covdata": attr.label(
+            cfg = "exec",
+            executable = True,
+            doc = """Tool used to decode coverage meta-data files. If absent,
+            no baseline coverage is emitted for packages without tests.""",
         ),
         "goos": attr.string(
             mandatory = True,
@@ -96,7 +103,7 @@ go_toolchain = rule(
     provides = [platform_common.ToolchainInfo],
 )
 
-def declare_go_toolchains(exec_goos, sdk, builder, pack):
+def declare_go_toolchains(exec_goos, sdk, builder, pack, covdata):
     """Declares go_toolchain targets for each platform."""
     for p in PLATFORMS:
         if p.cgo:
@@ -117,6 +124,7 @@ def declare_go_toolchains(exec_goos, sdk, builder, pack):
             sdk = sdk,
             builder = builder,
             pack = pack,
+            covdata = covdata,
             link_flags = link_flags,
             cgo_link_flags = cgo_link_flags,
             tags = ["manual"],

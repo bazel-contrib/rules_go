@@ -70,6 +70,7 @@ def define_sdk_repository_targets(
         # The .exe suffix is required on Windows and harmless on other platforms.
         # Output attributes are not configurable, so we use it everywhere.
         out_pack = "pack.exe",
+        out_covdata = "covdata.exe",
         sdk = ":go_sdk",
     )
 
@@ -83,6 +84,11 @@ def define_sdk_repository_targets(
         dep = ":pack.exe",
     )
 
+    non_go_reset_target(
+        name = "covdata_reset",
+        dep = ":covdata.exe",
+    )
+
     # TODO(jayconrod): Gazelle depends on this file directly. This dependency
     # should be broken, and this rule should be folded into go_sdk.
     package_list(
@@ -94,6 +100,7 @@ def define_sdk_repository_targets(
 
     declare_go_toolchains(
         builder = ":builder_reset",
+        covdata = ":covdata_reset",
         exec_goos = goos,
         pack = ":pack_reset",
         sdk = ":go_sdk",

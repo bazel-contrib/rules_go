@@ -555,6 +555,9 @@ set GOTELEMETRY=off
 set GOENV=off
 {go} build -trimpath -ldflags \"-buildid='' {ldflags}\" -o {out_pack} cmd/pack
 if %ERRORLEVEL% EQU 0 (
+  {go} build -trimpath -ldflags \"-buildid='' {ldflags}\" -o {out_covdata} cmd/covdata
+)
+if %ERRORLEVEL% EQU 0 (
   {go} build -trimpath -ldflags \"-buildid='' {ldflags}\" -o {out} {srcs}
 )
 set GO_EXIT_CODE=%ERRORLEVEL%
@@ -566,6 +569,7 @@ exit /b %GO_EXIT_CODE%
             go = sdk.go.path.replace("/", "\\"),
             out = out.path,
             out_pack = ctx.outputs.out_pack.path,
+            out_covdata = ctx.outputs.out_covdata.path,
             srcs = " ".join([f.path for f in ctx.files.srcs]),
             ldflags = ctx.attr.ldflags,
         )
@@ -581,13 +585,14 @@ exit /b %GO_EXIT_CODE%
                 transitive = [sdk.headers, sdk.srcs, sdk.tools],
             ),
             toolchain = None,
-            outputs = [out, ctx.outputs.out_pack, gotmp],
+            outputs = [out, ctx.outputs.out_pack, ctx.outputs.out_covdata, gotmp],
             mnemonic = "GoToolchainBinaryBuild",
         )
     else:
         # Pass (potentially) generated files in via args to support path mapping.
         args = ctx.actions.args()
         args.add(ctx.outputs.out_pack)
+        args.add(ctx.outputs.out_covdata)
         args.add(out)
         args.add_all(ctx.files.srcs)
 
@@ -623,7 +628,7 @@ exit /b %GO_EXIT_CODE%
                 transitive = [sdk.headers, sdk.srcs, sdk.libs, sdk.tools],
             ),
             toolchain = None,
-            outputs = [out, ctx.outputs.out_pack],
+            outputs = [out, ctx.outputs.out_pack, ctx.outputs.out_covdata],
             execution_requirements = SUPPORTS_PATH_MAPPING_REQUIREMENT,
             mnemonic = "GoToolchainBinaryBuild",
         )
@@ -649,6 +654,7 @@ go_tool_binary = rule(
             doc = "Raw value to pass to go build via -ldflags without tokenization",
         ),
         "out_pack": attr.output(),
+        "out_covdata": attr.output(),
         "_binary_wrapper": attr.label(
             allow_single_file = True,
             default = "//go/private/rules:binary_wrapper.sh",
@@ -666,9 +672,9 @@ just have a main package and only depend on the standard library and don't
 require build constraints.
 
 It is currently only used to build the `builder` tool maintained as part of
-rules_go as well as the `pack` tool provided by the Go SDK in source form
-only as of Go 1.25. Combining both builds into a single action drastically
-reduces the overall build time due to Go's own caching mechanism.
+rules_go as well as the `pack` and `covdata` tools provided by the Go SDK in
+source form only as of Go 1.25. Combining these builds into a single action
+drastically reduces the overall build time due to Go's own caching mechanism.
 """,
     toolchains = [config_common.toolchain_type("@bazel_tools//tools/sh:toolchain_type", mandatory = False)],
 )
