@@ -44,6 +44,10 @@ def baseline_coverage_kwargs(go, ctx, sources):
         return {}
     if not go.coverage_enabled or not go.coverage_instrumented:
         return {}
+    if not go.toolchain._covdata:
+        # A custom toolchain without a covdata tool cannot decode the coverage
+        # meta-data this action's cover invocation emits.
+        return {}
 
     out_lcov = go.declare_file(go, name = ctx.label.name, ext = ".baseline.lcov")
     _emit_baseline_coverage(go, ctx, sources = sources, out_lcov = out_lcov)
@@ -64,6 +68,8 @@ def _emit_baseline_coverage(go, ctx, *, sources, out_lcov):
 
     args = go.builder_args(go)
     args.add_all(go_srcs, before_each = "-src")
+    args.add("-covdata", go.toolchain._covdata)
+    args.add("-importpath", go.importpath)
     args.add("-o", out_lcov)
 
     # The source paths this action writes to the tracefile have to be the same
@@ -83,7 +89,7 @@ def _emit_baseline_coverage(go, ctx, *, sources, out_lcov):
         execution_requirements = SUPPORTS_PATH_MAPPING_REQUIREMENT
 
     go.actions.run(
-        inputs = depset(go_srcs, transitive = [sdk.headers, sdk.tools]),
+        inputs = depset(go_srcs + [go.toolchain._covdata], transitive = [sdk.headers, sdk.tools]),
         outputs = [out_lcov],
         mnemonic = "GoBaselineCoverage",
         executable = go.toolchain._builder,

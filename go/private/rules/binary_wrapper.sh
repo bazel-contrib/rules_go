@@ -13,9 +13,11 @@ export HOME="${PWD}/_go_tool_binary-fake-home-${1//\\//_}"
 trap "${GO_BINARY} clean -cache" EXIT
 
 # We do not use -a here as the cache drastically reduces the time spent
-# on the second go build invocation (roughly 50% faster).
+# on the subsequent go build invocations (roughly 50% faster).
 
 "${GO_BINARY}" build -trimpath -ldflags="-buildid=\"\" ${LD_FLAGS}" -o "$1" cmd/pack
-shift
+
+"${GO_BINARY}" build -trimpath -ldflags="-buildid=\"\" ${LD_FLAGS}" -o "$2" cmd/covdata
+shift 2
 
 "${GO_BINARY}" build -trimpath -ldflags="-buildid=\"\" ${LD_FLAGS}" -o "$@"

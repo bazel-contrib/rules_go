@@ -15,11 +15,10 @@
 package main
 
 import (
+	"crypto/md5"
+	"encoding/json"
 	"flag"
 	"fmt"
-	"go/ast"
-	"go/parser"
-	"go/token"
 	"os"
 	"path/filepath"
 	"sort"
@@ -27,9 +26,9 @@ import (
 	"strings"
 )
 
-// baselineCoverVar is the variable name given to the coverage struct in the
-// throwaway instrumented sources this action produces. It is never compiled;
-// only the position table inside it is read back.
+// baselineCoverVar is the prefix cmd/cover uses for the counter variables in
+// the throwaway instrumented sources this action produces. They are never
+// compiled; only the coverage meta-data file is read back.
 const baselineCoverVar = "GoBaselineCover"
 
 // baselineCoverMode is the mode cmd/cover is invoked with. Any mode yields the
@@ -60,9 +59,11 @@ func baselineCoverage(args []string) error {
 	fs := flag.NewFlagSet("GoBaselineCoverage", flag.ExitOnError)
 	goenv := envFlags(fs)
 	var unfilteredSrcs multiFlag
-	var outPath string
+	var outPath, covdataPath, importPath string
 	fs.Var(&unfilteredSrcs, "src", "A source file to consider for coverage. May be repeated.")
 	fs.StringVar(&outPath, "o", "", "The LCOV tracefile to write.")
+	fs.StringVar(&covdataPath, "covdata", "", "The path to the covdata tool.")
+	fs.StringVar(&importPath, "importpath", "", "The import path of the package. May be empty.")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -72,6 +73,9 @@ func baselineCoverage(args []string) error {
 	if outPath == "" {
 		return fmt.Errorf("-o is required")
 	}
+	if covdataPath == "" {
+		return fmt.Errorf("-covdata is required")
+	}
 
 	// Apply the same build-constraint filtering the compile action applies, so
 	// a file excluded on this GOOS/GOARCH is never reported as uncovered.
@@ -80,7 +84,7 @@ func baselineCoverage(args []string) error {
 		return err
 	}
 
-	lcov, err := baselineLCOV(goenv, srcs.goSrcs)
+	lcov, err := baselineLCOV(goenv, covdataPath, importPath, srcs.goSrcs)
 	if err != nil {
 		return err
 	}
@@ -91,7 +95,7 @@ func baselineCoverage(args []string) error {
 // zero. Sources excluded by build constraints have already been filtered out
 // and so are absent, correctly: they are not compiled on this platform and
 // nothing about them is coverable here.
-func baselineLCOV(goenv *env, goSrcs []fileInfo) (string, error) {
+func baselineLCOV(goenv *env, covdataPath, importPath string, goSrcs []fileInfo) (string, error) {
 	if len(goSrcs) == 0 {
 		return "", nil
 	}
@@ -102,18 +106,13 @@ func baselineLCOV(goenv *env, goSrcs []fileInfo) (string, error) {
 	}
 	defer cleanup()
 
-	var out strings.Builder
-	for i, src := range goSrcs {
-		// cgo sources are included. compilepkg instruments them before cgo
-		// rewrites them, so a measured run reports positions in the
-		// unprocessed source -- the same ones read back here. Cgo sources
-		// that are not compiled at all, because CGO_ENABLED is 0, have
-		// already been filtered out.
-		lines, err := coverableLines(goenv, workDir, i, src.filename)
-		if err != nil {
-			return "", err
-		}
+	linesByFile, err := coverableLines(goenv, covdataPath, importPath, workDir, goSrcs)
+	if err != nil {
+		return "", err
+	}
 
+	var out strings.Builder
+	for _, src := range goSrcs {
 		// Bazel merges LCOV across languages and requires exec-root-relative
 		// source paths. The filenames handed to this action already are, and
 		// compilepkg's lcov cover_format uses the very same strings.
@@ -121,198 +120,189 @@ func baselineLCOV(goenv *env, goSrcs []fileInfo) (string, error) {
 		// A file with nothing to cover is still named, with LF:0. That matches
 		// the shape of the stub this replaces, but now the zero is a measured
 		// fact rather than the absence of a measurement.
-		fmt.Fprintf(&out, "SF:%s\n", filepath.ToSlash(src.filename))
+		name := filepath.ToSlash(src.filename)
+		lines := linesByFile[name]
+		delete(linesByFile, name)
+		fmt.Fprintf(&out, "SF:%s\n", name)
 		for _, line := range lines {
 			fmt.Fprintf(&out, "DA:%d,0\n", line)
 		}
 		fmt.Fprintf(&out, "LH:0\nLF:%d\nend_of_record\n", len(lines))
 	}
+	for name := range linesByFile {
+		return "", fmt.Errorf("cover reported coverable lines in %s, which is not among the package's sources", name)
+	}
 	return out.String(), nil
 }
 
-// coverableLines instruments one source file and reads back the set of lines
-// the instrumentation covers, sorted and deduplicated.
-func coverableLines(goenv *env, workDir string, index int, srcName string) ([]int, error) {
-	instrumented := filepath.Join(workDir, fmt.Sprintf("baseline.%d.%s", index, filepath.Base(srcName)))
-
-	// The single-file form of cmd/cover is used deliberately over the -pkgcfg
-	// form. -pkgcfg emits a coverage meta-data file that this action cannot
-	// read: Go 1.25 dropped the prebuilt covdata from the distribution, and
-	// go_tool_binary builds with "go build", which rejects the
-	// internal/coverage imports needed to decode one in process. Single-file
-	// mode needs only pkg/tool/<platform>/cover, already an input.
-	//
-	// The block positions are identical either way. Both forms record spans
-	// from one shared AST walk and differ only in where they store them.
-	goargs := goenv.goTool("cover", "-mode", baselineCoverMode, "-var", baselineCoverVar, "-o", instrumented, srcName)
-	if err := goenv.runCommand(goargs); err != nil {
-		return nil, fmt.Errorf("instrumenting %s: %w", srcName, err)
-	}
-
-	blocks, err := parseCoverPositions(instrumented)
-	if err != nil {
-		return nil, fmt.Errorf("reading coverage positions for %s: %w", srcName, err)
-	}
-	if len(blocks) == 0 {
-		// A file with no function bodies genuinely has no coverable lines, and
-		// must report LF:0. But zero blocks is also what a cover tool whose
-		// output this no longer understands would produce, and that failure
-		// would be invisible: every file would report LF:0, which is the very
-		// state this action exists to fix. Distinguish the two by asking the
-		// original source whether there was anything to instrument.
-		hasBody, err := hasFuncBody(srcName)
-		if err != nil {
-			return nil, err
-		}
-		if hasBody {
-			return nil, fmt.Errorf("no coverage blocks found for %s, but it declares a function body; "+
-				"the Go SDK's cover tool may have changed the format this parses", srcName)
-		}
-	}
-
-	seen := make(map[int]struct{})
-	for _, b := range blocks {
-		for line := b.startLine; line <= b.endLine; line++ {
-			seen[line] = struct{}{}
-		}
-	}
-	lines := make([]int, 0, len(seen))
-	for line := range seen {
-		lines = append(lines, line)
-	}
-	sort.Ints(lines)
-	return lines, nil
-}
-
-// hasFuncBody reports whether the file declares at least one function with a
-// body, which is the minimum for cmd/cover to record a block. A body-less
-// declaration -- a forward declaration for an assembly implementation, say --
-// has nothing to instrument and does not count.
-func hasFuncBody(path string) (bool, error) {
-	fset := token.NewFileSet()
-	f, err := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
-	if err != nil {
-		return false, err
-	}
-	for _, decl := range f.Decls {
-		if fn, ok := decl.(*ast.FuncDecl); ok && fn.Body != nil {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
-// coverBlock is one instrumented basic block's line span.
-type coverBlock struct {
-	startLine int
-	endLine   int
-}
-
-// parseCoverPositions extracts the block spans from a file instrumented by
-// cmd/cover. The instrumented source ends with a declaration of the form
+// coverableLines instruments the package once with cmd/cover's -pkgcfg mode,
+// which emits a coverage meta-data file, and decodes that file with the
+// covdata tool into the set of coverable lines per source file, sorted and
+// deduplicated.
 //
-//	var GoBaselineCover = struct {
-//		Count   [8]uint32
-//		Pos     [3 * 8]uint32
-//		NumStmt [8]uint16
-//	}{
-//		Pos: [3 * 8]uint32{
-//			22, 24, 0x16001d, // [0]
-//			...
-//		},
-//		...
-//	}
-//
-// where Pos holds one triple per block: start line, end line, and the two
-// columns packed into a single word. Only the line numbers are of interest.
-//
-// The declaration is emitted even for a file with nothing to instrument, in
-// which case Pos is empty and this yields no blocks. Its absence therefore
-// means the output was not understood rather than that the file was empty.
-// Callers treat that as an error when the source had a function to instrument.
-func parseCoverPositions(path string) ([]coverBlock, error) {
-	fset := token.NewFileSet()
-	f, err := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
-	if err != nil {
+// cgo sources are included. compilepkg instruments them before cgo rewrites
+// them, so a measured run reports positions in the unprocessed source -- the
+// same ones read back here. Cgo sources that are not compiled at all, because
+// CGO_ENABLED is 0, have already been filtered out.
+func coverableLines(goenv *env, covdataPath, importPath, workDir string, goSrcs []fileInfo) (map[string][]int, error) {
+	// cmd/cover refuses an empty PkgPath, but with Local set the file names it
+	// records never include it, so a placeholder serves for the packages that
+	// have no import path, such as most binaries.
+	if importPath == "" {
+		importPath = "baseline-coverage"
+	}
+
+	metaDir := filepath.Join(workDir, "covmeta")
+	if err := os.Mkdir(metaDir, 0o777); err != nil {
 		return nil, err
 	}
 
-	lit := findCoverPosLiteral(f)
-	if lit == nil {
+	// The file name must match the covmeta.<tag> shape covdata looks for. The
+	// tag itself only distinguishes multiple meta files in one directory, of
+	// which there is one.
+	metaFile := filepath.Join(metaDir, fmt.Sprintf("covmeta.%x", md5.Sum([]byte(importPath))))
+
+	// EmitMetaFile exists for "go test -cover" on a package with no test
+	// files, which needs the block positions of a package that is never
+	// linked into a test binary -- exactly this action's situation. Local
+	// makes cmd/cover record each source file under the name it was given on
+	// the command line, which is already exec-root-relative, rather than under
+	// <importpath>/<basename>.
+	cfg := coverPkgConfig{
+		OutConfig:    filepath.Join(workDir, "outcfg.txt"),
+		PkgPath:      importPath,
+		PkgName:      goSrcs[0].pkg,
+		Granularity:  "perblock",
+		Local:        true,
+		EmitMetaFile: metaFile,
+	}
+	cfgData, err := json.Marshal(cfg)
+	if err != nil {
+		return nil, err
+	}
+	pkgcfgPath := filepath.Join(workDir, "pkgcfg.json")
+	if err := os.WriteFile(pkgcfgPath, cfgData, writeFileMode); err != nil {
+		return nil, err
+	}
+
+	// cmd/cover insists on writing instrumented output: a covervars.go
+	// followed by one file per input. All of it is thrown away with the work
+	// directory; only the meta-data file is of interest.
+	var outList strings.Builder
+	fmt.Fprintf(&outList, "%s\n", filepath.Join(workDir, "covervars.go"))
+	for i := range goSrcs {
+		fmt.Fprintf(&outList, "%s\n", filepath.Join(workDir, fmt.Sprintf("baseline.%d.go", i)))
+	}
+	outListPath := filepath.Join(workDir, "outfilelist.txt")
+	if err := os.WriteFile(outListPath, []byte(outList.String()), writeFileMode); err != nil {
+		return nil, err
+	}
+
+	goargs := goenv.goTool("cover", "-pkgcfg", pkgcfgPath, "-var", baselineCoverVar, "-mode", baselineCoverMode, "-outfilelist", outListPath)
+	for _, src := range goSrcs {
+		goargs = append(goargs, src.filename)
+	}
+	if err := goenv.runCommand(goargs); err != nil {
+		return nil, fmt.Errorf("instrumenting package: %w", err)
+	}
+
+	// cmd/cover always creates the meta-data file, but leaves it empty for a
+	// package with no function bodies, which genuinely has no coverable lines.
+	// covdata cannot decode an empty file, and has nothing to say about one.
+	// An absent file means cmd/cover no longer honors EmitMetaFile, and that
+	// failure must be loud: quietly reporting LF:0 everywhere is the very
+	// state this action exists to fix.
+	info, err := os.Stat(metaFile)
+	if err != nil {
+		return nil, fmt.Errorf("the cover tool did not emit a coverage meta-data file for %s: %w", importPath, err)
+	}
+	if info.Size() == 0 {
 		return nil, nil
 	}
 
-	if len(lit.Elts)%3 != 0 {
-		return nil, fmt.Errorf("position table has %d entries, want a multiple of 3", len(lit.Elts))
+	profilePath := filepath.Join(workDir, "baseline.cov")
+	covdataArgs := []string{covdataPath, "textfmt", "-i=" + metaDir, "-o=" + profilePath}
+	if err := goenv.runCommand(covdataArgs); err != nil {
+		return nil, fmt.Errorf("decoding coverage meta-data for %s: %w", importPath, err)
 	}
-	blocks := make([]coverBlock, 0, len(lit.Elts)/3)
-	for i := 0; i < len(lit.Elts); i += 3 {
-		startLine, err := parseUintLit(lit.Elts[i])
-		if err != nil {
-			return nil, err
-		}
-		endLine, err := parseUintLit(lit.Elts[i+1])
-		if err != nil {
-			return nil, err
-		}
-		if startLine == 0 || endLine < startLine {
-			return nil, fmt.Errorf("nonsensical block span %d-%d", startLine, endLine)
-		}
-		blocks = append(blocks, coverBlock{startLine: startLine, endLine: endLine})
+	profile, err := os.ReadFile(profilePath)
+	if err != nil {
+		return nil, err
 	}
-	return blocks, nil
+	return parseCoverProfile(string(profile))
 }
 
-// findCoverPosLiteral locates the "Pos" element of the coverage variable's
-// initializer, or nil when the file carries no instrumentation.
-func findCoverPosLiteral(f *ast.File) *ast.CompositeLit {
-	for _, decl := range f.Decls {
-		genDecl, ok := decl.(*ast.GenDecl)
-		if !ok || genDecl.Tok != token.VAR {
+// parseCoverProfile extracts the per-file line sets from a coverage profile in
+// the text format emitted by "covdata textfmt": a "mode:" header followed by
+// one block per line,
+//
+//	name.go:startLine.startCol,endLine.endCol numStmt count
+//
+// Every line a block spans counts as coverable, matching how a measured
+// profile is rendered as LCOV after a coverage run.
+func parseCoverProfile(profile string) (map[string][]int, error) {
+	seen := make(map[string]map[int]bool)
+	for _, line := range strings.Split(profile, "\n") {
+		if line == "" || strings.HasPrefix(line, "mode:") {
 			continue
 		}
-		for _, spec := range genDecl.Specs {
-			valueSpec, ok := spec.(*ast.ValueSpec)
-			if !ok {
-				continue
-			}
-			for i, name := range valueSpec.Names {
-				if name.Name != baselineCoverVar || i >= len(valueSpec.Values) {
-					continue
-				}
-				outer, ok := valueSpec.Values[i].(*ast.CompositeLit)
-				if !ok {
-					continue
-				}
-				for _, elt := range outer.Elts {
-					kv, ok := elt.(*ast.KeyValueExpr)
-					if !ok {
-						continue
-					}
-					key, ok := kv.Key.(*ast.Ident)
-					if !ok || key.Name != "Pos" {
-						continue
-					}
-					if inner, ok := kv.Value.(*ast.CompositeLit); ok {
-						return inner
-					}
-				}
-			}
+		fields := strings.Fields(line)
+		if len(fields) != 3 {
+			return nil, fmt.Errorf("malformed line in coverage profile: %q", line)
+		}
+		colon := strings.LastIndexByte(fields[0], ':')
+		if colon <= 0 {
+			return nil, fmt.Errorf("malformed line in coverage profile: %q", line)
+		}
+		name := filepath.ToSlash(fields[0][:colon])
+		startLine, endLine, err := parseBlockSpan(fields[0][colon+1:])
+		if err != nil {
+			return nil, fmt.Errorf("malformed block span in coverage profile line %q: %v", line, err)
+		}
+		if seen[name] == nil {
+			seen[name] = make(map[int]bool)
+		}
+		for l := startLine; l <= endLine; l++ {
+			seen[name][l] = true
 		}
 	}
-	return nil
+
+	linesByFile := make(map[string][]int, len(seen))
+	for name, set := range seen {
+		lines := make([]int, 0, len(set))
+		for l := range set {
+			lines = append(lines, l)
+		}
+		sort.Ints(lines)
+		linesByFile[name] = lines
+	}
+	return linesByFile, nil
 }
 
-// parseUintLit reads a non-negative integer literal, which cmd/cover emits in
-// either decimal or hexadecimal.
-func parseUintLit(expr ast.Expr) (int, error) {
-	lit, ok := expr.(*ast.BasicLit)
-	if !ok || lit.Kind != token.INT {
-		return 0, fmt.Errorf("expected an integer literal, got %T", expr)
+// parseBlockSpan reads the lines of a "startLine.startCol,endLine.endCol"
+// block position.
+func parseBlockSpan(span string) (startLine, endLine int, err error) {
+	start, end, ok := strings.Cut(span, ",")
+	if !ok {
+		return 0, 0, fmt.Errorf("expected two positions separated by a comma")
 	}
-	v, err := strconv.ParseUint(lit.Value, 0, 32)
-	if err != nil {
-		return 0, err
+	if startLine, err = parsePositionLine(start); err != nil {
+		return 0, 0, err
 	}
-	return int(v), nil
+	if endLine, err = parsePositionLine(end); err != nil {
+		return 0, 0, err
+	}
+	if startLine <= 0 || endLine < startLine {
+		return 0, 0, fmt.Errorf("nonsensical block span %d-%d", startLine, endLine)
+	}
+	return startLine, endLine, nil
+}
+
+// parsePositionLine reads the line number of a "line.column" position.
+func parsePositionLine(pos string) (int, error) {
+	lineStr, _, ok := strings.Cut(pos, ".")
+	if !ok {
+		return 0, fmt.Errorf("expected a line.column position, got %q", pos)
+	}
+	return strconv.Atoi(lineStr)
 }
