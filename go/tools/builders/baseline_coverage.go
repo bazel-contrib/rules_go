@@ -136,14 +136,14 @@ func coverableLines(goenv *env, workDir string, index int, srcName string) ([]in
 	instrumented := filepath.Join(workDir, fmt.Sprintf("baseline.%d.%s", index, filepath.Base(srcName)))
 
 	// The single-file form of cmd/cover is used deliberately over the -pkgcfg
-	// form. -pkgcfg can emit a coverage meta-data file directly (its
-	// EmitMetaFile field exists for "go test -cover" on a package with no test
-	// files, exactly this situation), but decoding that file requires the
-	// covdata tool, which the Go SDK does not ship prebuilt -- the go command
-	// compiles it on demand into the user's build cache. An action cannot rely
-	// on that. The single-file form needs only pkg/tool/<platform>/cover, which
-	// rules_go already depends on, and its position table carries the same
-	// blocks -pkgcfg would have recorded.
+	// form. -pkgcfg emits a coverage meta-data file that this action cannot
+	// read: Go 1.25 dropped the prebuilt covdata from the distribution, and
+	// go_tool_binary builds with "go build", which rejects the
+	// internal/coverage imports needed to decode one in process. Single-file
+	// mode needs only pkg/tool/<platform>/cover, already an input.
+	//
+	// The block positions are identical either way. Both forms record spans
+	// from one shared AST walk and differ only in where they store them.
 	goargs := goenv.goTool("cover", "-mode", baselineCoverMode, "-var", baselineCoverVar, "-o", instrumented, srcName)
 	if err := goenv.runCommand(goargs); err != nil {
 		return nil, fmt.Errorf("instrumenting %s: %w", srcName, err)
