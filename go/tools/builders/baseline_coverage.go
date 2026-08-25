@@ -15,12 +15,14 @@
 package main
 
 import (
+	"bufio"
 	"crypto/md5"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -232,6 +234,16 @@ func coverableLines(goenv *env, covdataPath, importPath, workDir string, goSrcs 
 	return parseCoverProfile(string(profile))
 }
 
+// coverLinePattern matches one block line of a coverage profile. It is copied
+// verbatim from bzltestutil's converter, which parses the same text format for
+// measured coverage, so that both readers accept exactly the same input. The
+// pattern cannot be shared: builder is a go_tool_binary restricted to the
+// standard library, and bzltestutil imports coverdata.
+//
+// The greedy path group is what allows a source path to contain a space, which
+// splitting on whitespace would break.
+var coverLinePattern = regexp.MustCompile(`^(?P<path>.+):(?P<startLine>\d+)\.(?P<startColumn>\d+),(?P<endLine>\d+)\.(?P<endColumn>\d+) (?P<numStmt>\d+) (?P<count>\d+)$`)
+
 // parseCoverProfile extracts the per-file line sets from a coverage profile in
 // the text format emitted by "covdata textfmt": a "mode:" header followed by
 // one block per line,
@@ -242,22 +254,34 @@ func coverableLines(goenv *env, covdataPath, importPath, workDir string, goSrcs 
 // profile is rendered as LCOV after a coverage run.
 func parseCoverProfile(profile string) (map[string][]int, error) {
 	seen := make(map[string]map[int]bool)
-	for _, line := range strings.Split(profile, "\n") {
-		if line == "" || strings.HasPrefix(line, "mode:") {
-			continue
-		}
-		fields := strings.Fields(line)
-		if len(fields) != 3 {
+	// Read by lines the way bzltestutil does, so that a trailing carriage
+	// return is stripped rather than left to defeat the pattern's anchor.
+	scanner := bufio.NewScanner(strings.NewReader(profile))
+	for scanner.Scan() {
+		line := scanner.Text()
+		m := coverLinePattern.FindStringSubmatch(line)
+		if m == nil {
+			// Matching before this check, as bzltestutil does, so that a
+			// source path beginning with "mode:" is read as the record it is
+			// rather than mistaken for the header.
+			if line == "" || strings.HasPrefix(line, "mode: ") {
+				continue
+			}
 			return nil, fmt.Errorf("malformed line in coverage profile: %q", line)
 		}
-		colon := strings.LastIndexByte(fields[0], ':')
-		if colon <= 0 {
-			return nil, fmt.Errorf("malformed line in coverage profile: %q", line)
-		}
-		name := filepath.ToSlash(fields[0][:colon])
-		startLine, endLine, err := parseBlockSpan(fields[0][colon+1:])
+		// The paths are compared against the source names this action was
+		// given, which are slash-separated.
+		name := filepath.ToSlash(m[1])
+		startLine, err := strconv.Atoi(m[2])
 		if err != nil {
-			return nil, fmt.Errorf("malformed block span in coverage profile line %q: %v", line, err)
+			return nil, fmt.Errorf("malformed start line in coverage profile line %q: %v", line, err)
+		}
+		endLine, err := strconv.Atoi(m[4])
+		if err != nil {
+			return nil, fmt.Errorf("malformed end line in coverage profile line %q: %v", line, err)
+		}
+		if startLine <= 0 || endLine < startLine {
+			return nil, fmt.Errorf("nonsensical block span %d-%d in coverage profile line %q", startLine, endLine, line)
 		}
 		if seen[name] == nil {
 			seen[name] = make(map[int]bool)
@@ -265,6 +289,9 @@ func parseCoverProfile(profile string) (map[string][]int, error) {
 		for l := startLine; l <= endLine; l++ {
 			seen[name][l] = true
 		}
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("reading coverage profile: %w", err)
 	}
 
 	linesByFile := make(map[string][]int, len(seen))
@@ -277,32 +304,4 @@ func parseCoverProfile(profile string) (map[string][]int, error) {
 		linesByFile[name] = lines
 	}
 	return linesByFile, nil
-}
-
-// parseBlockSpan reads the lines of a "startLine.startCol,endLine.endCol"
-// block position.
-func parseBlockSpan(span string) (startLine, endLine int, err error) {
-	start, end, ok := strings.Cut(span, ",")
-	if !ok {
-		return 0, 0, fmt.Errorf("expected two positions separated by a comma")
-	}
-	if startLine, err = parsePositionLine(start); err != nil {
-		return 0, 0, err
-	}
-	if endLine, err = parsePositionLine(end); err != nil {
-		return 0, 0, err
-	}
-	if startLine <= 0 || endLine < startLine {
-		return 0, 0, fmt.Errorf("nonsensical block span %d-%d", startLine, endLine)
-	}
-	return startLine, endLine, nil
-}
-
-// parsePositionLine reads the line number of a "line.column" position.
-func parsePositionLine(pos string) (int, error) {
-	lineStr, _, ok := strings.Cut(pos, ".")
-	if !ok {
-		return 0, fmt.Errorf("expected a line.column position, got %q", pos)
-	}
-	return strconv.Atoi(lineStr)
 }

@@ -29,6 +29,21 @@ go_test(
 )
 
 go_test(
+    name = "baseline_coverage_test",
+    size = "small",
+    srcs = [
+        "baseline_coverage.go",
+        "baseline_coverage_test.go",
+        "cover.go",
+        "edit.go",
+        "env.go",
+        "filter.go",
+        "flags.go",
+        "read.go",
+    ],
+)
+
+go_test(
     name = "cover_test",
     size = "small",
     srcs = [
