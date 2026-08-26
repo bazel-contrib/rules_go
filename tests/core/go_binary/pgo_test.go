@@ -96,7 +96,7 @@ func TestGoBinaryOutputWithPgoProfileDiffersFromGoBinaryWithoutPgoProfile(t *tes
 	var out []byte
 	var stderr []byte
 	var err error
-	if out, stderr, err = bazel_testing.BazelOutputWithInput(nil, "cquery", "--output=files", "//src:pgo_with_profile", "//src:pgo_without_profile"); err != nil {
+	if out, stderr, err = bazel_testing.BazelOutputWithInput(nil, "cquery", "--output=files", "//src:pgo_with_profile + //src:pgo_without_profile"); err != nil {
 		t.Fatal(err)
 	}
 	files := strings.Split(strings.TrimSpace(string(out)), "\n")

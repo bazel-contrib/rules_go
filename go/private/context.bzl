@@ -46,6 +46,10 @@ load(
     "apple_ensure_options",
 )
 load(
+    "//go/private/actions:preprofile.bzl",
+    "emit_preprofile",
+)
+load(
     "//go/private/rules:transition.bzl",
     "non_request_nogo_transition",
 )
@@ -53,8 +57,6 @@ load(
     ":common.bzl",
     "COVERAGE_OPTIONS_DENYLIST",
     "GO_TOOLCHAIN",
-    "GO_TOOLCHAIN_LABEL",
-    "SUPPORTS_PATH_MAPPING_REQUIREMENT",
     "as_iterable",
 )
 load(
@@ -80,10 +82,6 @@ load(
     "INFERRED_PATH",
     "get_archive",
     "get_source",
-)
-load(
-    ":sdk.bzl",
-    "parse_version",
 )
 
 CPP_TOOLCHAIN_TYPE = Label("@bazel_tools//tools/cpp:toolchain_type")
@@ -1063,41 +1061,6 @@ def cgo_context_data_impl(ctx):
         ),
     )
 
-def _preprocess_pgo_profile(ctx, toolchain, profile):
-    """Converts a pprof profile into the intermediate representation used by the compiler.
-
-    Returns the profile unchanged if the SDK is too old to convert it.
-    """
-    sdk = toolchain.sdk
-
-    # "go tool preprofile" was added in Go 1.23. Older compilers only accept raw
-    # pprof profiles.
-    version = parse_version(sdk.version)
-    if not version or version[:2] < (1, 23):
-        return profile
-
-    out = ctx.actions.declare_file(ctx.label.name + "/" + profile.basename + ".preprofile")
-
-    args = ctx.actions.args()
-    args.add("preprofile")
-
-    # Use a file rather than sdk.root_file.dirname as the latter is just a
-    # string and thus not subject to path mapping.
-    args.add_all("-sdk", [sdk.root_file], map_each = _dirname, expand_directories = False)
-    args.add("-in", profile)
-    args.add("-out", out)
-
-    ctx.actions.run(
-        inputs = depset([profile, sdk.root_file], transitive = [sdk.tools]),
-        outputs = [out],
-        mnemonic = "GoPreprofile",
-        executable = toolchain._builder,
-        arguments = [args],
-        toolchain = GO_TOOLCHAIN_LABEL,
-        execution_requirements = SUPPORTS_PATH_MAPPING_REQUIREMENT,
-    )
-    return out
-
 def _go_config_impl(ctx):
     toolchain = ctx.toolchains[GO_TOOLCHAIN]
 
@@ -1105,7 +1068,7 @@ def _go_config_impl(ctx):
     if len(pgo_profiles) > 2:
         fail("providing more than one pprof file to pgoprofile is not supported")
     if len(pgo_profiles) == 1:
-        pgoprofile = _preprocess_pgo_profile(ctx, toolchain, pgo_profiles[0])
+        pgoprofile = emit_preprofile(ctx, toolchain, pgo_profiles[0])
     else:
         pgoprofile = None
 

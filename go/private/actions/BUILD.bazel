@@ -60,6 +60,16 @@ bzl_library(
 )
 
 bzl_library(
+    name = "preprofile",
+    srcs = ["preprofile.bzl"],
+    visibility = ["//go:__subpackages__"],
+    deps = [
+        "//go/private:common",
+        "//go/private:sdk",
+    ],
+)
+
+bzl_library(
     name = "stdlib",
     srcs = ["stdlib.bzl"],
     visibility = ["//go:__subpackages__"],
