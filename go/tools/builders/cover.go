@@ -16,6 +16,7 @@ package main
 
 import (
 	"bytes"
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -193,4 +194,121 @@ func init() {
 		return fmt.Errorf("registerCoverage: %v", err)
 	}
 	return nil
+}
+
+// coveragePath returns the location path of coverage counter data emitted by
+// the go runtime. With the go coverage redesign, the location path looks to be
+// importpath + the file base name. Line directives are honored but the location
+// path is still importpath relative.
+func coveragePath(src string, importPath string) (string, error) {
+	directiveName, err := findFirstLineDirectiveFilename(src)
+	if err != nil {
+		return "", err
+	}
+	filename := src
+	if directiveName != "" {
+		fmt.Println("directiveName: ", directiveName)
+		filename = directiveName
+	}
+	return importPath + "/" + filepath.Base(filename), nil
+}
+
+// lineDirective represents a parsed line directive
+type lineDirective struct {
+	Filename string
+	Line     int
+	Column   int // 0 if not specified
+}
+
+// parseLineDirective extracts information from a Go line directive.
+// It handles both //line and /*line*/ formats and validates the results.
+func parseLineDirective(directive string) (*lineDirective, error) {
+	// Remove leading/trailing whitespace
+	directive = strings.TrimSpace(directive)
+
+	var content string
+
+	// Handle //line directive
+	if strings.HasPrefix(directive, "//line ") {
+		content = directive[7:] // Remove "//line "
+	} else if strings.HasPrefix(directive, "/*line ") && strings.HasSuffix(directive, "*/") {
+		// Handle /*line*/ directive
+		content = directive[7 : len(directive)-2] // Remove "/*line " and "*/"
+	} else {
+		return nil, fmt.Errorf("not a valid line directive")
+	}
+
+	if content == "" {
+		return nil, fmt.Errorf("empty line directive content")
+	}
+
+	return parseLineContent(content)
+}
+
+// parseLineContent parses the content after "line " prefix
+func parseLineContent(content string) (*lineDirective, error) {
+	// Use a more sophisticated approach to handle Windows paths
+	// Find all colons and work backwards to find line/column numbers
+	parts := strings.Split(content, ":")
+	if len(parts) < 2 {
+		return nil, fmt.Errorf("missing line number")
+	}
+
+	// Try to parse as filename:line:col
+	if len(parts) >= 3 {
+		// Check if last two parts are valid numbers
+		colStr := parts[len(parts)-1]
+		lineStr := parts[len(parts)-2]
+
+		col, colErr := strconv.Atoi(colStr)
+		line, lineErr := strconv.Atoi(lineStr)
+
+		if colErr == nil && lineErr == nil && line > 0 && col > 0 {
+			// Valid filename:line:col format
+			filename := strings.Join(parts[:len(parts)-2], ":")
+			return &lineDirective{
+				Filename: filename,
+				Line:     line,
+				Column:   col,
+			}, nil
+		}
+	}
+
+	// Try to parse as filename:line
+	lineStr := parts[len(parts)-1]
+	line, err := strconv.Atoi(lineStr)
+	if err != nil || line <= 0 {
+		return nil, fmt.Errorf("invalid line number: %s", lineStr)
+	}
+
+	filename := strings.Join(parts[:len(parts)-1], ":")
+
+	return &lineDirective{
+		Filename: filename,
+		Line:     line,
+		Column:   0,
+	}, nil
+}
+
+// findFirstLineDirectiveFilename opens a Go file, scans it, and returns the
+// filename from the first line directive it finds.
+func findFirstLineDirectiveFilename(filePath string) (string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return "", fmt.Errorf("open file: %w", err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if ld, err := parseLineDirective(line); err == nil && ld != nil {
+			return ld.Filename, nil // Found the first one, return it.
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return "", fmt.Errorf("scanning file: %w", err)
+	}
+	// no line directive found, return empty string
+	return "", nil
 }
