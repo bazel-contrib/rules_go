@@ -1,0 +1,22 @@
+load("//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "calculator",
+    srcs = [
+        "calculator.go",
+    ],
+    importpath = "calculator",
+)
+
+go_binary(
+    name = "main",
+    srcs = [
+        "main.go",
+    ],
+    deps = [":calculator"],
+)
+
+sh_binary(
+    name = "show_not_reproducible",
+    srcs = ["show_not_reproducible.sh"],
+)
