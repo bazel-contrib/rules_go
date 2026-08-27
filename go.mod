@@ -2,16 +2,16 @@ module github.com/bazelbuild/rules_go
 
 toolchain go1.26.7
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/aymanbagabas/go-udiff v0.4.1
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.7.0-rc.1
 	github.com/golang/protobuf v1.5.4
-	golang.org/x/crypto v0.48.0
-	golang.org/x/net v0.50.0
-	golang.org/x/tools v0.41.0
+	golang.org/x/crypto v0.54.0
+	golang.org/x/net v0.57.0
+	golang.org/x/tools v0.48.0
 	google.golang.org/genproto v0.0.0-20250115164207-1a7da9e5054f
 	google.golang.org/genproto/googleapis/bytestream v0.0.0-20251124214823-79d6a2a48846
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250313205543-e70fdf4c4cb4
@@ -21,8 +21,8 @@ require (
 )
 
 require (
-	golang.org/x/mod v0.32.0 // indirect
-	golang.org/x/sync v0.19.0 // indirect
-	golang.org/x/sys v0.41.0 // indirect
-	golang.org/x/text v0.34.0 // indirect
+	golang.org/x/mod v0.38.0 // indirect
+	golang.org/x/sync v0.22.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/text v0.40.0 // indirect
 )
