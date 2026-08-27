@@ -173,7 +173,6 @@ This runs tests from the repository `golang.org/x/tools <https://golang.org/x/to
 * @org_golang_x_tools//go/analysis/passes/directive/testdata/src/a:a_test
 * @org_golang_x_tools//go/analysis/passes/gofix:gofix_test
 * @org_golang_x_tools//go/analysis/passes/hostport:hostport_test
-* @org_golang_x_tools//go/analysis/passes/inline:inline_test
 * @org_golang_x_tools//go/analysis/passes/modernize:modernize_test
 * @org_golang_x_tools//go/analysis/passes/modernize/testdata/src/bloop:bloop_test
 * @org_golang_x_tools//go/analysis/passes/modernize/testdata/src/stringsbuilder:stringsbuilder_test

@@ -87,7 +87,7 @@ POPULAR_REPOS = [
             "cmd/file2fuzz:file2fuzz_test", # Requires working GOROOT, uses go build
             "cmd/fiximports:fiximports_test", # requires working GOROOT, not present in CI.
             "cmd/deadcode:deadcode_test", # Needs GOROOT
-            "cmd/goimports:goimports_test", # requires x_telemetry (via golang.org/x/telemetry/counter)
+            "cmd/goimports:goimports_test", # requires x_telemetry
             "cmd/gonew:gonew_test", # requires build cache
             "cmd/signature-fuzzer/fuzz-driver:fuzz-driver_test", # requires working GOROOT
             "cmd/signature-fuzzer/fuzz-runner:fuzz-runner_test", # requires working GOROOT
@@ -124,6 +124,7 @@ POPULAR_REPOS = [
             "go/analysis/passes/httpmux:httpmux_test", # Needs GOROOT
             "go/analysis/passes/httpresponse:httpresponse_test", # Needs testdata directory
             "go/analysis/passes/ifaceassert:ifaceassert_test", # Needs GOROOT
+            "go/analysis/passes/inline:inline_test", # Needs testdata directory
             "go/analysis/passes/loopclosure:loopclosure_test", # Needs testdata directory
             "go/analysis/passes/lostcancel:lostcancel_test", # Needs testdata directory
             "go/analysis/passes/modernize/testdata/src/testingcontext:testingcontext_test", # Not a real test
@@ -199,7 +200,7 @@ POPULAR_REPOS = [
         build_excludes = [
             "blog:blog", # requires present
             "cmd/deadcode:deadcode", # requires x_telemetry
-            "cmd/goimports:goimports", # requires x_telemetry (via golang.org/x/telemetry/counter)
+            "cmd/goimports:goimports", # requires x_telemetry
             "present:present", # Needs goldmark
         ],
     ),
