@@ -87,6 +87,7 @@ POPULAR_REPOS = [
             "cmd/file2fuzz:file2fuzz_test", # Requires working GOROOT, uses go build
             "cmd/fiximports:fiximports_test", # requires working GOROOT, not present in CI.
             "cmd/deadcode:deadcode_test", # Needs GOROOT
+            "cmd/goimports:goimports_test", # requires x_telemetry (via golang.org/x/telemetry/counter)
             "cmd/gonew:gonew_test", # requires build cache
             "cmd/signature-fuzzer/fuzz-driver:fuzz-driver_test", # requires working GOROOT
             "cmd/signature-fuzzer/fuzz-runner:fuzz-runner_test", # requires working GOROOT
@@ -198,6 +199,7 @@ POPULAR_REPOS = [
         build_excludes = [
             "blog:blog", # requires present
             "cmd/deadcode:deadcode", # requires x_telemetry
+            "cmd/goimports:goimports", # requires x_telemetry (via golang.org/x/telemetry/counter)
             "present:present", # Needs goldmark
         ],
     ),
