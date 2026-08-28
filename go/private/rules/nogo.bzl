@@ -29,6 +29,10 @@ load(
     "GoArchive",
 )
 load(
+    "//go/private:sdk.bzl",
+    "parse_version",
+)
+load(
     "//go/private/rules:transition.bzl",
     "go_tool_transition",
 )
@@ -45,6 +49,16 @@ def _nogo_impl(ctx):
         ctx,
         maybe_needs_cc_toolchain = maybe_needs_cc_toolchain(ctx.attr, go_infos = ctx.attr.deps),
     )
+
+    # x/tools (nogo's analysis engine) uses APIs added in Go 1.25.
+    version = parse_version(go.sdk.version)
+    if version and version[:2] < (1, 25):
+        fail((
+            "The Go SDK building nogo is {}. " +
+            "nogo requires a Go SDK of 1.25 or newer. " +
+            "Register a Go 1.25+ SDK, or disable nogo."
+        ).format(go.sdk.version))
+
     nogo_main = go.declare_file(go, path = "nogo_main.go")
     nogo_args = ctx.actions.args()
     nogo_args.add("gennogomain")
