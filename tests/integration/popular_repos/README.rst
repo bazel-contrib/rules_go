@@ -196,7 +196,6 @@ This runs tests from the repository `golang.org/x/tools <https://golang.org/x/to
 * @org_golang_x_tools//internal/event/export/otel:otel_test
 * @org_golang_x_tools//internal/event/keys:keys_test
 * @org_golang_x_tools//internal/event/label:label_test
-* @org_golang_x_tools//internal/excfg:excfg_test
 * @org_golang_x_tools//internal/flow:flow_test
 * @org_golang_x_tools//internal/gopathwalk:gopathwalk_test
 * @org_golang_x_tools//internal/graph:graph_test

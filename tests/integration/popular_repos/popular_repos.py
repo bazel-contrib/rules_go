@@ -179,6 +179,7 @@ POPULAR_REPOS = [
             "internal/diffp:diffp_test", # Needs testdata directory
             "internal/drivertest:drivertest_test", # Needs go tool
             "internal/expect:expect_test", # Needs testdata directory
+            "internal/excfg:excfg_test", # Needs testdata directory
             "internal/facts:facts_test", # loads test package with go/packages, which probably needs go list
             "internal/gcimporter:gcimporter_test", # Needs testdata directory
             "internal/gocommand:gocommand_test", # Needs go tool
