@@ -1,2 +1,2 @@
 common --enable_bzlmod
-build --@my_rules_go//go/toolchain:sdk_version=1.24.13
+build --@my_rules_go//go/toolchain:sdk_version=1.25.0
