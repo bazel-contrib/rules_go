@@ -22,6 +22,8 @@ BAZEL_GOOS_CONSTRAINTS = {
     "freebsd": "@platforms//os:freebsd",
     "ios": "@platforms//os:ios",
     "linux": "@platforms//os:linux",
+    "netbsd": "@platforms//os:netbsd",
+    "openbsd": "@platforms//os:openbsd",
     "qnx": "@platforms//os:qnx",
     "windows": "@platforms//os:windows",
 }
