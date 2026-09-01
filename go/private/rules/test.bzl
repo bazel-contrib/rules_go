@@ -763,8 +763,16 @@ def _recompile_external_deps(go, external_go_info, internal_archive, library_lab
                 mode = go.mode,
                 _headers = internal_archive._headers,
                 _package_metadata_files = depset(
-                    direct = [package_metadata] if package_metadata else [],
+                    direct = [arc_data] if package_metadata else [],
                     transitive = [getattr(a, "_package_metadata_files", depset()) for a in deps],
+                ),
+                _imports_files = depset(
+                    direct = [arc_data],
+                    transitive = [getattr(a, "_imports_files", depset()) for a in deps],
+                ),
+                _buildinfo_link_inputs = depset(
+                    direct = ([package_metadata] if package_metadata else []) + [arc_data._imports],
+                    transitive = [getattr(a, "_buildinfo_link_inputs", depset()) for a in deps],
                 ),
             )
         label_to_archive[label] = archive

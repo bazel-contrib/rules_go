@@ -89,6 +89,67 @@ func validSemverIdentifiers(value string, rejectNumericLeadingZero bool) bool {
 	return true
 }
 
+func reachableModules(mainPackage string, packageMetadataFiles, importsFiles []string) ([]moduleInfo, error) {
+	metadataPathByPackage, err := parseKeyedPaths(packageMetadataFiles)
+	if err != nil {
+		return nil, err
+	}
+	importsPathByPackage, err := parseKeyedPaths(importsFiles)
+	if err != nil {
+		return nil, err
+	}
+
+	importsByPackage := make(map[string][]string, len(importsPathByPackage))
+	for pkg, path := range importsPathByPackage {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("reading imports manifest %q: %w", path, err)
+		}
+		for _, line := range strings.Split(string(data), "\n") {
+			line = strings.TrimSpace(line)
+			if line != "" {
+				importsByPackage[pkg] = append(importsByPackage[pkg], line)
+			}
+		}
+	}
+
+	reachable := make(map[string]bool)
+	var queue []string
+	if mainPackage != "" {
+		queue = append(queue, mainPackage)
+	}
+	for len(queue) > 0 {
+		pkg := queue[len(queue)-1]
+		queue = queue[:len(queue)-1]
+		if reachable[pkg] {
+			continue
+		}
+		reachable[pkg] = true
+		queue = append(queue, importsByPackage[pkg]...)
+	}
+
+	var metadataPaths []string
+	for pkg := range reachable {
+		if path, ok := metadataPathByPackage[pkg]; ok {
+			metadataPaths = append(metadataPaths, path)
+		}
+	}
+	sort.Strings(metadataPaths)
+	return modulesFromPackageMetadataFiles(metadataPaths)
+}
+
+func parseKeyedPaths(entries []string) (map[string]string, error) {
+	result := make(map[string]string, len(entries))
+	for _, entry := range entries {
+		key, path, ok := strings.Cut(entry, "=")
+		if !ok {
+			return nil, fmt.Errorf("malformed key=path entry %q, expected \"key=path\"", entry)
+		}
+		result[key] = path
+	}
+	return result, nil
+}
+
 func modulesFromPackageMetadataFiles(paths []string) ([]moduleInfo, error) {
 	modules := make([]moduleInfo, 0, len(paths))
 	for _, path := range paths {
