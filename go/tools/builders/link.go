@@ -40,6 +40,7 @@ func link(args []string) error {
 	stamps := multiFlag{}
 	xdefs := multiFlag{}
 	packageMetadataFiles := multiFlag{}
+	importsFiles := multiFlag{}
 	archives := archiveMultiFlag{}
 	flags := flag.NewFlagSet("link", flag.ExitOnError)
 	goenv := envFlags(flags)
@@ -59,7 +60,8 @@ func link(args []string) error {
 	packagePath := flags.String("p", "", "Package path of the main archive.")
 	outFile := flags.String("o", "", "Path to output file.")
 	flags.Var(&archives, "arc", "Label, package path, and file name of a dependency, separated by '='")
-	flags.Var(&packageMetadataFiles, "package_metadata", "Path to a package_metadata JSON file (repeated).")
+	flags.Var(&packageMetadataFiles, "package_metadata", "Package path and path of a package_metadata JSON file, separated by '=' (repeated).")
+	flags.Var(&importsFiles, "imports", "Package path and path of an imports manifest, separated by '=' (repeated).")
 	packageList := flags.String("package_list", "", "The file containing the list of standard library packages")
 	buildmode := flags.String("buildmode", "", "Build mode used.")
 	flags.Var(&xdefs, "X", "A string variable to replace in the linked binary (repeated).")
@@ -111,7 +113,7 @@ func link(args []string) error {
 	// Build an importcfg file.
 	modinfo := ""
 	if shouldEmitBuildInfo(*buildmode) {
-		modules, err := modulesFromPackageMetadataFiles(packageMetadataFiles)
+		modules, err := reachableModules(*packagePath, packageMetadataFiles, importsFiles)
 		if err != nil {
 			return err
 		}

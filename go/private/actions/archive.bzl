@@ -57,6 +57,10 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
 
     # store export information for compiling dependent packages separately
     out_export = go.declare_file(go, name = source.name, ext = pre_ext + ".x")
+
+    # store the packages actually imported for determining build-info reachability
+    out_imports = go.declare_file(go, name = source.name, ext = pre_ext + ".imports")
+
     out_cgo_export_h = None  # set if cgo used in c-shared or c-archive mode
 
     nogo = go.nogo
@@ -126,6 +130,7 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
             headers = headers,
             out_lib = out_lib,
             out_export = out_export,
+            out_imports = out_imports,
             out_facts = out_facts,
             out_diagnostics = out_diagnostics,
             out_nogo_validation = out_nogo_validation,
@@ -158,6 +163,7 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
             headers = headers,
             out_lib = out_lib,
             out_export = out_export,
+            out_imports = out_imports,
             out_facts = out_facts,
             out_diagnostics = out_diagnostics,
             out_nogo_validation = out_nogo_validation,
@@ -196,6 +202,7 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
         _cxxopts = tuple(source.cxxopts),
         _clinkopts = tuple(source.clinkopts),
         _package_metadata = getattr(source, "_package_metadata", None),
+        _imports = out_imports,
 
         # Information on dependencies
         _dep_labels = tuple([d.data.label for d in direct]),
@@ -222,8 +229,16 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
     cgo_exports = depset(direct = cgo_exports_direct, transitive = [a.cgo_exports for a in direct], order = "preorder")
     package_metadata = getattr(data, "_package_metadata", None)
     package_metadata_files = depset(
-        direct = [package_metadata] if package_metadata else [],
+        direct = [data] if package_metadata else [],
         transitive = [getattr(a, "_package_metadata_files", depset()) for a in direct],
+    )
+    imports_files = depset(
+        direct = [data],
+        transitive = [getattr(a, "_imports_files", depset()) for a in direct],
+    )
+    buildinfo_link_inputs = depset(
+        direct = ([package_metadata] if package_metadata else []) + [out_imports],
+        transitive = [getattr(a, "_buildinfo_link_inputs", depset()) for a in direct],
     )
     return GoArchive(
         source = source,
@@ -238,4 +253,6 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
         runfiles = runfiles,
         _headers = headers,
         _package_metadata_files = package_metadata_files,
+        _imports_files = imports_files,
+        _buildinfo_link_inputs = buildinfo_link_inputs,
     )
