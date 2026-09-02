@@ -36,7 +36,6 @@ load(
 # Keep their package name in sync with the implementation of
 # _original_setting_key.
 TRANSITIONED_GO_SETTING_KEYS = [
-    "//go/config:static",
     "//go/config:msan",
     "//go/config:race",
     "//go/config:pure",
@@ -70,9 +69,11 @@ TOOL_INHERITED_SETTING_KEYS = [
 
 def _setting_before_go_transition(settings, key):
     """Returns the value of key from before the last go_transition."""
-    original_value = settings[_SETTING_KEY_TO_ORIGINAL_SETTING_KEY[key]]
-    if original_value:
-        return json.decode(original_value)
+    original_key = _SETTING_KEY_TO_ORIGINAL_SETTING_KEY.get(key)
+    if original_key:
+        original_value = settings[original_key]
+        if original_value:
+            return json.decode(original_value)
     return settings[key]
 
 def _go_transition_impl(settings, attr):
@@ -87,7 +88,9 @@ def _go_transition_impl(settings, attr):
     original_settings = settings
     settings = dict(settings)
 
-    _set_ternary(settings, attr, "static")
+    # The static attribute is deliberately not applied here: it only affects
+    # the link action of the rule it is set on and is thus read directly by
+    # go_context rather than propagated to all dependencies as a setting.
     race = _set_ternary(settings, attr, "race")
     msan = _set_ternary(settings, attr, "msan")
     pure = _set_ternary(settings, attr, "pure")
@@ -354,8 +357,8 @@ intermediate rule that allows users to apply these transitions.
 
 The '//go/config:static' and '//go/config:pure' settings are an exception: they are
 inherited from the value set on the command line, as they determine whether the tool
-can run on the execution platform. The 'static' and 'pure' attributes of an enclosing
-rule are still reset.
+can run on the execution platform. The 'pure' attribute of an enclosing rule is still
+reset.
 """,
 )
 

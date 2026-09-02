@@ -88,7 +88,7 @@ def emit_link(
     else:
         extld = extld_from_cc_toolchain(go)
         tool_args.add_all(extld)
-        if extld and (go.mode.static or
+        if extld and (go.static_link or
                       go.mode.race or
                       go.mode.linkmode != LINKMODE_NORMAL or
                       go.mode.goos == "windows" and go.mode.msan):
@@ -108,7 +108,7 @@ def emit_link(
             #       runtime/cgo(.text): relocation target memset not defined
             tool_args.add("-linkmode", "external")
 
-    if go.mode.static:
+    if go.static_link:
         extldflags.append("-static")
     if go.mode.linkmode != LINKMODE_NORMAL:
         builder_args.add("-buildmode", go.mode.linkmode)

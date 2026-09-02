@@ -600,7 +600,8 @@ def go_context(
         go_context_data = None,
         maybe_needs_cc_toolchain = True,
         goos = "auto",
-        goarch = "auto"):
+        goarch = "auto",
+        static = "auto"):
     """Returns an API used to build Go code.
 
     See /go/toolchains.rst#go-context
@@ -661,6 +662,15 @@ def go_context(
             mode_kwargs["pure"] = True
         mode = GoConfigInfo(**mode_kwargs)
         validate_mode(mode)
+
+    if static not in ("on", "off", "auto"):
+        fail('static: must be "on", "off", or "auto", got "{}"'.format(static))
+
+    # Static linking only affects the link action of the rule it is set on, so
+    # the static attribute is applied here rather than through a configuration
+    # transition, which would give every dependency a configuration of its own.
+    # It is kept out of mode since that describes how archives are compiled.
+    static_link = mode.static if static == "auto" else static == "on"
 
     if stdlib:
         goroot = stdlib.root_file.dirname
@@ -761,6 +771,7 @@ def go_context(
         toolchain = toolchain,
         sdk = toolchain.sdk,
         mode = mode,
+        static_link = static_link,
         stdlib = stdlib,
         actions = ctx.actions,
         cc_toolchain_files = cc_toolchain_files,

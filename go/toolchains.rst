@@ -674,6 +674,12 @@ Fields
 | Controls the compilation setup affecting things like enabling profilers and sanitizers.          |
 | See `compilation modes`_ for more information about the allowed values.                          |
 +--------------------------------+-----------------------------------------------------------------+
+| :param:`static_link`           | :type:`bool`                                                    |
++--------------------------------+-----------------------------------------------------------------+
+| Whether binaries linked through this context are statically linked. This is the value of the     |
+| ``static`` mode after applying the ``static`` attribute of the rule, which only affects linking  |
+| and thus isn't part of :param:`mode`.                                                            |
++--------------------------------+-----------------------------------------------------------------+
 | :param:`stdlib`                | :type:`GoStdLib`                                                |
 +--------------------------------+-----------------------------------------------------------------+
 | The standard library and tools to use in this build mode. This may be the                        |

@@ -68,6 +68,7 @@ def _go_test_impl(ctx):
         maybe_needs_cc_toolchain = maybe_needs_cc_toolchain(ctx.attr, go_infos = ctx.attr.deps),
         goos = ctx.attr.goos,
         goarch = ctx.attr.goarch,
+        static = ctx.attr.static,
     )
 
     validation_outputs = []

@@ -122,6 +122,33 @@ func TestCommandLineSettingsReachToolsWithExcludedStarlarkFlags(t *testing.T) {
 	}
 }
 
+// TestStaticAttributeDoesNotReachDependencies verifies that the static
+// attribute only affects the link action of the binary it is set on. Static
+// linking is a property of that single link, so applying it through the
+// configuration would recompile every dependency for no reason.
+func TestStaticAttributeDoesNotReachDependencies(t *testing.T) {
+	if err := bazel_testing.RunBazel("build", "//:plain", "//:static_attr", "--nobuild"); err != nil {
+		t.Fatalf("bazel build //:plain //:static_attr: %v", err)
+	}
+	hashes := make(map[string][]string)
+	for _, target := range []string{"//:plain", "//:static_attr"} {
+		query := fmt.Sprintf("deps(%s) intersect //:lib", target)
+		out, err := bazel_testing.BazelOutput("cquery", "--output=jsonproto", query)
+		if err != nil {
+			t.Fatalf("bazel cquery '%s': %v", query, err)
+		}
+		hashes[target] = extractConfigHashes(t, bytes.TrimSpace(out))
+		if len(hashes[target]) != 1 {
+			t.Fatalf("expected %s to depend on //:lib in exactly one configuration, got %d", target, len(hashes[target]))
+		}
+	}
+	plain, static := hashes["//:plain"][0], hashes["//:static_attr"][0]
+	if plain != static {
+		t.Errorf("//:lib is built in different configurations for //:plain and //:static_attr, differing in: %s",
+			strings.Join(getGoOptions(t, plain, static), ", "))
+	}
+}
+
 // TestRuleAttributesDoNotReachTools verifies that the static and pure
 // attributes of an individual rule do not propagate to Go tool binaries, which
 // would build one copy of every tool per distinct attribute value.
