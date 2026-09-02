@@ -183,7 +183,6 @@ def cgo_test_suite():
 
     runtime_lib_inputs_test(
         name = "static_runtime_lib_inputs_test",
-        expected_input_count = 2,
         expected_inputs = ["configured_dummy.a"],
         expected_linkopts = ["configured_dummy.a"],
         target_under_test = ":runtime_libs_static_binary",

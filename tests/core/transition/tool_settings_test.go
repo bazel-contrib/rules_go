@@ -281,16 +281,13 @@ func getGoOptions(t *testing.T, hashes ...string) []string {
 	if err := json.Unmarshal(bytes.TrimSpace(out), &jsonOut); err != nil {
 		t.Fatalf("Failed to decode bazel config JSON output %v: %q", err, string(out))
 	}
-	// The repository part of the keys depends on the canonical repository name,
-	// so only keep the part that identifies the setting.
-	const configPkg = "//go/config:"
 	var goOptions []string
 	for _, fragment := range jsonOut.Fragments {
 		if fragment.Name != "user-defined" {
 			continue
 		}
 		for key, value := range fragment.Options {
-			if _, name, found := strings.Cut(key, configPkg); found {
+			if name, ok := goOptionName(key); ok {
 				goOptions = append(goOptions, fmt.Sprintf("%s=%s", name, value))
 			}
 		}
@@ -300,11 +297,85 @@ func getGoOptions(t *testing.T, hashes ...string) []string {
 			continue
 		}
 		for key, diff := range fragment.OptionsDiff {
-			if _, name, found := strings.Cut(key, configPkg); found {
+			if name, ok := goOptionName(key); ok {
 				goOptions = append(goOptions, fmt.Sprintf("%s=%s vs %s", name, diff.First, diff.Second))
 			}
 		}
 	}
 	sort.Strings(goOptions)
 	return goOptions
+}
+
+// goOptionName returns the part of a rules_go setting's label that identifies
+// it. The repository part depends on the canonical repository name and is
+// dropped. Settings in //go/private are reported with a "private:" prefix.
+func goOptionName(key string) (string, bool) {
+	if _, name, found := strings.Cut(key, "//go/config:"); found {
+		return name, true
+	}
+	if _, name, found := strings.Cut(key, "//go/private:"); found {
+		return "private:" + name, true
+	}
+	return "", false
+}
+
+// TestStdlibSharesConfigurationWithTarget verifies that the standard library
+// a Go binary links against is built in the binary's own configuration when
+// nothing but default settings are in effect.
+func TestStdlibSharesConfigurationWithTarget(t *testing.T) {
+	// Restrict to the target configuration: the server may also hold //:plain
+	// in the exec configuration from an earlier test.
+	targetHashes := configHashes(t, "config(//:plain, target)")
+	if len(targetHashes) != 1 {
+		t.Fatalf("expected //:plain to be built in exactly one configuration, got %d", len(targetHashes))
+	}
+	stdlibHashes := configHashes(t, "deps(//:plain) intersect @io_bazel_rules_go//:stdlib")
+	if contains(stdlibHashes, targetHashes[0]) {
+		return
+	}
+	var diffs []string
+	for _, hash := range stdlibHashes {
+		diffs = append(diffs, strings.Join(getGoOptions(t, targetHashes[0], hash), ", "))
+	}
+	t.Errorf("no stdlib is built in the configuration of //:plain, the stdlib configurations differ from it in: %s",
+		strings.Join(diffs, "; "))
+}
+
+// TestStdlibSharesConfigurationWithExecTools verifies the same for the exec
+// configuration: every standard library reachable from a genrule tool,
+// including the one nogo is built against, is built in the configuration of
+// the tool itself.
+func TestStdlibSharesConfigurationWithExecTools(t *testing.T) {
+	toolHashes := configHashes(t, "deps(//:tool_user) intersect //:plain")
+	if len(toolHashes) != 1 {
+		t.Fatalf("expected //:tool_user to depend on //:plain in exactly one configuration, got %d", len(toolHashes))
+	}
+	stdlibHashes := configHashes(t, "deps(//:tool_user) intersect @io_bazel_rules_go//:stdlib")
+	var diffs []string
+	for _, hash := range stdlibHashes {
+		if hash != toolHashes[0] {
+			diffs = append(diffs, strings.Join(getGoOptions(t, toolHashes[0], hash), ", "))
+		}
+	}
+	if len(diffs) != 0 {
+		t.Errorf("a stdlib reachable from //:tool_user is not built in the configuration of //:plain, differing in: %s",
+			strings.Join(diffs, "; "))
+	}
+}
+
+// configHashes returns the hashes of the configurations of the targets matched
+// by the given cquery expression.
+func configHashes(t *testing.T, query string, flags ...string) []string {
+	// See nogoGoOptions for why the build is necessary.
+	if err := bazel_testing.RunBazel(append([]string{"build", "//:plain", "--nobuild"}, flags...)...); err != nil {
+		t.Fatalf("bazel build //:plain: %v", err)
+	}
+	out, err := bazel_testing.BazelOutput(append(
+		[]string{"cquery", "--output=jsonproto", query},
+		flags...,
+	)...)
+	if err != nil {
+		t.Fatalf("bazel cquery '%s': %v", query, err)
+	}
+	return extractConfigHashes(t, bytes.TrimSpace(out))
 }

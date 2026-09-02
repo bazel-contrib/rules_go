@@ -283,7 +283,12 @@ def _go_stdlib_transition_impl(settings, _attr):
         if label not in _stdlib_keep_keys:
             settings[label] = value
     settings["//go/config:tags"] = [t for t in settings["//go/config:tags"] if t in _TAG_AFFECTS_STDLIB]
+
+    # The standard library doesn't run nogo, so use the default values rather
+    # than the tool values to share the configuration of both regular targets
+    # and plain exec tools.
     settings["//go/private:bootstrap_nogo"] = False
+    settings["//go/private:request_nogo"] = True
     settings["//command_line_option:collect_code_coverage"] = False
     return settings
 
