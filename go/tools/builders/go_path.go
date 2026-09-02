@@ -21,6 +21,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"log"
 	"os"
@@ -112,6 +113,53 @@ func readManifest(path string) ([]manifestEntry, error) {
 	return entries, nil
 }
 
+func copySymlinkRecursively(src, dst string, writeFile func(src, dst string) error, createDir func(dst string) error) error {
+	target, err := os.Readlink(src)
+	if err != nil {
+		return err
+	}
+	if !filepath.IsAbs(target) {
+		target = filepath.Join(filepath.Dir(src), target)
+	}
+
+	return copyRecursively(target, dst, writeFile, createDir)
+}
+
+func copyRecursively(src, dst string, writeFile func(src, dst string) error, createDir func(dst string) error) error {
+	srcInfo, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+
+	if srcInfo.Mode().Type()&fs.ModeDir != 0 {
+		return filepath.WalkDir(src, func(path string, d os.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			relDst, err := filepath.Rel(src, path)
+			if err != nil {
+				return err
+			}
+
+			if d.Type()&fs.ModeDir != 0 {
+				return createDir(filepath.Join(dst, relDst))
+			}
+
+			if d.Type()&fs.ModeSymlink != 0 {
+				return copySymlinkRecursively(path, filepath.Join(dst, relDst), writeFile, createDir)
+			}
+
+			return writeFile(path, filepath.Join(dst, relDst))
+		})
+	}
+
+	if srcInfo.Mode().Type()&fs.ModeSymlink != 0 {
+		return copySymlinkRecursively(src, dst, writeFile, createDir)
+	}
+
+	return writeFile(src, dst)
+}
+
 func archivePath(out string, manifest []manifestEntry) (err error) {
 	outFile, err := os.Create(out)
 	if err != nil {
@@ -124,12 +172,12 @@ func archivePath(out string, manifest []manifestEntry) (err error) {
 	}()
 	outZip := zip.NewWriter(outFile)
 
-	for _, entry := range manifest {
-		srcFile, err := os.Open(abs(filepath.FromSlash(entry.Src)))
+	writeFile := func(src, dst string) error {
+		srcFile, err := os.Open(src)
 		if err != nil {
 			return err
 		}
-		w, err := outZip.Create(entry.Dst)
+		w, err := outZip.Create(dst)
 		if err != nil {
 			srcFile.Close()
 			return err
@@ -141,6 +189,19 @@ func archivePath(out string, manifest []manifestEntry) (err error) {
 		if err := srcFile.Close(); err != nil {
 			return err
 		}
+
+		return nil
+	}
+	createDir := func(_ string) error {
+		// Directories are created automatically in ZIP files.
+		return nil
+	}
+
+	for _, entry := range manifest {
+		src := abs(filepath.FromSlash(entry.Src))
+		if err := copyRecursively(src, entry.Dst, writeFile, createDir); err != nil {
+			return err
+		}
 	}
 
 	if err := outZip.Close(); err != nil {
@@ -150,15 +211,14 @@ func archivePath(out string, manifest []manifestEntry) (err error) {
 }
 
 func copyPath(out string, manifest []manifestEntry) error {
-	if err := os.MkdirAll(out, 0777); err != nil {
+	const dirMode = 0777
+
+	if err := os.MkdirAll(out, dirMode); err != nil {
 		return err
 	}
-	for _, entry := range manifest {
-		dst := abs(filepath.Join(out, filepath.FromSlash(entry.Dst)))
-		if err := os.MkdirAll(filepath.Dir(dst), 0777); err != nil {
-			return err
-		}
-		srcFile, err := os.Open(abs(filepath.FromSlash(entry.Src)))
+
+	writeFile := func(src, dst string) error {
+		srcFile, err := os.Open(src)
 		if err != nil {
 			return err
 		}
@@ -176,7 +236,25 @@ func copyPath(out string, manifest []manifestEntry) error {
 		if err := dstFile.Close(); err != nil {
 			return err
 		}
+
+		return nil
 	}
+	createDir := func(dst string) error {
+		return os.Mkdir(dst, dirMode)
+	}
+
+	for _, entry := range manifest {
+		dst := abs(filepath.Join(out, filepath.FromSlash(entry.Dst)))
+		if err := os.MkdirAll(filepath.Dir(dst), dirMode); err != nil {
+			return err
+		}
+
+		src := abs(filepath.FromSlash(entry.Src))
+		if err := copyRecursively(src, dst, writeFile, createDir); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
