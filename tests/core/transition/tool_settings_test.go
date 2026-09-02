@@ -62,6 +62,13 @@ go_binary(
     pure = "on",
     deps = [":lib"],
 )
+
+genrule(
+    name = "tool_user",
+    outs = ["tool_user.txt"],
+    cmd = "$(location :plain) > $@",
+    tools = [":plain"],
+)
 -- main.go --
 package main
 
@@ -163,6 +170,35 @@ func TestRuleAttributesDoNotReachTools(t *testing.T) {
 	}
 }
 
+// TestToolsShareStdlib verifies that all Go binaries built for the exec
+// configuration, whether as plain tools of a genrule or through
+// go_tool_transition like nogo, are built against a single standard library.
+// A tool transition that sets a setting to anything but its default value
+// gives the tools it applies to a configuration of their own and thus a
+// second copy of the standard library and of every dependency they share
+// with other tools.
+func TestToolsShareStdlib(t *testing.T) {
+	// See nogoGoOptions for why the build is necessary.
+	if err := bazel_testing.RunBazel("build", "//:tool_user", "--nobuild"); err != nil {
+		t.Fatalf("bazel build //:tool_user: %v", err)
+	}
+	query := "deps(//:tool_user) intersect @io_bazel_rules_go//:stdlib"
+	out, err := bazel_testing.BazelOutput("cquery", "--output=jsonproto", query)
+	if err != nil {
+		t.Fatalf("bazel cquery '%s': %v", query, err)
+	}
+	hashes := extractConfigHashes(t, bytes.TrimSpace(out))
+	if len(hashes) == 1 {
+		return
+	}
+	var diffs []string
+	for i := 1; i < len(hashes); i++ {
+		diffs = append(diffs, strings.Join(getGoOptions(t, hashes[0], hashes[i]), ", "))
+	}
+	t.Errorf("the tools of //:tool_user are built against %d standard libraries in configurations differing in: %s",
+		len(hashes), strings.Join(diffs, "; "))
+}
+
 // nogoGoOptions returns the rules_go settings that the nogo binary reachable
 // from target is configured with and that differ from their default value.
 func nogoGoOptions(t *testing.T, target string, flags ...string) []string {
@@ -228,10 +264,19 @@ func getGoOptions(t *testing.T, hashes ...string) []string {
 		t.Fatalf("bazel config %s: %v", strings.Join(hashes, " "), err)
 	}
 	var jsonOut struct {
+		// Set when a single configuration is requested.
 		Fragments []struct {
 			Name    string            `json:"name"`
 			Options map[string]string `json:"options"`
 		} `json:"fragmentOptions"`
+		// Set when two configurations are diffed.
+		FragmentsDiff []struct {
+			Name        string `json:"name"`
+			OptionsDiff map[string]struct {
+				First  string `json:"first"`
+				Second string `json:"second"`
+			} `json:"optionsDiff"`
+		} `json:"fragmentsDiff"`
 	}
 	if err := json.Unmarshal(bytes.TrimSpace(out), &jsonOut); err != nil {
 		t.Fatalf("Failed to decode bazel config JSON output %v: %q", err, string(out))
@@ -247,6 +292,16 @@ func getGoOptions(t *testing.T, hashes ...string) []string {
 		for key, value := range fragment.Options {
 			if _, name, found := strings.Cut(key, configPkg); found {
 				goOptions = append(goOptions, fmt.Sprintf("%s=%s", name, value))
+			}
+		}
+	}
+	for _, fragment := range jsonOut.FragmentsDiff {
+		if fragment.Name != "user-defined" {
+			continue
+		}
+		for key, diff := range fragment.OptionsDiff {
+			if _, name, found := strings.Cut(key, configPkg); found {
+				goOptions = append(goOptions, fmt.Sprintf("%s=%s vs %s", name, diff.First, diff.Second))
 			}
 		}
 	}
