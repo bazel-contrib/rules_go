@@ -19,7 +19,6 @@ load(
 load(
     "//go/private:mode.bzl",
     "LINKMODES",
-    "LINKMODE_NORMAL",
 )
 load(
     "//go/private:platforms.bzl",
@@ -201,7 +200,7 @@ _common_reset_transition_dict = dict({
     "//go/config:race": False,
     "//go/config:pure": False,
     "//go/config:debug": False,
-    "//go/config:linkmode": LINKMODE_NORMAL,
+    "//go/config:linkmode": "auto",
     "//go/config:tags": [],
     "//go/config:pgoprofile": Label("//go/config:empty"),
 }, **{setting: "" for setting in _SETTING_KEY_TO_ORIGINAL_SETTING_KEY.values()})

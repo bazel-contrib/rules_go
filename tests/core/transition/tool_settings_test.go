@@ -163,6 +163,20 @@ func TestRuleAttributesDoNotReachTools(t *testing.T) {
 	}
 }
 
+// TestToolsUseDefaultLinkmode verifies that go_tool_transition resets linkmode
+// to the flag's default rather than to an explicit value. An explicit value
+// gives Go tool binaries a configuration of their own and thus a second copy
+// of the standard library and of every dependency they share with other
+// targets in the exec configuration.
+func TestToolsUseDefaultLinkmode(t *testing.T) {
+	got := nogoGoOptions(t, "//:plain")
+	for _, opt := range got {
+		if strings.HasPrefix(opt, "linkmode=") {
+			t.Errorf("nogo is built with a non-default linkmode: got %s", strings.Join(got, ", "))
+		}
+	}
+}
+
 // nogoGoOptions returns the rules_go settings that the nogo binary reachable
 // from target is configured with and that differ from their default value.
 func nogoGoOptions(t *testing.T, target string, flags ...string) []string {
