@@ -179,20 +179,6 @@ go_transition = transition(
     ] + TRANSITIONED_GO_SETTING_KEYS + _SETTING_KEY_TO_ORIGINAL_SETTING_KEY.values(),
 )
 
-def _non_request_nogo_transition(_settings, _attr):
-    # This transition is used to make sure we only end up with 1 copy of coverdata,
-    # even if a test links against it and is run in coverage mode.
-    #
-    # It is also used to make sure that we do not end up with multiple configurations
-    # for CC toolchain dependencies when doing CGO.
-    return {"//go/private:request_nogo": False}
-
-non_request_nogo_transition = transition(
-    implementation = _non_request_nogo_transition,
-    inputs = [],
-    outputs = ["//go/private:request_nogo"],
-)
-
 _common_reset_transition_dict = dict({
     "//go/private:request_nogo": False,
     "//go/config:static": False,
