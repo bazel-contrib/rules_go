@@ -418,9 +418,7 @@ func TestStdlibSharesConfigurationWithExecTools(t *testing.T) {
 // built for the exec configuration is built in one of exactly three
 // configurations: the target configuration, the exec configuration and the
 // configuration of nogo, which differs from the exec configuration only in the
-// settings that keep nogo from analyzing its own dependencies. Any other
-// configuration is a fork introduced by a rules_go transition and causes every
-// target in it, including the C++ toolchain, to be analyzed and built again.
+// settings that keep nogo from analyzing its own dependencies.
 func TestNoConfigurationForksByDefault(t *testing.T) {
 	targetHashes := configHashes(t, "config(//:plain, target)")
 	if len(targetHashes) != 1 {
