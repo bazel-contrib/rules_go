@@ -240,22 +240,72 @@ func contains(haystack []string, needle string) bool {
 	return false
 }
 
+// nullConfig is the checksum cquery reports for targets that aren't built in
+// any configuration, such as source files.
+const nullConfig = "null"
+
+type configuredTarget struct {
+	label string
+	hash  string
+}
+
+// cqueryResult holds the configured targets matched by a cquery expression in
+// the order Bazel reports them, which lists a target before its dependencies.
+type cqueryResult struct {
+	targets []configuredTarget
+	// isTool records which configurations are exec configurations. It is
+	// empty on Bazel versions that don't report configurations separately.
+	isTool map[string]bool
+}
+
 func extractConfigHashes(t *testing.T, rawJSONOut []byte) []string {
+	var hashes []string
+	for _, ct := range parseCqueryResult(t, rawJSONOut).targets {
+		hashes = append(hashes, ct.hash)
+	}
+	return hashes
+}
+
+func parseCqueryResult(t *testing.T, rawJSONOut []byte) cqueryResult {
+	type named struct {
+		Name string `json:"name"`
+	}
 	var jsonOut struct {
 		Results []struct {
+			Target struct {
+				Type          string `json:"type"`
+				Rule          *named `json:"rule"`
+				SourceFile    *named `json:"sourceFile"`
+				GeneratedFile *named `json:"generatedFile"`
+				PackageGroup  *named `json:"packageGroup"`
+			} `json:"target"`
 			Configuration struct {
 				Checksum string `json:"checksum"`
 			} `json:"configuration"`
 		} `json:"results"`
+		Configurations []struct {
+			Checksum string `json:"checksum"`
+			IsTool   bool   `json:"isTool"`
+		} `json:"configurations"`
 	}
 	if err := json.Unmarshal(rawJSONOut, &jsonOut); err != nil {
 		t.Fatalf("Failed to decode bazel cquery JSON output %v: %q", err, string(rawJSONOut))
 	}
-	var hashes []string
-	for _, result := range jsonOut.Results {
-		hashes = append(hashes, result.Configuration.Checksum)
+	result := cqueryResult{isTool: make(map[string]bool)}
+	for _, r := range jsonOut.Results {
+		label := fmt.Sprintf("<%s>", r.Target.Type)
+		for _, n := range []*named{r.Target.Rule, r.Target.SourceFile, r.Target.GeneratedFile, r.Target.PackageGroup} {
+			if n != nil {
+				label = n.Name
+				break
+			}
+		}
+		result.targets = append(result.targets, configuredTarget{label: label, hash: r.Configuration.Checksum})
 	}
-	return hashes
+	for _, c := range jsonOut.Configurations {
+		result.isTool[c.Checksum] = c.IsTool
+	}
+	return result
 }
 
 func getGoOptions(t *testing.T, hashes ...string) []string {
@@ -363,9 +413,78 @@ func TestStdlibSharesConfigurationWithExecTools(t *testing.T) {
 	}
 }
 
+// TestNoConfigurationForksByDefault verifies that, with nothing but default
+// settings in effect, every target reachable from a Go binary or from a tool
+// built for the exec configuration is built in one of exactly three
+// configurations: the target configuration, the exec configuration and the
+// configuration of nogo, which differs from the exec configuration only in the
+// settings that keep nogo from analyzing its own dependencies. Any other
+// configuration is a fork introduced by a rules_go transition and causes every
+// target in it, including the C++ toolchain, to be analyzed and built again.
+func TestNoConfigurationForksByDefault(t *testing.T) {
+	targetHashes := configHashes(t, "config(//:plain, target)")
+	if len(targetHashes) != 1 {
+		t.Fatalf("expected //:plain to be built in exactly one target configuration, got %d", len(targetHashes))
+	}
+	execHashes := configHashes(t, "deps(//:tool_user) intersect //:plain")
+	if len(execHashes) != 1 {
+		t.Fatalf("expected //:tool_user to depend on //:plain in exactly one configuration, got %d", len(execHashes))
+	}
+	nogoHashes := configHashes(t, "deps(//:plain) intersect //:my_nogo_actual")
+	if len(nogoHashes) != 1 {
+		t.Fatalf("expected //:plain to depend on //:my_nogo_actual in exactly one configuration, got %d", len(nogoHashes))
+	}
+	target, exec := targetHashes[0], execHashes[0]
+	expected := map[string]bool{target: true, exec: true, nogoHashes[0]: true, nullConfig: true}
+	// Bazel analyzes constraint values and other targets that don't read any
+	// configuration in a configuration of their own.
+	for _, hash := range configHashes(t, "kind(constraint_value, deps(//:plain))") {
+		expected[hash] = true
+	}
+
+	result := cqueryConfiguredTargets(t, "deps(//:plain + //:tool_user)")
+	var unexpected []string
+	labels := make(map[string][]string)
+	for _, ct := range result.targets {
+		if expected[ct.hash] {
+			continue
+		}
+		if _, seen := labels[ct.hash]; !seen {
+			unexpected = append(unexpected, ct.hash)
+		}
+		labels[ct.hash] = append(labels[ct.hash], ct.label)
+	}
+	for _, hash := range unexpected {
+		baseline, baselineName := target, "target"
+		if result.isTool[hash] {
+			baseline, baselineName = exec, "exec"
+		}
+		diff := strings.Join(getGoOptions(t, baseline, hash), ", ")
+		if diff == "" {
+			diff = "options other than rules_go settings"
+		}
+		examples, more := labels[hash], ""
+		if len(examples) > 5 {
+			examples, more = examples[:5], fmt.Sprintf(" and %d more", len(examples)-5)
+		}
+		t.Errorf("%d targets are built in a configuration that differs from the %s configuration in %s: %s%s",
+			len(labels[hash]), baselineName, diff, strings.Join(examples, ", "), more)
+	}
+}
+
 // configHashes returns the hashes of the configurations of the targets matched
 // by the given cquery expression.
 func configHashes(t *testing.T, query string, flags ...string) []string {
+	var hashes []string
+	for _, ct := range cqueryConfiguredTargets(t, query, flags...).targets {
+		hashes = append(hashes, ct.hash)
+	}
+	return hashes
+}
+
+// cqueryConfiguredTargets returns the configured targets matched by the given
+// cquery expression.
+func cqueryConfiguredTargets(t *testing.T, query string, flags ...string) cqueryResult {
 	// See nogoGoOptions for why the build is necessary.
 	if err := bazel_testing.RunBazel(append([]string{"build", "//:plain", "--nobuild"}, flags...)...); err != nil {
 		t.Fatalf("bazel build //:plain: %v", err)
@@ -377,5 +496,5 @@ func configHashes(t *testing.T, query string, flags ...string) []string {
 	if err != nil {
 		t.Fatalf("bazel cquery '%s': %v", query, err)
 	}
-	return extractConfigHashes(t, bytes.TrimSpace(out))
+	return parseCqueryResult(t, bytes.TrimSpace(out))
 }
