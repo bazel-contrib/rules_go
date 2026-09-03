@@ -59,6 +59,8 @@ func main() {
 		action = genTestMain
 	case "link":
 		action = link
+	case "vcsstamp":
+		action = vcsStamp
 	case "gennogomain":
 		action = genNogoMain
 	case "preprofile":

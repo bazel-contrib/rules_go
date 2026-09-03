@@ -101,6 +101,8 @@ go_test(
     srcs = [
         "buildinfo.go",
         "buildinfo_test.go",
+        "env.go",
+        "flags.go",
     ],
 )
 

@@ -15,13 +15,16 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"net/url"
 	"os"
 	"runtime/debug"
 	"sort"
 	"strings"
+	"time"
 )
 
 const (
@@ -29,6 +32,11 @@ const (
 	// https://go.dev/src/cmd/go/internal/modload/build.go#L29-L30
 	buildInfoStart = "\x30\x77\xaf\x0c\x92\x74\x08\x02\x41\xe1\xc1\x07\xe6\xd6\x18\xe6"
 	buildInfoEnd   = "\xf9\x32\x43\x31\x86\x18\x20\x72\x00\x82\x42\x10\x41\x16\xd8\xf2"
+
+	stableVCSKey         = "STABLE_VCS"
+	stableVCSRevisionKey = "STABLE_VCS_REVISION"
+	stableVCSTimeKey     = "STABLE_VCS_TIME"
+	stableVCSModifiedKey = "STABLE_VCS_MODIFIED"
 )
 
 type moduleInfo struct {
@@ -163,6 +171,80 @@ func moduleFromPURL(purl string) (moduleInfo, bool, error) {
 	return moduleInfo{path: modulePath, version: moduleVersion, sum: moduleSum}, true, nil
 }
 
+type stampEntry struct {
+	key   string
+	value string
+}
+
+func vcsStamp(args []string) error {
+	args, _, err := expandParamsFiles(args)
+	if err != nil {
+		return err
+	}
+
+	flags := flag.NewFlagSet("vcsstamp", flag.ExitOnError)
+	input := flags.String("in", "", "The stable workspace status file to filter.")
+	output := flags.String("out", "", "The filtered VCS stamp file to write.")
+	if err := flags.Parse(args); err != nil {
+		return err
+	}
+	if *input == "" {
+		return fmt.Errorf("-in must be set")
+	}
+	if *output == "" {
+		return fmt.Errorf("-out must be set")
+	}
+
+	stampMap, err := readStampMap([]string{*input})
+	if err != nil {
+		return err
+	}
+
+	entries := buildInfoVCSEntries(stampMap)
+	var builder strings.Builder
+	// Bazel's workspace status format is one key/value pair per line and
+	// explicitly forbids either part from spanning lines. Values therefore
+	// cannot contain newlines here, while the first-space separator preserves
+	// all other permitted characters in the value.
+	for _, entry := range entries {
+		builder.WriteString(entry.key)
+		builder.WriteByte(' ')
+		builder.WriteString(entry.value)
+		builder.WriteByte('\n')
+	}
+	return os.WriteFile(*output, []byte(builder.String()), 0o666)
+}
+
+func readStampMap(files []string) (map[string]string, error) {
+	stampMap := map[string]string{}
+	for _, stampFile := range files {
+		stampBuf, err := os.ReadFile(stampFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed reading stamp file %s: %v", stampFile, err)
+		}
+		if len(stampBuf) == 0 {
+			continue
+		}
+		lines := bytes.Split(stampBuf, []byte{'\n'})
+		if len(lines[len(lines)-1]) == 0 {
+			lines = lines[:len(lines)-1]
+		}
+		for _, stampLine := range lines {
+			stampLine = bytes.TrimSuffix(stampLine, []byte{'\r'})
+			line := strings.SplitN(string(stampLine), " ", 2)
+			switch len(line) {
+			case 0:
+				// Nothing to do here.
+			case 1:
+				stampMap[line[0]] = ""
+			case 2:
+				stampMap[line[0]] = line[1]
+			}
+		}
+	}
+	return stampMap, nil
+}
+
 func buildInfoDeps(modules []moduleInfo, mainModule moduleInfo) []*debug.Module {
 	// Package metadata is not guaranteed to come from a single MVS-resolved
 	// module graph. Preserve distinct versions for the same path rather than
@@ -211,11 +293,11 @@ func buildInfoMain(module moduleInfo) debug.Module {
 	return debug.Module{Path: module.path, Version: module.version}
 }
 
-func buildInfoSettings(buildmode string, buildTags []string, race, msan, cover, go123ArchSettings bool) []debug.BuildSetting {
-	return buildInfoSettingsFromEnv(buildmode, buildTags, race, msan, cover, go123ArchSettings, os.Getenv)
+func buildInfoSettings(buildmode string, buildTags []string, race, msan, cover, go123ArchSettings bool, mainModulePath string, stampMap map[string]string) []debug.BuildSetting {
+	return buildInfoSettingsFromEnv(buildmode, buildTags, race, msan, cover, go123ArchSettings, mainModulePath, os.Getenv, stampMap)
 }
 
-func buildInfoSettingsFromEnv(buildmode string, buildTags []string, race, msan, cover, go123ArchSettings bool, getenv func(string) string) []debug.BuildSetting {
+func buildInfoSettingsFromEnv(buildmode string, buildTags []string, race, msan, cover, go123ArchSettings bool, mainModulePath string, getenv func(string) string, stampMap map[string]string) []debug.BuildSetting {
 	if buildmode == "" || buildmode == "normal" {
 		buildmode = "exe"
 	}
@@ -250,7 +332,53 @@ func buildInfoSettingsFromEnv(buildmode string, buildTags []string, race, msan, 
 	if key, value := buildInfoArchSetting(goarch, go123ArchSettings, getenv); key != "" && value != "" {
 		settings = append(settings, debug.BuildSetting{Key: key, Value: value})
 	}
+	settings = append(settings, buildInfoVCSSettings(mainModulePath, stampMap)...)
 	return settings
+}
+
+func buildInfoVCSSettings(mainModulePath string, stampMap map[string]string) []debug.BuildSetting {
+	if mainModulePath == "" {
+		return nil
+	}
+	vcsEntries := buildInfoVCSEntries(stampMap)
+	if len(vcsEntries) == 0 {
+		return nil
+	}
+
+	settings := []debug.BuildSetting{{Key: "vcs", Value: vcsEntries[0].value}}
+	for _, entry := range vcsEntries[1:] {
+		switch entry.key {
+		case stableVCSRevisionKey:
+			settings = append(settings, debug.BuildSetting{Key: "vcs.revision", Value: entry.value})
+		case stableVCSTimeKey:
+			settings = append(settings, debug.BuildSetting{Key: "vcs.time", Value: entry.value})
+		case stableVCSModifiedKey:
+			settings = append(settings, debug.BuildSetting{Key: "vcs.modified", Value: entry.value})
+		}
+	}
+	return settings
+}
+
+func buildInfoVCSEntries(stampMap map[string]string) []stampEntry {
+	vcs := strings.TrimSpace(stampMap[stableVCSKey])
+	if vcs == "" {
+		return nil
+	}
+
+	entries := []stampEntry{{key: stableVCSKey, value: vcs}}
+	if revision := strings.TrimSpace(stampMap[stableVCSRevisionKey]); revision != "" {
+		entries = append(entries, stampEntry{key: stableVCSRevisionKey, value: revision})
+	}
+	if stamp := strings.TrimSpace(stampMap[stableVCSTimeKey]); stamp != "" {
+		if parsed, err := time.Parse(time.RFC3339Nano, stamp); err == nil {
+			entries = append(entries, stampEntry{key: stableVCSTimeKey, value: parsed.UTC().Format(time.RFC3339Nano)})
+		}
+	}
+	switch modified := strings.TrimSpace(stampMap[stableVCSModifiedKey]); modified {
+	case "false", "true":
+		entries = append(entries, stampEntry{key: stableVCSModifiedKey, value: modified})
+	}
+	return entries
 }
 
 func buildInfoTags(buildTags []string, race, msan bool) []string {

@@ -57,6 +57,7 @@ load(
     ":common.bzl",
     "COVERAGE_OPTIONS_DENYLIST",
     "GO_TOOLCHAIN",
+    "GO_TOOLCHAIN_LABEL",
     "as_iterable",
 )
 load(
@@ -276,16 +277,6 @@ def _tool_args(go):
     args.use_param_file("-param=%s")
     return args
 
-def package_metadata_file_from_metadata(package_metadata = (), applicable_licenses = ()):
-    # Bazel may surface repo-level metadata through either spelling depending on
-    # the version and rule surface, so probe both.
-    for metadata_group in (package_metadata, applicable_licenses):
-        for metadata in metadata_group:
-            if PackageMetadataInfo in metadata:
-                return metadata[PackageMetadataInfo].metadata
-
-    return None
-
 def _merge_embed(source, embed):
     s = get_source(embed)
     source["srcs"] = s.srcs + source["srcs"]
@@ -403,11 +394,19 @@ def new_go_info(
     if deps == None:
         deps = [get_archive(dep) for dep in getattr(attr, "deps", [])]
 
-    package_metadata = package_metadata_file_from_metadata(
-        getattr(attr, "package_metadata", ()),
-        getattr(attr, "applicable_licenses", ()),
-    )
+    package_metadata = None
 
+    # Bazel exposes repository-level metadata through package_metadata in newer
+    # versions and applicable_licenses in older versions, so inspect both
+    # built-in attributes.
+    metadata_targets = (
+        getattr(attr, "package_metadata", []) +
+        getattr(attr, "applicable_licenses", [])
+    )
+    for metadata_target in metadata_targets:
+        if PackageMetadataInfo in metadata_target:
+            package_metadata = metadata_target[PackageMetadataInfo].metadata
+            break
     go_info = {
         "name": go.label.name if not name else name,
         "label": go.label,
@@ -807,6 +806,8 @@ def go_context(
         declare_directory = _declare_directory,
 
         # Private
+        _vcs_stamp = go_context_info.vcs_stamp if go_context_info else None,
+
         # TODO: All uses of this should be removed
         _ctx = ctx,
 
@@ -820,9 +821,27 @@ def _go_context_data_impl(ctx):
     if "msan" in ctx.features:
         print("WARNING: --features=msan is no longer supported. Use --@io_bazel_rules_go//go/config:msan instead.")
 
+    # All Go targets in a configuration share this target. Filter the stable
+    # workspace status here so stamped links share one action and only relink
+    # when the VCS-specific values change.
+    vcs_stamp = ctx.actions.declare_file(ctx.label.name + ".vcsstamp")
+    args = ctx.actions.args()
+    args.add("vcsstamp")
+    args.add("-in", ctx.info_file)
+    args.add("-out", vcs_stamp)
+    ctx.actions.run(
+        inputs = [ctx.info_file],
+        outputs = [vcs_stamp],
+        mnemonic = "GoVCSStamp",
+        executable = ctx.toolchains[GO_TOOLCHAIN]._builder,
+        arguments = [args],
+        toolchain = GO_TOOLCHAIN_LABEL,
+    )
+
     return [
         GoContextInfo(
             coverdata = ctx.attr.coverdata[0][GoArchive],
+            vcs_stamp = vcs_stamp,
         ),
         ctx.attr.stdlib[GoStdLib],
         ctx.attr.go_config[GoConfigInfo],

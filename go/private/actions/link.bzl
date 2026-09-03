@@ -24,6 +24,7 @@ load(
 )
 load(
     "//go/private:mode.bzl",
+    "LINKMODES_EXECUTABLE",
     "LINKMODE_NORMAL",
     "LINKMODE_PLUGIN",
     "extld_from_cc_toolchain",
@@ -36,6 +37,9 @@ load(
 
 def _format_archive(d):
     return "{}={}={}".format(d.label, d.importmap, d.file.path)
+
+def _should_emit_buildinfo(go):
+    return go.mode.linkmode in LINKMODES_EXECUTABLE
 
 def emit_link(
         go,
@@ -58,6 +62,7 @@ def emit_link(
         buildinfo_main_package_path = archive.data.importpath
     if buildinfo_module_metadata == None:
         buildinfo_module_metadata = getattr(archive.data, "_package_metadata", None)
+    metadata_owner = buildinfo_module_metadata.owner if buildinfo_module_metadata else None
 
     # Exclude -lstdc++ from link options. We don't want to link against it
     # unless we actually have some C++ code. _cgo_codegen will include it
@@ -177,9 +182,24 @@ def emit_link(
             if count_group_matches(v, "{", "}") != stable_vars_count:
                 stamp_x_defs_volatile = True
 
+    vcs_stamp_file = None
+
+    # The linked target and the metadata selected for BuildInfo.Main may have
+    # different owners. For example, a target in the main repository may embed
+    # a main package whose metadata came from an external repository.
+    if (go.mode.stamp and
+        info_file and
+        go._vcs_stamp != None and
+        not go.label.repo_name and
+        metadata_owner != None and
+        not metadata_owner.repo_name and
+        _should_emit_buildinfo(go)):
+        vcs_stamp_file = go._vcs_stamp
+        builder_args.add("-vcs_stamp", vcs_stamp_file)
+
     # Stamping support
     stamp_inputs = []
-    if stamp_x_defs_stable:
+    if stamp_x_defs_stable and info_file:
         stamp_inputs.append(info_file)
     if stamp_x_defs_volatile:
         stamp_inputs.append(version_file)
@@ -204,6 +224,8 @@ def emit_link(
     inputs_direct = stamp_inputs + [go.sdk.package_list]
     if buildinfo_module_metadata:
         inputs_direct.append(buildinfo_module_metadata)
+    if vcs_stamp_file:
+        inputs_direct.append(vcs_stamp_file)
     if go.coverage_enabled and go.coverdata:
         inputs_direct.append(go.coverdata.data.file)
     inputs_transitive = [
