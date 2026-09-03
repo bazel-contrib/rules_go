@@ -37,6 +37,12 @@ load(
 def _format_archive(d):
     return "{}={}={}".format(d.label, d.importmap, d.file.path)
 
+def _format_package_metadata(d):
+    return "{}={}".format(d.importmap, d._package_metadata.path)
+
+def _format_imports(d):
+    return "{}={}".format(d.importmap, d._imports.path)
+
 def emit_link(
         go,
         archive = None,
@@ -134,17 +140,26 @@ def emit_link(
         arcs = depset(test_archives, transitive = [d.transitive for d in archive.direct])
 
     package_metadata_files = depset(
+        direct = [d for d in test_archives if getattr(d, "_package_metadata", None)],
+        transitive = [getattr(d, "_package_metadata_files", depset()) for d in archive.direct],
+    )
+    imports_files = depset(
+        direct = test_archives,
+        transitive = [getattr(archive, "_imports_files", depset())],
+    )
+    buildinfo_link_inputs = depset(
         direct = [
             metadata
             for archive_data in test_archives
             for metadata in [getattr(archive_data, "_package_metadata", None)]
             if metadata
-        ],
-        transitive = [getattr(d, "_package_metadata_files", depset()) for d in archive.direct],
+        ] + [archive_data._imports for archive_data in test_archives],
+        transitive = [getattr(archive, "_buildinfo_link_inputs", depset())],
     )
 
     builder_args.add_all(arcs, before_each = "-arc", map_each = _format_archive)
-    builder_args.add_all(package_metadata_files, before_each = "-package_metadata")
+    builder_args.add_all(package_metadata_files, before_each = "-package_metadata", map_each = _format_package_metadata)
+    builder_args.add_all(imports_files, before_each = "-imports", map_each = _format_imports)
     builder_args.add("-package_list", go.sdk.package_list)
     if go.coverage_enabled:
         builder_args.add("-cover")
@@ -214,7 +229,7 @@ def emit_link(
         go.cc_toolchain_files,
         go.sdk.tools,
         go.stdlib.libs,
-        package_metadata_files,
+        buildinfo_link_inputs,
     ]
     inputs = depset(direct = inputs_direct, transitive = inputs_transitive)
 

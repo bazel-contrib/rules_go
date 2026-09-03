@@ -65,6 +65,48 @@ go_test(
     deps = ["@com_github_google_go_cmp//cmp:go_default_library"],
 )
 
+package_metadata(
+    name = "unused_lib_metadata",
+    purl = "pkg:golang/example.com/unused@v1.0.0",
+)
+
+go_library(
+    name = "unused_lib",
+    srcs = ["stdlib_only.go"],
+    importpath = "example.com/unused",
+    applicable_licenses = [":unused_lib_metadata"],
+)
+
+go_library(
+    name = "embedded_lib",
+    srcs = ["with_dep.go"],
+    importpath = "example.com/main/cmd/embedded_lib",
+    deps = ["@com_github_google_go_cmp//cmp:go_default_library"],
+)
+
+# Depends on embedded_lib the normal (non-embed) way because _recompile_external_deps
+# bails out early unless its label is also reachable through a regular dependency edge.
+go_library(
+    name = "dep_on_embedded_lib",
+    srcs = ["stdlib_only.go"],
+    importpath = "example.com/dep_on_embedded_lib",
+    deps = [":embedded_lib"],
+)
+
+# Regression test for the stub GoArchive branch reached above, which unused_lib
+# takes since it doesn't depend on embedded_lib.
+go_test(
+    name = "embedded_test",
+    srcs = ["embedded_test.go"],
+    embed = [":embedded_lib"],
+    applicable_licenses = [":main_package_metadata"],
+    deps = [
+        "@com_github_google_go_cmp//cmp:go_default_library",
+        ":unused_lib",  # Declared but not imported.
+        ":dep_on_embedded_lib",
+    ],
+)
+
 go_binary(
     name = "stdlib_only",
     srcs = ["stdlib_only.go"],
@@ -208,6 +250,38 @@ func TestBuildInfoDeps(t *testing.T) {
     }
     if !foundCmp {
         t.Fatalf("missing github.com/google/go-cmp@v0.6.0 in %+v", info.Deps)
+    }
+}
+
+-- embedded_test.go --
+package main
+
+import (
+    "runtime/debug"
+    "testing"
+
+    "github.com/google/go-cmp/cmp"
+)
+
+func TestBuildInfoDepsEmbeddedLib(t *testing.T) {
+    _ = cmp.Equal("use cmp", "use cmp")
+
+    info, ok := debug.ReadBuildInfo()
+    if !ok {
+        t.Fatal("ReadBuildInfo returned ok=false")
+    }
+
+    foundCmp := false
+    for _, dep := range info.Deps {
+        if dep.Path == "example.com/unused" {
+            t.Fatalf("got unimported declared dependency example.com/unused in %+v", info.Deps)
+        }
+        if dep.Path == "github.com/google/go-cmp" {
+            foundCmp = true
+        }
+    }
+    if !foundCmp {
+        t.Fatalf("missing github.com/google/go-cmp in %+v", info.Deps)
     }
 }
 
@@ -494,7 +568,6 @@ func TestReadBuildInfoDeps(t *testing.T) {
 	}
 
 	foundCmp := false
-	foundUnusedDeclaredDep := false
 	for _, dep := range got.Deps {
 		if dep.Path == "github.com/google/go-cmp" && dep.Version == "v0.6.0" {
 			foundCmp = true
@@ -503,18 +576,12 @@ func TestReadBuildInfoDeps(t *testing.T) {
 				t.Fatalf("got go-cmp Sum %q; want %q", dep.Sum, wantSum)
 			}
 		}
-		if dep.Path == "example.com/versionless" && dep.Version == "(devel)" {
-			foundUnusedDeclaredDep = true
-			if dep.Sum != "" {
-				t.Fatalf("got versionless Sum %q; want empty", dep.Sum)
-			}
+		if dep.Path == "example.com/versionless" {
+			t.Fatalf("got unimported declared dependency example.com/versionless in %+v", got.Deps)
 		}
 	}
 	if !foundCmp {
 		t.Fatalf("missing github.com/google/go-cmp@v0.6.0 in %+v", got.Deps)
-	}
-	if !foundUnusedDeclaredDep {
-		t.Fatalf("missing unused declared dependency example.com/versionless@(devel) in %+v", got.Deps)
 	}
 	for _, dep := range got.Deps {
 		if dep.Path == "example.com/main" {
@@ -614,6 +681,12 @@ func TestGoTestBuildInfoDeps(t *testing.T) {
 
 func TestGoTestBuildInfoDepsWithCoverage(t *testing.T) {
 	if _, err := bazel_testing.BazelOutput("coverage", "//:with_dep_test"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestGoTestBuildInfoDepsEmbeddedLib(t *testing.T) {
+	if _, err := bazel_testing.BazelOutput("test", "//:embedded_test"); err != nil {
 		t.Fatal(err)
 	}
 }
