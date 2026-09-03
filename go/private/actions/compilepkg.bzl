@@ -17,7 +17,7 @@ load(
     "//go/private:mode.bzl",
     "link_mode_arg",
 )
-load("//go/private/actions:utils.bzl", "quote_opts")
+load("//go/private/actions:utils.bzl", "path_mapping_action_settings", "quote_opts")
 
 def _archive(v):
     importpaths = [v.data.importpath]
@@ -165,13 +165,7 @@ def emit_compilepkg(
 
     # cgo and the linker action don't support path mapping yet
     # TODO: Remove the second condition after https://github.com/bazelbuild/bazel/pull/21921.
-    if cgo or "local" in go._ctx.attr.tags:
-        # cgo doesn't support path mapping yet
-        env = go.env
-        execution_requirements = {}
-    else:
-        env = go.env_for_path_mapping
-        execution_requirements = SUPPORTS_PATH_MAPPING_REQUIREMENT
+    env, execution_requirements = path_mapping_action_settings(go, cgo)
     cgo_go_srcs = None
     if cgo:
         if cgo_out_dir:

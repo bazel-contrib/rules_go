@@ -13,7 +13,8 @@
 # limitations under the License.
 
 load("@io_bazel_rules_go_bazel_features//:features.bzl", "bazel_features")
-load("//go/private:common.bzl", "GO_TOOLCHAIN_LABEL", "SUPPORTS_PATH_MAPPING_REQUIREMENT")
+load("//go/private:common.bzl", "GO_TOOLCHAIN_LABEL")
+load("//go/private/actions:utils.bzl", "path_mapping_action_settings")
 
 def baseline_coverage_kwargs(go, ctx, sources):
     """Emits a baseline coverage report and returns it as instrumented_files_info kwargs.
@@ -77,16 +78,10 @@ def _emit_baseline_coverage(go, ctx, *, sources, out_lcov):
     # separate record instead of being displaced by measured data. Path mapping
     # rewrites the paths of generated sources, so it can only be enabled where
     # compilepkg also enables it. See the matching condition there.
-    if getattr(ctx.attr, "cgo", False) or "local" in ctx.attr.tags:
-        env = go.env
-        execution_requirements = {}
-    else:
-        # The environment carries GOOS, GOARCH and CGO_ENABLED, which decide
-        # which sources the build constraints select. GOROOT is dropped and
-        # passed as an argument by builder_args instead, since path mapping
-        # cannot map environment variable values.
-        env = go.env_for_path_mapping
-        execution_requirements = SUPPORTS_PATH_MAPPING_REQUIREMENT
+    env, execution_requirements = path_mapping_action_settings(
+        go,
+        getattr(ctx.attr, "cgo", False),
+    )
 
     go.actions.run(
         inputs = depset(go_srcs + [go.toolchain._covdata], transitive = [sdk.headers, sdk.tools]),
