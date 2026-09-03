@@ -261,7 +261,11 @@ def _non_go_tool_transition_impl(settings, _attr):
     targets or protoc directly.
     """
     settings = dict(settings, **_reset_transition_dict)
+
+    # Non-Go tools don't run nogo, so use the default values rather than the
+    # tool values to share the configuration of plain exec tools.
     settings["//go/private:bootstrap_nogo"] = False
+    settings["//go/private:request_nogo"] = True
     return settings
 
 non_go_tool_transition = transition(
