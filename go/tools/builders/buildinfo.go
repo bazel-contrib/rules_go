@@ -99,20 +99,6 @@ func reachableModules(mainPackage string, packageMetadataFiles, importsFiles []s
 		return nil, err
 	}
 
-	importsByPackage := make(map[string][]string, len(importsPathByPackage))
-	for pkg, path := range importsPathByPackage {
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return nil, fmt.Errorf("reading imports manifest %q: %w", path, err)
-		}
-		for _, line := range strings.Split(string(data), "\n") {
-			line = strings.TrimSpace(line)
-			if line != "" {
-				importsByPackage[pkg] = append(importsByPackage[pkg], line)
-			}
-		}
-	}
-
 	reachable := make(map[string]bool)
 	var queue []string
 	if mainPackage != "" {
@@ -125,7 +111,21 @@ func reachableModules(mainPackage string, packageMetadataFiles, importsFiles []s
 			continue
 		}
 		reachable[pkg] = true
-		queue = append(queue, importsByPackage[pkg]...)
+
+		path, ok := importsPathByPackage[pkg]
+		if !ok {
+			continue
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("reading imports manifest %q: %w", path, err)
+		}
+		for _, line := range strings.Split(string(data), "\n") {
+			line = strings.TrimSpace(line)
+			if line != "" {
+				queue = append(queue, line)
+			}
+		}
 	}
 
 	var metadataPaths []string

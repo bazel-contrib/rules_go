@@ -227,19 +227,6 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
     # to the archive only exposes a single header rather than combining all headers.
     cgo_exports_direct = [out_cgo_export_h] if out_cgo_export_h else []
     cgo_exports = depset(direct = cgo_exports_direct, transitive = [a.cgo_exports for a in direct], order = "preorder")
-    package_metadata = getattr(data, "_package_metadata", None)
-    package_metadata_files = depset(
-        direct = [data] if package_metadata else [],
-        transitive = [getattr(a, "_package_metadata_files", depset()) for a in direct],
-    )
-    imports_files = depset(
-        direct = [data],
-        transitive = [getattr(a, "_imports_files", depset()) for a in direct],
-    )
-    buildinfo_link_inputs = depset(
-        direct = ([package_metadata] if package_metadata else []) + [out_imports],
-        transitive = [getattr(a, "_buildinfo_link_inputs", depset()) for a in direct],
-    )
     return GoArchive(
         source = source,
         data = data,
@@ -252,7 +239,4 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
         cgo_exports = cgo_exports,
         runfiles = runfiles,
         _headers = headers,
-        _package_metadata_files = package_metadata_files,
-        _imports_files = imports_files,
-        _buildinfo_link_inputs = buildinfo_link_inputs,
     )

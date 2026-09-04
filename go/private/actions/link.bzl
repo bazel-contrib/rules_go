@@ -38,6 +38,8 @@ def _format_archive(d):
     return "{}={}={}".format(d.label, d.importmap, d.file.path)
 
 def _format_package_metadata(d):
+    if not d._package_metadata:
+        return None
     return "{}={}".format(d.importmap, d._package_metadata.path)
 
 def _format_imports(d):
@@ -139,27 +141,16 @@ def emit_link(
     else:
         arcs = depset(test_archives, transitive = [d.transitive for d in archive.direct])
 
-    package_metadata_files = depset(
-        direct = [d for d in test_archives if getattr(d, "_package_metadata", None)],
-        transitive = [getattr(d, "_package_metadata_files", depset()) for d in archive.direct],
-    )
-    imports_files = depset(
-        direct = test_archives,
-        transitive = [getattr(archive, "_imports_files", depset())],
-    )
+    all_archive_data = depset(test_archives, transitive = [archive.transitive])
+    all_archive_data_list = all_archive_data.to_list()
     buildinfo_link_inputs = depset(
-        direct = [
-            metadata
-            for archive_data in test_archives
-            for metadata in [getattr(archive_data, "_package_metadata", None)]
-            if metadata
-        ] + [archive_data._imports for archive_data in test_archives],
-        transitive = [getattr(archive, "_buildinfo_link_inputs", depset())],
+        [d._package_metadata for d in all_archive_data_list if d._package_metadata] +
+        [d._imports for d in all_archive_data_list],
     )
 
     builder_args.add_all(arcs, before_each = "-arc", map_each = _format_archive)
-    builder_args.add_all(package_metadata_files, before_each = "-package_metadata", map_each = _format_package_metadata)
-    builder_args.add_all(imports_files, before_each = "-imports", map_each = _format_imports)
+    builder_args.add_all(all_archive_data, before_each = "-package_metadata", map_each = _format_package_metadata)
+    builder_args.add_all(all_archive_data, before_each = "-imports", map_each = _format_imports)
     builder_args.add("-package_list", go.sdk.package_list)
     if go.coverage_enabled:
         builder_args.add("-cover")
