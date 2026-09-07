@@ -29,12 +29,26 @@ bazel_dep(name = "rules_go", repo_name = "io_bazel_rules_go")
 bazel_dep(name = "rules_cc", version = "0.1.5")
 -- other_repo/cc/BUILD.bazel --
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
 
 cc_binary(
     name = "main",
     srcs = ["main.c"],
     deps = ["//cgo"],
 )
+
+cc_library(
+    name = "lib",
+    hdrs = ["sub/lib.h"],
+    srcs = ["sub/lib.c"],
+    includes = ["sub"],
+    visibility = ["//visibility:public"],
+)
+-- other_repo/cc/sub/lib.h --
+#pragma once
+int lib_func(void);
+-- other_repo/cc/sub/lib.c --
+int lib_func(void) { return 42; }
 -- other_repo/cc/main.c --
 #include "cgo/cgo.h"
 
@@ -66,6 +80,25 @@ import "C"
 func HelloCgo() {}
 
 func main() {}
+-- BUILD.bazel --
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "cgo_ext",
+    srcs = ["cgo_ext.go"],
+    cgo = True,
+    cdeps = ["@other_repo//cc:lib"],
+    importpath = "example.com/rules_go/cgo_ext",
+)
+-- cgo_ext.go --
+package cgo_ext
+
+// #include "lib.h"
+import "C"
+
+func Answer() int {
+    return int(C.lib_func())
+}
 `,
 		ModuleFileSuffix: `
 bazel_dep(name = "other_repo", version = "0.0.0")
@@ -85,6 +118,11 @@ func TestExternalIncludes(t *testing.T) {
 	})
 	t.Run("experimental_sibling_repository_layout", func(t *testing.T) {
 		if err := bazel_testing.RunBazel("build", "--experimental_sibling_repository_layout", "@other_repo//cc:main"); err != nil {
+			t.Fatalf("Did not expect error:\n%+v", err)
+		}
+	})
+	t.Run("external_include_paths", func(t *testing.T) {
+		if err := bazel_testing.RunBazel("build", "--features=external_include_paths", "//:cgo_ext"); err != nil {
 			t.Fatalf("Did not expect error:\n%+v", err)
 		}
 	})

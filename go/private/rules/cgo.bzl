@@ -128,6 +128,9 @@ def cgo_configure(go, srcs, cdeps, cppopts, copts, cxxopts, clinkopts):
             cc_system_includes = d[CcInfo].compilation_context.system_includes.to_list()
             for inc in cc_system_includes:
                 _include_unique(cppopts, "-isystem", inc, seen_system_includes)
+            if hasattr(d[CcInfo].compilation_context, "external_includes"):
+                for inc in d[CcInfo].compilation_context.external_includes.to_list():
+                    _include_unique(cppopts, "-isystem", inc, seen_system_includes)
             for lib in cc_libs:
                 # If both static and dynamic variants are available, Bazel will only give
                 # us the static variant. We'll get one file for each transitive dependency,
