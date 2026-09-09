@@ -480,6 +480,8 @@ def detect_host_platform(ctx):
     goos = ctx.os.name
     if goos == "mac os x":
         goos = "darwin"
+    elif goos == "dragonflybsd":
+        goos = "dragonfly"
     elif goos.startswith("windows"):
         goos = "windows"
 
