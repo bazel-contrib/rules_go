@@ -54,6 +54,7 @@ func link(args []string) error {
 	// BuildInfo.Main as golang.org/x/tools@v0.34.0. The package and module paths
 	// differ when the executable package is below the module root.
 	mainModuleMetadata := flags.String("main_module_metadata", "", "Path to the main module's package_metadata JSON file.")
+	mainImportsPath := flags.String("main_imports", "", "Path to the main archive's own imports manifest.")
 	race := flags.Bool("race", false, "Whether race instrumentation is enabled.")
 	msan := flags.Bool("msan", false, "Whether memory sanitizer instrumentation is enabled.")
 	cover := flags.Bool("cover", false, "Whether coverage instrumentation is enabled.")
@@ -113,7 +114,7 @@ func link(args []string) error {
 	// Build an importcfg file.
 	modinfo := ""
 	if shouldEmitBuildInfo(*buildmode) {
-		modules, err := reachableModules(*packagePath, packageMetadataFiles, importsFiles)
+		modules, err := reachableModules(*mainImportsPath, packageMetadataFiles, importsFiles)
 		if err != nil {
 			return err
 		}

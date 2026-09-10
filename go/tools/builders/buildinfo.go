@@ -89,7 +89,7 @@ func validSemverIdentifiers(value string, rejectNumericLeadingZero bool) bool {
 	return true
 }
 
-func reachableModules(mainPackage string, packageMetadataFiles, importsFiles []string) ([]moduleInfo, error) {
+func reachableModules(mainImportsPath string, packageMetadataFiles, importsFiles []string) ([]moduleInfo, error) {
 	metadataPathByPackage, err := parseKeyedPaths(packageMetadataFiles)
 	if err != nil {
 		return nil, err
@@ -101,8 +101,11 @@ func reachableModules(mainPackage string, packageMetadataFiles, importsFiles []s
 
 	reachable := make(map[string]bool)
 	var queue []string
-	if mainPackage != "" {
-		queue = append(queue, mainPackage)
+	if mainImportsPath != "" {
+		queue, err = readImportsManifest(mainImportsPath)
+		if err != nil {
+			return nil, err
+		}
 	}
 	for len(queue) > 0 {
 		pkg := queue[len(queue)-1]
@@ -116,16 +119,11 @@ func reachableModules(mainPackage string, packageMetadataFiles, importsFiles []s
 		if !ok {
 			continue
 		}
-		data, err := os.ReadFile(path)
+		imports, err := readImportsManifest(path)
 		if err != nil {
-			return nil, fmt.Errorf("reading imports manifest %q: %w", path, err)
+			return nil, err
 		}
-		for _, line := range strings.Split(string(data), "\n") {
-			line = strings.TrimSpace(line)
-			if line != "" {
-				queue = append(queue, line)
-			}
-		}
+		queue = append(queue, imports...)
 	}
 
 	var metadataPaths []string
@@ -136,6 +134,21 @@ func reachableModules(mainPackage string, packageMetadataFiles, importsFiles []s
 	}
 	sort.Strings(metadataPaths)
 	return modulesFromPackageMetadataFiles(metadataPaths)
+}
+
+func readImportsManifest(path string) ([]string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("reading imports manifest %q: %w", path, err)
+	}
+	var imports []string
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			imports = append(imports, line)
+		}
+	}
+	return imports, nil
 }
 
 func parseKeyedPaths(entries []string) (map[string]string, error) {

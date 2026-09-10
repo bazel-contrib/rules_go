@@ -130,6 +130,34 @@ go_binary(
     srcs = ["with_vendored_dep.go"],
     deps = ["//third_party/vendored:vendored"],
 )
+
+package_metadata(
+    name = "colliding_leaf_metadata",
+    purl = "pkg:golang/example.com/colliding_leaf@v1.0.0",
+)
+
+go_library(
+    name = "colliding_leaf",
+    srcs = ["colliding_leaf.go"],
+    importpath = "example.com/colliding_leaf",
+    applicable_licenses = [":colliding_leaf_metadata"],
+)
+
+go_library(
+    name = "colliding_middle",
+    srcs = ["colliding_middle.go"],
+    importpath = "example.com/colliding",
+    deps = [":colliding_leaf"],
+)
+
+# Regression test: importpath is cosmetic on a go_binary (a main package always
+# compiles as "main"), so it can collide with a dependency's real importpath.
+go_binary(
+    name = "with_colliding_importpath",
+    srcs = ["with_colliding_importpath.go"],
+    importpath = "example.com/colliding",
+    deps = [":colliding_middle"],
+)
 -- direct_link_binary.bzl --
 load("@io_bazel_rules_go//go:def.bzl", "go_context", "go_rule", "new_go_info")
 
@@ -378,6 +406,44 @@ type output struct {
 func main() {
     _ = vendored.Name()
 
+    info, ok := debug.ReadBuildInfo()
+    out := output{OK: ok}
+    if info != nil {
+        for _, module := range info.Deps {
+            out.Deps = append(out.Deps, dep{Path: module.Path, Version: module.Version})
+        }
+    }
+    _ = json.NewEncoder(os.Stdout).Encode(out)
+}
+
+-- colliding_leaf.go --
+package collidingleaf
+-- colliding_middle.go --
+package collidingmiddle
+
+import _ "example.com/colliding_leaf"
+-- with_colliding_importpath.go --
+package main
+
+import (
+    "encoding/json"
+    "os"
+    "runtime/debug"
+
+    _ "example.com/colliding"
+)
+
+type dep struct {
+    Path    string ` + "`json:\"path\"`" + `
+    Version string ` + "`json:\"version\"`" + `
+}
+
+type output struct {
+    OK   bool  ` + "`json:\"ok\"`" + `
+    Deps []dep ` + "`json:\"deps\"`" + `
+}
+
+func main() {
     info, ok := debug.ReadBuildInfo()
     out := output{OK: ok}
     if info != nil {
@@ -740,4 +806,26 @@ func TestReadBuildInfoVendoredDep(t *testing.T) {
 		}
 	}
 	t.Fatalf("missing example.com/vendored@v1.2.3 in %+v", got.Deps)
+}
+
+func TestReadBuildInfoCollidingImportpath(t *testing.T) {
+	stdout, err := bazel_testing.BazelOutput("run", "//:with_colliding_importpath")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var got withDepOutput
+	if err := json.Unmarshal(stdout, &got); err != nil {
+		t.Fatalf("unmarshal output %q: %v", stdout, err)
+	}
+	if !got.OK {
+		t.Fatalf("ReadBuildInfo returned ok=false: %+v", got)
+	}
+
+	for _, dep := range got.Deps {
+		if dep.Path == "example.com/colliding_leaf" && dep.Version == "v1.0.0" {
+			return
+		}
+	}
+	t.Fatalf("missing example.com/colliding_leaf@v1.0.0 in %+v", got.Deps)
 }
