@@ -65,6 +65,48 @@ go_test(
     deps = ["@com_github_google_go_cmp//cmp:go_default_library"],
 )
 
+package_metadata(
+    name = "unused_lib_metadata",
+    purl = "pkg:golang/example.com/unused@v1.0.0",
+)
+
+go_library(
+    name = "unused_lib",
+    srcs = ["stdlib_only.go"],
+    importpath = "example.com/unused",
+    applicable_licenses = [":unused_lib_metadata"],
+)
+
+go_library(
+    name = "embedded_lib",
+    srcs = ["with_dep.go"],
+    importpath = "example.com/main/cmd/embedded_lib",
+    deps = ["@com_github_google_go_cmp//cmp:go_default_library"],
+)
+
+# Depends on embedded_lib the normal (non-embed) way because _recompile_external_deps
+# bails out early unless its label is also reachable through a regular dependency edge.
+go_library(
+    name = "dep_on_embedded_lib",
+    srcs = ["stdlib_only.go"],
+    importpath = "example.com/dep_on_embedded_lib",
+    deps = [":embedded_lib"],
+)
+
+# Regression test for the stub GoArchive branch reached above, which unused_lib
+# takes since it doesn't depend on embedded_lib.
+go_test(
+    name = "embedded_test",
+    srcs = ["embedded_test.go"],
+    embed = [":embedded_lib"],
+    applicable_licenses = [":main_package_metadata"],
+    deps = [
+        "@com_github_google_go_cmp//cmp:go_default_library",
+        ":unused_lib",  # Declared but not imported.
+        ":dep_on_embedded_lib",
+    ],
+)
+
 go_binary(
     name = "stdlib_only",
     srcs = ["stdlib_only.go"],
@@ -87,6 +129,34 @@ go_binary(
     name = "with_vendored_dep",
     srcs = ["with_vendored_dep.go"],
     deps = ["//third_party/vendored:vendored"],
+)
+
+package_metadata(
+    name = "colliding_leaf_metadata",
+    purl = "pkg:golang/example.com/colliding_leaf@v1.0.0",
+)
+
+go_library(
+    name = "colliding_leaf",
+    srcs = ["colliding_leaf.go"],
+    importpath = "example.com/colliding_leaf",
+    applicable_licenses = [":colliding_leaf_metadata"],
+)
+
+go_library(
+    name = "colliding_middle",
+    srcs = ["colliding_middle.go"],
+    importpath = "example.com/colliding",
+    deps = [":colliding_leaf"],
+)
+
+# Regression test: importpath is cosmetic on a go_binary (a main package always
+# compiles as "main"), so it can collide with a dependency's real importpath.
+go_binary(
+    name = "with_colliding_importpath",
+    srcs = ["with_colliding_importpath.go"],
+    importpath = "example.com/colliding",
+    deps = [":colliding_middle"],
 )
 -- direct_link_binary.bzl --
 load("@io_bazel_rules_go//go:def.bzl", "go_context", "go_rule", "new_go_info")
@@ -211,6 +281,38 @@ func TestBuildInfoDeps(t *testing.T) {
     }
 }
 
+-- embedded_test.go --
+package main
+
+import (
+    "runtime/debug"
+    "testing"
+
+    "github.com/google/go-cmp/cmp"
+)
+
+func TestBuildInfoDepsEmbeddedLib(t *testing.T) {
+    _ = cmp.Equal("use cmp", "use cmp")
+
+    info, ok := debug.ReadBuildInfo()
+    if !ok {
+        t.Fatal("ReadBuildInfo returned ok=false")
+    }
+
+    foundCmp := false
+    for _, dep := range info.Deps {
+        if dep.Path == "example.com/unused" {
+            t.Fatalf("got unimported declared dependency example.com/unused in %+v", info.Deps)
+        }
+        if dep.Path == "github.com/google/go-cmp" {
+            foundCmp = true
+        }
+    }
+    if !foundCmp {
+        t.Fatalf("missing github.com/google/go-cmp in %+v", info.Deps)
+    }
+}
+
 -- stdlib_only.go --
 package main
 
@@ -304,6 +406,44 @@ type output struct {
 func main() {
     _ = vendored.Name()
 
+    info, ok := debug.ReadBuildInfo()
+    out := output{OK: ok}
+    if info != nil {
+        for _, module := range info.Deps {
+            out.Deps = append(out.Deps, dep{Path: module.Path, Version: module.Version})
+        }
+    }
+    _ = json.NewEncoder(os.Stdout).Encode(out)
+}
+
+-- colliding_leaf.go --
+package collidingleaf
+-- colliding_middle.go --
+package collidingmiddle
+
+import _ "example.com/colliding_leaf"
+-- with_colliding_importpath.go --
+package main
+
+import (
+    "encoding/json"
+    "os"
+    "runtime/debug"
+
+    _ "example.com/colliding"
+)
+
+type dep struct {
+    Path    string ` + "`json:\"path\"`" + `
+    Version string ` + "`json:\"version\"`" + `
+}
+
+type output struct {
+    OK   bool  ` + "`json:\"ok\"`" + `
+    Deps []dep ` + "`json:\"deps\"`" + `
+}
+
+func main() {
     info, ok := debug.ReadBuildInfo()
     out := output{OK: ok}
     if info != nil {
@@ -494,7 +634,6 @@ func TestReadBuildInfoDeps(t *testing.T) {
 	}
 
 	foundCmp := false
-	foundUnusedDeclaredDep := false
 	for _, dep := range got.Deps {
 		if dep.Path == "github.com/google/go-cmp" && dep.Version == "v0.6.0" {
 			foundCmp = true
@@ -503,18 +642,12 @@ func TestReadBuildInfoDeps(t *testing.T) {
 				t.Fatalf("got go-cmp Sum %q; want %q", dep.Sum, wantSum)
 			}
 		}
-		if dep.Path == "example.com/versionless" && dep.Version == "(devel)" {
-			foundUnusedDeclaredDep = true
-			if dep.Sum != "" {
-				t.Fatalf("got versionless Sum %q; want empty", dep.Sum)
-			}
+		if dep.Path == "example.com/versionless" {
+			t.Fatalf("got unimported declared dependency example.com/versionless in %+v", got.Deps)
 		}
 	}
 	if !foundCmp {
 		t.Fatalf("missing github.com/google/go-cmp@v0.6.0 in %+v", got.Deps)
-	}
-	if !foundUnusedDeclaredDep {
-		t.Fatalf("missing unused declared dependency example.com/versionless@(devel) in %+v", got.Deps)
 	}
 	for _, dep := range got.Deps {
 		if dep.Path == "example.com/main" {
@@ -618,6 +751,12 @@ func TestGoTestBuildInfoDepsWithCoverage(t *testing.T) {
 	}
 }
 
+func TestGoTestBuildInfoDepsEmbeddedLib(t *testing.T) {
+	if _, err := bazel_testing.BazelOutput("test", "//:embedded_test"); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestReadBuildInfoVersionlessDep(t *testing.T) {
 	stdout, err := bazel_testing.BazelOutput("run", "//:with_versionless_dep")
 	if err != nil {
@@ -667,4 +806,26 @@ func TestReadBuildInfoVendoredDep(t *testing.T) {
 		}
 	}
 	t.Fatalf("missing example.com/vendored@v1.2.3 in %+v", got.Deps)
+}
+
+func TestReadBuildInfoCollidingImportpath(t *testing.T) {
+	stdout, err := bazel_testing.BazelOutput("run", "//:with_colliding_importpath")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var got withDepOutput
+	if err := json.Unmarshal(stdout, &got); err != nil {
+		t.Fatalf("unmarshal output %q: %v", stdout, err)
+	}
+	if !got.OK {
+		t.Fatalf("ReadBuildInfo returned ok=false: %+v", got)
+	}
+
+	for _, dep := range got.Deps {
+		if dep.Path == "example.com/colliding_leaf" && dep.Version == "v1.0.0" {
+			return
+		}
+	}
+	t.Fatalf("missing example.com/colliding_leaf@v1.0.0 in %+v", got.Deps)
 }

@@ -40,6 +40,7 @@ func link(args []string) error {
 	stamps := multiFlag{}
 	xdefs := multiFlag{}
 	packageMetadataFiles := multiFlag{}
+	importsFiles := multiFlag{}
 	archives := archiveMultiFlag{}
 	flags := flag.NewFlagSet("link", flag.ExitOnError)
 	goenv := envFlags(flags)
@@ -53,13 +54,15 @@ func link(args []string) error {
 	// BuildInfo.Main as golang.org/x/tools@v0.34.0. The package and module paths
 	// differ when the executable package is below the module root.
 	mainModuleMetadata := flags.String("main_module_metadata", "", "Path to the main module's package_metadata JSON file.")
+	mainImportsPath := flags.String("main_imports", "", "Path to the main archive's own imports manifest.")
 	race := flags.Bool("race", false, "Whether race instrumentation is enabled.")
 	msan := flags.Bool("msan", false, "Whether memory sanitizer instrumentation is enabled.")
 	cover := flags.Bool("cover", false, "Whether coverage instrumentation is enabled.")
 	packagePath := flags.String("p", "", "Package path of the main archive.")
 	outFile := flags.String("o", "", "Path to output file.")
 	flags.Var(&archives, "arc", "Label, package path, and file name of a dependency, separated by '='")
-	flags.Var(&packageMetadataFiles, "package_metadata", "Path to a package_metadata JSON file (repeated).")
+	flags.Var(&packageMetadataFiles, "package_metadata", "Package path and path of a package_metadata JSON file, separated by '=' (repeated).")
+	flags.Var(&importsFiles, "imports", "Package path and path of an imports manifest, separated by '=' (repeated).")
 	packageList := flags.String("package_list", "", "The file containing the list of standard library packages")
 	buildmode := flags.String("buildmode", "", "Build mode used.")
 	flags.Var(&xdefs, "X", "A string variable to replace in the linked binary (repeated).")
@@ -111,7 +114,7 @@ func link(args []string) error {
 	// Build an importcfg file.
 	modinfo := ""
 	if shouldEmitBuildInfo(*buildmode) {
-		modules, err := modulesFromPackageMetadataFiles(packageMetadataFiles)
+		modules, err := reachableModules(*mainImportsPath, packageMetadataFiles, importsFiles)
 		if err != nil {
 			return err
 		}

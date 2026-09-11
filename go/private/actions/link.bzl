@@ -37,6 +37,16 @@ load(
 def _format_archive(d):
     return "{}={}={}".format(d.label, d.importmap, d.file.path)
 
+def _format_package_metadata(d):
+    if not d._package_metadata:
+        return None
+    return "{}={}".format(d.importmap, d._package_metadata.path)
+
+def _format_imports(d, main_archive_file):
+    if d.file == main_archive_file:
+        return None
+    return "{}={}".format(d.importmap, d._imports.path)
+
 def emit_link(
         go,
         archive = None,
@@ -133,18 +143,25 @@ def emit_link(
     else:
         arcs = depset(test_archives, transitive = [d.transitive for d in archive.direct])
 
-    package_metadata_files = depset(
+    all_archive_data = depset(test_archives, transitive = [archive.transitive])
+    buildinfo_link_inputs = depset(
         direct = [
             metadata
             for archive_data in test_archives
             for metadata in [getattr(archive_data, "_package_metadata", None)]
             if metadata
-        ],
-        transitive = [getattr(d, "_package_metadata_files", depset()) for d in archive.direct],
+        ] + [archive_data._imports for archive_data in test_archives],
+        transitive = [getattr(archive, "_buildinfo_link_inputs", depset())],
     )
 
     builder_args.add_all(arcs, before_each = "-arc", map_each = _format_archive)
-    builder_args.add_all(package_metadata_files, before_each = "-package_metadata")
+    builder_args.add_all(all_archive_data, before_each = "-package_metadata", map_each = _format_package_metadata)
+    builder_args.add_all(
+        all_archive_data,
+        before_each = "-imports",
+        map_each = lambda d: _format_imports(d, archive.data.file),
+        allow_closure = True,
+    )
     builder_args.add("-package_list", go.sdk.package_list)
     if go.coverage_enabled:
         builder_args.add("-cover")
@@ -189,6 +206,7 @@ def emit_link(
     builder_args.add("-o", executable)
     builder_args.add("-main", archive.data.file)
     builder_args.add("-main_package_path", buildinfo_main_package_path)
+    builder_args.add("-main_imports", archive.data._imports)
     if buildinfo_module_metadata:
         builder_args.add("-main_module_metadata", buildinfo_module_metadata)
     builder_args.add("-p", archive.data.importmap)
@@ -214,7 +232,7 @@ def emit_link(
         go.cc_toolchain_files,
         go.sdk.tools,
         go.stdlib.libs,
-        package_metadata_files,
+        buildinfo_link_inputs,
     ]
     inputs = depset(direct = inputs_direct, transitive = inputs_transitive)
 

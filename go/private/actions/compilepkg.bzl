@@ -69,6 +69,7 @@ def emit_compilepkg(
         ldflags = None,
         out_lib = None,
         out_export = None,
+        out_imports = None,
         out_facts = None,
         out_diagnostics = None,
         out_nogo_validation = None,
@@ -83,6 +84,8 @@ def emit_compilepkg(
         fail("sources is a required parameter")
     if out_lib == None:
         fail("out_lib is a required parameter")
+    if out_imports == None:
+        fail("out_imports is a required parameter")
 
     have_nogo = nogo != None and nogo.executable != None
     if have_nogo != (out_facts != None):
@@ -97,7 +100,7 @@ def emit_compilepkg(
     inputs_direct = (sources + embedsrcs + [sdk.package_list, go.toolchain._pack] +
                      [archive.data.export_file for archive in archives])
     inputs_transitive = [sdk.headers, sdk.tools, go.stdlib.libs, headers]
-    outputs = [out_lib, out_export]
+    outputs = [out_lib, out_export, out_imports]
 
     shared_args = go.builder_args(go)
     shared_args.add_all(sources, before_each = "-src")
@@ -140,6 +143,7 @@ def emit_compilepkg(
 
     compile_args.add("-lo", out_lib)
     compile_args.add("-o", out_export)
+    compile_args.add("-imports", out_imports)
     if out_cgo_export_h:
         compile_args.add("-cgoexport", out_cgo_export_h)
         outputs.append(out_cgo_export_h)

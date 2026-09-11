@@ -27,8 +27,8 @@ import (
 )
 
 type archive struct {
-	label, importPath, packagePath, file string
-	importPathAliases                    []string
+	importPath, packagePath, file string
+	importPathAliases             []string
 }
 
 // checkImports verifies that each import in files refers to a
