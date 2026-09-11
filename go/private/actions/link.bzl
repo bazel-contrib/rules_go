@@ -42,13 +42,10 @@ def _format_package_metadata(d):
         return None
     return "{}={}".format(d.importmap, d._package_metadata.path)
 
-def _format_imports_except(main_archive_path):
-    def _format(d):
-        if d.file.path == main_archive_path:
-            return None
-        return "{}={}".format(d.importmap, d._imports.path)
-
-    return _format
+def _format_imports(d, main_archive_path):
+    if d.file.path == main_archive_path:
+        return None
+    return "{}={}".format(d.importmap, d._imports.path)
 
 def emit_link(
         go,
@@ -162,8 +159,8 @@ def emit_link(
     builder_args.add_all(
         all_archive_data,
         before_each = "-imports",
-        map_each = _format_imports_except(main_archive_path = archive.data.file.path),
-        allow_closure = True,  # safe: the captured path is not a large analysis-phase object, but a string
+        map_each = lambda d: _format_imports(d, archive.data.file.path),
+        allow_closure = True,
     )
     builder_args.add("-package_list", go.sdk.package_list)
     if go.coverage_enabled:
