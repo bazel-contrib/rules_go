@@ -42,8 +42,8 @@ def _format_package_metadata(d):
         return None
     return "{}={}".format(d.importmap, d._package_metadata.path)
 
-def _format_imports(d, main_archive_path):
-    if d.file.path == main_archive_path:
+def _format_imports(d, main_archive_file):
+    if d.file == main_archive_file:
         return None
     return "{}={}".format(d.importmap, d._imports.path)
 
@@ -159,7 +159,7 @@ def emit_link(
     builder_args.add_all(
         all_archive_data,
         before_each = "-imports",
-        map_each = lambda d: _format_imports(d, archive.data.file.path),
+        map_each = lambda d: _format_imports(d, archive.data.file),
         allow_closure = True,
     )
     builder_args.add("-package_list", go.sdk.package_list)
