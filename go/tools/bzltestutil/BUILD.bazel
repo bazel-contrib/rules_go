@@ -21,6 +21,7 @@ go_test(
     name = "bzltestutil_test",
     srcs = [
         "lcov_test.go",
+        "test2json_test.go",
         "wrap_test.go",
         "xml_test.go",
     ],

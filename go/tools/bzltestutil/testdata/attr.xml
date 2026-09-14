@@ -1,0 +1,9 @@
+<testsuites>
+	<testsuite errors="0" failures="0" skipped="0" tests="1" time="0.000" name="pkg/testing.TestAttr">
+		<testcase classname="testing" name="TestAttr" time="0.000">
+			<properties>
+				<property name="requirement_id" value="REQ-1234"></property>
+			</properties>
+		</testcase>
+	</testsuite>
+</testsuites>

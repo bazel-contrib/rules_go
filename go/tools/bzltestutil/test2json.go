@@ -42,6 +42,8 @@ type event struct {
 	Test    string     `json:",omitempty"`
 	Elapsed *float64   `json:",omitempty"`
 	Output  *textBytes `json:",omitempty"`
+	Key     string     `json:",omitempty"`
+	Value   string     `json:",omitempty"`
 }
 
 // textBytes is a hack to get JSON to emit a []byte as a string
@@ -172,6 +174,7 @@ var (
 		[]byte("=== PASS  "),
 		[]byte("=== FAIL  "),
 		[]byte("=== SKIP  "),
+		[]byte("=== ATTR  "),
 	}
 
 	reports = [][]byte{
@@ -300,6 +303,13 @@ func (c *Converter) handleInputLine(line []byte) {
 	name := strings.TrimSpace(string(line[i:]))
 
 	e := &event{Action: action}
+	if action == "attr" {
+		// An "=== ATTR  " line carries "TestName key value". This mirrors the handling
+		// in upstream go's cmd/internal/test2json, which this file is kept in sync with.
+		var rest string
+		name, rest, _ = strings.Cut(name, " ")
+		e.Key, e.Value, _ = strings.Cut(rest, " ")
+	}
 	if line[0] == '-' { // PASS or FAIL report
 		// Parse out elapsed time.
 		if i := strings.Index(name, " ("); i >= 0 {
