@@ -120,6 +120,15 @@ You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 	// creating reproducible builds because the build ids are hashed from
 	// CGO_CFLAGS, which frequently contains absolute paths. As a workaround,
 	// we strip the build ids, since they won't be used after this.
+	//
+	// We also use filterbuildid to add -trimpath to all invocations of cgo as
+	// there is no "CGOFLAGS" environment variable we could use for that
+	// purpose.
+	execRoot, err := bazelExecRoot()
+	if err != nil {
+		return err
+	}
+	os.Setenv("BAZEL_EXECROOT", execRoot)
 	installArgs := goenv.goCmd("install", "-toolexec", abs(os.Args[0])+" filterbuildid")
 	if len(build.Default.BuildTags) > 0 {
 		installArgs = append(installArgs, "-tags", strings.Join(build.Default.BuildTags, ","))
