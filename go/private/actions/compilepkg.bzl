@@ -207,6 +207,7 @@ def emit_compilepkg(
         env = env,
         toolchain = GO_TOOLCHAIN_LABEL,
         execution_requirements = execution_requirements,
+        use_default_shell_env = True,
     )
 
     if have_nogo:
