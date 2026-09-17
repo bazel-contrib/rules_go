@@ -556,6 +556,7 @@ set GOTOOLCHAIN=local
 set GO111MODULE=off
 set GOTELEMETRY=off
 set GOENV=off
+set GOEXPERIMENT={goexperiment}
 {go} build -trimpath -ldflags \"-buildid='' {ldflags}\" -o {out_pack} cmd/pack
 if %ERRORLEVEL% EQU 0 (
   {go} build -trimpath -ldflags \"-buildid='' {ldflags}\" -o {out_covdata} cmd/covdata
@@ -570,6 +571,7 @@ exit /b %GO_EXIT_CODE%
 """.format(
             gotmp = gotmp.path.replace("/", "\\"),
             go = sdk.go.path.replace("/", "\\"),
+            goexperiment = sdk.experiments,
             out = out.path,
             out_pack = ctx.outputs.out_pack.path,
             out_covdata = ctx.outputs.out_covdata.path,
@@ -623,6 +625,7 @@ exit /b %GO_EXIT_CODE%
                 "GO111MODULE": "off",
                 "GOTELEMETRY": "off",
                 "GOENV": "off",
+                "GOEXPERIMENT": sdk.experiments,
                 "GO_BINARY": sdk.go.path,
                 "LD_FLAGS": ctx.attr.ldflags,
             },

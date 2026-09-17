@@ -16,6 +16,7 @@ package go_download_sdk_test
 
 import (
 	"bytes"
+	"debug/buildinfo"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -283,6 +284,64 @@ index 5306bcb..d110a19 100644
 		"//:patch_test",
 	); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestGoToolBinaryExperiments(t *testing.T) {
+	origModuleData, err := os.ReadFile("MODULE.bazel")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i := bytes.Index(origModuleData, []byte("_host_go_sdk = use_extension"))
+	if i < 0 {
+		t.Fatal("could not find the default Go SDK declaration")
+	}
+
+	buf := &bytes.Buffer{}
+	buf.Write(origModuleData[:i])
+	buf.WriteString(`
+go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk")
+
+go_sdk.download(
+    name = "go_sdk_with_experiments",
+    version = "1.23.5",
+    experiments = ["rangefunc"],
+)
+use_repo(go_sdk, "go_sdk_with_experiments")
+`)
+	if err := os.WriteFile("MODULE.bazel", buf.Bytes(), 0666); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := os.WriteFile("MODULE.bazel", origModuleData, 0666); err != nil {
+			t.Errorf("error restoring MODULE.bazel: %v", err)
+		}
+	}()
+
+	if err := bazel_testing.RunBazel("build", "@go_sdk_with_experiments//:builder"); err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := bazel_testing.BazelOutput("cquery", "@go_sdk_with_experiments//:builder", "--output=files")
+	if err != nil {
+		t.Fatal(err)
+	}
+	builderPath := strings.TrimSpace(string(out))
+
+	info, err := buildinfo.ReadFile(builderPath)
+	if err != nil {
+		t.Fatalf("reading build info from %s: %v", builderPath, err)
+	}
+	var gotExperiment string
+	for _, s := range info.Settings {
+		if s.Key == "GOEXPERIMENT" {
+			gotExperiment = s.Value
+			break
+		}
+	}
+	if !strings.Contains(gotExperiment, "rangefunc") {
+		t.Fatalf("builder built from an SDK with experiments = [\"rangefunc\"] should report GOEXPERIMENT containing \"rangefunc\", got %q (settings: %+v)", gotExperiment, info.Settings)
 	}
 }
 
