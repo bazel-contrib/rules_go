@@ -367,6 +367,18 @@ GoSDK
 | :param:`package_list`          | :type:`File`                                                    |
 +--------------------------------+-----------------------------------------------------------------+
 | A file containing a list of importable packages in the standard library.                         |
+| For a ``gofips140`` snapshot SDK this also lists the versioned FIPS module                       |
+| packages, so the linker can resolve them.                                                        |
++--------------------------------+-----------------------------------------------------------------+
+| :param:`gofips140`             | :type:`string`                                                  |
++--------------------------------+-----------------------------------------------------------------+
+| The ``GOFIPS140`` version the SDK builds with, or the empty string when FIPS                     |
+| mode is not enabled. See ``gofips140`` in `toolchains.rst <toolchains.rst>`_.                    |
++--------------------------------+-----------------------------------------------------------------+
+| :param:`fips_package_list`     | :type:`File`                                                    |
++--------------------------------+-----------------------------------------------------------------+
+| A file listing only the versioned ``GOFIPS140`` snapshot packages, which the                     |
+| standard library builder places into ``pkg/``. Empty for a non-FIPS SDK.                         |
 +--------------------------------+-----------------------------------------------------------------+
 | :param:`tools`                 | :type:`depset of File`                                          |
 +--------------------------------+-----------------------------------------------------------------+
