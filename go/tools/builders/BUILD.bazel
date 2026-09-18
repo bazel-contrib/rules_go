@@ -101,6 +101,15 @@ go_test(
 )
 
 go_test(
+    name = "fips_test",
+    size = "small",
+    srcs = [
+        "fips.go",
+        "fips_test.go",
+    ],
+)
+
+go_test(
     name = "env_test",
     size = "small",
     srcs = [
@@ -152,6 +161,7 @@ filegroup(
         "env.go",
         "filter.go",
         "filter_buildid.go",
+        "fips.go",
         "flags.go",
         "generate_nogo_main.go",
         "generate_test_main.go",
