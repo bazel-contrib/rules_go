@@ -435,8 +435,6 @@ func defaultCFlags(workDir string) []string {
 	switch {
 	case goos == "darwin" || goos == "ios":
 		return flags
-	case goos == "windows" && goarch == "amd64":
-		return append(flags, "-mthreads")
 	default:
 		return append(flags, "-pthread")
 	}

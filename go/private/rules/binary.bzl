@@ -223,7 +223,6 @@ def _go_binary_impl(ctx):
             "linkopts": {
                 "darwin": [],
                 "ios": [],
-                "windows": ["-mthreads"],
             }.get(go.mode.goos, ["-pthread"]),
         }
         cgo_exports = archive.cgo_exports.to_list()
