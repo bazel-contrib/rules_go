@@ -431,7 +431,7 @@ func defaultCFlags(workDir string) []string {
 		"-ffile-prefix-map=" + abs(".") + "=.",
 		"-ffile-prefix-map=" + workDir + "=.",
 	}
-	goos, goarch := os.Getenv("GOOS"), os.Getenv("GOARCH")
+	goos := os.Getenv("GOOS")
 	switch {
 	case goos == "darwin" || goos == "ios":
 		return flags
