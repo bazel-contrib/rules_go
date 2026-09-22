@@ -25,3 +25,9 @@ bzl_library(
         "//go/private:providers",
     ],
 )
+
+bzl_library(
+    name = "copy_cmd",
+    srcs = ["copy_cmd.bzl"],
+    visibility = ["//go:__subpackages__"],
+)
