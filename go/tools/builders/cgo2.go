@@ -111,6 +111,7 @@ func cgo2(goenv *env, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSr
 		case "windows":
 			// MinGW's linker doesn't seem to support --unresolved-symbols
 			// and MSVC isn't supported at all.
+			os.Stderr.Write(relativizePaths(originalErrBuf.Bytes()))
 			return "", nil, nil, err
 		case "darwin", "ios":
 			allowUnresolvedSymbolsLdFlag = "-Wl,-undefined,dynamic_lookup"
