@@ -44,6 +44,7 @@ load("@rules_cc//cc/common:cc_common.bzl", "cc_common")
 load(
     "//go/platform:apple.bzl",
     "apple_ensure_options",
+    "apple_macos_minimum_os",
 )
 load(
     "//go/private/actions:preprofile.bzl",
@@ -767,6 +768,7 @@ def go_context(
         toolchain = toolchain,
         sdk = toolchain.sdk,
         mode = mode,
+        macos_minimum_os = apple_macos_minimum_os(ctx, mode.goos),
         static_link = static_link,
         stdlib = stdlib,
         actions = ctx.actions,

@@ -33,6 +33,7 @@ load(
     "//go/private:rpath.bzl",
     "rpath",
 )
+load("//go/private:sdk.bzl", "parse_version")
 
 def _format_archive(d):
     return "{}={}={}".format(d.label, d.importmap, d.file.path)
@@ -212,6 +213,10 @@ def emit_link(
     builder_args.add("-p", archive.data.importmap)
     tool_args.add_all(gc_linkopts)
     tool_args.add_all(go.toolchain.flags.link)
+
+    sdk_version = parse_version(go.sdk.version)
+    if go.mode.goos == "darwin" and sdk_version and sdk_version[:2] >= (1, 27) and go.macos_minimum_os:
+        tool_args.add("-macos", go.macos_minimum_os)
 
     # Do not remove, somehow this is needed when building for darwin/arm only.
     tool_args.add("-buildid=redacted")

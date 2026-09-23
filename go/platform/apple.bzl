@@ -35,6 +35,12 @@ def _apple_env(ctx, platform):
     xcode_config = ctx.attr._xcode_config[apple_common.XcodeVersionConfig]
     return apple_common.target_apple_env(xcode_config, platform)
 
+def apple_macos_minimum_os(ctx, goos):
+    if goos != "darwin" or not hasattr(ctx.attr, "_xcode_config"):
+        return None
+    xcode_config = ctx.attr._xcode_config[apple_common.XcodeVersionConfig]
+    return str(xcode_config.minimum_os_for_platform_type(apple_common.platform_type.macos))
+
 def apple_ensure_options(ctx, env, compiler_option_lists, linker_option_lists, target_gnu_system_name):
     """Returns environment and flags for Apple targets."""
     platform, platform_type = _PLATFORMS.get(target_gnu_system_name, (None, None))
