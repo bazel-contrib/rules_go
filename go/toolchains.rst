@@ -820,7 +820,7 @@ a ``runfiles`` object.
 | |module metadata|              | :type:`File`                | :value:`None`                     |
 +--------------------------------+-----------------------------+-----------------------------------+
 | Package metadata JSON file used to populate ``BuildInfo.Main``. Defaults to the metadata         |
-| propagated by :param:`source`.                                                                   |
+| propagated by :param:`source`. Repository provenance is inferred from the file's owning label.  |
 +--------------------------------+-----------------------------+-----------------------------------+
 
 
@@ -872,7 +872,7 @@ It does not return anything.
 | |module metadata|              | :type:`File`                | :value:`None`                     |
 +--------------------------------+-----------------------------+-----------------------------------+
 | Package metadata JSON file used to populate ``BuildInfo.Main``. Defaults to metadata propagated  |
-| by :param:`archive`.                                                                             |
+| by :param:`archive`. Repository provenance is inferred from the file's owning label.             |
 +--------------------------------+-----------------------------+-----------------------------------+
 
 

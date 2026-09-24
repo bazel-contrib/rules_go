@@ -288,6 +288,105 @@ func TestModInfoDataWithoutPathOrDeps(t *testing.T) {
 	}
 }
 
+func TestBuildInfoVCSEntries(t *testing.T) {
+	tests := []struct {
+		name  string
+		stamp map[string]string
+		want  []stampEntry
+	}{
+		{
+			name: "normalize",
+			stamp: map[string]string{
+				stableVCSKey:         " git ",
+				stableVCSRevisionKey: " abc123 ",
+				stableVCSTimeKey:     "2026-04-21T17:47:02+07:00",
+				stableVCSModifiedKey: "true",
+				"BUILD_USER":         "someone-else",
+			},
+			want: []stampEntry{
+				{key: stableVCSKey, value: "git"},
+				{key: stableVCSRevisionKey, value: "abc123"},
+				{key: stableVCSTimeKey, value: "2026-04-21T10:47:02Z"},
+				{key: stableVCSModifiedKey, value: "true"},
+			},
+		},
+		{
+			name: "require vcs",
+			stamp: map[string]string{
+				stableVCSRevisionKey: "abc123",
+			},
+		},
+		{
+			name: "omit malformed optional values",
+			stamp: map[string]string{
+				stableVCSKey:         "hg",
+				stableVCSTimeKey:     "not-a-time",
+				stableVCSModifiedKey: "not-a-bool",
+			},
+			want: []stampEntry{{key: stableVCSKey, value: "hg"}},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := buildInfoVCSEntries(test.stamp); !reflect.DeepEqual(got, test.want) {
+				t.Fatalf("got VCS entries %+v; want %+v", got, test.want)
+			}
+		})
+	}
+}
+
+func TestVCSStampPreservesWorkspaceStatusValues(t *testing.T) {
+	dir := t.TempDir()
+	input := filepath.Join(dir, "stable-status.txt")
+	output := filepath.Join(dir, "vcs-stamp.txt")
+	revision := "abc123 with spaces\t\"quotes\"\\backslash"
+	contents := "STABLE_VCS custom vcs\n" +
+		"STABLE_VCS_REVISION " + revision + "\n" +
+		"STABLE_VCS_TIME 2026-04-21T17:47:02+07:00\n" +
+		"STABLE_VCS_MODIFIED true\n"
+	if err := os.WriteFile(input, []byte(contents), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := vcsStamp([]string{"-in", input, "-out", output}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := readStampMap([]string{output})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]string{
+		stableVCSKey:         "custom vcs",
+		stableVCSRevisionKey: revision,
+		stableVCSTimeKey:     "2026-04-21T10:47:02Z",
+		stableVCSModifiedKey: "true",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got VCS stamp %+v; want %+v", got, want)
+	}
+}
+
+func TestReadStampMapAcceptsLargeUnrelatedValue(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "stable-status.txt")
+	contents := "STABLE_PROVENANCE " + strings.Repeat("x", 128<<10) + "\n" +
+		"STABLE_VCS git\n"
+	if err := os.WriteFile(path, []byte(contents), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := readStampMap([]string{path})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got["STABLE_PROVENANCE"] != strings.Repeat("x", 128<<10) {
+		t.Fatal("large stable-status value was not preserved")
+	}
+	if got[stableVCSKey] != "git" {
+		t.Fatalf("got VCS %q; want git", got[stableVCSKey])
+	}
+}
+
 func TestBuildInfoSettingsFromEnv(t *testing.T) {
 	env := map[string]string{
 		"CGO_ENABLED":  "1",
@@ -296,9 +395,9 @@ func TestBuildInfoSettingsFromEnv(t *testing.T) {
 		"GOOS":         "linux",
 		"GOAMD64":      "v3",
 	}
-	got := buildInfoSettingsFromEnv("pie", []string{"foo", "race", "bar"}, true, false, true, false, func(key string) string {
+	got := buildInfoSettingsFromEnv("pie", []string{"foo", "race", "bar"}, true, false, true, false, "example.com/mainmodule", func(key string) string {
 		return env[key]
-	})
+	}, nil)
 	want := []debug.BuildSetting{
 		{Key: "-buildmode", Value: "pie"},
 		{Key: "-compiler", Value: "gc"},
@@ -318,9 +417,9 @@ func TestBuildInfoSettingsFromEnv(t *testing.T) {
 }
 
 func TestBuildInfoSettingsPreservesExplicitInstrumentationTags(t *testing.T) {
-	got := buildInfoSettingsFromEnv("normal", []string{"race", "foo", "race"}, true, false, false, false, func(string) string {
+	got := buildInfoSettingsFromEnv("normal", []string{"race", "foo", "race"}, true, false, false, false, "example.com/mainmodule", func(string) string {
 		return ""
-	})
+	}, nil)
 	want := []debug.BuildSetting{
 		{Key: "-buildmode", Value: "exe"},
 		{Key: "-compiler", Value: "gc"},
