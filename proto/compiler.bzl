@@ -25,10 +25,15 @@ load(
     "//go:def.bzl",
     "GoInfo",
     "go_context",
-    "go_rule",
+)
+load(
+    "//go/private:common.bzl",
+    "GO_TOOLCHAIN",
 )
 load(
     "//go/private:context.bzl",
+    "CGO_ATTRS",
+    "CGO_FRAGMENTS",
     "new_go_info",
 )
 load(
@@ -241,7 +246,7 @@ def _go_proto_compiler_impl(ctx):
         go_info,
     ]
 
-_go_proto_compiler = go_rule(
+_go_proto_compiler = rule(
     implementation = _go_proto_compiler_impl,
     attrs = {
         "deps": attr.label_list(providers = [GoInfo]),
@@ -276,8 +281,20 @@ _go_proto_compiler = go_rule(
             cfg = "exec",
             default = "//proto/private:legacy_proto_toolchain",
         ),
-    }),
-    toolchains = _use_toolchain(_PROTO_TOOLCHAIN_TYPE),
+    }) | CGO_ATTRS,
+    fragments = CGO_FRAGMENTS,
+    # Deliberately NOT using go_rule (which adds CGO_TOOLCHAINS): the compiler
+    # calls go_context(maybe_needs_cc_toolchain = False) and does not build cgo
+    # code itself. Requiring the (optional) C++ toolchain type here makes this
+    # rule's exec-platform resolution follow the cross-compiling C++ toolchain,
+    # so when a go_proto_library is built for a non-host target (e.g. GOOS=darwin
+    # on a macOS host driving a Linux RBE), the exec-transitioned go-protoc /
+    # protoc / plugin tools land on the host platform while the GoProtocGen
+    # action (in the constraint-free internal_use_only_go_proto_gen exec group)
+    # runs on the first registered exec platform (the Linux RBE worker), causing
+    # an "Exec format error". Resolving with GO_TOOLCHAIN only keeps the tools on
+    # the same platform as the action.
+    toolchains = [GO_TOOLCHAIN] + _use_toolchain(_PROTO_TOOLCHAIN_TYPE),
 )
 
 def go_proto_compiler(name, **kwargs):
