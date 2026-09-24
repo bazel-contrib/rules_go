@@ -1,0 +1,118 @@
+package(
+    default_visibility = ["//visibility:public"],
+)
+
+# Represents the level of support for the particular microarchitecture of a
+# target platform based on the general arm64 architecture.
+# GOARM64 is set based on the chosen constraint_value.
+# See https://go.dev/wiki/MinimumRequirements#arm64
+constraint_setting(
+    name = "arm64",
+)
+
+constraint_value(
+    name = "v8.0",
+    constraint_setting = ":arm64",
+)
+
+constraint_value(
+    name = "v8.1",
+    constraint_setting = ":arm64",
+)
+
+constraint_value(
+    name = "v8.2",
+    constraint_setting = ":arm64",
+)
+
+constraint_value(
+    name = "v8.3",
+    constraint_setting = ":arm64",
+)
+
+constraint_value(
+    name = "v8.4",
+    constraint_setting = ":arm64",
+)
+
+constraint_value(
+    name = "v8.5",
+    constraint_setting = ":arm64",
+)
+
+constraint_value(
+    name = "v8.6",
+    constraint_setting = ":arm64",
+)
+
+constraint_value(
+    name = "v8.7",
+    constraint_setting = ":arm64",
+)
+
+constraint_value(
+    name = "v8.8",
+    constraint_setting = ":arm64",
+)
+
+constraint_value(
+    name = "v8.9",
+    constraint_setting = ":arm64",
+)
+
+constraint_value(
+    name = "v9.0",
+    constraint_setting = ":arm64",
+)
+
+constraint_value(
+    name = "v9.1",
+    constraint_setting = ":arm64",
+)
+
+constraint_value(
+    name = "v9.2",
+    constraint_setting = ":arm64",
+)
+
+constraint_value(
+    name = "v9.3",
+    constraint_setting = ":arm64",
+)
+
+constraint_value(
+    name = "v9.4",
+    constraint_setting = ":arm64",
+)
+
+constraint_value(
+    name = "v9.5",
+    constraint_setting = ":arm64",
+)
+
+# Optional ARM64 CPU feature extensions, orthogonal to the version above.
+# These are appended to GOARM64, e.g. "v9.0,lse,crypto".
+constraint_setting(
+    name = "lse",
+)
+
+constraint_value(
+    name = "lse_on",
+    constraint_setting = ":lse",
+)
+
+constraint_setting(
+    name = "crypto",
+)
+
+constraint_value(
+    name = "crypto_on",
+    constraint_setting = ":crypto",
+)
+
+filegroup(
+    name = "all_files",
+    testonly = True,
+    srcs = glob(["**"]),
+    visibility = ["//visibility:public"],
+)
