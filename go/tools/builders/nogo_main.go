@@ -75,7 +75,8 @@ func run(args []string) (error, int) {
 	factMap := factMultiFlag{}
 	flags := flag.NewFlagSet("nogo", flag.ExitOnError)
 	flags.Var(&factMap, "fact", "Import path and file containing facts for that library, separated by '=' (may be repeated)'")
-	factsOnly := flags.Bool("facts_only", false, "If true, only facts are emitted, no analyzers are run")
+	factsOnly := flags.Bool("facts_only", false, "If true, only fact-producing analyzers are run")
+	typesOnly := flags.Bool("types_only", false, "If true, type-check without running analyzers")
 	importcfg := flags.String("importcfg", "", "The import configuration file")
 	goVersion := flags.String("go_version", "", "The SDK Go version from rules_go, without the leading 'go' prefix (for example 1.24.3); nogo normalizes it for go/types")
 	packagePath := flags.String("p", "", "The package path (importmap) of the package being compiled")
@@ -93,7 +94,11 @@ func run(args []string) (error, int) {
 
 	normalizedGoVersion := normalizeGoVersion(*goVersion)
 
-	diagnostics, pkg, err := checkPackage(analyzers, *packagePath, normalizedGoVersion, packageFile, importMap, factMap, *factsOnly, srcs, ignores)
+	enabledAnalyzers := analyzers
+	if *typesOnly {
+		enabledAnalyzers = nil
+	}
+	diagnostics, pkg, err := checkPackage(enabledAnalyzers, *packagePath, normalizedGoVersion, packageFile, importMap, factMap, *factsOnly, srcs, ignores)
 	if err != nil {
 		return fmt.Errorf("error running analyzers: %v", err), nogoError
 	}
@@ -291,18 +296,18 @@ func checkPackage(analyzers []*analysis.Analyzer, packagePath, goVersion string,
 			roots = append(roots, visit(a))
 		}
 	}
-	if len(roots) == 0 {
-		// No analyzers to run, return early.
-		return nil, nil, nil
-	}
 
 	// Load the package, including AST, types, and facts.
 	imp := newImporter(importMap, packageFile, factMap)
-	pkg, err := load(packagePath, goVersion, imp, filenames)
+	pkg, err := load(packagePath, goVersion, imp, filenames, len(roots) > 0)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error loading package: %v", err)
 	}
 
+	// Type-checking must also report errors when no analyzers are enabled.
+	if pkg.illTyped && len(roots) == 0 {
+		return nil, nil, pkg.typeCheckError
+	}
 	for _, act := range actions {
 		act.pkg = pkg
 	}
@@ -509,7 +514,7 @@ func (act *action) execOnce() {
 
 // load parses and type checks the source code in each file in filenames.
 // load also deserializes facts stored for imported packages.
-func load(packagePath, goVersion string, imp *importer, filenames []string) (*goPackage, error) {
+func load(packagePath, goVersion string, imp *importer, filenames []string, decodeFacts bool) (*goPackage, error) {
 	if len(filenames) == 0 {
 		return nil, errors.New("no filenames")
 	}
@@ -526,6 +531,7 @@ func load(packagePath, goVersion string, imp *importer, filenames []string) (*go
 	config := types.Config{
 		GoVersion: goVersion,
 		Importer:  imp,
+		Sizes:     typesSizes,
 	}
 	info := &types.Info{
 		Types:      make(map[ast.Expr]types.TypeAndValue),
@@ -545,7 +551,12 @@ func load(packagePath, goVersion string, imp *importer, filenames []string) (*go
 	}
 	pkg.types, pkg.typesInfo = types, info
 
-	pkg.facts, err = facts.NewDecoder(pkg.types).Decode(imp.readFacts)
+	readFacts := imp.readFacts
+	if !decodeFacts {
+		// Type-check-only packages do not register or propagate analyzer facts.
+		readFacts = func(string) ([]byte, error) { return nil, nil }
+	}
+	pkg.facts, err = facts.NewDecoder(pkg.types).Decode(readFacts)
 	if err != nil {
 		return nil, fmt.Errorf("internal error decoding facts: %v", err)
 	}

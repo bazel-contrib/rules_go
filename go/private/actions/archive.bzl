@@ -34,7 +34,7 @@ load(
     "cgo_configure",
 )
 
-def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_deps = None, is_external_pkg = False):
+def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_deps = None, is_external_pkg = False, nogo_types_only = False):
     """See go/toolchains.rst#archive for full documentation."""
 
     if source == None:
@@ -156,6 +156,7 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
         importmap = importmap,
         cgo_go_srcs = cgo_out_dir,
         recompile_internal_deps = None if cgo_out_dir else recompile_internal_deps,
+        types_only = nogo_types_only,
     )
 
     data = GoArchiveData(

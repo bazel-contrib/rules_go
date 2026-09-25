@@ -43,18 +43,20 @@ def emit_nogo(
         importpath = "",
         importmap = "",
         cgo_go_srcs = None,
-        recompile_internal_deps = None):
+        recompile_internal_deps = None,
+        types_only = False):
     """Declares analysis outputs and registers nogo and validation actions."""
     nogo = go.nogo
 
     # Some targets have no nogo provider, or one without an executable.
-    if nogo == None or nogo.executable == None or "no-nogo" in go._ctx.attr.tags:
+    if nogo == None or nogo.executable == None:
         return struct(facts = None, diagnostics = None, validation = None)
 
+    types_only = types_only or "no-nogo" in go._ctx.attr.tags
     out_facts = go.declare_file(go, name = source.name, ext = output_suffix + ".facts")
     out_diagnostics = go.declare_directory(go, name = source.name, ext = output_suffix + "_nogo")
     out_validation = None
-    if validate_nogo(go):
+    if not types_only and validate_nogo(go):
         out_validation = go.declare_file(go, name = source.name, ext = output_suffix + ".nogo")
 
     sources = source.srcs
@@ -89,7 +91,9 @@ def emit_nogo(
 
     nogo_args.add_all(archives, before_each = "-facts", map_each = _facts)
     nogo_args.add_all("-stdlib_export", [go.stdlib.export_files], expand_directories = False)
-    if not out_validation:
+    if types_only:
+        nogo_args.add("-types_only")
+    elif not out_validation:
         # Since diagnostics are ignored, analyzers that don't generate facts can be skipped.
         nogo_args.add("-facts_only")
     nogo_args.add("-out_facts", out_facts)
