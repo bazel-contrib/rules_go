@@ -108,7 +108,9 @@ def emit_nogo(
         arguments = ["nogo", args],
         env = go.env_for_path_mapping,
         toolchain = GO_TOOLCHAIN_LABEL,
-        execution_requirements = SUPPORTS_PATH_MAPPING_REQUIREMENT,
+        # Cgo source contents contain paths from an unmapped compile action.
+        # Mapping the tree path cannot map the embedded line directives.
+        execution_requirements = {} if cgo_go_srcs else SUPPORTS_PATH_MAPPING_REQUIREMENT,
         progress_message = "Running nogo on %{label}",
     )
 

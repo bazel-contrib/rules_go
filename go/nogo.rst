@@ -201,7 +201,8 @@ types and run fact-producing analyzers needed by checked dependents.
 Analysis keeps the target platform, build tags, and Go language version, but does
 not receive compiler SDK tools or a configured ``GOROOT``. Standard-library analysis
 exports omit PGO profiles; compilation still uses them. Pure-Go analysis supports
-Bazel path mapping.
+Bazel path mapping. Analysis of cgo-generated sources does not, because the generated
+contents can contain paths from the unmapped compilation action.
 
 There are examples of how to re-use the analyzers from `golangci-lint`_ and `staticcheck`_ in
 `nogo`_ here: `sluongng/nogo-analyzer`_.
