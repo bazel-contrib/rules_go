@@ -229,7 +229,7 @@ rule.  Instead, it's referenced in the ``data`` field of GoArchive_.
 +--------------------------------+-----------------------------------------------------------------+
 | :param:`facts_file`            | :type:`File`                                                    |
 +--------------------------------+-----------------------------------------------------------------+
-| The serialized facts for this library produced when nogo ran for this library.                   |
+| The serialized types and analysis facts produced by nogo for this library.                       |
 +--------------------------------+-----------------------------------------------------------------+
 | :param:`srcs`                  | :type:`tuple of File`                                           |
 +--------------------------------+-----------------------------------------------------------------+

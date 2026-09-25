@@ -76,11 +76,11 @@ func run(args []string) (error, int) {
 	flags := flag.NewFlagSet("nogo", flag.ExitOnError)
 	flags.Var(&factMap, "fact", "Import path and file containing facts for that library, separated by '=' (may be repeated)'")
 	factsOnly := flags.Bool("facts_only", false, "If true, only fact-producing analyzers are run")
-	typesOnly := flags.Bool("types_only", false, "If true, type-check without running analyzers")
+	typesOnly := flags.Bool("types_only", false, "If true, export types without running analyzers")
 	importcfg := flags.String("importcfg", "", "The import configuration file")
 	goVersion := flags.String("go_version", "", "The SDK Go version from rules_go, without the leading 'go' prefix (for example 1.24.3); nogo normalizes it for go/types")
 	packagePath := flags.String("p", "", "The package path (importmap) of the package being compiled")
-	xPath := flags.String("x", "", "The archive file where serialized facts should be written")
+	xPath := flags.String("x", "", "The file where serialized types and facts should be written")
 	nogoFixDir := flags.String("fix_dir", "", "The path of the directory to store the nogo fixes in")
 	var ignores multiFlag
 	flags.Var(&ignores, "ignore", "Names of files to ignore")
@@ -103,15 +103,23 @@ func run(args []string) (error, int) {
 		return fmt.Errorf("error running analyzers: %v", err), nogoError
 	}
 
-	// Write the facts file for downstream consumers before failing due to diagnostics.
+	// Export types and facts even when diagnostics will fail validation. The type
+	// data prepares downstream analysis to stop reading compiler-private exports.
 	if *xPath != "" {
-		var factsContent []byte
-		if pkg != nil {
-			factsContent = pkg.facts.Encode()
+		if pkg.illTyped {
+			return fmt.Errorf("cannot export ill-typed package: %v", pkg.typeCheckError), nogoError
 		}
-
-		if err := os.WriteFile(abs(*xPath), factsContent, 0o666); err != nil {
-			return fmt.Errorf("error writing facts: %v", err), nogoError
+		var typesContent bytes.Buffer
+		if err := gcexportdata.Write(&typesContent, pkg.fset, pkg.types); err != nil {
+			return fmt.Errorf("error exporting types: %v", err), nogoError
+		}
+		var data bytes.Buffer
+		entry := exportData{Types: typesContent.Bytes(), Facts: pkg.facts.Encode()}
+		if err := gob.NewEncoder(&data).Encode(entry); err != nil {
+			return fmt.Errorf("error encoding export data: %v", err), nogoError
+		}
+		if err := os.WriteFile(abs(*xPath), data.Bytes(), 0o666); err != nil {
+			return fmt.Errorf("error writing export data: %v", err), nogoError
 		}
 	}
 
@@ -304,7 +312,7 @@ func checkPackage(analyzers []*analysis.Analyzer, packagePath, goVersion string,
 		return nil, nil, fmt.Errorf("error loading package: %v", err)
 	}
 
-	// Type-checking must also report errors when no analyzers are enabled.
+	// Even without analyzers, a well-typed package is required to export types.
 	if pkg.illTyped && len(roots) == 0 {
 		return nil, nil, pkg.typeCheckError
 	}
@@ -553,7 +561,7 @@ func load(packagePath, goVersion string, imp *importer, filenames []string, deco
 
 	readFacts := imp.readFacts
 	if !decodeFacts {
-		// Type-check-only packages do not register or propagate analyzer facts.
+		// Export-only packages do not register or propagate analyzer facts.
 		readFacts = func(string) ([]byte, error) { return nil, nil }
 	}
 	pkg.facts, err = facts.NewDecoder(pkg.types).Decode(readFacts)
@@ -720,24 +728,55 @@ type config struct {
 	analyzerFlags map[string]string
 }
 
-// importer imports standard-library types from go list -export files and
-// application types from compiler-produced export archives.
-type importer struct {
-	fset         *token.FileSet
-	importMap    map[string]string         // map import path in source code to package path
-	packageCache map[string]*types.Package // cache of previously imported packages
-	packageFile  map[string]string         // map package path to type export file
-	factMap      map[string]string         // map canonical package path to file containing serialized facts
+// exportData is nogo's private artifact, independent of compiler archives.
+// Types is written and read by the same version of x/tools. It includes the
+// transitive types reachable from the package's API, so direct inputs suffice.
+type exportData struct {
+	Types []byte
+	Facts []byte
 }
 
-func newImporter(importMap, packageFile map[string]string, factMap map[string]string) *importer {
+// importer imports standard-library types from go list -export files,
+// application types from compiler-produced export archives, and facts from nogo.
+type importer struct {
+	fset         *token.FileSet
+	importMap    map[string]string
+	packageCache map[string]*types.Package
+	packageFile  map[string]string // standard-library exports and application compiler archives
+	factMap      map[string]string // canonical package path to nogo export file
+	exports      map[string]*exportData
+}
+
+func newImporter(importMap, packageFile, factMap map[string]string) *importer {
 	return &importer{
 		fset:         token.NewFileSet(),
 		importMap:    importMap,
 		packageCache: make(map[string]*types.Package),
 		packageFile:  packageFile,
 		factMap:      factMap,
+		exports:      make(map[string]*exportData),
 	}
+}
+
+func (i *importer) readExport(path string) (*exportData, error) {
+	if entry, ok := i.exports[path]; ok {
+		return entry, nil
+	}
+	file, ok := i.factMap[path]
+	if !ok {
+		return nil, nil // standard library: types only, no analysis facts
+	}
+	f, err := os.Open(file)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	var entry exportData
+	if err := gob.NewDecoder(f).Decode(&entry); err != nil {
+		return nil, fmt.Errorf("reading nogo export data %s: %v", file, err)
+	}
+	i.exports[path] = &entry
+	return &entry, nil
 }
 
 func (i *importer) Import(path string) (*types.Package, error) {
@@ -774,18 +813,11 @@ func (i *importer) Import(path string) (*types.Package, error) {
 }
 
 func (i *importer) readFacts(pkgPath string) ([]byte, error) {
-	facts := i.factMap[pkgPath]
-	if facts == "" {
-		// Packages that were not built with the nogo toolchain will not be
-		// analyzed, so there's no opportunity to store facts. This includes
-		// packages in the standard library and packages built with go_tool_library,
-		// such as coverdata. Analyzers are expected to hard code information
-		// about standard library definitions and must gracefully handle packages
-		// that don't have facts. For example, the "printf" analyzer must know
-		// fmt.Printf accepts a format string.
-		return nil, nil
+	entry, err := i.readExport(pkgPath)
+	if err != nil || entry == nil {
+		return nil, err
 	}
-	return os.ReadFile(facts)
+	return entry.Facts, nil
 }
 
 type factMultiFlag map[string]string

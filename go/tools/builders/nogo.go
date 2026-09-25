@@ -33,7 +33,7 @@ func nogo(args []string) error {
 	fs.Var(&deps, "arc", "Import path, package path, and file name of a direct dependency, separated by '='")
 	fs.Var(&facts, "facts", "Import path, package path, and file name of a direct dependency's nogo facts file, separated by '='")
 	fs.BoolVar(&factsOnly, "facts_only", false, "If true, only fact-producing analyzers are run")
-	fs.BoolVar(&typesOnly, "types_only", false, "If true, type-check without running analyzers")
+	fs.BoolVar(&typesOnly, "types_only", false, "If true, export types without running analyzers")
 	fs.StringVar(&importPath, "importpath", "", "The import path of the package being compiled. Not passed to the compiler, but may be displayed in debug data.")
 	fs.StringVar(&packagePath, "p", "", "The package path (importmap) of the package being compiled")
 	fs.StringVar(&packageListPath, "package_list", "", "The file containing the list of standard library packages")
@@ -122,7 +122,8 @@ func nogo(args []string) error {
 
 func runNogo(workDir string, nogoPath string, srcs, ignores []string, facts []archive, factsOnly, typesOnly bool, packagePath, importcfgPath, goVersion, outFactsPath, outDirPath string) error {
 	if len(srcs) == 0 {
-		// Match the compiler's synthetic empty package so it can be type-checked.
+		// Match the compiler's synthetic empty package, but still emit valid
+		// type data for downstream imports.
 		file := filepath.Join(workDir, "empty.go")
 		if err := os.WriteFile(file, []byte("package empty\n"), 0o666); err != nil {
 			return err
