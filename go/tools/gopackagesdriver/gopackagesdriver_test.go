@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"maps"
 	"os"
 	"path"
@@ -114,6 +115,47 @@ func main() {
 package unattached
 
 // not mentioned in any target
+
+-- offline/dep/BUILD.bazel --
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "dep",
+    srcs = ["dep.go"],
+    importpath = "example.com/offline/dep",
+    visibility = ["//visibility:public"],
+)
+
+-- offline/dep/dep.go --
+package dep
+
+func Value() int {
+	return 1
+}
+
+-- offline/lib/BUILD.bazel --
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "lib",
+    srcs = ["lib.go"],
+    importpath = "example.com/offline/lib",
+    visibility = ["//visibility:public"],
+    deps = ["//offline/dep"],
+)
+
+-- offline/lib/lib.go --
+package lib
+
+import (
+	"fmt"
+
+	"example.com/offline/dep"
+)
+
+func Hello() string {
+	return fmt.Sprintf("%d", dep.Value())
+}
 `,
 	})
 }
@@ -389,6 +431,134 @@ func TestUnattached(t *testing.T) {
 	runForTestExpectError(t, "found no labels matching the requests", packages.DriverRequest{}, ".", "file=unattached.go")
 }
 
+func TestPkgJSONList(t *testing.T) {
+	restoreEnv := scrubTestEnv(t)
+	defer restoreEnv()
+
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldWorkspaceRoot := workspaceRoot
+	oldBuildWorkingDirectory := buildWorkingDirectory
+	workspaceRoot = wd
+	buildWorkingDirectory = wd
+	defer func() {
+		workspaceRoot = oldWorkspaceRoot
+		buildWorkingDirectory = oldBuildWorkingDirectory
+	}()
+
+	ctx := context.Background()
+	bazel, err := NewBazel(ctx, bazelBin, workspaceRoot, buildWorkingDirectory, bazelCommonFlags, bazelStartupFlags)
+	if err != nil {
+		t.Fatalf("NewBazel: %v", err)
+	}
+	builder, err := NewBazelJSONBuilder(bazel, false)
+	if err != nil {
+		t.Fatalf("NewBazelJSONBuilder: %v", err)
+	}
+
+	oldBuildFlags := bazelBuildFlags
+	bazelBuildFlags = append(append([]string{}, bazelBuildFlags...), "--@io_bazel_rules_go//go/config:export_stdlib=true")
+	defer func() { bazelBuildFlags = oldBuildFlags }()
+
+	mode := packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles |
+		packages.NeedImports | packages.NeedExportFile
+	jsonFiles, err := builder.Build(ctx, []string{"//offline/lib:lib"}, mode)
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	if len(jsonFiles) == 0 {
+		t.Fatal("Build returned no .pkg.json files")
+	}
+
+	listFile, err := os.CreateTemp("", "pkg_json_list_*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(listFile.Name())
+	for _, f := range jsonFiles {
+		if _, err := fmt.Fprintln(listFile, f); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := listFile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	oldList := pkgJSONList
+	pkgJSONList = listFile.Name()
+	defer func() { pkgJSONList = oldList }()
+
+	// Any bazel invocation from here on fails the test.
+	oldBazelBin := bazelBin
+	bazelBin = filepath.Join(t.TempDir(), "no-bazel")
+	defer func() { bazelBin = oldBazelBin }()
+
+	execRoot := bazel.ExecutionRoot()
+	if err := os.Chdir(execRoot); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chdir(wd)
+
+	resp := runForTest(t, packages.DriverRequest{Mode: mode}, ".", "example.com/offline/lib")
+
+	if len(resp.Roots) != 1 {
+		t.Fatalf("expected 1 root, got %v", resp.Roots)
+	}
+	root := findPackageByID(resp.Packages, resp.Roots[0])
+	if root == nil {
+		t.Fatalf("root package missing: %s", resp.Roots[0])
+	}
+	if root.PkgPath != "example.com/offline/lib" {
+		t.Fatalf("PkgPath: got %q", root.PkgPath)
+	}
+	if len(root.GoFiles) == 0 {
+		t.Fatal("root has no GoFiles")
+	}
+	for _, f := range root.GoFiles {
+		if _, err := os.Stat(f); err != nil {
+			t.Errorf("GoFile %q: %v", f, err)
+		}
+	}
+
+	var depPkg, fmtPkg *packages.Package
+	for _, p := range resp.Packages {
+		switch p.PkgPath {
+		case "example.com/offline/dep":
+			depPkg = p
+		case "fmt":
+			fmtPkg = p
+		}
+	}
+	if depPkg == nil {
+		t.Fatal("dep package missing")
+	}
+	if depPkg.ExportFile == "" {
+		t.Fatal("dep has no ExportFile")
+	}
+	if _, err := os.Stat(depPkg.ExportFile); err != nil {
+		t.Errorf("dep ExportFile: %v", err)
+	}
+	if fmtPkg == nil {
+		t.Fatal("fmt package missing")
+	}
+	if fmtPkg.ExportFile == "" {
+		t.Fatal("fmt has no ExportFile")
+	}
+	if _, err := os.Stat(fmtPkg.ExportFile); err != nil {
+		t.Errorf("fmt ExportFile: %v", err)
+	}
+
+	prefix := runForTest(t, packages.DriverRequest{Mode: mode}, ".", "example.com/offline/...")
+	if len(prefix.Roots) != 2 {
+		t.Fatalf("example.com/offline/...: expected 2 roots, got %v", prefix.Roots)
+	}
+
+	runForTestExpectError(t, "found no packages matching import path", packages.DriverRequest{}, ".", "example.com/missing")
+	runForTestExpectError(t, "not supported", packages.DriverRequest{}, ".", "file=lib.go")
+}
+
 func runForTest(
 	t *testing.T,
 	driverRequest packages.DriverRequest,
@@ -406,45 +576,8 @@ func runForTestExpectError(
 	args ...string) packages.DriverResponse {
 	t.Helper()
 
-	// Remove most environment variables, other than those on an allowlist.
-	//
-	// Bazel sets TEST_* and RUNFILES_* and a bunch of other variables.
-	// If Bazel is invoked when these variables, it assumes (correctly)
-	// that it's being invoked by a test, and it does different things that
-	// we don't want. For example, it randomizes the output directory, which
-	// is extremely expensive here. Our test framework creates an output
-	// directory shared among go_bazel_tests and points to it using .bazelrc.
-	//
-	// This only works if TEST_TMPDIR is not set when invoking bazel.
-	// bazel_testing.BazelCmd normally unsets that, but since gopackagesdriver
-	// invokes bazel directly, we need to unset it here.
-	allowEnv := map[string]struct{}{
-		"HOME":        {},
-		"PATH":        {},
-		"PWD":         {},
-		"SYSTEMDRIVE": {},
-		"SYSTEMROOT":  {},
-		"TEMP":        {},
-		"TMP":         {},
-		"TZ":          {},
-		"USER":        {},
-	}
-	var oldEnv []string
-	for _, env := range os.Environ() {
-		key, value, cut := strings.Cut(env, "=")
-		if !cut {
-			continue
-		}
-		if _, allowed := allowEnv[key]; !allowed && !strings.HasPrefix(key, "GOPACKAGES") {
-			os.Unsetenv(key)
-			oldEnv = append(oldEnv, key, value)
-		}
-	}
-	defer func() {
-		for i := 0; i < len(oldEnv); i += 2 {
-			os.Setenv(oldEnv[i], oldEnv[i+1])
-		}
-	}()
+	restoreEnv := scrubTestEnv(t)
+	defer restoreEnv()
 
 	// Set workspaceRoot and buildWorkingDirectory global variable.
 	// It's initialized to the BUILD_WORKSPACE_DIRECTORY environment variable
@@ -485,6 +618,50 @@ func runForTestExpectError(
 		t.Fatalf("unmarshaling response: %v", err)
 	}
 	return resp
+}
+
+// scrubTestEnv removes most environment variables, other than those on an
+// allowlist, and returns a function that restores them.
+//
+// Bazel sets TEST_* and RUNFILES_* and a bunch of other variables.
+// If Bazel is invoked when these variables, it assumes (correctly)
+// that it's being invoked by a test, and it does different things that
+// we don't want. For example, it randomizes the output directory, which
+// is extremely expensive here. Our test framework creates an output
+// directory shared among go_bazel_tests and points to it using .bazelrc.
+//
+// This only works if TEST_TMPDIR is not set when invoking bazel.
+// bazel_testing.BazelCmd normally unsets that, but since gopackagesdriver
+// invokes bazel directly, we need to unset it here.
+func scrubTestEnv(t *testing.T) func() {
+	t.Helper()
+	allowEnv := map[string]struct{}{
+		"HOME":        {},
+		"PATH":        {},
+		"PWD":         {},
+		"SYSTEMDRIVE": {},
+		"SYSTEMROOT":  {},
+		"TEMP":        {},
+		"TMP":         {},
+		"TZ":          {},
+		"USER":        {},
+	}
+	var oldEnv []string
+	for _, env := range os.Environ() {
+		key, value, cut := strings.Cut(env, "=")
+		if !cut {
+			continue
+		}
+		if _, allowed := allowEnv[key]; !allowed && !strings.HasPrefix(key, "GOPACKAGES") {
+			os.Unsetenv(key)
+			oldEnv = append(oldEnv, key, value)
+		}
+	}
+	return func() {
+		for i := 0; i < len(oldEnv); i += 2 {
+			os.Setenv(oldEnv[i], oldEnv[i+1])
+		}
+	}
 }
 
 func assertSuffixesInList(t *testing.T, list []string, expectedSuffixes ...string) {
