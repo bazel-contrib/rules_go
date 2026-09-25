@@ -16,6 +16,7 @@ package main
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"golang.org/x/tools/go/packages"
@@ -119,12 +120,72 @@ func (pr *PackageRegistry) walk(acc map[string]*packages.Package, root string) {
 	}
 }
 
+// MatchImportPaths maps import-path queries to package IDs already loaded
+// in the registry. "/..." is a prefix match. Stdlib packages are never
+// roots. file= and local-directory queries error — they need bazel query.
+func (pr *PackageRegistry) MatchImportPaths(queries []string) ([]string, error) {
+	ids := make([]string, 0, len(queries))
+	seen := map[string]struct{}{}
+
+	for _, query := range queries {
+		if strings.HasPrefix(query, "file=") || isLocalPattern(query) {
+			return nil, fmt.Errorf("query %q is not supported when answering from pkg.json files; use an import path", query)
+		}
+
+		var (
+			exact  string
+			prefix string
+		)
+		if strings.HasSuffix(query, "/...") {
+			prefix = strings.TrimSuffix(query, "/...")
+		} else {
+			exact = query
+		}
+
+		matched := false
+		for _, pkg := range pr.packagesByID {
+			if _, isStdlib := pr.stdlib[pkg.PkgPath]; isStdlib {
+				continue
+			}
+			if exact != "" {
+				if pkg.PkgPath != exact {
+					continue
+				}
+			} else if pkg.PkgPath != prefix && !strings.HasPrefix(pkg.PkgPath, prefix+"/") {
+				continue
+			}
+			matched = true
+			if _, ok := seen[pkg.ID]; ok {
+				continue
+			}
+			seen[pkg.ID] = struct{}{}
+			ids = append(ids, pkg.ID)
+		}
+		if !matched {
+			return nil, fmt.Errorf("found no packages matching import path %q", query)
+		}
+	}
+
+	sort.Strings(ids)
+	return ids, nil
+}
+
 func (pr *PackageRegistry) Match(labels []string) ([]string, []*packages.Package) {
+	return pr.match(labels, true)
+}
+
+// MatchCanonicalIDs is like Match but does not rewrite labels for Bazel 6+
+// canonical form. Use it when IDs already come from .pkg.json.
+func (pr *PackageRegistry) MatchCanonicalIDs(ids []string) ([]string, []*packages.Package) {
+	return pr.match(ids, false)
+}
+
+func (pr *PackageRegistry) match(labels []string, canonicalize bool) ([]string, []*packages.Package) {
 	roots := map[string]struct{}{}
 
 	for _, label := range labels {
 		// When packagesdriver is ran from rules go, rulesGoRepositoryName will just be @
-		if pr.bazelVersion.isAtLeast(bazelVersion{6, 0, 0}) &&
+		if canonicalize && pr.bazelVersion.isAtLeast(bazelVersion{6, 0, 0}) &&
 			!strings.HasPrefix(label, "@") {
 			// Canonical labels is only since Bazel 6.0.0
 			label = fmt.Sprintf("@%s", label)
