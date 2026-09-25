@@ -59,13 +59,9 @@ def emit_nogo(
 
     sources = source.srcs
     archives = source.deps
-    if source.cover and go.coverdata:
-        archives = archives + [go.coverdata]
 
     builder_args = go.builder_args(go)
     builder_args.add_all(sources, before_each = "-src")
-    if source.cover and go.coverdata:
-        builder_args.add("-cover_mode", "atomic")
     builder_args.add_all(archives, before_each = "-arc", map_each = _archive)
     if recompile_internal_deps:
         builder_args.add_all(recompile_internal_deps, before_each = "-recompile_internal_deps")
@@ -80,10 +76,10 @@ def emit_nogo(
     go_version = go.sdk.version
     sdk = go.sdk
 
-    inputs_direct = (sources + [sdk.package_list] +
+    inputs_direct = (sources + [sdk.package_list, go.stdlib.export_files] +
                      [archive.data.facts_file for archive in archives if archive.data.facts_file] +
                      [archive.data.export_file for archive in archives])
-    inputs_transitive = [sdk.tools, sdk.headers, go.stdlib.libs]
+    inputs_transitive = [sdk.tools, sdk.headers]
     outputs = [out_diagnostics, out_facts]
 
     nogo_args = go.tool_args(go)
@@ -92,6 +88,7 @@ def emit_nogo(
         nogo_args.add_all([cgo_go_srcs], before_each = "-ignore_src")
 
     nogo_args.add_all(archives, before_each = "-facts", map_each = _facts)
+    nogo_args.add_all("-stdlib_export", [go.stdlib.export_files], expand_directories = False)
     if not out_validation:
         # Since diagnostics are ignored, analyzers that don't generate facts can be skipped.
         nogo_args.add("-facts_only")

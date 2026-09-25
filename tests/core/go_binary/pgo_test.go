@@ -30,9 +30,17 @@ var pgoProfile []byte
 
 func TestMain(m *testing.M) {
 	bazel_testing.TestMain(m, bazel_testing.Args{
+		Nogo:         "@//src:nogo",
+		NogoIncludes: []string{"@//src:__pkg__"},
 		Main: `
 -- src/BUILD.bazel --
-load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_test")
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_test", "nogo")
+
+nogo(
+    name = "nogo",
+    deps = ["@org_golang_x_tools//go/analysis/passes/buildssa"],
+    visibility = ["//visibility:public"],
+)
 
 go_binary(
     name = "pgo_with_profile",
@@ -163,6 +171,30 @@ func TestPgoProfileIsPreprocessed(t *testing.T) {
 	for _, profile := range profiles {
 		if !strings.HasSuffix(profile, ".preprofile") {
 			t.Errorf("compile action got raw profile %s, want a preprocessed one", profile)
+		}
+	}
+}
+
+// TestAnalysisExportsIgnorePgo verifies that a compilation-only profile does
+// not become an argument or input of the standard-library analysis action.
+func TestAnalysisExportsIgnorePgo(t *testing.T) {
+	writeProfile(t)
+	out, err := bazel_testing.BazelOutput("aquery", "--experimental_output_paths=strip",
+		`mnemonic("GoStdlibExport", deps(//src:pgo_with_profile))`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	actions := string(out)
+	if !strings.Contains(actions, "Mnemonic: GoStdlibExport") {
+		t.Fatal("expected a standard-library export action")
+	}
+	if profiles := pgoProfileArgs(actions); len(profiles) != 0 {
+		t.Fatalf("analysis export action received PGO arguments: %v", profiles)
+	}
+	for _, line := range strings.Split(actions, "\n") {
+		if strings.HasPrefix(strings.TrimSpace(line), "Inputs: [") &&
+			(strings.Contains(line, ".pprof") || strings.Contains(line, ".preprofile")) {
+			t.Fatalf("analysis export action received a PGO input: %s", line)
 		}
 	}
 }

@@ -190,6 +190,9 @@ that can run in parallel with the Go compiler. For cgo packages, it depends on g
 Go sources from the compilation action. This allows ``nogo`` to benefit from Bazel's
 incremental build and caching as well as the Remote Build Execution framework.
 
+Standard-library analysis types come from ``go list -export``. These exports
+omit PGO profiles; compilation still uses them.
+
 There are examples of how to re-use the analyzers from `golangci-lint`_ and `staticcheck`_ in
 `nogo`_ here: `sluongng/nogo-analyzer`_.
 
