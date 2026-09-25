@@ -15,25 +15,13 @@
 load("//go/private:common.bzl", "GO_TOOLCHAIN_LABEL", "SUPPORTS_PATH_MAPPING_REQUIREMENT")
 load("//go/private:context.bzl", "validate_nogo")
 
-def _archive(v):
+def _dependency(v):
     importpaths = [v.data.importpath]
     importpaths.extend(v.data.importpath_aliases)
     return "{}={}={}".format(
         ":".join(importpaths),
         v.data.importmap,
-        v.data.export_file.path if v.data.export_file else v.data.file.path,
-    )
-
-def _facts(v):
-    facts_file = v.data.facts_file
-    if not facts_file:
-        return None
-    importpaths = [v.data.importpath]
-    importpaths.extend(v.data.importpath_aliases)
-    return "{}={}={}".format(
-        ":".join(importpaths),
-        v.data.importmap,
-        facts_file.path,
+        v.data.facts_file.path if v.data.facts_file else "",
     )
 
 def emit_nogo(
@@ -61,49 +49,48 @@ def emit_nogo(
 
     sources = source.srcs
     archives = source.deps
+    args = go.tool_args(go)
+    args.add_joined("-tags", go.mode.tags, join_with = ",")
+    args.add_all(sources, before_each = "-src")
 
-    builder_args = go.builder_args(go)
-    builder_args.add_all(sources, before_each = "-src")
-    builder_args.add_all(archives, before_each = "-arc", map_each = _archive)
+    # Strict-deps checking needs every dependency's import paths, even when
+    # it has no analysis artifact. Never pass compiler archive paths to nogo.
+    args.add_all(archives, before_each = "-arc", map_each = _dependency)
     if recompile_internal_deps:
-        builder_args.add_all(recompile_internal_deps, before_each = "-recompile_internal_deps")
-    builder_args.add("-importpath", importpath if importpath else go.label.name)
+        args.add_all(recompile_internal_deps, before_each = "-recompile_internal_deps")
+    args.add("-importpath", importpath if importpath else go.label.name)
     if importmap:
-        builder_args.add("-p", importmap)
-    builder_args.add("-package_list", go.sdk.package_list)
+        args.add("-p", importmap)
+    args.add("-package_list", go.sdk.package_list)
     testfilter = getattr(source, "testfilter", None)
     if testfilter:
-        builder_args.add("-testfilter", testfilter)
+        args.add("-testfilter", testfilter)
 
     go_version = go.sdk.version
     sdk = go.sdk
 
     inputs_direct = (sources + [sdk.package_list, go.stdlib.export_files] +
-                     [archive.data.facts_file for archive in archives if archive.data.facts_file] +
-                     [archive.data.export_file for archive in archives])
-    inputs_transitive = [sdk.tools, sdk.headers]
+                     [archive.data.facts_file for archive in archives if archive.data.facts_file])
     outputs = [out_diagnostics, out_facts]
 
-    nogo_args = go.tool_args(go)
     if cgo_go_srcs:
         inputs_direct.append(cgo_go_srcs)
-        nogo_args.add_all([cgo_go_srcs], before_each = "-ignore_src")
+        args.add_all([cgo_go_srcs], before_each = "-ignore_src")
 
-    nogo_args.add_all(archives, before_each = "-facts", map_each = _facts)
-    nogo_args.add_all("-stdlib_export", [go.stdlib.export_files], expand_directories = False)
+    args.add_all("-stdlib_export", [go.stdlib.export_files], expand_directories = False)
     if types_only:
-        nogo_args.add("-types_only")
+        args.add("-types_only")
     elif not out_validation:
         # Since diagnostics are ignored, analyzers that don't generate facts can be skipped.
-        nogo_args.add("-facts_only")
-    nogo_args.add("-out_facts", out_facts)
-    nogo_args.add_all("-out", [out_diagnostics], expand_directories = False)
+        args.add("-facts_only")
+    args.add("-out_facts", out_facts)
+    args.add_all("-out", [out_diagnostics], expand_directories = False)
     if go_version:
         # -go_version is the raw SDK version from go.sdk.version (for example
         # "1.24.3"), without the leading "go" prefix expected by go/types.
         # nogo_main.go normalizes it before type checking.
-        nogo_args.add("-go_version", go_version)
-    nogo_args.add("-nogo", nogo.executable)
+        args.add("-go_version", go_version)
+    args.add("-nogo", nogo.executable)
 
     # This action runs nogo and produces the facts files for downstream nogo actions.
     # It is important that this action doesn't fail if nogo produces findings, which allows users
@@ -113,12 +100,12 @@ def emit_nogo(
     # analyzers with --sandbox_debug. Users can set debug = True on the nogo target to have it fail
     # on findings to get the same debugging experience as with other failures.
     go.actions.run(
-        inputs = depset(inputs_direct, transitive = inputs_transitive),
+        inputs = depset(inputs_direct),
         tools = [nogo],
         outputs = outputs,
         mnemonic = "RunNogo",
         executable = go.toolchain._builder,
-        arguments = ["nogo", builder_args, nogo_args],
+        arguments = ["nogo", args],
         env = go.env_for_path_mapping,
         toolchain = GO_TOOLCHAIN_LABEL,
         execution_requirements = SUPPORTS_PATH_MAPPING_REQUIREMENT,

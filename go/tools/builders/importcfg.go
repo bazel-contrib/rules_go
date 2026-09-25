@@ -263,11 +263,16 @@ func (m *archiveMultiFlag) Set(v string) error {
 		return fmt.Errorf("badly formed -arc flag: %s", v)
 	}
 	importPaths := strings.Split(parts[0], ":")
+	file := parts[2]
+	// Nogo also uses -arc for dependencies without an analysis artifact.
+	if file != "" {
+		file = abs(file)
+	}
 	a := archive{
 		importPath:        importPaths[0],
 		importPathAliases: importPaths[1:],
 		packagePath:       parts[1],
-		file:              abs(parts[2]),
+		file:              file,
 	}
 	*m = append(*m, a)
 	return nil

@@ -103,8 +103,8 @@ func run(args []string) (error, int) {
 		return fmt.Errorf("error running analyzers: %v", err), nogoError
 	}
 
-	// Export types and facts even when diagnostics will fail validation. The type
-	// data prepares downstream analysis to stop reading compiler-private exports.
+	// Export types and facts even when diagnostics will fail validation. Downstream
+	// analyses must not depend on the compiler's private export-data format.
 	if *xPath != "" {
 		if pkg.illTyped {
 			return fmt.Errorf("cannot export ill-typed package: %v", pkg.typeCheckError), nogoError
@@ -736,13 +736,13 @@ type exportData struct {
 	Facts []byte
 }
 
-// importer imports standard-library types from go list -export files,
-// application types from compiler-produced export archives, and facts from nogo.
+// importer imports types and facts produced by nogo, and standard-library
+// types obtained through the supported go list -export interface.
 type importer struct {
 	fset         *token.FileSet
 	importMap    map[string]string
 	packageCache map[string]*types.Package
-	packageFile  map[string]string // standard-library exports and application compiler archives
+	packageFile  map[string]string // standard-library go list -export files
 	factMap      map[string]string // canonical package path to nogo export file
 	exports      map[string]*exportData
 }
@@ -789,6 +789,14 @@ func (i *importer) Import(path string) (*types.Package, error) {
 	if pkg, ok := i.packageCache[path]; ok && pkg.Complete() {
 		return pkg, nil
 	}
+	entry, err := i.readExport(path)
+	if err != nil {
+		return nil, err
+	}
+	if entry != nil {
+		return gcexportdata.Read(bytes.NewReader(entry.Types), i.fset, i.packageCache, path)
+	}
+
 	file, ok := i.packageFile[path]
 	if !ok {
 		return nil, fmt.Errorf("could not import %q", path)
@@ -799,8 +807,8 @@ func (i *importer) Import(path string) (*types.Package, error) {
 	}
 	defer f.Close()
 	// Older Go releases return an archive from go list -export. New releases
-	// return raw indexed data. Application dependencies still use the
-	// compiler-produced export archives.
+	// return raw indexed data. This compatibility path is only for the public
+	// go list interface, never for Bazel's compiler-produced .x files.
 	r := bufio.NewReader(f)
 	if magic, _ := r.Peek(8); string(magic) == "!<arch>\n" {
 		export, err := gcexportdata.NewReader(r)
