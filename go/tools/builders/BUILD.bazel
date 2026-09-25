@@ -145,6 +145,7 @@ filegroup(
         "cc.go",
         "cgo2.go",
         "cgo_response.go",
+        "codesign.go",
         "compilepkg.go",
         "constants.go",
         "cover.go",

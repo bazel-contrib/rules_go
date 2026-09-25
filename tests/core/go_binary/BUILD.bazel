@@ -20,6 +20,12 @@ go_bazel_test(
 )
 
 go_bazel_test(
+    name = "buildid_darwin_test",
+    srcs = ["buildid_darwin_test.go"],
+    target_compatible_with = ["@platforms//os:macos"],
+)
+
+go_bazel_test(
     name = "configurable_attribute_bad_test",
     srcs = ["configurable_attribute_bad_test.go"],
 )
