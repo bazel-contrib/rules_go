@@ -140,6 +140,7 @@ filegroup(
         "asm.go",
         "baseline_coverage.go",
         "builder.go",
+        "buildid.go",
         "buildinfo.go",
         "cc.go",
         "cgo2.go",
