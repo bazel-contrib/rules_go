@@ -123,12 +123,7 @@ func run(args []string) (error, int) {
 		}
 	}
 
-	var fset *token.FileSet
-	if pkg != nil {
-		fset = pkg.fset
-	} else if len(diagnostics) > 0 {
-		return fmt.Errorf("pkg should not be nil with diagnostics"), nogoError
-	}
+	fset := pkg.fset
 
 	exitCode := nogoSuccess
 	var errMsg bytes.Buffer
@@ -294,15 +289,12 @@ func checkPackage(analyzers []*analysis.Analyzer, packagePath, goVersion string,
 	// Note that this set may be disjoint from the initial set of analyzers: root
 	// analyzers may consume results from required analyzers which themselves use
 	// facts.
-	roots := make([]*action, 0, len(analyzers))
 	if factsOnly {
-		for _, a := range factProducers(analyzers) {
-			roots = append(roots, visit(a))
-		}
-	} else {
-		for _, a := range analyzers {
-			roots = append(roots, visit(a))
-		}
+		analyzers = factProducers(analyzers)
+	}
+	roots := make([]*action, 0, len(analyzers))
+	for _, a := range analyzers {
+		roots = append(roots, visit(a))
 	}
 
 	// Load the package, including AST, types, and facts.

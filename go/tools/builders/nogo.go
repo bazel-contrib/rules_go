@@ -119,25 +119,21 @@ func nogo(args []string) error {
 		return err
 	}
 
-	return runNogo(workDir, nogoPath, goSrcs, ignoreSrcs, deps, factsOnly, typesOnly, packagePath, importcfgPath, goVersion, outFactsPath, outPath)
-}
-
-func runNogo(workDir string, nogoPath string, srcs, ignores []string, deps []archive, factsOnly, typesOnly bool, packagePath, importcfgPath, goVersion, outFactsPath, outDirPath string) error {
-	if len(srcs) == 0 {
+	if len(goSrcs) == 0 {
 		// Match the compiler's synthetic empty package, but still emit valid
 		// type data for downstream imports.
 		file := filepath.Join(workDir, "empty.go")
 		if err := os.WriteFile(file, []byte("package empty\n"), 0o666); err != nil {
 			return err
 		}
-		srcs = []string{file}
+		goSrcs = []string{file}
 		// The synthetic source is not user code and must not be analyzed.
 		typesOnly = true
 	}
 
-	args := []string{nogoPath}
+	args = []string{nogoPath}
 	args = append(args, "-p", packagePath)
-	args = append(args, "-fix_dir", outDirPath)
+	args = append(args, "-fix_dir", outPath)
 	args = append(args, "-importcfg", importcfgPath)
 	if goVersion != "" {
 		args = append(args, "-go_version", goVersion)
@@ -153,11 +149,16 @@ func runNogo(workDir string, nogoPath string, srcs, ignores []string, deps []arc
 		args = append(args, "-facts_only")
 	}
 	args = append(args, "-x", outFactsPath)
-	for _, ignore := range ignores {
+	for _, ignore := range ignoreSrcs {
 		args = append(args, "-ignore", ignore)
 	}
-	args = append(args, srcs...)
+	args = append(args, goSrcs...)
 
+	return runNogo(args, workDir, outPath)
+}
+
+// runNogo executes the prepared analyzer command and preserves findings for validation.
+func runNogo(args []string, workDir, outDirPath string) error {
 	paramsFile := filepath.Join(workDir, "nogo.param")
 	if err := writeParamsFile(paramsFile, args[1:]); err != nil {
 		return fmt.Errorf("error writing nogo params file: %v", err)
