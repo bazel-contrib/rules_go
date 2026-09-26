@@ -120,7 +120,7 @@ def emit_nogo(
     if go_version:
         # -go_version is the raw SDK version from go.sdk.version (for example
         # "1.24.3"), without the leading "go" prefix expected by go/types.
-        # nogo_main.go normalizes it before type checking.
+        # The nogo runtime normalizes it before type checking.
         args.add("-go_version", go_version)
     args.add("-nogo", nogo.executable)
 

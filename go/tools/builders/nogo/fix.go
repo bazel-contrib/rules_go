@@ -1,4 +1,4 @@
-package main
+package nogo
 
 import (
 	"bytes"
@@ -23,15 +23,15 @@ type diagnosticEntry struct {
 
 // A nogoEdit describes the replacement of a portion of a text file.
 type nogoEdit struct {
-	New   string // the replacement
-	Start int    // starting byte offset of the region to replace
-	End   int    // (exclusive) ending byte offset of the region to replace
+	New          string // the replacement
+	Start        int    // starting byte offset of the region to replace
+	End          int    // (exclusive) ending byte offset of the region to replace
 	analyzerName string
 }
 
 type fileChange struct {
 	fileName string
-	changes []nogoEdit
+	changes  []nogoEdit
 }
 
 func (e nogoEdit) String() string {
@@ -56,7 +56,6 @@ func (a byStartEnd) Less(i, j int) bool {
 	return a[i].End < a[j].End
 }
 func (a byStartEnd) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-
 
 // applyEdits applies a sequence of nogoEdits to the src byte slice and returns the result.
 // Edits are applied in order of start offset; edits with the same start offset are applied in the order they were provided.
@@ -116,9 +115,9 @@ func getFixes(entries []diagnosticEntry, fileSet *token.FileSet) ([]fileChange, 
 				}
 
 				fix := nogoEdit{
-					Start: file.Offset(start),
-					End: file.Offset(end),
-					New: string(edit.NewText),
+					Start:        file.Offset(start),
+					End:          file.Offset(end),
+					New:          string(edit.NewText),
 					analyzerName: entry.analyzerName,
 				}
 				candidateChanges[file.Name()] = append(candidateChanges[file.Name()], fix)
@@ -172,7 +171,6 @@ func getFixes(entries []diagnosticEntry, fileSet *token.FileSet) ([]fileChange, 
 	return finalFileChanges, errors.New(errMsg.String())
 }
 
-
 // validate whether the list of edits has overlaps or contains invalid ones.
 // If there is any issue, an error is returned. Otherwise, the function
 // returns a new list of edits that is sorted and unique.
@@ -206,7 +204,6 @@ func validate(edits []nogoEdit) ([]nogoEdit, error) {
 	}
 	return validatedEdits[:tail], nil
 }
-
 
 func writePatch(patchFile io.Writer, changes []fileChange) error {
 	// sort the changes by file name to make sure the patch is stable.
@@ -246,4 +243,32 @@ func formatErrors(errs []error) []string {
 		result[i] = fmt.Sprintf("- %v", err)
 	}
 	return result
+}
+
+// Keep the filename in sync with the bootstrap validator in ../constants.go.
+const nogoFixBasename = "nogo.patch"
+
+func saveSuggestedFixes(nogoFixDir string, diagnostics []diagnosticEntry, fset *token.FileSet) []error {
+	if nogoFixDir == "" {
+		return nil
+	}
+	var errs []error
+	fixes, err := getFixes(diagnostics, fset)
+	if err != nil {
+		errs = append(errs, err)
+	}
+	if len(fixes) == 0 {
+		return errs
+	}
+	patchFilePath := filepath.Join(nogoFixDir, nogoFixBasename)
+	patchFile, err := os.Create(patchFilePath)
+	if err != nil {
+		errs = append(errs, fmt.Errorf("creating %q: %w", patchFilePath, err))
+		return errs
+	}
+	defer patchFile.Close()
+	if err := writePatch(patchFile, fixes); err != nil {
+		errs = append(errs, err)
+	}
+	return errs
 }

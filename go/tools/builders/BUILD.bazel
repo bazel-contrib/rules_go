@@ -30,6 +30,7 @@ go_test(
         "env.go",
         "filter.go",
         "flags.go",
+        "params.go",
         "read.go",
     ],
 )
@@ -43,19 +44,6 @@ go_test(
         "edit.go",
         "env.go",
         "flags.go",
-    ],
-)
-
-go_test(
-    name = "nogo_fix_test",
-    size = "small",
-    srcs = [
-        "nogo_fix.go",
-        "nogo_fix_test.go",
-    ],
-    deps = [
-        "@com_github_aymanbagabas_go_udiff//:go_default_library",
-        "@org_golang_x_tools//go/analysis",
     ],
 )
 
@@ -83,15 +71,6 @@ go_test(
 )
 
 go_test(
-    name = "nolint_test",
-    size = "small",
-    srcs = [
-        "nolint.go",
-        "nolint_test.go",
-    ],
-)
-
-go_test(
     name = "env_test",
     size = "small",
     srcs = [
@@ -107,20 +86,6 @@ go_test(
     srcs = [
         "buildinfo.go",
         "buildinfo_test.go",
-    ],
-)
-
-go_test(
-    name = "nogo_version_test",
-    size = "small",
-    srcs = [
-        "nogo_goversions_go118.go",
-        "nogo_goversions_go121.go",
-        "nogo_goversions_go122.go",
-        "nogo_version.go",
-        "nogo_version_go121_test.go",
-        "nogo_version_pre121_test.go",
-        "nogo_version_test.go",
     ],
 )
 
@@ -149,6 +114,7 @@ filegroup(
         "link.go",
         "nogo.go",
         "nogo_validation.go",
+        "params.go",
         "preprofile.go",
         "read.go",
         "replicate.go",
@@ -165,28 +131,10 @@ go_source(
     name = "nogo_srcs",
     srcs = [
         "constants.go",
-        "env.go",
-        "flags.go",
-        "nogo_fix.go",
-        "nogo_goversions_go118.go",
-        "nogo_goversions_go121.go",
-        "nogo_goversions_go122.go",
-        "nogo_main.go",
-        "nogo_version.go",
-        "nolint.go",
+        "params.go",
     ],
-    # //go/tools/builders:nogo_srcs is considered a different target by
-    # Bazel's visibility check than
-    # @io_bazel_rules_go//go/tools/builders:nogo_srcs. Only the latter is
-    # allowed to depend on
-    # @org_golang_x_tools//go/analysis/internal/facts:go_tool_library.
-    tags = ["manual"],
     visibility = ["//visibility:public"],
-    deps = [
-        "@org_golang_x_tools//go/analysis",
-        "@org_golang_x_tools//go/gcexportdata",
-        "@org_golang_x_tools//internal/facts",
-    ],
+    deps = ["//go/tools/builders/nogo"],
 )
 
 go_binary(
@@ -211,6 +159,7 @@ go_binary(
         "env.go",
         "flags.go",
         "info.go",
+        "params.go",
     ],
     visibility = ["//visibility:public"],
 )
@@ -228,6 +177,7 @@ go_binary(
     srcs = [
         "env.go",
         "flags.go",
+        "params.go",
         "protoc.go",
     ],
     visibility = ["//visibility:private"],
@@ -249,6 +199,6 @@ filegroup(
 filegroup(
     name = "all_files",
     testonly = True,
-    srcs = glob(["**"]),
+    srcs = glob(["**"]) + ["//go/tools/builders/nogo:all_files"],
     visibility = ["//visibility:public"],
 )

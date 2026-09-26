@@ -1,6 +1,6 @@
 //go:build !go1.21
 
-package main
+package nogo
 
 import "testing"
 
