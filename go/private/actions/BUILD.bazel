@@ -77,7 +77,7 @@ bzl_library(
     visibility = ["//go:__subpackages__"],
     deps = [
         "//go/private:common",
-        "//go/private:context",
+        "@io_bazel_rules_nogo//:scope.bzl",
     ],
 )
 

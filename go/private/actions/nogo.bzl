@@ -12,8 +12,42 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load(
+    "@io_bazel_rules_nogo//:scope.bzl",
+    NOGO_EXCLUDES = "EXCLUDES",
+    NOGO_INCLUDES = "INCLUDES",
+)
 load("//go/private:common.bzl", "GO_TOOLCHAIN_LABEL", "SUPPORTS_PATH_MAPPING_REQUIREMENT")
-load("//go/private:context.bzl", "validate_nogo")
+
+def matches_scope(label, scope):
+    if scope == "all":
+        return True
+    if scope.repo_name != label.repo_name:
+        return False
+    if scope.name == "__pkg__":
+        return scope.package == label.package
+    if scope.name == "__subpackages__":
+        if not scope.package:
+            return True
+        return scope.package == label.package or label.package.startswith(scope.package + "/")
+    fail("invalid scope '%s'" % scope.name)
+
+def _matches_scopes(label, scopes):
+    for scope in scopes:
+        if matches_scope(label, scope):
+            return True
+    return False
+
+def _analysis_mode(go, types_only):
+    # Some targets have no nogo provider, or one without an executable.
+    if go.nogo == None or go.nogo.executable == None:
+        return "disabled"
+    if types_only or "no-nogo" in go._ctx.attr.tags:
+        return "types"
+    label = go.label
+    if _matches_scopes(label, NOGO_INCLUDES) and not _matches_scopes(label, NOGO_EXCLUDES):
+        return "full"
+    return "facts"
 
 def _dependency(v):
     importpaths = [v.data.importpath]
@@ -35,16 +69,14 @@ def emit_nogo(
         types_only = False):
     """Declares analysis outputs and registers nogo and validation actions."""
     nogo = go.nogo
-
-    # Some targets have no nogo provider, or one without an executable.
-    if nogo == None or nogo.executable == None:
+    mode = _analysis_mode(go, types_only)
+    if mode == "disabled":
         return struct(facts = None, diagnostics = None, validation = None)
 
-    types_only = types_only or "no-nogo" in go._ctx.attr.tags
     out_facts = go.declare_file(go, name = source.name, ext = output_suffix + ".facts")
     out_diagnostics = go.declare_directory(go, name = source.name, ext = output_suffix + "_nogo")
     out_validation = None
-    if not types_only and validate_nogo(go):
+    if mode == "full":
         out_validation = go.declare_file(go, name = source.name, ext = output_suffix + ".nogo")
 
     sources = source.srcs
@@ -78,9 +110,9 @@ def emit_nogo(
         args.add_all([cgo_go_srcs], before_each = "-ignore_src")
 
     args.add_all("-stdlib_export", [go.stdlib.export_files], expand_directories = False)
-    if types_only:
+    if mode == "types":
         args.add("-types_only")
-    elif not out_validation:
+    elif mode == "facts":
         # Since diagnostics are ignored, analyzers that don't generate facts can be skipped.
         args.add("-facts_only")
     args.add("-out_facts", out_facts)

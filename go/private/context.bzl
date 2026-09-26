@@ -20,11 +20,6 @@ load(
     "@bazel_skylib//rules:common_settings.bzl",
     "BuildSettingInfo",
 )
-load(
-    "@io_bazel_rules_nogo//:scope.bzl",
-    NOGO_EXCLUDES = "EXCLUDES",
-    NOGO_INCLUDES = "INCLUDES",
-)
 load("@package_metadata//providers:package_metadata_info.bzl", "PackageMetadataInfo")
 load(
     "@rules_cc//cc:action_names.bzl",
@@ -513,25 +508,6 @@ def _infer_importpath(ctx, embeds, importpath, importmap):
         importpath = importpath[1:]
     return importpath, importpath, INFERRED_PATH
 
-def matches_scope(label, scope):
-    if scope == "all":
-        return True
-    if scope.repo_name != label.repo_name:
-        return False
-    if scope.name == "__pkg__":
-        return scope.package == label.package
-    if scope.name == "__subpackages__":
-        if not scope.package:
-            return True
-        return scope.package == label.package or label.package.startswith(scope.package + "/")
-    fail("invalid scope '%s'" % scope.name)
-
-def _matches_scopes(label, scopes):
-    for scope in scopes:
-        if matches_scope(label, scope):
-            return True
-    return False
-
 def _go_infos_use_cgo(go_infos):
     for go_info in go_infos:
         if GoInfo in go_info and go_info[GoInfo].cgo:
@@ -547,12 +523,6 @@ def _sources_use_cgo(attr, go_infos):
 def maybe_needs_cc_toolchain(attr, go_infos = []):
     """Returns whether this rule's own sources may use the C/C++ toolchain."""
     return _sources_use_cgo(attr, go_infos)
-
-def validate_nogo(go):
-    """Whether nogo should be run as a validation action rather than just to generate fact files for the current
-    target."""
-    label = go.label
-    return _matches_scopes(label, NOGO_INCLUDES) and not _matches_scopes(label, NOGO_EXCLUDES)
 
 default_go_config_info = GoConfigInfo(
     static = False,
