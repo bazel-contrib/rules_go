@@ -18,8 +18,12 @@ package buildid_test
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"debug/elf"
+	"debug/macho"
+	"encoding/binary"
 	"encoding/hex"
+	"os"
 	"strings"
 	"testing"
 
@@ -125,7 +129,60 @@ func TestNativeChangeChangesBuildID(t *testing.T) {
 	}
 }
 
+func TestCrossCompiledMachO(t *testing.T) {
+	data, err := os.ReadFile(output(t, "//src:pure", "--platforms=@io_bazel_rules_go//go/toolchain:darwin_arm64"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	prefix := []byte("\xff Go build ID: \"")
+	i := bytes.Index(data, prefix)
+	if i < 0 {
+		t.Fatal("Go build ID not found")
+	}
+	goID := string(data[i+len(prefix):][:40])
+	if goID == strings.Repeat("0", 40) {
+		t.Fatal("Go build ID placeholder was not replaced")
+	}
+
+	f, err := macho.NewFile(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	uuid := loadCommand(f, 0x1b) // LC_UUID
+	if uuid == nil || hex.EncodeToString(uuid[8:14]) != goID[:12] {
+		t.Errorf("LC_UUID %x does not match Go build ID %s", uuid, goID)
+	}
+
+	// The kernel refuses to run arm64 binaries whose page hashes don't match
+	// the code signature.
+	cs := loadCommand(f, 0x1d) // LC_CODE_SIGNATURE
+	if cs == nil {
+		t.Fatal("no code signature")
+	}
+	be := binary.BigEndian
+	sig := data[f.ByteOrder.Uint32(cs[8:]):]
+	cd := sig[be.Uint32(sig[16:]):]
+	hashOff, nSlots, codeLimit, pageSize := int(be.Uint32(cd[16:])), int(be.Uint32(cd[28:])), int(be.Uint32(cd[32:])), 1<<cd[39]
+	for p := range nSlots {
+		sum := sha256.Sum256(data[p*pageSize : min((p+1)*pageSize, codeLimit)])
+		if !bytes.Equal(sum[:], cd[hashOff+p*sha256.Size:][:sha256.Size]) {
+			t.Fatalf("code signature does not match page %d", p)
+		}
+	}
+}
+
 func build(t *testing.T, target string, flags ...string) buildIDs {
+	t.Helper()
+	f, err := elf.Open(output(t, target, flags...))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	goID := noteDesc(t, f, ".note.go.buildid")
+	return buildIDs{goID: string(goID), gnuID: hex.EncodeToString(noteDesc(t, f, ".note.gnu.build-id"))}
+}
+
+func output(t *testing.T, target string, flags ...string) string {
 	t.Helper()
 	if err := bazel_testing.RunBazel(append([]string{"build", target}, flags...)...); err != nil {
 		t.Fatal(err)
@@ -134,13 +191,16 @@ func build(t *testing.T, target string, flags ...string) buildIDs {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f, err := elf.Open(strings.TrimSpace(string(out)))
-	if err != nil {
-		t.Fatal(err)
+	return strings.TrimSpace(string(out))
+}
+
+func loadCommand(f *macho.File, cmd uint32) []byte {
+	for _, l := range f.Loads {
+		if raw := l.Raw(); f.ByteOrder.Uint32(raw) == cmd {
+			return raw
+		}
 	}
-	defer f.Close()
-	goID := noteDesc(t, f, ".note.go.buildid")
-	return buildIDs{goID: string(goID), gnuID: hex.EncodeToString(noteDesc(t, f, ".note.gnu.build-id"))}
+	return nil
 }
 
 func noteDesc(t *testing.T, f *elf.File, name string) []byte {
