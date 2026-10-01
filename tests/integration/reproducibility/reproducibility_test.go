@@ -42,6 +42,12 @@ go_library(
 	importpath = "empty_lib",
 )
 
+go_library(
+	name = "covered",
+	srcs = ["covered.go"],
+	importpath = "covered",
+)
+
 go_binary(
     name = "hello",
     srcs = ["hello.go"],
@@ -72,6 +78,12 @@ import (
 
 func main() {
 	fmt.Println("hello", cmp.Equal("same", "same"))
+}
+-- covered.go --
+package covered
+
+func Covered() string {
+	return "covered"
 }
 -- add.h --
 #ifdef __cplusplus
@@ -355,6 +367,37 @@ func Test(t *testing.T) {
 			if !found {
 				t.Fatal("Placeholder not found in stdlib of " + dir)
 			}
+		}
+	})
+
+	t.Run("Check coverage", func(t *testing.T) {
+		// Instrumented sources are written to a temporary directory, which must not leak into outputs.
+		for _, dir := range dirs[:2] {
+			cmd := bazel_testing.BazelCmd("build",
+				"--collect_code_coverage",
+				"--instrumentation_filter=^//:covered$",
+				"//:covered",
+			)
+			cmd.Dir = dir
+			if err := cmd.Run(); err != nil {
+				t.Fatalf("in %s, error running %s: %v", dir, strings.Join(cmd.Args, " "), err)
+			}
+		}
+		var dirHashes [2][]fileHash
+		for i := range dirHashes {
+			var err error
+			dirHashes[i], err = hashFiles(filepath.Join(dirs[i], "bazel-bin/"), func(root, path string) bool {
+				return path != root && (filepath.Dir(path) != root || !strings.HasPrefix(filepath.Base(path), "covered."))
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+		if len(dirHashes[0]) == 0 {
+			t.Fatal("no covered outputs found")
+		}
+		if err := compareHashes(dirHashes[0], dirHashes[1]); err != nil {
+			t.Fatal(err)
 		}
 	})
 }
