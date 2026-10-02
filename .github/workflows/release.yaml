@@ -16,6 +16,10 @@ jobs:
       prerelease: false
       tag_name: ${{ github.ref_name }}
       draft: true
+      # The release archive is created with git and every commit is tested on Buildkite, so don't
+      # run Bazel at all. The reusable workflow appends flags to the command, which true ignores.
+      bazel_test_command: "true"
+      mount_bazel_caches: false
   publish:
     needs: release
     uses: ./.github/workflows/publish.yaml

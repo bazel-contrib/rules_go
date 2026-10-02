@@ -1,5 +1,8 @@
 module(
     name = "rules_go",
+    # Replaced with the release version by Publish to BCR, which requires the attribute to be
+    # present. Empty rather than a placeholder so that overrides don't report a bogus version.
+    version = "",
     compatibility_level = 0,
     repo_name = "io_bazel_rules_go",
 )

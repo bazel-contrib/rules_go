@@ -329,6 +329,12 @@ func compileArchive(
 		}
 	}
 
+	trimPath, err := createTrimPath()
+	if err != nil {
+		return err
+	}
+	trimPath = workDir + "=>;" + trimPath
+
 	// If we have cgo, generate separate C and go files, and compile the
 	// C files.
 	var objFiles []string
@@ -355,16 +361,12 @@ func compileArchive(
 				return err
 			}
 		}
-		gcFlags = append(gcFlags, "-trimpath="+srcDir)
+		gcFlags = append(gcFlags, "-trimpath="+srcDir+";"+trimPath)
 	} else {
 		if cgoExportHPath != "" {
 			if err := os.WriteFile(cgoExportHPath, nil, 0o666); err != nil {
 				return err
 			}
-		}
-		trimPath, err := createTrimPath()
-		if err != nil {
-			return err
 		}
 		// Preserve an existing -trimpath argument, applying abs() to each prefix.
 		for i, flag := range gcFlags {
