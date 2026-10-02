@@ -1,0 +1,165 @@
+// Copyright 2026 The Bazel Authors. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package main
+
+import (
+	"bytes"
+	"crypto/sha256"
+	"debug/elf"
+	"debug/macho"
+	"encoding/hex"
+	"fmt"
+	"os"
+	"strings"
+)
+
+// buildIDPlaceholder makes the linker emit the Go and host build IDs, which
+// setContentBuildID overwrites in place once the binary is linked. Its length
+// matches the hex-encoded ID written over it.
+var buildIDPlaceholder = strings.Repeat("0", 2*buildIDSize)
+
+const buildIDSize = 20
+
+// hasContentBuildID reports whether setContentBuildID supports binaries for goos.
+func hasContentBuildID(goos string) bool {
+	switch goos {
+	case "android", "darwin", "dragonfly", "freebsd", "illumos", "ios", "linux", "netbsd", "openbsd", "solaris":
+		return true
+	}
+	return false
+}
+
+// setContentBuildID replaces the placeholder Go build ID and the host build ID
+// (ELF GNU build ID or Mach-O LC_UUID) of the binary at path with a hash of the
+// binary, so that distinct binaries get distinct IDs and rebuilds stay
+// reproducible. Binaries without the placeholder, e.g. built with -buildid in
+// gc_linkopts, are left untouched.
+func setContentBuildID(path string) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	if bytes.HasPrefix(data, []byte(elf.ELFMAG)) {
+		return setELFBuildID(path, data)
+	}
+	return setMachOBuildID(path, data)
+}
+
+func setELFBuildID(path string, data []byte) error {
+	f, err := elf.NewFile(bytes.NewReader(data))
+	if err != nil {
+		return err
+	}
+	goStart, goEnd, ok := noteDesc(f, ".note.go.buildid")
+	if !ok || string(data[goStart:goEnd]) != buildIDPlaceholder {
+		return nil
+	}
+
+	sum := sha256.Sum256(data)
+	out, err := os.OpenFile(path, os.O_WRONLY, 0)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+	if _, err := out.WriteAt([]byte(hex.EncodeToString(sum[:buildIDSize])), goStart); err != nil {
+		return err
+	}
+	// The GNU note is missing when the external linker does not support --build-id.
+	if start, end, ok := noteDesc(f, ".note.gnu.build-id"); ok {
+		desc := make([]byte, end-start)
+		copy(desc, sum[:])
+		if _, err := out.WriteAt(desc, start); err != nil {
+			return err
+		}
+	}
+	return out.Close()
+}
+
+// setMachOBuildID re-signs the binary after patching it, because the code
+// signature covers both the Go build ID and LC_UUID.
+func setMachOBuildID(path string, data []byte) error {
+	f, err := macho.NewFile(bytes.NewReader(data))
+	if err != nil {
+		return err
+	}
+	if f.Magic != macho.Magic64 {
+		return fmt.Errorf("not 64-bit Mach-O file: %s", path)
+	}
+	// The Go linker stores the Go build ID in the text segment on Mach-O.
+	prefix := "\xff Go build ID: \""
+	i := bytes.Index(data, []byte(prefix+buildIDPlaceholder+"\"\n \xff"))
+	if i < 0 {
+		return nil
+	}
+
+	sum := sha256.Sum256(data)
+	out, err := os.OpenFile(path, os.O_WRONLY, 0)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+	if _, err := out.WriteAt([]byte(hex.EncodeToString(sum[:buildIDSize])), int64(i+len(prefix))); err != nil {
+		return err
+	}
+	if off, ok := machoUUIDOffset(f); ok {
+		uuid := make([]byte, 16)
+		copy(uuid, sum[:])
+		// Same RFC 4122 version and variant bits as the Go linker sets.
+		uuid[6] = uuid[6]&0x0f | 0x30
+		uuid[8] = uuid[8]&0x3f | 0xc0
+		if _, err := out.WriteAt(uuid, off); err != nil {
+			return err
+		}
+	}
+	if err := out.Close(); err != nil {
+		return err
+	}
+	return machoCodeSign(path)
+}
+
+// machoUUIDOffset returns the file offset of the LC_UUID payload.
+func machoUUIDOffset(f *macho.File) (int64, bool) {
+	const lcUUID = 0x1b
+	off := int64(machoHeaderSize64)
+	for _, l := range f.Loads {
+		raw := l.Raw()
+		if f.ByteOrder.Uint32(raw) == lcUUID {
+			return off + 8, true
+		}
+		off += int64(f.ByteOrder.Uint32(raw[4:]))
+	}
+	return 0, false
+}
+
+// noteDesc returns the file offsets of the descriptor of the first note in the
+// named section.
+func noteDesc(f *elf.File, name string) (start, end int64, ok bool) {
+	s := f.Section(name)
+	if s == nil || s.Type != elf.SHT_NOTE {
+		return 0, 0, false
+	}
+	var hdr [12]byte
+	if _, err := s.ReadAt(hdr[:], 0); err != nil {
+		return 0, 0, false
+	}
+	namesz := int64(f.ByteOrder.Uint32(hdr[0:]))
+	descsz := int64(f.ByteOrder.Uint32(hdr[4:]))
+	start = int64(len(hdr)) + (namesz+3)&^3
+	if start+descsz > int64(s.Size) {
+		return 0, 0, false
+	}
+	start += int64(s.Offset)
+	return start, start + descsz, true
+}

@@ -218,8 +218,6 @@ def emit_link(
     if go.mode.goos == "darwin" and sdk_version and sdk_version[:2] >= (1, 27) and go.macos_minimum_os:
         tool_args.add("-macos", go.macos_minimum_os)
 
-    # Do not remove, somehow this is needed when building for darwin/arm only.
-    tool_args.add("-buildid=redacted")
     if go.mode.strip:
         tool_args.add("-s", "-w")
     tool_args.add_joined("-extldflags", extldflags, join_with = " ")
