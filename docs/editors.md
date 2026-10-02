@@ -334,6 +334,14 @@ need to configure them:
 - `GOPACKAGESDRIVER_BAZEL_QUERY_SCOPE` which specifies the scope for `importpath` queries (since `gopls` only issues `file=` queries, so **use if you know what you're doing!**)
 - `GOPACKAGESDRIVER_BAZEL_BUILD_FLAGS` which will be passed to `bazel build`
   invocations
+- `GOPACKAGESDRIVER_PKG_JSON_LIST`: path to a file listing `.pkg.json` files
+  produced by `go_pkg_info_aspect`, one per line. When set, the driver answers
+  from those files and never invokes `bazel`, so `go/packages`-based tools can
+  run inside a Bazel action. Placeholder paths resolve against the working
+  directory (the execution root inside an action). Only import-path queries
+  (optionally ending in `/...`) are supported. Files are filtered for the
+  `GOOS`, `GOARCH` and `GOTAGS` of the driver's environment, so set them in the
+  action when targeting another platform.
 
 ## Debugging
 It is possible to debug driver issues by calling it directly and looking at the errors
