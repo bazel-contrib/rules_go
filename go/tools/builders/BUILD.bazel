@@ -3,15 +3,6 @@ load("//go/private:common.bzl", "RULES_GO_STDLIB_PREFIX")
 load("//go/private/rules:transition.bzl", "go_reset_target")
 
 go_test(
-    name = "cgo_response_test",
-    size = "small",
-    srcs = [
-        "cgo_response.go",
-        "cgo_response_test.go",
-    ],
-)
-
-go_test(
     name = "filter_test",
     size = "small",
     srcs = [
@@ -143,7 +134,6 @@ filegroup(
         "buildinfo.go",
         "cc.go",
         "cgo2.go",
-        "cgo_response.go",
         "compilepkg.go",
         "constants.go",
         "cover.go",

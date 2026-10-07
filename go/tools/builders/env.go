@@ -549,11 +549,7 @@ func passLongArgsInResponseFiles(cmd *exec.Cmd) (cleanup func()) {
 	cleanup = func() { os.Remove(tf.Name()) }
 	var buf bytes.Buffer
 	for _, arg := range cmd.Args[1:] {
-		// Slashes need to be doubled for escaping
-		escaped_arg := strings.ReplaceAll(arg, "\\", "\\\\")
-		// Newlines too, so that they don't get split when read
-		escaped_arg = strings.ReplaceAll(escaped_arg, "\n", "\\n")
-		fmt.Fprintf(&buf, "%s\n", escaped_arg)
+		fmt.Fprintf(&buf, "%s\n", encodeResponseFileArg(arg))
 	}
 	if _, err := tf.Write(buf.Bytes()); err != nil {
 		tf.Close()
@@ -566,6 +562,36 @@ func passLongArgsInResponseFiles(cmd *exec.Cmd) (cleanup func()) {
 	}
 	cmd.Args = []string{cmd.Args[0], "@" + tf.Name()}
 	return cleanup
+}
+
+// encodeResponseFileArg encodes one argv entry using Go 1.27's
+// GCC-compatible response-file format.
+func encodeResponseFileArg(arg string) string {
+	if arg == "" {
+		return `""`
+	}
+	if !strings.ContainsAny(arg, " \t\n\r'\"\\$`") {
+		return arg
+	}
+
+	var b strings.Builder
+	b.WriteByte('"')
+	for _, r := range arg {
+		switch r {
+		case '\\':
+			b.WriteString(`\\`)
+		case '"':
+			b.WriteString(`\"`)
+		case '$':
+			b.WriteString(`\$`)
+		case '`':
+			b.WriteString("\\`")
+		default:
+			b.WriteRune(r)
+		}
+	}
+	b.WriteByte('"')
+	return b.String()
 }
 
 // quotePathIfNeeded quotes path if it contains whitespace and isn't already quoted.
