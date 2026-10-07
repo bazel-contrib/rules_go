@@ -223,8 +223,6 @@ func link(args []string) error {
 	return nil
 }
 
-var versionExp = regexp.MustCompile(`.*go1\.(\d+).*$`)
-
 func onVersion(version int) (bool, error) {
 	v := runtime.Version()
 	m := versionExp.FindStringSubmatch(v)

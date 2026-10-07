@@ -28,7 +28,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 )
 
@@ -530,19 +529,4 @@ func formatLdFlagsFileContent(flags string) string {
 		return encodeResponseFileArg(flags) + "\n"
 	}
 	return flags
-}
-
-func onVersionOrHigher(version int) (bool, error) {
-	v := runtime.Version()
-	m := versionExp.FindStringSubmatch(v)
-	if len(m) != 2 {
-		return false, fmt.Errorf("failed to match against Go version %q", v)
-	}
-	mvStr := m[1]
-	mv, err := strconv.Atoi(mvStr)
-	if err != nil {
-		return false, fmt.Errorf("convert minor version %q to int: %w", mvStr, err)
-	}
-
-	return mv >= version, nil
 }
