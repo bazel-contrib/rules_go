@@ -62,6 +62,30 @@ func TestTransformArgs(t *testing.T) {
 			flags:    []string{"-internal-isystem"},
 			expected: []string{"-Xclang", "-internal-isystem", "-Xclang", "RELATIVE/PATH"},
 		},
+		{
+			name:     "extern-C forwarding",
+			args:     []string{"-Xclang", "-internal-externc-isystem", "-Xclang", "relative/path"},
+			flags:    cgoAbsEnvFlags,
+			expected: []string{"-Xclang", "-internal-externc-isystem", "-Xclang", "RELATIVE/PATH"},
+		},
+		{
+			name:     "early C forwarding",
+			args:     []string{"-Xpreprocessor", "-internal-externc-isystem", "-Xpreprocessor", "relative/path"},
+			flags:    cgoAbsEnvFlags,
+			expected: []string{"-Xpreprocessor", "-internal-externc-isystem", "-Xpreprocessor", "RELATIVE/PATH"},
+		},
+		{
+			name:     "early C++ forwarding",
+			args:     []string{"-Xpreprocessor", "-internal-isystem", "-Xpreprocessor", "relative/path"},
+			flags:    cgoAbsEnvFlags,
+			expected: []string{"-Xpreprocessor", "-internal-isystem", "-Xpreprocessor", "RELATIVE/PATH"},
+		},
+		{
+			name:     "joined C++ path",
+			args:     []string{"-stdlib++-isystemrelative/path"},
+			flags:    cgoAbsEnvFlags,
+			expected: []string{"-stdlib++-isystemRELATIVE/PATH"},
+		},
 	}
 
 	for _, tc := range testCases {
