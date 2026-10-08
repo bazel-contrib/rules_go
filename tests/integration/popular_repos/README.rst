@@ -165,6 +165,7 @@ This runs tests from the repository `golang.org/x/tools <https://golang.org/x/to
 * @org_golang_x_tools//benchmark/parse:parse_test
 * @org_golang_x_tools//cmd/benchcmp:benchcmp_test
 * @org_golang_x_tools//cmd/bisect:bisect_test
+* @org_golang_x_tools//cmd/compilebench:compilebench_test
 * @org_golang_x_tools//cmd/digraph:digraph_test
 * @org_golang_x_tools//cmd/go-contrib-init:go-contrib-init_test
 * @org_golang_x_tools//cmd/splitdwarf/internal/macho:macho_test
@@ -182,7 +183,6 @@ This runs tests from the repository `golang.org/x/tools <https://golang.org/x/to
 * @org_golang_x_tools//go/ast/edge:edge_test
 * @org_golang_x_tools//go/callgraph:callgraph_test
 * @org_golang_x_tools//go/callgraph/vta/internal/trie:trie_test
-* @org_golang_x_tools//internal/aliases:aliases_test
 * @org_golang_x_tools//internal/analysis/analyzerutil:analyzerutil_test
 * @org_golang_x_tools//internal/analysis/driverutil:driverutil_test
 * @org_golang_x_tools//internal/astutil:astutil_test
