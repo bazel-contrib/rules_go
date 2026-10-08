@@ -103,7 +103,14 @@ def _go_download_sdk_impl(ctx):
         fail("unsupported platform {}".format(platform))
 
     filename, sha256 = sdks[platform]
-    _remote_sdk(ctx, [url.format(filename) for url in ctx.attr.urls], ctx.attr.strip_prefix, sha256)
+
+    strip_prefix = ctx.attr.strip_prefix
+    if ctx.attr.strip_prefixes:
+        if platform not in ctx.attr.strip_prefixes:
+            fail("strip_prefixes does not contain platform '{}'".format(platform))
+        strip_prefix = ctx.attr.strip_prefixes[platform]
+
+    _remote_sdk(ctx, [url.format(filename) for url in ctx.attr.urls], strip_prefix, sha256)
     patch(ctx, patch_args = _get_patch_args(ctx.attr.patch_strip))
 
     sdk_build_file_override = ctx.attr._bootstrap_sdk_build_file if ctx.attr.experimental_build_compiler_from_source else None
@@ -122,6 +129,7 @@ def _go_download_sdk_impl(ctx):
             "urls": ctx.attr.urls,
             "version": version,
             "strip_prefix": ctx.attr.strip_prefix,
+            "strip_prefixes": ctx.attr.strip_prefixes,
             "experimental_build_compiler_from_source": ctx.attr.experimental_build_compiler_from_source,
         }
 
@@ -142,6 +150,12 @@ go_download_sdk_rule = repository_rule(
         "urls": attr.string_list(default = ["https://dl.google.com/go/{}"]),
         "version": attr.string(),
         "strip_prefix": attr.string(default = "go"),
+        "strip_prefixes": attr.string_dict(
+            doc = "Per-platform strip_prefix, keyed by '<goos>_<goarch>'. " +
+                  "Takes precedence over strip_prefix when non-empty. Required for " +
+                  "GOPROXY-style mirrors (e.g. the golang.org/toolchain module layout) " +
+                  "where each platform archive has a different top-level directory.",
+        ),
         "patches": attr.label_list(
             doc = "A list of patches to apply to the SDK after downloading it",
         ),
