@@ -35,7 +35,7 @@ var (
 	// cgoEnvVars is the list of all cgo environment variable
 	cgoEnvVars = []string{"CGO_CFLAGS", "CGO_CXXFLAGS", "CGO_CPPFLAGS", "CGO_LDFLAGS"}
 	// cgoAbsEnvFlags are all the flags that need absolute path in cgoEnvVars
-	cgoAbsEnvFlags = []string{"-I", "-L", "-isysroot", "-isystem", "-internal-isystem", "-iquote", "-include", "-imacros", "-gcc-toolchain", "--sysroot", "-resource-dir", "-fsanitize-blacklist", "-fsanitize-ignorelist", "--warning-suppression-mappings", "-idirafter", "-isystem-after", "--include-directory-after "}
+	cgoAbsEnvFlags = []string{"-I", "-L", "-isysroot", "-isystem", "-internal-isystem", "-internal-externc-isystem", "-stdlib++-isystem", "-iquote", "-include", "-imacros", "-gcc-toolchain", "--sysroot", "-resource-dir", "-fsanitize-blacklist", "-fsanitize-ignorelist", "--warning-suppression-mappings", "-idirafter", "-isystem-after", "--include-directory-after "}
 	// cgoAbsPlaceholder is placed in front of flag values that must be absolutized
 	cgoAbsPlaceholder = "__GO_BAZEL_CC_PLACEHOLDER__"
 )
@@ -434,10 +434,10 @@ func absArgs(args []string, flags []string) {
 func transformArgs(args []string, flags []string, fn func(string) string) {
 	absNext := false
 	for i := range args {
-		// When expecting a path argument and we see -Xclang, skip over it
+		// When expecting a path argument and we see a forwarding flag, skip over it
 		// and map the next argument instead.
 		// ex: -Xclang -isystem -Xclang path
-		if absNext && args[i] == "-Xclang" {
+		if absNext && (args[i] == "-Xclang" || args[i] == "-Xpreprocessor") {
 			continue
 		}
 		if absNext {
@@ -548,12 +548,15 @@ func passLongArgsInResponseFiles(cmd *exec.Cmd) (cleanup func()) {
 	}
 	cleanup = func() { os.Remove(tf.Name()) }
 	var buf bytes.Buffer
+	// Go 1.27 switched to a GCC-compatible response file format. Older
+	// toolchains only understand backslash escapes for '\\' and '\n'.
+	gccFormat, err := onVersionOrHigher(27)
+	if err != nil {
+		log.Fatalf("error writing long arguments to response file: %v", err)
+	}
 	for _, arg := range cmd.Args[1:] {
-		// Slashes need to be doubled for escaping
-		escaped_arg := strings.ReplaceAll(arg, "\\", "\\\\")
-		// Newlines too, so that they don't get split when read
-		escaped_arg = strings.ReplaceAll(escaped_arg, "\n", "\\n")
-		fmt.Fprintf(&buf, "%s\n", escaped_arg)
+		buf.WriteString(formatArgForResponseFile(arg, gccFormat))
+		buf.WriteByte('\n')
 	}
 	if _, err := tf.Write(buf.Bytes()); err != nil {
 		tf.Close()
@@ -603,4 +606,60 @@ func useResponseFile(path string, argLen int) bool {
 		return true
 	}
 	return false
+}
+
+// encodeResponseFileArg encodes one argv entry using Go 1.27's
+// GCC-compatible response-file format.
+func encodeResponseFileArg(arg string) string {
+	if arg == "" {
+		return `""`
+	}
+	if !strings.ContainsAny(arg, " \t\n\r'\"\\$`") {
+		return arg
+	}
+
+	var b strings.Builder
+	b.WriteByte('"')
+	for _, r := range arg {
+		switch r {
+		case '\\':
+			b.WriteString(`\\`)
+		case '"':
+			b.WriteString(`\"`)
+		case '$':
+			b.WriteString(`\$`)
+		case '`':
+			b.WriteString("\\`")
+		default:
+			b.WriteRune(r)
+		}
+	}
+	b.WriteByte('"')
+	return b.String()
+}
+
+var versionExp = regexp.MustCompile(`.*go1\.(\d+).*$`)
+
+func onVersionOrHigher(version int) (bool, error) {
+	v := runtime.Version()
+	m := versionExp.FindStringSubmatch(v)
+	if len(m) != 2 {
+		return false, fmt.Errorf("match against Go version %q", v)
+	}
+	mvStr := m[1]
+	mv, err := strconv.Atoi(mvStr)
+	if err != nil {
+		return false, fmt.Errorf("convert minor version %q to int: %w", mvStr, err)
+	}
+	return mv >= version, nil
+}
+
+func formatArgForResponseFile(arg string, useGCCFormat bool) string {
+	if useGCCFormat {
+		return encodeResponseFileArg(arg) + "\n"
+	}
+	// Slashes need to be doubled for escaping
+	escaped_arg := strings.ReplaceAll(arg, "\\", "\\\\")
+	// Newlines too, so that they don't get split when read
+	return strings.ReplaceAll(escaped_arg, "\n", "\\n")
 }

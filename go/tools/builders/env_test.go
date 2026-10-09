@@ -62,6 +62,30 @@ func TestTransformArgs(t *testing.T) {
 			flags:    []string{"-internal-isystem"},
 			expected: []string{"-Xclang", "-internal-isystem", "-Xclang", "RELATIVE/PATH"},
 		},
+		{
+			name:     "extern-C forwarding",
+			args:     []string{"-Xclang", "-internal-externc-isystem", "-Xclang", "relative/path"},
+			flags:    cgoAbsEnvFlags,
+			expected: []string{"-Xclang", "-internal-externc-isystem", "-Xclang", "RELATIVE/PATH"},
+		},
+		{
+			name:     "early C forwarding",
+			args:     []string{"-Xpreprocessor", "-internal-externc-isystem", "-Xpreprocessor", "relative/path"},
+			flags:    cgoAbsEnvFlags,
+			expected: []string{"-Xpreprocessor", "-internal-externc-isystem", "-Xpreprocessor", "RELATIVE/PATH"},
+		},
+		{
+			name:     "early C++ forwarding",
+			args:     []string{"-Xpreprocessor", "-internal-isystem", "-Xpreprocessor", "relative/path"},
+			flags:    cgoAbsEnvFlags,
+			expected: []string{"-Xpreprocessor", "-internal-isystem", "-Xpreprocessor", "RELATIVE/PATH"},
+		},
+		{
+			name:     "joined C++ path",
+			args:     []string{"-stdlib++-isystemrelative/path"},
+			flags:    cgoAbsEnvFlags,
+			expected: []string{"-stdlib++-isystemRELATIVE/PATH"},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -71,6 +95,41 @@ func TestTransformArgs(t *testing.T) {
 			transformArgs(args, tc.flags, upper)
 			if !reflect.DeepEqual(args, tc.expected) {
 				t.Errorf("got %v, want %v", args, tc.expected)
+			}
+		})
+	}
+}
+
+func TestEncodeResponseFileArg(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		arg  string
+		want string
+	}{
+		{
+			name: "empty",
+			arg:  "",
+			want: `""`,
+		},
+		{
+			name: "unchanged without special characters",
+			arg:  "-pthread",
+			want: "-pthread",
+		},
+		{
+			name: "keeps whitespace in one argument",
+			arg:  "-target x86_64-linux-gnu --sysroot=/dev/null",
+			want: `"-target x86_64-linux-gnu --sysroot=/dev/null"`,
+		},
+		{
+			name: "escapes special characters",
+			arg:  `-Wl,-rpath,$ORIGIN -X "quoted" C:\tmp\lib`,
+			want: `"-Wl,-rpath,\$ORIGIN -X \"quoted\" C:\\tmp\\lib"`,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := encodeResponseFileArg(tc.arg); got != tc.want {
+				t.Fatalf("encodeResponseFileArg(%q) = %q; want %q", tc.arg, got, tc.want)
 			}
 		})
 	}
