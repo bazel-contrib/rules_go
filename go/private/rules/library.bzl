@@ -226,7 +226,7 @@ def _go_tool_library_impl(ctx):
     )
 
     go_info = new_go_info(go, ctx.attr)
-    archive = go.archive(go, go_info)
+    archive = go.archive(go, go_info, nogo_types_only = True)
 
     return [
         go_info,
@@ -246,6 +246,10 @@ go_tool_library = go_rule(
         "x_defs": attr.string_dict(),
         "_go_config": attr.label(default = "//:go_config"),
         "_stdlib": attr.label(default = "//:stdlib"),
+        "_nogo": attr.label(
+            default = Label("@io_bazel_rules_nogo//:nogo"),
+            cfg = "exec",
+        ),
     },
 )
 # This is used instead of `go_library` for dependencies of the `nogo` rule and
