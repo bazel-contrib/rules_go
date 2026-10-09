@@ -3,7 +3,9 @@
 // license that can be found in the LICENSE file.
 
 // This file was adapted from Go src/cmd/internal/codesign/codesign.go and the
-// machoCodeSign function in src/cmd/link/internal/ld/macho.go at go1.26.7.
+// machoCodeSign function in src/cmd/link/internal/ld/macho.go at go1.26.7:
+// https://cs.opensource.google/go/go/+/refs/tags/go1.26.7:src/cmd/internal/codesign/codesign.go
+// https://cs.opensource.google/go/go/+/refs/tags/go1.26.7:src/cmd/link/internal/ld/macho.go;l=1475-1562
 // It re-signs Mach-O binaries after setContentBuildID patches them, using the
 // same ad-hoc signing algorithm as the Go and Darwin linkers.
 
