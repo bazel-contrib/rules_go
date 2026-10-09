@@ -32,6 +32,13 @@ var buildIDPlaceholder = strings.Repeat("0", 2*buildIDSize)
 
 const buildIDSize = 20
 
+// ELF note sections holding the Go and GNU build IDs, as written by cmd/link:
+// https://cs.opensource.google/go/go/+/refs/tags/go1.26.7:src/cmd/link/internal/ld/elf.go;l=938-963
+const (
+	elfGoBuildIDSection  = ".note.go.buildid"
+	elfGNUBuildIDSection = ".note.gnu.build-id"
+)
+
 // hasContentBuildID reports whether setContentBuildID supports binaries for goos.
 func hasContentBuildID(goos string) bool {
 	switch goos {
@@ -62,7 +69,7 @@ func setELFBuildID(path string, data []byte) error {
 	if err != nil {
 		return err
 	}
-	goStart, goEnd, ok := noteDesc(f, ".note.go.buildid")
+	goStart, goEnd, ok := noteDesc(f, elfGoBuildIDSection)
 	if !ok || string(data[goStart:goEnd]) != buildIDPlaceholder {
 		return nil
 	}
@@ -77,7 +84,7 @@ func setELFBuildID(path string, data []byte) error {
 		return err
 	}
 	// The GNU note is missing when the external linker does not support --build-id.
-	if start, end, ok := noteDesc(f, ".note.gnu.build-id"); ok {
+	if start, end, ok := noteDesc(f, elfGNUBuildIDSection); ok {
 		desc := make([]byte, end-start)
 		copy(desc, sum[:])
 		if _, err := out.WriteAt(desc, start); err != nil {
