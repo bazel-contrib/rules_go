@@ -39,6 +39,14 @@ const (
 	elfGNUBuildIDSection = ".note.gnu.build-id"
 )
 
+// Delimiters of the quoted Go build ID that cmd/link stores in the text segment
+// of non-ELF binaries, as defined in cmd/internal/buildid:
+// https://cs.opensource.google/go/go/+/refs/tags/go1.26.7:src/cmd/internal/buildid/buildid.go;l=241-242
+const (
+	goBuildPrefix = "\xff Go build ID: \""
+	goBuildEnd    = "\"\n \xff"
+)
+
 // hasContentBuildID reports whether setContentBuildID supports binaries for goos.
 func hasContentBuildID(goos string) bool {
 	switch goos {
@@ -105,8 +113,7 @@ func setMachOBuildID(path string, data []byte) error {
 		return fmt.Errorf("not 64-bit Mach-O file: %s", path)
 	}
 	// The Go linker stores the Go build ID in the text segment on Mach-O.
-	prefix := "\xff Go build ID: \""
-	i := bytes.Index(data, []byte(prefix+buildIDPlaceholder+"\"\n \xff"))
+	i := bytes.Index(data, []byte(goBuildPrefix+buildIDPlaceholder+goBuildEnd))
 	if i < 0 {
 		return nil
 	}
@@ -117,7 +124,7 @@ func setMachOBuildID(path string, data []byte) error {
 		return err
 	}
 	defer out.Close()
-	if _, err := out.WriteAt([]byte(hex.EncodeToString(sum[:buildIDSize])), int64(i+len(prefix))); err != nil {
+	if _, err := out.WriteAt([]byte(hex.EncodeToString(sum[:buildIDSize])), int64(i+len(goBuildPrefix))); err != nil {
 		return err
 	}
 	if off, ok := machoUUIDOffset(f); ok {
