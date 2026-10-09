@@ -66,13 +66,14 @@ func setContentBuildID(path string) error {
 	if err != nil {
 		return err
 	}
+	sum := sha256.Sum256(data)
 	if bytes.HasPrefix(data, []byte(elf.ELFMAG)) {
-		return setELFBuildID(path, data)
+		return setELFBuildID(path, data, sum)
 	}
-	return setMachOBuildID(path, data)
+	return setMachOBuildID(path, data, sum)
 }
 
-func setELFBuildID(path string, data []byte) error {
+func setELFBuildID(path string, data []byte, sum [sha256.Size]byte) error {
 	f, err := elf.NewFile(bytes.NewReader(data))
 	if err != nil {
 		return err
@@ -82,29 +83,19 @@ func setELFBuildID(path string, data []byte) error {
 		return nil
 	}
 
-	sum := sha256.Sum256(data)
-	out, err := os.OpenFile(path, os.O_WRONLY, 0)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-	if _, err := out.WriteAt([]byte(hex.EncodeToString(sum[:buildIDSize])), goStart); err != nil {
-		return err
-	}
+	patches := map[int64][]byte{goStart: []byte(hex.EncodeToString(sum[:buildIDSize]))}
 	// The GNU note is missing when the external linker does not support --build-id.
 	if start, end, ok := noteDesc(f, elfGNUBuildIDSection); ok {
 		desc := make([]byte, end-start)
 		copy(desc, sum[:])
-		if _, err := out.WriteAt(desc, start); err != nil {
-			return err
-		}
+		patches[start] = desc
 	}
-	return out.Close()
+	return patchFile(path, patches)
 }
 
 // setMachOBuildID re-signs the binary after patching it, because the code
 // signature covers both the Go build ID and LC_UUID.
-func setMachOBuildID(path string, data []byte) error {
+func setMachOBuildID(path string, data []byte, sum [sha256.Size]byte) error {
 	f, err := macho.NewFile(bytes.NewReader(data))
 	if err != nil {
 		return err
@@ -118,29 +109,34 @@ func setMachOBuildID(path string, data []byte) error {
 		return nil
 	}
 
-	sum := sha256.Sum256(data)
-	out, err := os.OpenFile(path, os.O_WRONLY, 0)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-	if _, err := out.WriteAt([]byte(hex.EncodeToString(sum[:buildIDSize])), int64(i+len(goBuildPrefix))); err != nil {
-		return err
-	}
+	patches := map[int64][]byte{int64(i + len(goBuildPrefix)): []byte(hex.EncodeToString(sum[:buildIDSize]))}
 	if off, ok := machoUUIDOffset(f); ok {
 		uuid := make([]byte, 16)
 		copy(uuid, sum[:])
 		// Same RFC 4122 version and variant bits as the Go linker sets.
 		uuid[6] = uuid[6]&0x0f | 0x30
 		uuid[8] = uuid[8]&0x3f | 0xc0
-		if _, err := out.WriteAt(uuid, off); err != nil {
-			return err
-		}
+		patches[off] = uuid
 	}
-	if err := out.Close(); err != nil {
+	if err := patchFile(path, patches); err != nil {
 		return err
 	}
 	return machoCodeSign(path)
+}
+
+// patchFile overwrites the file at path with each patch at its offset.
+func patchFile(path string, patches map[int64][]byte) error {
+	out, err := os.OpenFile(path, os.O_WRONLY, 0)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+	for off, b := range patches {
+		if _, err := out.WriteAt(b, off); err != nil {
+			return err
+		}
+	}
+	return out.Close()
 }
 
 // machoUUIDOffset returns the file offset of the LC_UUID payload.
