@@ -78,7 +78,8 @@ def _go_path_impl(ctx):
             if src_dir == None:
                 fail("cannot relativize {}: src_dir is unset".format(f.path))
             embedpath = paths.relativize(f.path, f.root.path)
-            dst = pkg.dir + "/" + paths.relativize(embedpath.lstrip(ctx.bin_dir.path + "/"), src_dir.lstrip(ctx.bin_dir.path + "/"))
+            bin_prefix = ctx.bin_dir.path + "/"
+            dst = pkg.dir + "/" + paths.relativize(_trim_prefix(embedpath, bin_prefix), _trim_prefix(src_dir, bin_prefix))
             _add_manifest_entry(manifest_entries, manifest_entry_map, inputs, f, dst)
     if ctx.attr.include_pkg:
         for pkg in pkg_map.values():
@@ -279,3 +280,9 @@ def _add_manifest_entry(entries, entry_map, inputs, src, dst):
     entries.append(struct(src = src.path, dst = dst))
     entry_map[dst] = src.path
     inputs.append(src)
+
+def _trim_prefix(s, prefix):
+    # str.lstrip removes a set of leading characters, not a prefix.
+    if s.startswith(prefix):
+        return s[len(prefix):]
+    return s
