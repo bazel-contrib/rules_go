@@ -180,6 +180,14 @@ func link(args []string) error {
 		}
 	}
 
+	// Appended before toolArgs, so a -buildid in gc_linkopts still takes precedence.
+	contentBuildID := *buildmode != "c-archive" && hasContentBuildID(os.Getenv("GOOS"))
+	if contentBuildID {
+		goargs = append(goargs, "-buildid="+buildIDPlaceholder)
+	} else {
+		goargs = append(goargs, "-buildid=redacted")
+	}
+
 	if *buildmode != "" {
 		goargs = append(goargs, "-buildmode", *buildmode)
 	}
@@ -212,6 +220,12 @@ func link(args []string) error {
 	}
 	if err := goenv.runCommand(goargs); err != nil {
 		return err
+	}
+
+	if contentBuildID {
+		if err := setContentBuildID(*outFile); err != nil {
+			return fmt.Errorf("error setting build ID: %v", err)
+		}
 	}
 
 	if *buildmode == "c-archive" {
