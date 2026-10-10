@@ -23,7 +23,7 @@ def _go_host_sdk_impl(ctx):
     goroot = _detect_host_sdk(ctx)
     platform = _detect_sdk_platform(ctx, goroot)
     version = _detect_sdk_version(ctx, goroot)
-    _sdk_build_file(ctx, platform, version, experiments = ctx.attr.experiments)
+    _sdk_build_file(ctx, platform, version, experiments = ctx.attr.experiments, gofips140 = ctx.attr.gofips140, goroot = goroot)
     _local_sdk(ctx, goroot)
 
 go_host_sdk_rule = repository_rule(
@@ -33,6 +33,10 @@ go_host_sdk_rule = repository_rule(
         "version": attr.string(),
         "experiments": attr.string_list(
             doc = "Go experiments to enable via GOEXPERIMENT",
+        ),
+        "gofips140": attr.string(
+            default = "",
+            doc = "GOFIPS140 version to build with (e.g. 'v1.0.0', 'latest', 'certified'). Empty string disables.",
         ),
         "_sdk_build_file": attr.label(
             default = Label("//go/private:BUILD.sdk.bazel"),
@@ -54,6 +58,14 @@ def go_host_sdk(name, register_toolchains = True, **kwargs):
         _register_toolchains(name)
 
 def _go_download_sdk_impl(ctx):
+    # The bootstrap SDK build file does not thread GOFIPS140 through to the
+    # toolchain, so the two together would silently produce a non-FIPS SDK for
+    # someone who asked for a validated one. Refuse before downloading anything.
+    if ctx.attr.gofips140 not in ("", "off") and ctx.attr.experimental_build_compiler_from_source:
+        fail("gofips140 = '{}' is not supported together with ".format(ctx.attr.gofips140) +
+             "experimental_build_compiler_from_source: the bootstrap SDK build file does not " +
+             "propagate GOFIPS140, which would silently produce a non-FIPS build.")
+
     if not ctx.attr.goos and not ctx.attr.goarch:
         goos, goarch = detect_host_platform(ctx)
     else:
@@ -109,7 +121,7 @@ def _go_download_sdk_impl(ctx):
     sdk_build_file_override = ctx.attr._bootstrap_sdk_build_file if ctx.attr.experimental_build_compiler_from_source else None
 
     detected_version = _detect_sdk_version(ctx, ".")
-    _sdk_build_file(ctx, platform, detected_version, experiments = ctx.attr.experiments, sdk_build_file_override = sdk_build_file_override)
+    _sdk_build_file(ctx, platform, detected_version, experiments = ctx.attr.experiments, gofips140 = ctx.attr.gofips140, goroot = ".", sdk_build_file_override = sdk_build_file_override)
 
     if not ctx.attr.sdks and not ctx.attr.version:
         # Returning this makes Bazel print a message that 'version' must be
@@ -138,6 +150,10 @@ go_download_sdk_rule = repository_rule(
         "sdks": attr.string_list_dict(),
         "experiments": attr.string_list(
             doc = "Go experiments to enable via GOEXPERIMENT",
+        ),
+        "gofips140": attr.string(
+            default = "",
+            doc = "GOFIPS140 version to build with (e.g. 'v1.0.0', 'latest', 'certified'). Empty string disables.",
         ),
         "urls": attr.string_list(default = ["https://dl.google.com/go/{}"]),
         "version": attr.string(),
@@ -336,7 +352,7 @@ def _go_local_sdk_impl(ctx):
     goroot = ctx.attr.path
     platform = _detect_sdk_platform(ctx, goroot)
     version = _detect_sdk_version(ctx, goroot)
-    _sdk_build_file(ctx, platform, version, ctx.attr.experiments)
+    _sdk_build_file(ctx, platform, version, ctx.attr.experiments, gofips140 = ctx.attr.gofips140, goroot = goroot)
     _local_sdk(ctx, goroot)
 
 _go_local_sdk = repository_rule(
@@ -346,6 +362,10 @@ _go_local_sdk = repository_rule(
         "version": attr.string(),
         "experiments": attr.string_list(
             doc = "Go experiments to enable via GOEXPERIMENT",
+        ),
+        "gofips140": attr.string(
+            default = "",
+            doc = "GOFIPS140 version to build with (e.g. 'v1.0.0', 'latest', 'certified'). Empty string disables.",
         ),
         "_sdk_build_file": attr.label(
             default = Label("//go/private:BUILD.sdk.bazel"),
@@ -382,7 +402,7 @@ def _go_wrap_sdk_impl(ctx):
     goroot = str(ctx.path(root_file).dirname)
     platform = _detect_sdk_platform(ctx, goroot)
     version = _detect_sdk_version(ctx, goroot)
-    _sdk_build_file(ctx, platform, version, ctx.attr.experiments)
+    _sdk_build_file(ctx, platform, version, ctx.attr.experiments, gofips140 = ctx.attr.gofips140, goroot = goroot)
     _local_sdk(ctx, goroot)
 
 # string_keyed_label_dict was added in 8.0.0
@@ -405,6 +425,10 @@ go_wrap_sdk_rule = repository_rule(
         "version": attr.string(),
         "experiments": attr.string_list(
             doc = "Go experiments to enable via GOEXPERIMENT",
+        ),
+        "gofips140": attr.string(
+            default = "",
+            doc = "GOFIPS140 version to build with (e.g. 'v1.0.0', 'latest', 'certified'). Empty string disables.",
         ),
         "_sdk_build_file": attr.label(
             default = Label("//go/private:BUILD.sdk.bazel"),
@@ -449,9 +473,111 @@ def _local_sdk(ctx, path):
             continue
         ctx.symlink(entry, entry.basename)
 
-def _sdk_build_file(ctx, platform, version, experiments, sdk_build_file_override = None):
+# Bound on the number of directories visited when walking an extracted GOFIPS140
+# snapshot. Starlark has neither recursion nor while loops, so the walk is an
+# explicit stack driven by a bounded for loop. A snapshot holds well under a
+# hundred directories; the bound only exists to satisfy Starlark, and being
+# reached at all means the layout is not what this code expects.
+_FIPS_WALK_MAX_VISITS = 10000
+
+def fips_snapshot_import_paths(go_files, version):
+    """Maps GOFIPS140 snapshot source paths to package import paths.
+
+    Args:
+        go_files: paths of non-test .go files relative to the snapshot root,
+            e.g. "aes/gcm/gcm_asm.go".
+        version: resolved snapshot version, e.g. "v1.0.0-c2097c7c".
+
+    Returns:
+        The sorted import paths of the packages containing those files, e.g.
+        ["crypto/internal/fips140/v1.0.0-c2097c7c/aes/gcm"].
+    """
+    prefix = "crypto/internal/fips140/" + version
+    packages = {}
+    for path in go_files:
+        pkg_dir, _, _ = path.rpartition("/")
+        if pkg_dir:
+            packages[prefix + "/" + pkg_dir] = None
+        else:
+            packages[prefix] = None
+    return sorted(packages.keys())
+
+def _fips_snapshot_go_files(root):
+    """Lists non-test .go files under root, as paths relative to root."""
+    go_files = []
+    stack = [(root, "")]
+    for _ in range(_FIPS_WALK_MAX_VISITS):
+        if not stack:
+            break
+        cur, rel = stack.pop()
+        for entry in cur.readdir():
+            entry_rel = rel + "/" + entry.basename if rel else entry.basename
+            if entry.is_dir:
+                stack.append((entry, entry_rel))
+            elif entry.basename.endswith(".go") and not entry.basename.endswith("_test.go"):
+                go_files.append(entry_rel)
+    if stack:
+        fail("GOFIPS140 snapshot walk did not finish within {} directories; ".format(_FIPS_WALK_MAX_VISITS) +
+             "the snapshot layout under {} is not what rules_go expects.".format(root))
+    return go_files
+
+def _fips_snapshot_packages(ctx, goroot, gofips140):
+    """Enumerates the versioned GOFIPS140 snapshot packages from lib/fips140.
+
+    Only called for a GOFIPS140 snapshot build (a concrete version or alias, not
+    "", "off", or "latest"); the caller in _sdk_build_file is the single gate, so
+    no FIPS logic runs unless gofips140 is set on the SDK rule. Runs at SDK-fetch
+    time, where repository_ctx can extract and read the snapshot zip (Starlark
+    cannot read a zip during rule analysis). The result is baked into the
+    generated BUILD file, so the build itself needs no shell action or external
+    tool. Fails if the requested snapshot is missing or does not have the
+    expected layout.
+    """
+    lib_dir = "{}/lib/fips140".format(goroot)
+
+    # Resolve an alias (e.g. certified, inprocess, or v1.0.0) to the concrete
+    # version (e.g. v1.0.0-c2097c7c) via lib/fips140/<value>.txt when present.
+    alias_file = ctx.path("{}/{}.txt".format(lib_dir, gofips140))
+    version = ctx.read(alias_file).strip() if alias_file.exists else gofips140
+
+    zip_path = ctx.path("{}/{}.zip".format(lib_dir, version))
+    if not zip_path.exists:
+        fail("GOFIPS140 snapshot build requested (gofips140 = '{}'), but the ".format(gofips140) +
+             "snapshot zip {} was not found in the SDK.".format(zip_path))
+
+    # Extract into a throwaway directory inside the repository (never under
+    # goroot, which may be outside it and read-only) so the snapshot can be
+    # enumerated, then remove it. Layout inside the zip:
+    #   golang.org/fips140@<version>/fips140/<version>/<pkg...>/<file>.go
+    # which maps to the import path crypto/internal/fips140/<version>/<pkg...>.
+    tmp = "_fips_pkglist_tmp"
+    ctx.extract(archive = zip_path, output = tmp)
+    root = ctx.path("{}/golang.org/fips140@{}/fips140/{}".format(tmp, version, version))
+    if not root.exists:
+        ctx.delete(tmp)
+        fail("GOFIPS140 snapshot {} does not contain the expected directory ".format(zip_path) +
+             "golang.org/fips140@{0}/fips140/{0}; its layout is not what rules_go expects.".format(version))
+
+    go_files = _fips_snapshot_go_files(root)
+    ctx.delete(tmp)
+    if not go_files:
+        fail("GOFIPS140 snapshot {} contains no Go sources; ".format(zip_path) +
+             "its layout is not what rules_go expects.")
+    return fips_snapshot_import_paths(go_files, version)
+
+def _sdk_build_file(ctx, platform, version, experiments, goroot, gofips140 = "", sdk_build_file_override = None):
     ctx.file("ROOT")
     goos, _, goarch = platform.partition("_")
+
+    # For a GOFIPS140 snapshot build, enumerate the versioned FIPS module
+    # packages from the snapshot zip under lib/fips140 now, at SDK-fetch time,
+    # and bake the list into the generated BUILD file. This keeps the build free
+    # of any shell action or external tool, so this step no longer needs a POSIX
+    # shell. GOFIPS140 builds as a whole are only exercised on Linux and macOS;
+    # Windows is untested rather than known to work.
+    fips_packages = []
+    if gofips140 not in ("", "off", "latest"):
+        fips_packages = _fips_snapshot_packages(ctx, goroot, gofips140)
 
     ctx.template(
         "BUILD.bazel",
@@ -463,6 +589,8 @@ def _sdk_build_file(ctx, platform, version, experiments, sdk_build_file_override
             "{exe}": ".exe" if goos == "windows" else "",
             "{version}": version,
             "{experiments}": repr(experiments),
+            "{gofips140}": repr(gofips140),
+            "{fips_packages}": repr(fips_packages),
             "{exec_compatible_with}": repr([
                 GOARCH_CONSTRAINTS[goarch],
                 GOOS_CONSTRAINTS[goos],
