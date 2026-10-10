@@ -116,6 +116,12 @@ A second test like `indirect_import_test`_ in the same package. Both recompile
 the same dependency against their own internal test package, so the recompiled
 archives must not share a file name. Verifies `#4736`_.
 
+indirect_import/slash_test
+--------------------------
+
+Like `indirect_import_other_test`_, but with a ``/`` in the test name, which
+becomes part of the recompiled archive's file name.
+
 testmain_without_exit
 ---------------------
 
