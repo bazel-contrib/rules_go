@@ -136,7 +136,9 @@ func runNogo(workDir string, nogoPath string, srcs, ignores []string, facts []ar
 			return fmt.Errorf("nogo command '%s' exited unexpectedly: %s", cmdLine, exitErr.String())
 		}
 		prettyOut := relativizePaths(out.Bytes())
-		if exitErr.ExitCode() != nogoViolation {
+		// A Go panic also exits with nogoViolation. nogo writes the facts file
+		// before it reports findings, so without one it crashed.
+		if _, statErr := os.Stat(outFactsPath); exitErr.ExitCode() != nogoViolation || statErr != nil {
 			return errors.New(string(prettyOut))
 		}
 		outLog, err := os.Create(filepath.Join(outDirPath, nogoLogBasename))
