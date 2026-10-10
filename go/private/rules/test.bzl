@@ -746,7 +746,10 @@ def _recompile_external_deps(go, external_go_info, internal_archive, library_lab
         # If this archive needs to be recompiled, use go.archive.
         # Otherwise, create a stub GoArchive, using the original file.
         if need_recompile[label]:
-            recompile_suffix = ".recompile%d" % i
+            # The archive is declared in this test's package, so include the
+            # test's name: another go_test there may recompile the same
+            # dependency against its own internal archive.
+            recompile_suffix = ".recompile_%s_%d" % (go.label.name, i)
             archive = go.archive(go, go_info, _recompile_suffix = recompile_suffix)
         else:
             archive = GoArchive(

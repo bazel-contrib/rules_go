@@ -207,6 +207,26 @@ go_library(
     deps = [":indirect_import_lib"],
 )
 
+go_test(
+    name = "indirect_import_other_test",
+    srcs = [
+        "indirect_import_i_test.go",
+        "indirect_import_x_test.go",
+    ],
+    embed = [":indirect_import_lib"],
+    deps = [":indirect_import_dep"],
+)
+
+go_test(
+    name = "indirect_import/slash_test",
+    srcs = [
+        "indirect_import_i_test.go",
+        "indirect_import_x_test.go",
+    ],
+    embed = [":indirect_import_lib"],
+    deps = [":indirect_import_dep"],
+)
+
 [
     go_test(
         name = "same_package_{}_test".format(i),

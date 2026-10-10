@@ -5,6 +5,7 @@ Basic go_test functionality
 .. _#1877: https://github.com/bazelbuild/rules_go/issues/1877
 .. _#34129: https:////github.com/golang/go/issues/34129
 .. _#2749: https://github.com/bazelbuild/rules_go/issues/2749
+.. _#4736: https://github.com/bazel-contrib/rules_go/issues/4736
 
 Tests to ensure that basic features of `go_test`_ are working as expected.
 
@@ -107,6 +108,19 @@ indirect_import_test
 Checks that an external test can import another package that imports the library
 under test. The other package should be compiled against the internal test
 package, not the library under test. Verifies `#1877`_.
+
+indirect_import_other_test
+--------------------------
+
+A second test like `indirect_import_test`_ in the same package. Both recompile
+the same dependency against their own internal test package, so the recompiled
+archives must not share a file name. Verifies `#4736`_.
+
+indirect_import/slash_test
+--------------------------
+
+Like `indirect_import_other_test`_, but with a ``/`` in the test name, which
+becomes part of the recompiled archive's file name.
 
 testmain_without_exit
 ---------------------
