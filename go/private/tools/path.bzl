@@ -282,7 +282,6 @@ def _add_manifest_entry(entries, entry_map, inputs, src, dst):
     inputs.append(src)
 
 def _trim_prefix(s, prefix):
-    # str.lstrip removes a set of leading characters, not a prefix.
     if s.startswith(prefix):
         return s[len(prefix):]
     return s
