@@ -102,6 +102,10 @@ func run(ctx context.Context, in io.Reader, out io.Writer, args []string) (retEr
 		}
 	}()
 
+	if pkgJSONList != "" {
+		return runFromPkgJSON(pkgJSONList, request, queries, out)
+	}
+
 	bazel, err := NewBazel(ctx, bazelBin, workspaceRoot, buildWorkingDirectory, bazelCommonFlags, bazelStartupFlags)
 	if err != nil {
 		return fmt.Errorf("unable to create bazel instance: %w", err)
