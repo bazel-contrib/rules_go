@@ -419,12 +419,26 @@ This downloads a Go SDK for use in toolchains.
 +--------------------------------+-----------------------------+---------------------------------------------+
 | The number of leading slashes to be stripped from the file name in thepatches.                             |
 +--------------------------------+-----------------------------+---------------------------------------------+
+| :param:`gofips140`             | :type:`string`              | :value:`""`                                 |
++--------------------------------+-----------------------------+---------------------------------------------+
+| The `GOFIPS140 <https://go.dev/doc/security/fips140>`_ version to build the standard library and           |
+| all Go code against, for example                                                                           |
+| :value:`"v1.0.0"`. A concrete version, or an alias such as :value:`"certified"` or                         |
+| :value:`"inprocess"`, selects a frozen snapshot of the Go Cryptographic Module that ships inside           |
+| the SDK under ``lib/fips140``; the standard library is then rebuilt against that snapshot and              |
+| binaries default to ``GODEBUG=fips140=on``. :value:`"latest"` builds the in-tree crypto from               |
+| ``GOROOT/src`` instead, and :value:`""` or :value:`"off"` disables FIPS mode entirely.                     |
+|                                                                                                            |
+| Requires an SDK that ships ``lib/fips140`` (Go 1.24 or later); a snapshot request against an older         |
+| SDK fails at fetch time. Cannot be combined with ``experimental_build_compiler_from_source``.              |
+| Only exercised on Linux and macOS.                                                                         |
++--------------------------------+-----------------------------+---------------------------------------------+
 | ``experimental_build_``        | :type:`bool`                | :value:`False`                              |
 | ``compiler_from_source``       |                             |                                             |
 +--------------------------------+-----------------------------+---------------------------------------------+
 | Experimental: if true, bootstraps Go compiler binaries from the downloaded source instead                  |
 | of using the prebuilt compiler binaries in the SDK archive.                                                |
-| In WORKSPACE mode, call ``rules_shell_toolchains()`` from                                                   |
+| In WORKSPACE mode, call ``rules_shell_toolchains()`` from                                                  |
 | ``@rules_shell//shell:repositories.bzl`` before ``go_register_toolchains()``.                              |
 +--------------------------------+-----------------------------+---------------------------------------------+
 
@@ -493,6 +507,10 @@ used. Otherwise, ``go env GOROOT`` is used.
 +--------------------------------+-----------------------------+-----------------------------------+
 | Go experiments to enable via `GOEXPERIMENT`.                                                     |
 +--------------------------------+-----------------------------+-----------------------------------+
+| :param:`gofips140`             | :type:`string`              | :value:`""`                       |
++--------------------------------+-----------------------------+-----------------------------------+
+| The GOFIPS140 version to build with. See ``gofips140`` on `go_download_sdk`_.                    |
++--------------------------------+-----------------------------+-----------------------------------+
 
 go_local_sdk
 ~~~~~~~~~~~~
@@ -521,6 +539,10 @@ This prepares a local path to use as the Go SDK in toolchains.
 | :param:`experiments`           | :type:`string_list`         | :value:`[]`                       |
 +--------------------------------+-----------------------------+-----------------------------------+
 | Go experiments to enable via `GOEXPERIMENT`.                                                     |
++--------------------------------+-----------------------------+-----------------------------------+
+| :param:`gofips140`             | :type:`string`              | :value:`""`                       |
++--------------------------------+-----------------------------+-----------------------------------+
+| The GOFIPS140 version to build with. See ``gofips140`` on `go_download_sdk`_.                    |
 +--------------------------------+-----------------------------+-----------------------------------+
 
 
@@ -557,6 +579,10 @@ rule.
 | :param:`experiments`           | :type:`string_list`         | :value:`[]`                       |
 +--------------------------------+-----------------------------+-----------------------------------+
 | Go experiments to enable via `GOEXPERIMENT`.                                                     |
++--------------------------------+-----------------------------+-----------------------------------+
+| :param:`gofips140`             | :type:`string`              | :value:`""`                       |
++--------------------------------+-----------------------------+-----------------------------------+
+| The GOFIPS140 version to build with. See ``gofips140`` on `go_download_sdk`_.                    |
 +--------------------------------+-----------------------------+-----------------------------------+
 
 
