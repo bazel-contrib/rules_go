@@ -155,7 +155,13 @@ func cgo2(goenv *env, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSr
 	allGoSrcs = make([]string, len(goSrcs)+len(gen.genGoSrcs))
 	for i := range goSrcs {
 		allGoSrcs[i] = filepath.Join(workDir, goBases[i])
+		// Compiler errors name the copy, which is deleted with the work
+		// directory, so point them at the source file instead.
+		goenv.addSrcPathRewrite(allGoSrcs[i], goSrcs[i])
 	}
+	// The files cgo generates in workDir carry //line directives with relative
+	// source paths, which the compiler resolves against workDir.
+	goenv.addSrcPathRewrite(workDir+string(filepath.Separator), "")
 	copy(allGoSrcs[len(goSrcs):], gen.genGoSrcs)
 	return workDir, allGoSrcs, cObjs, nil
 }

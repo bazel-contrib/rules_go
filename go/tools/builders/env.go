@@ -66,6 +66,15 @@ type env struct {
 	workDirPath string
 
 	shouldPreserveWorkDir bool
+
+	// srcPathRewrites maps paths in the work directory back to the paths of
+	// the source files they stand for, so that diagnostics from tools run on
+	// them name the user's files. See addSrcPathRewrite.
+	srcPathRewrites []srcPathRewrite
+}
+
+type srcPathRewrite struct {
+	from, to string
 }
 
 // envFlags registers flags common to multiple builders and returns an env
@@ -150,8 +159,30 @@ func (e *env) runCommand(args []string) error {
 	cmd.Stdout = buf
 	cmd.Stderr = buf
 	err := runAndLogCommand(cmd, e.verbose)
-	os.Stderr.Write(relativizePaths(buf.Bytes()))
+	os.Stderr.Write(relativizePaths(e.rewriteSrcPaths(buf.Bytes())))
 	return err
+}
+
+// addSrcPathRewrite records that the path from, in the work directory, stands
+// for the source path to, so that tool output names to instead of from.
+// Rewrites apply in the order they were added, so specific paths must be added
+// before any directory that contains them.
+//
+// Paths are left alone when the work directory is preserved with -work, since
+// the files can then be inspected where the tools saw them.
+func (e *env) addSrcPathRewrite(from, to string) {
+	if e.shouldPreserveWorkDir {
+		return
+	}
+	e.srcPathRewrites = append(e.srcPathRewrites, srcPathRewrite{from, to})
+}
+
+// rewriteSrcPaths applies the rewrites added with addSrcPathRewrite to output.
+func (e *env) rewriteSrcPaths(output []byte) []byte {
+	for _, r := range e.srcPathRewrites {
+		output = bytes.ReplaceAll(output, []byte(r.from), []byte(r.to))
+	}
+	return output
 }
 
 // runCommandToFile executes a subprocess and writes stdout/stderr to the given
