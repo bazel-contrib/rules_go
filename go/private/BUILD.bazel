@@ -103,6 +103,7 @@ bzl_library(
         ":nogo",
         "//go/private/skylib/lib:versions",
         "//proto:gogo",
+        "//tests:bazel_binaries",
     ],  # keep
 )
 

@@ -156,6 +156,7 @@ filegroup(
         "//extras:all_files",
         "//go:all_files",
         "//proto:all_files",
+        "//tests:all_files",
         "//third_party:all_files",
     ],
     visibility = ["//visibility:public"],

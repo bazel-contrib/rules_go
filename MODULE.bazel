@@ -196,6 +196,11 @@ bazel_dep(name = "bazel_ci_rules", version = "1.0.0", dev_dependency = True)
 bazelci = use_extension("//.bazelci:extensions.bzl", "bazelci", dev_dependency = True)
 use_repo(bazelci, "buildkite_config")
 
+# Downstream go_bazel_test users need this repository even when rules_go is
+# not the root module, so this usage is non-dev. Provisioning remains lazy.
+bazel_test_binaries = use_extension("//tests:bazel_binaries.bzl", "bazel_binaries")
+use_repo(bazel_test_binaries, "rules_go_bazel_test")
+
 # For testing the compatibility with a hermetic cc toolchain. Users should not
 # have to enable it. Referenced by the debian11_zig_cc CI task via
 # --extra_toolchains.

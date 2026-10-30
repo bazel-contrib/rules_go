@@ -1,3 +1,5 @@
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@platforms//host:constraints.bzl", "HOST_CONSTRAINTS")
 load(":buildifier_test.bzl", "buildifier_test")
 
 buildifier_test(
@@ -7,4 +9,37 @@ buildifier_test(
         ":buildifier_test.bzl",
         "//:all_files",
     ],
+)
+
+filegroup(
+    name = "all_files",
+    testonly = True,
+    srcs = [
+        "BUILD.bazel",
+        "bazel_binaries.bzl",
+        "buildifier_test.bzl",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+bzl_library(
+    name = "bazel_binaries",
+    srcs = ["bazel_binaries.bzl"],
+    visibility = ["//visibility:public"],
+)
+
+# The captured executable and the harness SDK both run on the client platform.
+filegroup(
+    name = "bazel_binary",
+    testonly = True,
+    srcs = ["@rules_go_bazel_test//:binary"],
+    target_compatible_with = HOST_CONSTRAINTS,
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "bazel_version",
+    testonly = True,
+    srcs = ["@rules_go_bazel_test//:version.txt"],
+    visibility = ["//visibility:public"],
 )
