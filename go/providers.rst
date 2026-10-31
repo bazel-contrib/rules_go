@@ -395,6 +395,10 @@ from GoSDK_, or it may be another library compiled for the target mode.
 +--------------------------------+-----------------------------------------------------------------+
 | .a files for the standard library, built for the target platform.                                |
 +--------------------------------+-----------------------------------------------------------------+
+| :param:`export_files`          | :type:`File`                                                    |
++--------------------------------+-----------------------------------------------------------------+
+| Lazily built directory of standard-library type exports from ``go list -export``, used by nogo.  |
++--------------------------------+-----------------------------------------------------------------+
 | :param:`cache_dir`             | :type:`list of File`                                            |
 +--------------------------------+-----------------------------------------------------------------+
 | GOCACHE directory for the stdlib after running `go list`.                                        |

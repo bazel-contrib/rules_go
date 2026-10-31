@@ -22,6 +22,7 @@ bzl_library(
         "//go/private:mode",
         "//go/private:providers",
         "//go/private/actions:compilepkg",
+        "//go/private/actions:nogo",
         "//go/private/rules:cgo",
     ],
 )
@@ -31,6 +32,7 @@ bzl_library(
     srcs = ["baseline_coverage.bzl"],
     visibility = ["//go:__subpackages__"],
     deps = [
+        ":utils",
         "//go/private:common",
         "@io_bazel_rules_go_bazel_features//:features",
     ],
@@ -70,6 +72,16 @@ bzl_library(
 )
 
 bzl_library(
+    name = "nogo",
+    srcs = ["nogo.bzl"],
+    visibility = ["//go:__subpackages__"],
+    deps = [
+        "//go/private:common",
+        "//go/private:context",
+    ],
+)
+
+bzl_library(
     name = "preprofile",
     srcs = ["preprofile.bzl"],
     visibility = ["//go:__subpackages__"],
@@ -94,4 +106,8 @@ bzl_library(
 bzl_library(
     name = "utils",
     srcs = ["utils.bzl"],
+    deps = [
+        "//go/private:common",
+        "@bazel_skylib//lib:shell",
+    ],
 )

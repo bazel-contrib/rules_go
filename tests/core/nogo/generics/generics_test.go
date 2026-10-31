@@ -23,7 +23,8 @@ import (
 
 func TestMain(m *testing.M) {
 	bazel_testing.TestMain(m, bazel_testing.Args{
-		Nogo: "@//:nogo",
+		Nogo:         "@//:nogo",
+		NogoIncludes: []string{"@//:__pkg__", "@//leaf:__pkg__"},
 		Main: `
 -- BUILD.bazel --
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "nogo")
@@ -65,12 +66,95 @@ func (set *Set[T]) Add(s ...T) {
 func S(x ...string) *Set[string] {
 	return New[string](x...)
 }
+
+-- base/BUILD.bazel --
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "base",
+    srcs = ["base.go"],
+    importmap = "example.com/base/implementation",
+    importpath = "example.com/base",
+    importpath_aliases = ["example.com/base-alias"],
+    visibility = ["//visibility:public"],
+)
+
+-- base/base.go --
+package base
+
+type Box[T any] struct { Value T }
+
+-- left/BUILD.bazel --
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "left",
+    srcs = ["left.go"],
+    importpath = "example.com/left",
+    deps = ["//base"],
+    visibility = ["//visibility:public"],
+)
+
+-- left/left.go --
+package left
+
+import (
+    "net/url"
+    "example.com/base"
+)
+
+type Exposed = base.Box[url.URL]
+
+-- right/BUILD.bazel --
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "right",
+    srcs = ["right.go"],
+    importpath = "example.com/right",
+    deps = ["//base"],
+    visibility = ["//visibility:public"],
+)
+
+-- right/right.go --
+package right
+
+import (
+    "net/url"
+    "example.com/base-alias"
+)
+
+func New() base.Box[url.URL] { return base.Box[url.URL]{Value: url.URL{Scheme: "https"}} }
+
+-- leaf/BUILD.bazel --
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "leaf",
+    srcs = ["leaf.go"],
+    importpath = "example.com/leaf",
+    deps = ["//left", "//right"],
+)
+
+-- leaf/leaf.go --
+package leaf
+
+import (
+    "net/url"
+    "example.com/left"
+    "example.com/right"
+)
+
+func New() (left.Exposed, *url.URL) {
+    value := right.New()
+    return value, &value.Value
+}
 `,
 	})
 }
 
 func Test(t *testing.T) {
-	cmd := bazel_testing.BazelCmd("build", "//:src")
+	cmd := bazel_testing.BazelCmd("build", "//:src", "//leaf")
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 
