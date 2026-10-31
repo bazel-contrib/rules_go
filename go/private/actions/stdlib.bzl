@@ -74,6 +74,20 @@ def _build_stdlib_list_json(go):
     )
     return out, cache_dir
 
+# GOMAXPROCS below pins the action to this, so the reservation is what the
+# action actually uses rather than an estimate. Kept well under the core count
+# on purpose: compiling the standard library stops getting faster at around six
+# cores, and letting several GoStdlib actions run with a slice each finishes a
+# batch sooner than giving one action the whole machine.
+_STDLIB_CPUS = 4
+
+# Around 250MB per action at that many threads, plus headroom for the extra a
+# compiler holds on to when it is given a PGO profile.
+_STDLIB_MEMORY_MB = 512
+
+def _stdlib_resource_set(_os, _inputs_size):
+    return {"cpu": _STDLIB_CPUS, "memory": _STDLIB_MEMORY_MB}
+
 def _stdlib_execution_requirements(go):
     # Non-pure stdlib actions run cgo and pass C toolchain paths through
     # CGO_CFLAGS/CGO_LDFLAGS. Bazel does not path-map environment values.
@@ -141,6 +155,12 @@ def _build_stdlib(go):
         args.add("-pgoprofile", go.mode.pgoprofile)
         inputs_direct.append(go.mode.pgoprofile)
 
+    env = dict(_build_env(go))
+
+    # "go install" defaults to one compiler per core; hold it to what was
+    # reserved for the action.
+    env["GOMAXPROCS"] = str(_STDLIB_CPUS)
+
     outputs = [pkg]
     go.actions.run(
         inputs = depset(direct = inputs_direct, transitive = inputs_transitive),
@@ -148,9 +168,10 @@ def _build_stdlib(go):
         mnemonic = "GoStdlib",
         executable = go.toolchain._builder,
         arguments = [args],
-        env = _build_env(go),
+        env = env,
         toolchain = GO_TOOLCHAIN_LABEL,
         execution_requirements = _stdlib_execution_requirements(go),
+        resource_set = _stdlib_resource_set,
     )
     list_json, cache_dir = _build_stdlib_list_json(go)
     return GoStdLib(
