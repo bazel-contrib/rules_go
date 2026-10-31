@@ -108,13 +108,16 @@ def _build_env(go):
 def _dirname(file):
     return file.dirname
 
-def _build_stdlib(go):
-    pkg = go.declare_directory(go, path = "pkg")
+def _stdlib_args(go, out, export = False):
     args = go.builder_args(go, "stdlib")
 
-    # Use a file rather than pkg.dirname as the latter is just a string and thus
-    # not subject to path mapping.
-    args.add_all("-out", [pkg], map_each = _dirname, expand_directories = False)
+    # Keep the output as a File argument so it is subject to path mapping.
+    # Compiler archives use its parent as GOROOT; exports use the tree itself.
+    if export:
+        args.add("-export")
+        args.add_all("-out", [out], expand_directories = False)
+    else:
+        args.add_all("-out", [out], map_each = _dirname, expand_directories = False)
     if go.mode.race:
         args.add("-race")
     if go.mode.msan:
@@ -133,21 +136,42 @@ def _build_stdlib(go):
 
     args.add("-gcflags", quote_opts(go.mode.gc_goopts))
 
+    # PGO changes implementation code, not the types consumed by analysis.
+    if go.mode.pgoprofile and not export:
+        args.add("-pgoprofile", go.mode.pgoprofile)
+    return args
+
+def _build_stdlib(go):
+    pkg = go.declare_directory(go, path = "pkg")
+    export_files = go.declare_directory(go, path = "export")
     sdk = go.sdk
     inputs_direct = [sdk.go, sdk.package_list, sdk.root_file]
     inputs_transitive = [sdk.headers, sdk.srcs, sdk.tools, go.cc_toolchain_files]
 
+    compile_inputs = list(inputs_direct)
     if go.mode.pgoprofile:
-        args.add("-pgoprofile", go.mode.pgoprofile)
-        inputs_direct.append(go.mode.pgoprofile)
+        compile_inputs.append(go.mode.pgoprofile)
 
     outputs = [pkg]
     go.actions.run(
-        inputs = depset(direct = inputs_direct, transitive = inputs_transitive),
+        inputs = depset(direct = compile_inputs, transitive = inputs_transitive),
         outputs = outputs,
         mnemonic = "GoStdlib",
         executable = go.toolchain._builder,
-        arguments = [args],
+        arguments = [_stdlib_args(go, pkg)],
+        env = _build_env(go),
+        toolchain = GO_TOOLCHAIN_LABEL,
+        execution_requirements = _stdlib_execution_requirements(go),
+    )
+
+    # This action is only executed when analysis consumes export_files. Keep it
+    # independent of nogo itself to avoid a toolchain bootstrap cycle.
+    go.actions.run(
+        inputs = depset(direct = inputs_direct, transitive = inputs_transitive),
+        outputs = [export_files],
+        mnemonic = "GoStdlibExport",
+        executable = go.toolchain._builder,
+        arguments = [_stdlib_args(go, export_files, export = True)],
         env = _build_env(go),
         toolchain = GO_TOOLCHAIN_LABEL,
         execution_requirements = _stdlib_execution_requirements(go),
@@ -155,6 +179,7 @@ def _build_stdlib(go):
     list_json, cache_dir = _build_stdlib_list_json(go)
     return GoStdLib(
         _list_json = list_json,
+        export_files = export_files,
         # runtime/cgo records CGO_LDFLAGS from this configuration in its
         # package metadata. Keep the matching C++ toolchain files available
         # when a later GoLink action replays those flags.

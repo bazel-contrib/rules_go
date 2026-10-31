@@ -67,7 +67,11 @@ GoSDK = provider(
     },
 )
 
-GoStdLib = provider()
+GoStdLib = provider(
+    doc = """The target standard library. export_files is a lazily built tree of
+    <import path>.x files copied from go list -export, for analysis only. libs
+    continues to contain compiler-facing archives.""",
+)
 
 GoConfigInfo = provider()
 
