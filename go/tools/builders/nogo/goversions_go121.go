@@ -1,4 +1,4 @@
-//go:build !go1.21
+//go:build go1.21 && !go1.22
 
 /* Copyright 2026 The Bazel Authors. All rights reserved.
 
@@ -15,13 +15,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package nogo
 
 import "go/types"
 
-// Go 1.18-go1.20 only accepts go1.N in types.Config.GoVersion.
 func normalizeGoVersionForTypes(goVersion string) string {
-	return trimGoPatchVersion(goVersion)
+	return goVersion
 }
 
 func initFileVersions(*types.Info) {}

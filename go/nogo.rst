@@ -24,7 +24,7 @@
 
 
 ``nogo`` is a tool that analyzes the source code of Go programs. It runs
-in an action after the Go compiler in the Bazel Go rules and rejects sources that
+in a separate Bazel action alongside Go compilation and rejects sources that
 contain disallowed coding patterns from the configured analyzers.
 
 ``nogo`` is a powerful tool for preventing bugs and code anti-patterns early
@@ -145,9 +145,11 @@ by default. You could exclude the external repositories from ``nogo`` by using t
 not validated with ``nogo`` by default. See the Bzlmod_ guide for more information
 on how to configure the ``nogo`` scope in this case.
 
-You can prevent ``nogo`` from running for a particular target by adding ``"no-nogo"`` to
-``tags``. This can be useful for generated code, which is often large but not interesting
-for static analysis.
+You can prevent analyzers from running for a particular target by adding ``"no-nogo"``
+to ``tags``. This can be useful for generated code, which is often large but not
+interesting for static analysis. When needed by a checked dependent, ``nogo`` still
+type-checks the package and exports its types, without running analyzers or producing
+analysis facts. The same export-only behavior applies to ``go_tool_library`` targets.
 
 Fixes
 --------------------------------
@@ -185,9 +187,22 @@ For example, `golangci-lint`_ or `staticcheck`_ are popular linters that are com
 analyzers, each of which is a collection of rules.
 
 ``nogo`` is a runner binary that runs a collection of analyzers while leveraging Bazel's
-action orchestration framework. In particular, ``nogo`` is run as part of rules_go GoCompilePkg
-action, and it is run in parallel with the Go compiler. This allows ``nogo`` to benefit from
-Bazel's incremental build and caching as well as the Remote Build Execution framework.
+action orchestration framework. In particular, ``nogo`` runs in a separate RunNogo action
+that can run in parallel with the Go compiler. For cgo packages, it depends on generated
+Go sources from the compilation action. This allows ``nogo`` to benefit from Bazel's
+incremental build and caching as well as the Remote Build Execution framework.
+
+Each nogo action exports both type information and analysis facts for dependent nogo
+actions. Type information uses the x/tools export-data format, independently of the
+compiler archives used to compile and link the program. Standard-library types come
+from ``go list -export``. Packages outside the configured analysis scope still export
+types and run fact-producing analyzers needed by checked dependents.
+
+Analysis keeps the target platform, build tags, and Go language version, but does
+not receive compiler SDK tools or a configured ``GOROOT``. Standard-library analysis
+exports omit PGO profiles; compilation still uses them. Pure-Go analysis supports
+Bazel path mapping. Analysis of cgo-generated sources does not, because the generated
+contents can contain paths from the unmapped compilation action.
 
 There are examples of how to re-use the analyzers from `golangci-lint`_ and `staticcheck`_ in
 `nogo`_ here: `sluongng/nogo-analyzer`_.

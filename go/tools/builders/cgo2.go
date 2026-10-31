@@ -140,7 +140,7 @@ func cgo2(goenv *env, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSr
 	}
 	gen.genGoSrcs = append(gen.genGoSrcs, cgoImportsGo)
 	if cgoGoSrcsPath != "" {
-		if err := copyGeneratedGoSrcs(gen.genGoSrcs, cgoGoSrcsPath); err != nil {
+		if err := gen.copyGeneratedGoSrcs(cgoGoSrcsPath); err != nil {
 			return "", nil, nil, err
 		}
 	}
@@ -187,7 +187,7 @@ func cgo2GeneratedGoSrcsForNogo(goenv *env, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, o
 		return err
 	}
 	gen.genGoSrcs = append(gen.genGoSrcs, cgoImportsSrc)
-	return copyGeneratedGoSrcs(gen.genGoSrcs, cgoGoSrcsPath)
+	return gen.copyGeneratedGoSrcs(cgoGoSrcsPath)
 }
 
 type cgoGenResult struct {
@@ -195,6 +195,7 @@ type cgoGenResult struct {
 	hdrIncludes     []string
 	combinedLdFlags []string
 	genGoSrcs       []string
+	originalGoSrcs  map[string]string
 	genCSrcs        []string
 	cgoMainC        string
 }
@@ -270,6 +271,7 @@ func generateCgoSources(goenv *env, baseWorkDir, subdir string, cgoSrcs, cSrcs, 
 
 	// If cgo sources are in different directories, gather them into a temporary
 	// directory so we can use -srcdir.
+	originalCgoSrcs := append([]string{}, cgoSrcs...)
 	srcDir := filepath.Dir(cgoSrcs[0])
 	srcsInSingleDir := true
 	for _, src := range cgoSrcs[1:] {
@@ -341,9 +343,11 @@ func generateCgoSources(goenv *env, baseWorkDir, subdir string, cgoSrcs, cSrcs, 
 	genGoSrcs[0] = filepath.Join(workDir, "_cgo_gotypes.go")
 	genCSrcs := make([]string, 1+len(cgoSrcs))
 	genCSrcs[0] = filepath.Join(workDir, "_cgo_export.c")
+	originalGoSrcs := make(map[string]string, len(cgoSrcs))
 	for i, src := range cgoSrcs {
 		stem := strings.TrimSuffix(filepath.Base(src), ".go")
 		genGoSrcs[i+1] = filepath.Join(workDir, stem+".cgo1.go")
+		originalGoSrcs[genGoSrcs[i+1]] = originalCgoSrcs[i]
 		genCSrcs[i+1] = filepath.Join(workDir, stem+".cgo2.c")
 	}
 	cgoMainC := filepath.Join(workDir, "_cgo_main.c")
@@ -352,14 +356,39 @@ func generateCgoSources(goenv *env, baseWorkDir, subdir string, cgoSrcs, cSrcs, 
 		hdrIncludes:     hdrIncludes,
 		combinedLdFlags: combinedLdFlags,
 		genGoSrcs:       genGoSrcs,
+		originalGoSrcs:  originalGoSrcs,
 		genCSrcs:        genCSrcs,
 		cgoMainC:        cgoMainC,
 	}, nil
 }
 
-func copyGeneratedGoSrcs(srcs []string, outDir string) error {
-	for _, src := range srcs {
-		if err := copyFile(src, filepath.Join(outDir, filepath.Base(src))); err != nil {
+func (gen *cgoGenResult) copyGeneratedGoSrcs(outDir string) error {
+	for _, src := range gen.genGoSrcs {
+		out := filepath.Join(outDir, filepath.Base(src))
+		original, ok := gen.originalGoSrcs[src]
+		if !ok {
+			if err := copyFile(src, out); err != nil {
+				return err
+			}
+			continue
+		}
+		data, err := os.ReadFile(src)
+		if err != nil {
+			return err
+		}
+		// The parser resolves relative //line filenames against the generated
+		// file's directory, not the execroot. Rebase only cmd/cgo's initial
+		// directive when relocating the file; leave user directives untouched.
+		lines := strings.SplitN(string(data), "\n", 4)
+		if len(lines) != 4 || !strings.HasPrefix(lines[2], "//line ") || !strings.HasSuffix(lines[2], ":1:1") {
+			return fmt.Errorf("missing initial cgo line directive in %s", src)
+		}
+		rel, err := filepath.Rel(abs(outDir), abs(original))
+		if err != nil {
+			return err
+		}
+		lines[2] = "//line " + filepath.ToSlash(rel) + ":1:1"
+		if err := os.WriteFile(out, []byte(strings.Join(lines, "\n")), 0666); err != nil {
 			return err
 		}
 	}
