@@ -92,3 +92,60 @@ argument on the command line:
 $ bazel build --stamp --workspace_status_command=./status.sh //:cmd
 ```
 
+### VCS build info
+
+When `go_binary` and `go_test` targets are linked with stamping enabled,
+`rules_go` also maps a small stable workspace status convention into Go build
+info. These settings are visible through `runtime/debug.ReadBuildInfo` and
+`go version -m`. They are only emitted when the linked target and its recorded
+main module both come from the main repository; stamped binaries built from
+external repositories, targets without main module metadata, and local wrappers
+around external main modules omit `vcs.*` settings.
+
+Including test binaries is intentional. Go's own toolchain regenerates build
+information for test binaries and includes VCS metadata when `-buildvcs=true`.
+Bazel's `--stamp` flag is likewise an explicit provenance opt-in. This differs
+from Go's default `-buildvcs=auto` mode, which omits VCS metadata from test
+binaries.
+
+***Warning:*** avoid enabling VCS stamping for routine development test runs.
+The current commit hash becomes part of every eligible stamped `go_test`
+binary. Creating a commit, amending a commit message, or rebasing changes that
+hash, which relinks those test binaries and invalidates their cached test
+results even when their source code did not change. This does not invalidate Go
+compilation outputs, but it can substantially reduce test cache hits across a
+workspace. Keep stamping disabled for normal development and enable it for
+release or provenance-verification builds where embedding the exact revision is
+worth the cache cost.
+
+Target and main-module provenance are checked separately. A local target can
+embed a main package whose metadata came from an external repository; in that
+case the target is local, but the module recorded in `BuildInfo.Main` is not.
+Main-module provenance follows the metadata source that supplied `Main.Path`,
+including embedded libraries and `package_metadata` / `applicable_licenses`,
+and is derived from the metadata file's owning label at link time.
+
+The workspace status names mirror Go's build info names, with Bazel's
+`STABLE_` prefix and underscores in place of dots.
+
+| Workspace status key | Go build info setting | Notes |
+| --- | --- | --- |
+| `STABLE_VCS` | `vcs` | Required and must be non-empty before any `vcs.*` settings are emitted. |
+| `STABLE_VCS_REVISION` | `vcs.revision` | Optional when non-empty. |
+| `STABLE_VCS_TIME` | `vcs.time` | Optional; must be in `RFC3339Nano` format and is normalized to UTC. |
+| `STABLE_VCS_MODIFIED` | `vcs.modified` | Optional; must be `true` or `false`. |
+
+Invalid or missing optional values are ignored individually.
+
+``` bash
+#!/usr/bin/env bash
+
+echo "STABLE_VCS git"
+echo "STABLE_VCS_REVISION $(git rev-parse HEAD)"
+echo "STABLE_VCS_TIME $(git show -s --format=%cI HEAD)"
+if test -z "$(git status --porcelain --untracked-files=normal)"; then
+  echo "STABLE_VCS_MODIFIED false"
+else
+  echo "STABLE_VCS_MODIFIED true"
+fi
+```
