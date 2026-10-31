@@ -272,6 +272,22 @@ Bzlmod equivalent:
 The SDK will use the bootstrapped compiler/linker binaries directly.
 
 
+Using SDK tools in build actions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Use an executable target for a Go SDK tool that an action needs:
+
+.. code:: bzl
+
+    load("@io_bazel_rules_go//go:def.bzl", "go_sdk_tool")
+
+    go_sdk_tool(name = "objdump", tool = "objdump")
+
+Declare the consumer's tool attribute with ``cfg = "exec"`` so it runs on
+the execution platform even when inspecting a file built for another
+platform. The rule reuses a matching executable in the SDK's ``pkg/tool``
+directory, or builds the command from the selected SDK in a separate action.
+
 Writing new Go rules
 ~~~~~~~~~~~~~~~~~~~~
 
