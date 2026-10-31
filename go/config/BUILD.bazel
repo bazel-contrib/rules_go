@@ -40,6 +40,19 @@ bool_flag(
     visibility = ["//visibility:public"],
 )
 
+# When set, a go_binary or go_test with no cgo in its dependencies links with
+# the Go linker, and its link action gets no C/C++ toolchain files or
+# environment. See "Choosing the linker" in go/modes.rst.
+#
+# Universally scoped so that Go tool binaries built for the execution platform
+# also link this way. They are often most of the GoLink actions in a build.
+bool_flag(
+    name = "internal_link",
+    build_setting_default = False,
+    scope = "universal",
+    visibility = ["//visibility:public"],
+)
+
 bool_flag(
     name = "experimental_use_sh_toolchain",
     build_setting_default = False,

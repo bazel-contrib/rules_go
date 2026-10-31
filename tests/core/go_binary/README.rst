@@ -68,3 +68,21 @@ prefix
 ------
 This binary has a name that conflicts with a subdirectory. Its output file
 name should not have this conflict. Verifies `#2463`_.
+
+auto_internal_link_test
+-----------------------
+Checks how GoLink selects the linker. By default, rules_go lets the Go linker
+choose for a binary that can link internally. With the ``internal_link`` flag,
+such a binary links with the Go linker and without the C/C++ toolchain.
+
+The test covers cgo and ``.syso`` dependencies, link modes, race and msan,
+plugin hosts, opt-out flags, and build tags. It also checks the inputs and the
+environment of the link step, and the build information of the binary. On
+Linux, it checks that a static binary has no ``PT_INTERP`` header and that a
+binary has a GNU build ID.
+
+stdlib_cgo_predicate_test
+-------------------------
+Compares the standard library check in ``go/private/actions/link.bzl`` with
+the output of go list for each GOOS. The test fails when a Go release changes
+the standard library packages that use cgo.

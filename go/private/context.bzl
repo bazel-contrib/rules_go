@@ -568,6 +568,7 @@ default_go_config_info = GoConfigInfo(
     arm = None,
     pgoprofile = None,
     export_stdlib = False,
+    internal_link = False,
 )
 
 def _cc_runtime_libs_for_mode(mode, cgo_tools):
@@ -714,6 +715,7 @@ def go_context(
         env["GOARM"] = mode.arm
 
     if cgo_context_info:
+        env_without_cc = dict(env)
         env.update(cgo_context_info.env)
         cgo_tools = cgo_context_info.cgo_tools
         cc_toolchain_files = depset(transitive = [
@@ -721,6 +723,7 @@ def go_context(
             _cc_runtime_libs_for_mode(mode, cgo_tools),
         ])
     else:
+        env_without_cc = env
         cc_toolchain_files = depset()
         cgo_tools = None
 
@@ -781,6 +784,11 @@ def go_context(
         coverage_instrumented = ctx.coverage_instrumented(),
         export_stdlib = go_config_info.export_stdlib,
         env = env,
+        # The environment without the C/C++ toolchain variables, used by GoLink
+        # when the Go linker links internally.
+        _env_without_cc = env_without_cc,
+        # Whether the rule sets pure = "off", which asks for the C/C++ toolchain.
+        _explicit_pure_off = getattr(attr, "pure", "auto") == "off",
         # Path mapping can't map the values of environment variables, so we pass GOROOT to the action
         # via an argument instead in builder_args. We need to drop it from the environment to get cache
         # hits across different configurations since the stdlib path typically contains a Bazel
@@ -1060,6 +1068,9 @@ def cgo_context_data_impl(ctx):
             ld_dynamic_lib_path = ld_dynamic_lib_path,
             ld_dynamic_lib_options = ld_dynamic_lib_options,
             ar_path = cc_toolchain.ar_executable,
+            # The --linkopt values, which are flags for the C/C++ linker. GoLink
+            # keeps the external linker when they are set, so that they apply.
+            user_linkopts = ctx.fragments.cpp.linkopts,
         ),
     )
 
@@ -1112,6 +1123,7 @@ def _go_config_impl(ctx):
         arm = ctx.attr.arm,
         pgoprofile = pgoprofile,
         export_stdlib = ctx.attr.export_stdlib[BuildSettingInfo].value,
+        internal_link = ctx.attr.internal_link[BuildSettingInfo].value,
     )
     validate_mode(go_config_info)
 
@@ -1173,6 +1185,10 @@ go_config = rule(
             providers = [BuildSettingInfo],
         ),
         "force_pic": attr.bool(mandatory = True),
+        "internal_link": attr.label(
+            mandatory = True,
+            providers = [BuildSettingInfo],
+        ),
     },
     provides = [GoConfigInfo],
     doc = """Collects information about build settings in the current

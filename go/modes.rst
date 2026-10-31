@@ -97,6 +97,16 @@ or using `Bazel configuration transitions`_.
 | but adds time to the initial build. Leave false unless you want to use       |
 | golangci-lint or another tool that relies on GOPACKAGESDRIVER.               |
 +------------------------+---------------------+-------------------------------+
+| :param:`internal_link` | :type:`bool`        | :value:`false`                |
++------------------------+---------------------+-------------------------------+
+| When set, a `go_binary`_ or `go_test`_ with no cgo in its dependencies links |
+| with the Go linker. Its link action gets no C/C++ toolchain files or         |
+| environment. The setting also applies to Go tools that Bazel builds for the  |
+| execution platform. On Linux, this needs the netgo and osusergo build tags,  |
+| so that the standard library has no cgo. A binary that imports the plugin    |
+| package must set ``pure = "off"``, because rules_go cannot detect that       |
+| import. See `Choosing the linker`_.                                          |
++------------------------+---------------------+-------------------------------+
 
 Platforms
 ---------
@@ -117,6 +127,104 @@ For example, you could build for Linux / arm64 with the flag
 You can set the ``goos`` and ``goarch`` attributes on an individual
 `go_binary`_ or `go_test`_ rule to build a binary for a specific platform.
 This sets the ``--platforms`` flag via `Bazel configuration transitions`_.
+
+Choosing the linker
+-------------------
+
+The Go linker can link a binary by itself, or it can run the C/C++ linker. Go
+calls these modes internal linking and external linking.
+
+When the Go linker chooses
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+rules_go lets the Go linker choose the link mode for a `go_binary`_ or
+`go_test`_ when all of these conditions are true:
+
+* No package in the dependencies of the binary uses cgo or contains a
+  ``.syso`` file.
+* The standard library does not use cgo. On Unix systems other than macOS and
+  iOS, the net package uses cgo unless you set the ``netgo`` build tag.
+* On the same systems, the os/user package uses cgo unless you set the
+  ``osusergo`` build tag. Android is an exception.
+* With the ``boringcrypto`` Go experiment on Linux amd64 or arm64, the crypto
+  packages use cgo.
+* The link mode is ``normal``. On macOS and Windows, the ``pie`` link mode is
+  also possible.
+* Race and msan instrumentation are off.
+* The Go linker flags in ``gc_linkopts`` and in the Go toolchain do not select
+  the external linker or a link mode. One example of such a flag is
+  ``-linkmode=external``.
+* The build has no ``--linkopt`` flag. Its values are flags for the C/C++
+  linker.
+* If ``static`` is on, the target is not AIX, illumos, Solaris, or OpenBSD.
+  On these systems, the ``syscall`` package links libc dynamically.
+* The Go SDK is version 1.24 or later.
+
+To make the standard library free of cgo on Linux, build with
+``--define=gotags=netgo,osusergo``. You can also set
+``gotags = ["netgo", "osusergo"]`` on the binary.
+
+The Go linker then decides from the objects that it links, the same as the go
+command. It links a pure Go binary internally. It uses the external linker
+when an object needs it. One example is a binary that imports the plugin
+package. The link step still gets the C/C++ toolchain files and environment
+variables, because the Go linker can select the external linker.
+
+These are the effects:
+
+* On macOS and Windows, the default ``pie`` link mode does not force the
+  external linker. The Go linker links a pure Go binary internally.
+* With ``static`` on Linux, FreeBSD, NetBSD, and DragonFly BSD, the Go linker
+  links a pure Go binary internally. The result is a static binary.
+* On macOS, ``static`` has no effect when the Go linker links internally.
+  macOS does not support static binaries.
+* On Linux in normal mode without ``static``, nothing changes.
+
+If a condition in the list is false, rules_go keeps its own rules. It forces
+the external linker when ``static`` is on, or when race instrumentation is on.
+It also forces it for a link mode other than normal, and for msan
+instrumentation on Windows. In the other cases, the Go linker chooses.
+
+Linking without the C/C++ toolchain
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Set ``--@io_bazel_rules_go//go/config:internal_link`` to always use the Go
+linker for a binary that meets the conditions in the list. rules_go then
+passes ``-linkmode internal`` to the Go linker. The link step gets no C/C++
+toolchain files, flags, or environment variables. The build information of
+the binary still records ``CGO_ENABLED=1``, the same as the go command.
+
+The flag also applies to Go tools that Bazel builds for the execution
+platform. For these tools on Linux, set the build tags with
+``--define=gotags=netgo,osusergo``. Newer Bazel versions do not pass the tags
+setting of rules_go to the execution platform.
+
+rules_go cannot see which standard library packages a binary imports. The
+plugin package uses cgo and needs the external linker. With this flag, a
+binary that imports the plugin package must set ``pure = "off"``. If it does
+not, the binary stops with a fatal error when it calls ``plugin.Open``.
+
+In ``pure`` mode, rules_go always links internally.
+
+How to opt out
+~~~~~~~~~~~~~~
+
+These settings make a condition in the list false. rules_go then uses its own
+rules from the end of `When the Go linker chooses`_. The settings work with
+and without the ``internal_link`` flag.
+
+* For one target, set ``pure = "off"``.
+* For one target, add ``-linkmode=external`` to the gc_linkopts attribute.
+  This setting always selects the external linker.
+* For all targets, build with
+  ``--@io_bazel_rules_go//go/config:gc_linkopts=-linkmode=external``.
+
+Limitations
+~~~~~~~~~~~
+
+* With Go versions before 1.27 on macOS, the Go linker writes 12.0 as the
+  minimum macOS version. It ignores ``--macos_minimum_os``. The ``go build``
+  command does the same.
 
 
 Examples
@@ -143,14 +251,16 @@ You can build pure go binaries by setting those attributes on a binary.
 Building static binaries
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-| Note that static linking does not work on darwin.
+| macOS does not support static binaries. rules_go ignores ``static`` on macOS
+  when the Go linker links the binary internally. Otherwise, the link fails.
 
 You can switch the default binaries to statically linked binaries using
 
 .. code:: bash
     bazel build --@io_bazel_rules_go//go/config:static //:my_binary
 You can build static go binaries by setting those attributes on a binary.
-If you want it to be fully static (no libc), you should also specify pure.
+A binary with no libc code must not use cgo. Use pure mode, or meet the
+conditions in `Choosing the linker`_.
 
 .. code:: bzl
 

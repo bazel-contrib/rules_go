@@ -43,6 +43,8 @@ load(
     "GoArchive",
     "GoInfo",
     "INFERRED_PATH",
+    "archive_uses_cgo",
+    "package_uses_cgo",
 )
 load(
     "//go/private/rules:binary.bzl",
@@ -769,6 +771,7 @@ def _recompile_external_deps(go, external_go_info, internal_archive, library_lab
                     direct = ([package_metadata] if package_metadata else []) + [arc_data._imports],
                     transitive = [getattr(a, "_buildinfo_link_inputs", depset()) for a in deps],
                 ),
+                _uses_cgo = package_uses_cgo(arc_data) or any([archive_uses_cgo(a) for a in deps]),
             )
         label_to_archive[label] = archive
 

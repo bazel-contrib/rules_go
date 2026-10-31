@@ -29,6 +29,7 @@ GoArchiveData = provider()
 GoArchive = provider(fields = [
     "_buildinfo_link_inputs",
     "_headers",
+    "_uses_cgo",
     "cgo_deps",
     "cgo_exports",
     "cgo_link_inputs",
@@ -90,6 +91,26 @@ def get_archive(dep):
     if type(dep) == "struct":
         return dep
     return dep[GoArchive]
+
+def has_syso(srcs):
+    """Returns whether any file in srcs is a .syso object file."""
+    return any([f.extension == "syso" for f in srcs])
+
+def archive_uses_cgo(archive):
+    """Returns whether a GoArchive or any of its dependencies uses cgo.
+
+    An archive without the _uses_cgo field counts as using cgo. cgo_deps and
+    cgo_link_inputs come only from cdeps, so they would miss a package with
+    inline C code.
+    """
+    return getattr(archive, "_uses_cgo", True)
+
+def package_uses_cgo(data):
+    """Returns whether the package of one GoArchiveData uses cgo or a .syso file.
+
+    Data without the _cgo field counts as using cgo.
+    """
+    return getattr(data, "_cgo", True) or has_syso(data.srcs)
 
 def effective_importpath_pkgpath(lib):
     """Returns import and package paths for a given lib with modifications for display.
