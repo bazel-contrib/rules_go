@@ -34,6 +34,7 @@ go_test(
 
 go_tool_library(
     name = "coverage_target_dep",
+    srcs = ["coverage_target_dep.go"],
     importmap = "mapped/coverage_target/dep",
     importpath = "coverage_target/dep",
 )
@@ -45,6 +46,16 @@ nogo(
 )
 -- coverage_target_test.go --
 package coverage_target_test
+
+import "coverage_target/dep"
+
+var _ dep.Value = dep.Value{Text: "ok"}
+
+-- coverage_target_dep.go --
+package dep
+
+type Value struct { Text string }
+
 `,
 		Nogo: `@//:nogo`,
 	})
