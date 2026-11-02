@@ -52,6 +52,7 @@ def _build_stdlib_list_json(go):
     out = go.declare_file(go, "stdlib.pkg.json")
     cache_dir = go.declare_directory(go, "gocache")
     args = go.builder_args(go, "stdliblist")
+    args.add_all(sdk.srcs, before_each = "-src")
     args.add("-out", out)
     args.add_all("-cache", [cache_dir], expand_directories = False)
     if go.export_stdlib:
@@ -134,6 +135,7 @@ def _build_stdlib(go):
     args.add("-gcflags", quote_opts(go.mode.gc_goopts))
 
     sdk = go.sdk
+    args.add_all(sdk.srcs, before_each = "-src")
     inputs_direct = [sdk.go, sdk.package_list, sdk.root_file]
     inputs_transitive = [sdk.headers, sdk.srcs, sdk.tools, go.cc_toolchain_files]
 
