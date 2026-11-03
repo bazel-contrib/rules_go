@@ -12,6 +12,19 @@ set -eu
 export HOME="${PWD}/_go_tool_binary-fake-home-${1//\\//_}"
 trap "${GO_BINARY} clean -cache" EXIT
 
+# Resolve GO_BINARY to the real SDK so that `go` derives GOROOT from the
+# extracted repository rather than from sandbox symlinks. Linux already does
+# this implicitly (os.Executable reads /proc/self/exe), but macOS uses the
+# unresolved path, and go:embed rejects symlinked files ("cannot embed
+# irregular file"), e.g. in SDKs that embed files into cmd/pack's deps.
+while [ -L "${GO_BINARY}" ]; do
+  link="$(readlink "${GO_BINARY}")"
+  case "${link}" in
+    /*) GO_BINARY="${link}" ;;
+    *) GO_BINARY="$(dirname "${GO_BINARY}")/${link}" ;;
+  esac
+done
+
 # We do not use -a here as the cache drastically reduces the time spent
 # on the subsequent go build invocations (roughly 50% faster).
 
