@@ -427,7 +427,8 @@ This downloads a Go SDK for use in toolchains.
 | :value:`"inprocess"`, selects a frozen snapshot of the Go Cryptographic Module that ships inside           |
 | the SDK under ``lib/fips140``; the standard library is then rebuilt against that snapshot and              |
 | binaries default to ``GODEBUG=fips140=on``. :value:`"latest"` builds the in-tree crypto from               |
-| ``GOROOT/src`` instead, and :value:`""` or :value:`"off"` disables FIPS mode entirely.                     |
+| ``GOROOT/src`` instead, and :value:`"off"` disables FIPS mode entirely. :value:`""` uses the               |
+| ``GOFIPS140`` set in the SDK's ``go.env``, as vendor FIPS toolchains do, and otherwise disables FIPS mode. |
 |                                                                                                            |
 | Requires an SDK that ships ``lib/fips140`` (Go 1.24 or later); a snapshot request against an older         |
 | SDK fails at fetch time. Cannot be combined with ``experimental_build_compiler_from_source``.              |

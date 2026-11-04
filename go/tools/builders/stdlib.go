@@ -196,7 +196,7 @@ You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 	// TODO: remove this once upstream Go installs GOFIPS140 packages into the
 	// package tree instead of the build cache (golang/go#76225).
 	if gofips140 := os.Getenv("GOFIPS140"); gofips140 != "" && gofips140 != "off" && gofips140 != "latest" {
-		if err := installFIPSSnapshotArchives(goenv, output, buildFlags, *fipsPackageList); err != nil {
+		if err := installFIPSSnapshotArchives(goenv, output, buildFlags, *race, *msan, *fipsPackageList); err != nil {
 			return fmt.Errorf("install FIPS snapshot archives: %w", err)
 		}
 	}
@@ -208,7 +208,7 @@ You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 // call site for why this is needed (golang/go#76225) and why `go build` reuses
 // the build cache. The list is produced by the package-list step (a single
 // enumeration shared with the linker's importcfg via packages.txt).
-func installFIPSSnapshotArchives(goenv *env, goroot string, buildFlags []string, fipsPackageListPath string) error {
+func installFIPSSnapshotArchives(goenv *env, goroot string, buildFlags []string, race, msan bool, fipsPackageListPath string) error {
 	goos := os.Getenv("GOOS")
 	goarch := os.Getenv("GOARCH")
 	if goos == "" || goarch == "" {
@@ -224,7 +224,16 @@ func installFIPSSnapshotArchives(goenv *env, goroot string, buildFlags []string,
 	if len(pkgs) == 0 {
 		return fmt.Errorf("no versioned FIPS packages found in %s", fipsPackageListPath)
 	}
-	pkgDir := filepath.Join(goroot, "pkg", goos+"_"+goarch)
+	// `go install std` with -race/-msan places instrumented packages under a
+	// mode-suffixed pkg dir instead of the plain <goos>_<goarch> one.
+	platform := goos + "_" + goarch
+	switch {
+	case race:
+		platform += "_race"
+	case msan:
+		platform += "_msan"
+	}
+	pkgDir := filepath.Join(goroot, "pkg", platform)
 	for _, imp := range pkgs {
 		dst := filepath.Join(pkgDir, filepath.FromSlash(imp)+".a")
 		if _, err := os.Stat(dst); err == nil {

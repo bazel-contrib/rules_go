@@ -44,7 +44,7 @@ _COMMON_TAG_ATTRS = {
         doc = "Go experiments to enable via GOEXPERIMENT",
     ),
     "gofips140": attr.string(
-        doc = "GOFIPS140 version to build with (e.g. 'v1.0.0', 'latest', 'certified'). Empty string disables.",
+        doc = "GOFIPS140 version to build with (e.g. 'v1.0.0', 'latest', 'certified'). Empty string uses the SDK's go.env setting, if any, and otherwise disables.",
     ),
     "urls": attr.string_list(default = ["https://dl.google.com/go/{}"]),
     "patches": attr.label_list(
@@ -76,7 +76,7 @@ _host_tag = tag_class(
             doc = "Go experiments to enable via GOEXPERIMENT",
         ),
         "gofips140": attr.string(
-            doc = "GOFIPS140 version to build with (e.g. 'v1.0.0', 'latest', 'certified'). Empty string disables.",
+            doc = "GOFIPS140 version to build with (e.g. 'v1.0.0', 'latest', 'certified'). Empty string uses the SDK's go.env setting, if any, and otherwise disables.",
         ),
     },
 )
@@ -121,7 +121,7 @@ _wrap_tag = tag_class(
             doc = "Go experiments to enable via GOEXPERIMENT.",
         ),
         "gofips140": attr.string(
-            doc = "GOFIPS140 version to build with (e.g. 'v1.0.0', 'latest', 'certified'). Empty string disables.",
+            doc = "GOFIPS140 version to build with (e.g. 'v1.0.0', 'latest', 'certified'). Empty string uses the SDK's go.env setting, if any, and otherwise disables.",
         ),
         "goos": attr.string(),
         "goarch": attr.string(),

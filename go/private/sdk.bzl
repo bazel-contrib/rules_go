@@ -36,7 +36,7 @@ go_host_sdk_rule = repository_rule(
         ),
         "gofips140": attr.string(
             default = "",
-            doc = "GOFIPS140 version to build with (e.g. 'v1.0.0', 'latest', 'certified'). Empty string disables.",
+            doc = "GOFIPS140 version to build with (e.g. 'v1.0.0', 'latest', 'certified'). Empty string uses the SDK's go.env setting, if any, and otherwise disables.",
         ),
         "_sdk_build_file": attr.label(
             default = Label("//go/private:BUILD.sdk.bazel"),
@@ -153,7 +153,7 @@ go_download_sdk_rule = repository_rule(
         ),
         "gofips140": attr.string(
             default = "",
-            doc = "GOFIPS140 version to build with (e.g. 'v1.0.0', 'latest', 'certified'). Empty string disables.",
+            doc = "GOFIPS140 version to build with (e.g. 'v1.0.0', 'latest', 'certified'). Empty string uses the SDK's go.env setting, if any, and otherwise disables.",
         ),
         "urls": attr.string_list(default = ["https://dl.google.com/go/{}"]),
         "version": attr.string(),
@@ -365,7 +365,7 @@ _go_local_sdk = repository_rule(
         ),
         "gofips140": attr.string(
             default = "",
-            doc = "GOFIPS140 version to build with (e.g. 'v1.0.0', 'latest', 'certified'). Empty string disables.",
+            doc = "GOFIPS140 version to build with (e.g. 'v1.0.0', 'latest', 'certified'). Empty string uses the SDK's go.env setting, if any, and otherwise disables.",
         ),
         "_sdk_build_file": attr.label(
             default = Label("//go/private:BUILD.sdk.bazel"),
@@ -422,7 +422,7 @@ go_wrap_sdk_rule = repository_rule(
         ),
         "gofips140": attr.string(
             default = "",
-            doc = "GOFIPS140 version to build with (e.g. 'v1.0.0', 'latest', 'certified'). Empty string disables.",
+            doc = "GOFIPS140 version to build with (e.g. 'v1.0.0', 'latest', 'certified'). Empty string uses the SDK's go.env setting, if any, and otherwise disables.",
         ),
         "_sdk_build_file": attr.label(
             default = Label("//go/private:BUILD.sdk.bazel"),
@@ -559,9 +559,32 @@ def _fips_snapshot_packages(ctx, goroot, gofips140):
              "its layout is not what rules_go expects.")
     return fips_snapshot_import_paths(go_files, version)
 
+def _goroot_env_value(ctx, goroot, key):
+    """Returns the value $GOROOT/go.env assigns to key, or "" if it has none.
+
+    Parsed the way the go command reads the file: a line is KEY=VALUE taken
+    verbatim, anything else is ignored, and a later assignment wins.
+    """
+    path = ctx.path("{}/go.env".format(goroot))
+    if not path.exists:
+        return ""
+    prefix = key + "="
+    value = ""
+    for line in ctx.read(path).split("\n"):
+        if line.startswith(prefix):
+            value = line[len(prefix):]
+    return value
+
 def _sdk_build_file(ctx, platform, version, experiments, goroot, gofips140 = "", sdk_build_file_override = None):
     ctx.file("ROOT")
     goos, _, goarch = platform.partition("_")
+
+    # Vendor FIPS toolchains turn GOFIPS140 on in $GOROOT/go.env rather than
+    # the environment. rules_go actions never read that file, so without this
+    # such an SDK silently builds against the in-tree module. An explicit
+    # gofips140 still wins, as an environment variable does over go.env.
+    if not gofips140:
+        gofips140 = _goroot_env_value(ctx, goroot, "GOFIPS140")
 
     # For a GOFIPS140 snapshot build, enumerate the versioned FIPS module
     # packages from the snapshot zip under lib/fips140 now, at SDK-fetch time,
