@@ -137,6 +137,7 @@ filegroup(
         "cgo2.go",
         "codesign.go",
         "compilepkg.go",
+        "compressed_archive.go",
         "constants.go",
         "cover.go",
         "edit.go",
@@ -253,4 +254,13 @@ filegroup(
     testonly = True,
     srcs = glob(["**"]),
     visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "compressed_archive_test",
+    size = "small",
+    srcs = [
+        "compressed_archive.go",
+        "compressed_archive_test.go",
+    ],
 )
