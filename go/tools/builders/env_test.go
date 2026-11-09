@@ -134,3 +134,30 @@ func TestEncodeResponseFileArg(t *testing.T) {
 		})
 	}
 }
+
+func TestRewriteSrcPaths(t *testing.T) {
+	const workDir = "/tmp/rules_go_work-123/cgo/example.com/pkg"
+	output := []byte(workDir + "/plain.go:4:2: declared and not used: a\n" +
+		workDir + "/plain_1.go:4:2: declared and not used: b\n" +
+		workDir + "/pkg/c.go:7:2: declared and not used: c\n")
+
+	e := &env{}
+	e.addSrcPathRewrite(workDir+"/plain.go", "pkg/plain.go")
+	e.addSrcPathRewrite(workDir+"/plain_1.go", "pkg/sub/plain.go")
+	e.addSrcPathRewrite(workDir+"/", "")
+	got := string(e.rewriteSrcPaths(output))
+	want := "pkg/plain.go:4:2: declared and not used: a\n" +
+		"pkg/sub/plain.go:4:2: declared and not used: b\n" +
+		"pkg/c.go:7:2: declared and not used: c\n"
+	if got != want {
+		t.Errorf("rewriteSrcPaths:\ngot:\n%s\nwant:\n%s", got, want)
+	}
+
+	// With -work, the files stay where the tools saw them, so keep their paths.
+	e = &env{shouldPreserveWorkDir: true}
+	e.addSrcPathRewrite(workDir+"/plain.go", "pkg/plain.go")
+	e.addSrcPathRewrite(workDir+"/", "")
+	if got := e.rewriteSrcPaths(output); string(got) != string(output) {
+		t.Errorf("rewriteSrcPaths with -work changed the output:\n%s", got)
+	}
+}
