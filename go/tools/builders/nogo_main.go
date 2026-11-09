@@ -20,6 +20,7 @@ limitations under the License.
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/gob"
 	"errors"
@@ -708,14 +709,14 @@ type config struct {
 	analyzerFlags map[string]string
 }
 
-// importer is an implementation of go/types.Importer that imports type
-// information from the export data in compiled .a files.
+// importer imports standard-library types from go list -export files and
+// application types from compiler-produced export archives.
 type importer struct {
 	fset         *token.FileSet
 	importMap    map[string]string         // map import path in source code to package path
 	packageCache map[string]*types.Package // cache of previously imported packages
-	packageFile  map[string]string         // map package path to .a file with export data
-	factMap      map[string]string         // map import path in source code to file containing serialized facts
+	packageFile  map[string]string         // map package path to type export file
+	factMap      map[string]string         // map canonical package path to file containing serialized facts
 }
 
 func newImporter(importMap, packageFile map[string]string, factMap map[string]string) *importer {
@@ -730,40 +731,34 @@ func newImporter(importMap, packageFile map[string]string, factMap map[string]st
 
 func (i *importer) Import(path string) (*types.Package, error) {
 	if imp, ok := i.importMap[path]; ok {
-		// Translate import path if necessary.
 		path = imp
 	}
 	if path == "unsafe" {
-		// Special case: go/types has pre-defined type information for unsafe.
-		// See https://github.com/golang/go/issues/13882.
 		return types.Unsafe, nil
 	}
 	if pkg, ok := i.packageCache[path]; ok && pkg.Complete() {
-		return pkg, nil // cache hit
+		return pkg, nil
 	}
-
-	archive, ok := i.packageFile[path]
+	file, ok := i.packageFile[path]
 	if !ok {
 		return nil, fmt.Errorf("could not import %q", path)
 	}
-	// open file
-	f, err := os.Open(archive)
+	f, err := os.Open(file)
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		f.Close()
+	defer f.Close()
+	// Older Go releases return an archive from go list -export. New releases
+	// return raw indexed data. Application dependencies still use the
+	// compiler-produced export archives.
+	r := bufio.NewReader(f)
+	if magic, _ := r.Peek(8); string(magic) == "!<arch>\n" {
+		export, err := gcexportdata.NewReader(r)
 		if err != nil {
-			// add file name to error
-			err = fmt.Errorf("reading export data: %s: %v", archive, err)
+			return nil, fmt.Errorf("reading export data %s: %v", file, err)
 		}
-	}()
-
-	r, err := gcexportdata.NewReader(f)
-	if err != nil {
-		return nil, err
+		return gcexportdata.Read(export, i.fset, i.packageCache, path)
 	}
-
 	return gcexportdata.Read(r, i.fset, i.packageCache, path)
 }
 

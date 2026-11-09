@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -25,7 +26,7 @@ func nogo(args []string) error {
 	var importPath, packagePath, nogoPath, packageListPath, goVersion string
 	var testFilter string
 	var outFactsPath, outPath string
-	var coverMode string
+	var stdlibExport string
 	var factsOnly bool
 	fs.Var(&unfilteredSrcs, "src", ".go, .c, .cc, .m, .mm, .s, or .S file to be filtered and checked")
 	fs.Var(&ignoreSrcs, "ignore_src", ".go, .c, .cc, .m, .mm, .s, or .S file to be filtered and checked, but with its diagnostics ignored")
@@ -36,7 +37,7 @@ func nogo(args []string) error {
 	fs.StringVar(&packagePath, "p", "", "The package path (importmap) of the package being compiled")
 	fs.StringVar(&packageListPath, "package_list", "", "The file containing the list of standard library packages")
 	fs.Var(&recompileInternalDeps, "recompile_internal_deps", "The import path of the direct dependencies that needs to be recompiled.")
-	fs.StringVar(&coverMode, "cover_mode", "", "The coverage mode to use. Empty if coverage instrumentation should not be added.")
+	fs.StringVar(&stdlibExport, "stdlib_export", "", "Standard-library go list -export directory")
 	fs.StringVar(&testFilter, "testfilter", "off", "Controls test package filtering")
 	fs.StringVar(&nogoPath, "nogo", "", "The nogo binary")
 	fs.StringVar(&goVersion, "go_version", "", "The SDK Go version to forward to nogo, without the leading 'go' prefix (for example 1.24.3).")
@@ -51,6 +52,9 @@ func nogo(args []string) error {
 	}
 	if importPath == "" {
 		importPath = packagePath
+	}
+	if packagePath == "" {
+		packagePath = importPath
 	}
 
 	// Filter sources.
@@ -80,13 +84,39 @@ func nogo(args []string) error {
 	}
 	defer cleanup()
 
-	compilingWithCgo := os.Getenv("CGO_ENABLED") == "1" && haveCgo
-	importcfgPath, _, err := checkImportsAndBuildCfg(goenv, importPath, srcs, deps, packageListPath, recompileInternalDeps, compilingWithCgo, coverMode, workDir)
+	// Only source imports participate in strict-deps checking. The cgo-generated
+	// sources are included above, and analysis never sees coverage rewriting.
+	imports, err := checkImports(srcs.goSrcs, deps, packageListPath, importPath, recompileInternalDeps)
 	if err != nil {
 		return err
 	}
+	if os.Getenv("CGO_ENABLED") == "1" && haveCgo {
+		imports["runtime/cgo"] = nil
+		imports["syscall"] = nil
+		imports["unsafe"] = nil
+	}
+	var paths []string
+	for path := range imports {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+	var cfg bytes.Buffer
+	for _, path := range paths {
+		if arc := imports[path]; arc != nil {
+			if path != arc.packagePath {
+				fmt.Fprintf(&cfg, "importmap %s=%s\n", path, arc.packagePath)
+			}
+			fmt.Fprintf(&cfg, "packagefile %s=%s\n", arc.packagePath, arc.file)
+		} else {
+			fmt.Fprintf(&cfg, "packagefile %s=%s\n", path, filepath.Join(stdlibExport, filepath.FromSlash(path)+".x"))
+		}
+	}
+	importcfgPath := filepath.Join(workDir, "nogo.importcfg")
+	if err := os.WriteFile(importcfgPath, cfg.Bytes(), 0o666); err != nil {
+		return err
+	}
 
-	return runNogo(workDir, nogoPath, goSrcs, ignoreSrcs, facts, factsOnly, importPath, importcfgPath, goVersion, outFactsPath, outPath)
+	return runNogo(workDir, nogoPath, goSrcs, ignoreSrcs, facts, factsOnly, packagePath, importcfgPath, goVersion, outFactsPath, outPath)
 }
 
 func runNogo(workDir string, nogoPath string, srcs, ignores []string, facts []archive, factsOnly bool, packagePath, importcfgPath, goVersion, outFactsPath, outDirPath string) error {
@@ -107,7 +137,7 @@ func runNogo(workDir string, nogoPath string, srcs, ignores []string, facts []ar
 		args = append(args, "-go_version", goVersion)
 	}
 	for _, fact := range facts {
-		args = append(args, "-fact", fmt.Sprintf("%s=%s", fact.importPath, fact.file))
+		args = append(args, "-fact", fmt.Sprintf("%s=%s", fact.packagePath, fact.file))
 	}
 	if factsOnly {
 		args = append(args, "-facts_only")
