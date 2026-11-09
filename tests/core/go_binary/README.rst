@@ -68,3 +68,9 @@ prefix
 ------
 This binary has a name that conflicts with a subdirectory. Its output file
 name should not have this conflict. Verifies `#2463`_.
+
+pgo_test
+--------
+Checks PGO profile preprocessing and compiler behavior. Nogo analyzes the
+profiled binaries using standard-library type exports that do not depend on
+PGO profiles.

@@ -71,7 +71,7 @@ def _nogo_impl(ctx):
         go,
         struct(
             embed = [ctx.attr._nogo_srcs],
-            deps = analyzer_archives + [dep[GoArchive] for dep in ctx.attr._diff_deps],
+            deps = analyzer_archives,
         ),
         generated_srcs = [nogo_main],
         name = go.label.name + "~nogo",
@@ -108,9 +108,6 @@ _nogo = go_rule(
         ),
         "_go_context_data": attr.label(default = "//:go_context_data"),
         "_go_config": attr.label(default = "//:go_config"),
-        "_diff_deps": attr.label_list(default = [
-            "@com_github_aymanbagabas_go_udiff//:go_default_library",
-        ]),
         "_stdlib": attr.label(default = "//:stdlib"),
         "_allowlist_function_transition": attr.label(
             default = "@bazel_tools//tools/allowlists/function_transition_allowlist",

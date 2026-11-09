@@ -22,6 +22,10 @@ an implicit dependencies on ``//go/tools/coverdata``, which is a
 `go_tool_library`_, which isn't built with `nogo`_. We should be able to
 handle libraries like this that do not have serialized facts. Verifies `#1940`_.
 
+The fixture also imports a real ``go_tool_library`` source package and uses an
+exported type from it. Analysis must read its type exports despite the absence
+of analyzer facts.
+
 Also checks that `nogo`_ itself can be built with coverage enabled.
 Verifies `#2146`_.
 

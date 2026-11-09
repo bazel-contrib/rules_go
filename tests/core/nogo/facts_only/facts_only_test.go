@@ -64,8 +64,8 @@ go_library(
 )
 
 -- marker.go --
-// Package marker exports a fact for every function whose name starts
-// with "Marked" and returns the set of marked objects visible to the
+// Package marker exports a package fact and a fact for every function whose
+// name starts with "Marked", and returns the set of marked objects visible to the
 // package being analyzed, including objects from its imports. It also
 // reports a diagnostic at every marked declaration, so tests can tell
 // that diagnostics from facts-only compiles are discarded even though
@@ -85,15 +85,20 @@ type IsMarked struct{}
 
 func (*IsMarked) AFact() {}
 
+type PackageMarker struct{}
+
+func (*PackageMarker) AFact() {}
+
 var Analyzer = &analysis.Analyzer{
 	Name:       "marker",
-	Doc:        "exports a fact for functions whose name starts with Marked",
+	Doc:        "exports package and marked-function facts",
 	Run:        run,
-	FactTypes:  []analysis.Fact{(*IsMarked)(nil)},
+	FactTypes:  []analysis.Fact{(*IsMarked)(nil), (*PackageMarker)(nil)},
 	ResultType: reflect.TypeOf(map[types.Object]bool(nil)),
 }
 
 func run(pass *analysis.Pass) (interface{}, error) {
+	pass.ExportPackageFact(&PackageMarker{})
 	for _, f := range pass.Files {
 		for _, decl := range f.Decls {
 			fn, ok := decl.(*ast.FuncDecl)
@@ -178,9 +183,31 @@ package dep
 
 func MarkedDoNotUse() int { return 1 }
 
+type Widget struct{}
+
+func (Widget) MarkedMethod() int { return 2 }
+
 func helper() int { return MarkedDoNotUse() }
 
 var _ = helper
+
+-- middle/BUILD.bazel --
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "middle",
+    srcs = ["middle.go"],
+    importpath = "example.com/middle",
+    deps = ["//dep"],
+    visibility = ["//visibility:public"],
+)
+
+-- middle/middle.go --
+package middle
+
+import "example.com/dep"
+
+type Exposed = dep.Widget
 
 -- use/BUILD.bazel --
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -198,8 +225,103 @@ package use
 import "example.com/dep"
 
 func F() int { return dep.MarkedDoNotUse() }
+
+-- use/transitive/BUILD.bazel --
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "transitive",
+    srcs = ["transitive.go"],
+    importpath = "example.com/use/transitive",
+    deps = ["//middle"],
+)
+
+-- use/transitive/transitive.go --
+package transitive
+
+import "example.com/middle"
+
+func G() int { return middle.Exposed{}.MarkedMethod() }
+
+-- use/analyzed/BUILD.bazel --
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "analyzed",
+    srcs = ["analyzed.go"],
+    importpath = "example.com/use/analyzed",
+    visibility = ["//visibility:public"],
+)
+
+-- use/analyzed/analyzed.go --
+package analyzed
+
+type Source struct { Text string }
+
+-- use/relay/BUILD.bazel --
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "relay",
+    srcs = ["relay.go"],
+    importpath = "example.com/use/relay",
+    deps = ["//use/analyzed"],
+    tags = ["no-nogo"],
+    visibility = ["//visibility:public"],
+)
+
+-- use/relay/relay.go --
+package relay
+
+import "example.com/use/analyzed"
+
+type Exposed = analyzed.Source
+
+// The checked consumer would report this call if marker ran despite no-nogo.
+func MarkedMustNotRun() int { return 1 }
+
+-- use/consumer/BUILD.bazel --
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "consumer",
+    srcs = ["consumer.go"],
+    importpath = "example.com/use/consumer",
+    deps = ["//use/relay"],
+)
+
+-- use/consumer/consumer.go --
+package consumer
+
+import "example.com/use/relay"
+
+func New() relay.Exposed {
+    relay.MarkedMustNotRun()
+    return relay.Exposed{Text: "ok"}
+}
 `,
 	})
+}
+
+// The method is declared in dep, but only its re-exported type is named by use.
+// Its object fact must survive the intermediate package's facts-only compile.
+func TestFactOnTransitiveMethod(t *testing.T) {
+	err := bazel_testing.RunBazel("build", "//use/transitive")
+	if err == nil {
+		t.Fatal("expected build of //use to fail with a usemarked diagnostic")
+	}
+	if want := "call to marked function MarkedMethod (usemarked)"; !strings.Contains(err.Error(), want) {
+		t.Fatalf("expected error to contain %q, got:\n%s", want, err)
+	}
+}
+
+// A no-nogo relay must load types from an analyzed dependency even though it
+// has no analyzer registered to decode that dependency's marker facts, and
+// must not run marker on its own source.
+func TestNoNogoRelayOfAnalyzedTypes(t *testing.T) {
+	if err := bazel_testing.RunBazel("build", "//use/consumer"); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // TestFactsFromUncheckedDependency builds a package inside the nogo

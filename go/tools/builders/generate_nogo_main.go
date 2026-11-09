@@ -35,34 +35,31 @@ package main
 
 
 import (
+	"log"
+	"os"
 {{- if .NeedRegexp }}
 	"regexp"
 {{- end}}
+
+	"github.com/bazelbuild/rules_go/go/tools/builders/nogo"
 {{- range $import := .Imports}}
 	{{$import.Name}} "{{$import.Path}}"
 {{- end}}
-	"golang.org/x/tools/go/analysis"
 )
 
-var analyzers = []*analysis.Analyzer{
-{{- range $import := .Imports}}
-	{{$import.Name}}.Analyzer,
-{{- end}}
-}
-
 // configs maps analysis names to configurations.
-var configs = map[string]config{
+var configs = map[string]nogo.Config{
 {{- range $name, $config := .Configs}}
-	{{printf "%q" $name}}: config{
+	{{printf "%q" $name}}: nogo.Config{
 		{{- if $config.AnalyzerFlags }}
-		analyzerFlags: map[string]string {
+		AnalyzerFlags: map[string]string {
 			{{- range $flagKey, $flagValue := $config.AnalyzerFlags}}
 			{{printf "%q: %q" $flagKey $flagValue}},
 			{{- end}}
 		},
 		{{- end -}}
 		{{- if $config.OnlyFiles}}
-		onlyFiles: []*regexp.Regexp{
+		OnlyFiles: []*regexp.Regexp{
 			{{- range $path, $comment := $config.OnlyFiles}}
 			{{- if $comment}}
 			// {{$comment}}
@@ -72,7 +69,7 @@ var configs = map[string]config{
 		},
 		{{- end -}}
 		{{- if $config.ExcludeFiles}}
-		excludeFiles: []*regexp.Regexp{
+		ExcludeFiles: []*regexp.Regexp{
 			{{- range $path, $comment := $config.ExcludeFiles}}
 			{{- if $comment}}
 			// {{$comment}}
@@ -85,7 +82,23 @@ var configs = map[string]config{
 {{- end}}
 }
 
-const debugMode = {{ .Debug }}
+func main() {
+	log.SetFlags(0)
+	log.SetPrefix("nogo: ")
+	args, _, err := expandParamsFiles(os.Args[1:])
+	if err != nil {
+		log.Printf("error reading paramfiles: %v", err)
+		os.Exit(nogoError)
+	}
+	if err, exitCode := nogo.Run(args, configs, {{ .Debug }},
+	{{- range $import := .Imports}}
+		{{$import.Name}}.Analyzer,
+	{{- end}}
+	); err != nil {
+		log.Print(err)
+		os.Exit(exitCode)
+	}
+}
 `
 
 func genNogoMain(args []string) error {

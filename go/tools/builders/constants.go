@@ -12,10 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This file contains constants used by nogo binaries.
-// Note that this file is shared between the nogo binary and the builder.
-// Sharing it as a library isn't possible as libraries depend on nogo, creating
-// a circular dependency.
+// Process protocol shared by the bootstrap builder and generated nogo launcher.
+// Keep exit codes and the patch basename in sync with the nogo runtime package.
+// The builder cannot import that package: it is built before its dependencies.
 package main
 
 const (

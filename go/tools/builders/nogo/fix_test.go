@@ -1,4 +1,4 @@
-package main
+package nogo
 
 import (
 	"bytes"
@@ -246,9 +246,9 @@ func TestValidate_Success(t *testing.T) {
 }
 
 func TestValidate_Failure(t *testing.T) {
-	tests := []struct{
-		name string
-		edits []nogoEdit
+	tests := []struct {
+		name        string
+		edits       []nogoEdit
 		expectedErr string
 	}{
 		{
@@ -420,7 +420,7 @@ func TestWritePatch(t *testing.T) {
 			expectErr: true,
 		},
 		{
-			name:      "no edits",
+			name: "no edits",
 		},
 	}
 

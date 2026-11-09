@@ -1,0 +1,67 @@
+load("//go:def.bzl", "go_test", "go_tool_library")
+
+go_tool_library(
+    name = "nogo",
+    srcs = [
+        "analyze.go",
+        "driver.go",
+        "fix.go",
+        "goversions_go118.go",
+        "goversions_go121.go",
+        "goversions_go122.go",
+        "imports.go",
+        "nolint.go",
+        "version.go",
+    ],
+    importpath = "github.com/bazelbuild/rules_go/go/tools/builders/nogo",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_aymanbagabas_go_udiff//:go_default_library",
+        "@org_golang_x_tools//go/analysis",
+        "@org_golang_x_tools//go/gcexportdata",
+        "@org_golang_x_tools//internal/facts",
+    ],
+)
+
+go_test(
+    name = "fix_test",
+    size = "small",
+    srcs = [
+        "fix.go",
+        "fix_test.go",
+    ],
+    deps = [
+        "@com_github_aymanbagabas_go_udiff//:go_default_library",
+        "@org_golang_x_tools//go/analysis",
+    ],
+)
+
+go_test(
+    name = "nolint_test",
+    size = "small",
+    srcs = [
+        "nolint.go",
+        "nolint_test.go",
+    ],
+)
+
+go_test(
+    name = "version_test",
+    size = "small",
+    srcs = [
+        "goversions_go118.go",
+        "goversions_go121.go",
+        "goversions_go122.go",
+        "version.go",
+        "version_go121_test.go",
+        "version_pre121_test.go",
+        "version_test.go",
+    ],
+)
+
+filegroup(
+    name = "all_files",
+    testonly = True,
+    srcs = glob(["**"]),
+    visibility = ["//visibility:public"],
+)
