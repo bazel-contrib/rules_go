@@ -36,6 +36,16 @@ const (
 	toolTag = "gopackagesdriver"
 )
 
+// infoKeys are the `bazel info` keys used by the driver. They are requested
+// explicitly, because a plain `bazel info` also computes keys such as bazel-bin,
+// bazel-genfiles and bazel-testlogs, which require a build configuration and
+// make the next `bazel build` discard a large part of the analysis cache.
+var infoKeys = []string{
+	"execution_root",
+	"output_base",
+	"output_path",
+}
+
 type Bazel struct {
 	bazelBin              string
 	workspaceRoot         string
@@ -71,7 +81,7 @@ func NewBazel(ctx context.Context, bazelBin, workspaceRoot string, buildWorkingD
 
 func (b *Bazel) fillInfo(ctx context.Context) error {
 	b.info = map[string]string{}
-	output, err := b.run(ctx, "info")
+	output, err := b.run(ctx, "info", infoKeys...)
 	if err != nil {
 		return err
 	}
