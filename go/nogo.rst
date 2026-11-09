@@ -24,7 +24,7 @@
 
 
 ``nogo`` is a tool that analyzes the source code of Go programs. It runs
-in an action after the Go compiler in the Bazel Go rules and rejects sources that
+in a separate Bazel action alongside Go compilation and rejects sources that
 contain disallowed coding patterns from the configured analyzers.
 
 ``nogo`` is a powerful tool for preventing bugs and code anti-patterns early
@@ -185,9 +185,10 @@ For example, `golangci-lint`_ or `staticcheck`_ are popular linters that are com
 analyzers, each of which is a collection of rules.
 
 ``nogo`` is a runner binary that runs a collection of analyzers while leveraging Bazel's
-action orchestration framework. In particular, ``nogo`` is run as part of rules_go GoCompilePkg
-action, and it is run in parallel with the Go compiler. This allows ``nogo`` to benefit from
-Bazel's incremental build and caching as well as the Remote Build Execution framework.
+action orchestration framework. In particular, ``nogo`` runs in a separate RunNogo action
+that can run in parallel with the Go compiler. For cgo packages, it depends on generated
+Go sources from the compilation action. This allows ``nogo`` to benefit from Bazel's
+incremental build and caching as well as the Remote Build Execution framework.
 
 There are examples of how to re-use the analyzers from `golangci-lint`_ and `staticcheck`_ in
 `nogo`_ here: `sluongng/nogo-analyzer`_.
