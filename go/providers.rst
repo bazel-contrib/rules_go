@@ -229,7 +229,7 @@ rule.  Instead, it's referenced in the ``data`` field of GoArchive_.
 +--------------------------------+-----------------------------------------------------------------+
 | :param:`facts_file`            | :type:`File`                                                    |
 +--------------------------------+-----------------------------------------------------------------+
-| The serialized facts for this library produced when nogo ran for this library.                   |
+| The serialized types and analysis facts produced by nogo for this library.                       |
 +--------------------------------+-----------------------------------------------------------------+
 | :param:`srcs`                  | :type:`tuple of File`                                           |
 +--------------------------------+-----------------------------------------------------------------+
@@ -394,6 +394,10 @@ from GoSDK_, or it may be another library compiled for the target mode.
 | :param:`libs`                  | :type:`list of File`                                            |
 +--------------------------------+-----------------------------------------------------------------+
 | .a files for the standard library, built for the target platform.                                |
++--------------------------------+-----------------------------------------------------------------+
+| :param:`export_files`          | :type:`File`                                                    |
++--------------------------------+-----------------------------------------------------------------+
+| Lazily built directory of standard-library type exports from ``go list -export``, used by nogo.  |
 +--------------------------------+-----------------------------------------------------------------+
 | :param:`cache_dir`             | :type:`list of File`                                            |
 +--------------------------------+-----------------------------------------------------------------+

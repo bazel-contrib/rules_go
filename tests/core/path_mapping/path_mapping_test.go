@@ -18,7 +18,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"runtime"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel_testing"
@@ -26,9 +28,12 @@ import (
 
 func TestMain(m *testing.M) {
 	bazel_testing.TestMain(m, bazel_testing.Args{
+		Nogo:         "@//:nogo",
+		NogoIncludes: []string{"@//:__pkg__"},
 		Main: `
 -- BUILD.bazel --
-load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "nogo")
+load(":generate.bzl", "generate")
 
 go_library(
     name = "hello_lib",
@@ -40,6 +45,128 @@ go_binary(
     name = "hello",
     embed = [":hello_lib"],
 )
+
+nogo(
+    name = "nogo",
+    visibility = ["//visibility:public"],
+    deps = ["//analyzer"],
+)
+
+[generate(
+    name = name + "_source",
+    out = name + "/generated.go",
+    content = "package generated\n" + cgo_import + "func Generated() int { return " + value + " }\n",
+) for name, cgo_import, value in [
+    ("plain", "", "42"),
+    ("cgo", "import \"C\"\n", "int(C.int(42))"),
+]]
+
+generate(
+    name = "cgo_extra_source",
+    out = "cgo_extra/generated.go",
+    content = "package generated\nimport \"C\"\nfunc Extra() int { return int(C.int(24)) }\n",
+)
+
+[go_library(
+    name = name + "_dep",
+    srcs = [":" + name + "_source"] + ([":cgo_extra_source"] if name == "cgo" else []),
+    cgo = name == "cgo",
+    importpath = "example.com/" + name,
+) for name in ["plain", "cgo"]]
+
+[go_library(
+    name = name + "_consumer",
+    srcs = [name + "_consumer.go", "selected.go", "excluded.go"],
+    deps = [":" + name + "_dep"],
+    importpath = "example.com/" + name + "_consumer",
+) for name in ["plain", "cgo"]]
+
+-- generate.bzl --
+def _generate_impl(ctx):
+    ctx.actions.write(ctx.outputs.out, ctx.attr.content)
+    return [DefaultInfo(files = depset([ctx.outputs.out]))]
+
+generate = rule(
+    implementation = _generate_impl,
+    attrs = {"out": attr.output(mandatory = True), "content": attr.string()},
+)
+
+-- plain_consumer.go --
+package consumer
+import "example.com/plain"
+var Value = selected(generated.Generated())
+
+-- cgo_consumer.go --
+package consumer
+import "example.com/cgo"
+var Value = selected(generated.Generated())
+
+-- selected.go --
+//go:build mappingtest
+
+package consumer
+func selected(value int) int { return value }
+
+-- excluded.go --
+//go:build !mappingtest
+
+package consumer
+func selected(value string) int { return len(value) }
+
+-- analyzer/BUILD.bazel --
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+go_library(
+    name = "analyzer",
+    srcs = ["analyzer.go"],
+    importpath = "example.com/analyzer",
+    visibility = ["//visibility:public"],
+    deps = ["@org_golang_x_tools//go/analysis"],
+)
+
+-- analyzer/analyzer.go --
+package analyzer
+
+import (
+    "fmt"
+    "go/ast"
+    "os"
+    "strings"
+
+    "golang.org/x/tools/go/analysis"
+)
+
+var Analyzer = &analysis.Analyzer{
+    Name: "mappedpositions",
+    Doc: "checks generated source positions and reports imported positions",
+    Run: run,
+}
+
+func run(pass *analysis.Pass) (any, error) {
+    for _, file := range pass.Files {
+        for _, decl := range file.Decls {
+            fn, ok := decl.(*ast.FuncDecl)
+            if !ok || (fn.Name.Name != "Generated" && fn.Name.Name != "Extra") { continue }
+            // For cgo this position comes from a generated //line directive,
+            // not directly from a path-mapped command-line argument.
+            pos := pass.Fset.Position(fn.Pos())
+            content, err := os.ReadFile(pos.Filename)
+            if err != nil {
+                return nil, fmt.Errorf("cannot read generated source at %s: %w", pos, err)
+            }
+            if !strings.Contains(string(content), "func " + fn.Name.Name + "(") {
+                return nil, fmt.Errorf("source at %s does not contain %s", pos, fn.Name.Name)
+            }
+        }
+    }
+    for ident, obj := range pass.TypesInfo.Uses {
+        if obj.Name() == "Generated" && obj.Pkg() != pass.Pkg {
+            // This position was serialized into the dependency's export data.
+            pos := pass.Fset.Position(obj.Pos())
+            pass.Reportf(ident.Pos(), "imported Generated from %s", pos)
+        }
+    }
+    return nil, nil
+}
 
 -- hello.go --
 package hello
@@ -79,6 +206,56 @@ func TestSdkArgIsPathMapped(t *testing.T) {
 				// regression if -goroot (or -sdk) stopped being path mapped.
 				unstripped := aqueryArgs(t, c.mnemonic, c.target)
 				assertMatchesConfigSegment(t, unstripped, "-goroot")
+			}
+		})
+	}
+}
+
+// TestNogoPathMapping executes the actions as well as inspecting their command
+// lines: mapped arguments alone cannot verify positions embedded in export data
+// or in cgo-generated //line directives.
+func TestNogoPathMapping(t *testing.T) {
+	flags := []string{
+		"--experimental_output_paths=strip",
+		"--@io_bazel_rules_go//go/config:tags=mappingtest",
+		"--spawn_strategy=sandboxed",
+	}
+	for _, name := range []string{"plain", "cgo"} {
+		t.Run(name, func(t *testing.T) {
+			if runtime.GOOS == "windows" {
+				t.Skip("sandboxed execution is unavailable on Windows")
+			}
+			target := "//:" + name + "_consumer"
+			args := aqueryArgs(t, "RunNogo", target, flags...)
+			for _, flag := range []string{"-arc", "-stdlib_export", "-out_facts", "-out", "-nogo"} {
+				assertPathMapped(t, args, flag)
+			}
+			depArgs := aqueryArgs(t, "RunNogo", "//:"+name+"_dep", flags...)
+			if name == "cgo" {
+				// Cgo output still embeds unmapped paths from compilation, so
+				// its analysis action conservatively uses the same paths.
+				assertMatchesConfigSegment(t, depArgs, "-src")
+				assertMatchesConfigSegment(t, depArgs, "-ignore_src")
+			} else {
+				assertPathMapped(t, depArgs, "-src")
+			}
+			build := append([]string{"build"}, flags...)
+			cmd := bazel_testing.BazelCmd(append(build, target)...)
+			out, err := cmd.CombinedOutput()
+			if err == nil {
+				t.Fatalf("expected analyzer diagnostic, build succeeded:\n%s", out)
+			}
+			diagnostic := regexp.MustCompile(name + `_consumer.go:3:[0-9]+: imported Generated from (.*` + name + `/generated.go:[0-9]+(?::[0-9]+)?)`)
+			match := diagnostic.FindStringSubmatch(string(out))
+			if match == nil {
+				t.Fatalf("missing imported source-position diagnostic:\n%s", out)
+			}
+			if name == "cgo" {
+				if !unstrippedConfigSegment.MatchString(match[1]) {
+					t.Errorf("expected original cgo source position, got %s", match[1])
+				}
+			} else if unstrippedConfigSegment.MatchString(match[1]) || !strings.Contains(match[1], "bazel-out/cfg/") {
+				t.Errorf("imported source position was not path mapped: %s", match[1])
 			}
 		})
 	}
