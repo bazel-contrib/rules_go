@@ -71,7 +71,7 @@ func NewBazel(ctx context.Context, bazelBin, workspaceRoot string, buildWorkingD
 
 func (b *Bazel) fillInfo(ctx context.Context) error {
 	b.info = map[string]string{}
-	output, err := b.run(ctx, "info")
+	output, err := b.run(ctx, "info", "execution_root", "output_base", "output_path")
 	if err != nil {
 		return err
 	}
