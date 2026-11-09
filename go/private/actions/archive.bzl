@@ -26,7 +26,9 @@ load(
     "//go/private:providers.bzl",
     "GoArchive",
     "GoArchiveData",
+    "archive_uses_cgo",
     "effective_importpath_pkgpath",
+    "has_syso",
 )
 load(
     "//go/private/actions:compilepkg.bzl",
@@ -245,4 +247,7 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
         runfiles = runfiles,
         _headers = headers,
         _buildinfo_link_inputs = buildinfo_link_inputs,
+        # Whether this package or any dependency uses cgo or a .syso file.
+        # GoLink reads it to decide whether the Go linker can link internally.
+        _uses_cgo = bool(source.cgo and not go.mode.pure) or has_syso(source.srcs) or any([archive_uses_cgo(a) for a in direct]),
     )

@@ -4,8 +4,34 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
 load("@io_bazel_rules_go//go/tools/bazel_testing:def.bzl", "go_bazel_test")
 load(":linkmode.bzl", "linkmode_pie_wrapper")
 load(":many_deps.bzl", "many_deps")
+load(":stdlib_cgo_predicate.bzl", "stdlib_cgo_predicate_matrix")
 
 test_suite(name = "go_binary")
+
+go_bazel_test(
+    name = "auto_internal_link_test",
+    srcs = ["auto_internal_link_test.go"],
+)
+
+stdlib_cgo_predicate_matrix(
+    name = "stdlib_cgo_predicate_matrix",
+)
+
+# Compares stdlib_uses_cgo in go/private/actions/link.bzl with "go list".
+go_test(
+    name = "stdlib_cgo_predicate_test",
+    size = "small",
+    srcs = ["stdlib_cgo_predicate_test.go"],
+    data = [
+        ":stdlib_cgo_predicate_matrix",
+        "//go",
+    ],
+    env = {
+        "GO": "$(rlocationpath //go)",
+        "MATRIX": "$(rlocationpath :stdlib_cgo_predicate_matrix)",
+    },
+    deps = ["//go/runfiles"],
+)
 
 go_bazel_test(
     name = "bind_now_test",
@@ -327,10 +353,10 @@ go_library(
 go_binary(
     name = "stamp_override_bin",
     srcs = ["stamp_override_bin.go"],
-    deps = [":stamp_override_lib"],
     x_defs = {
         "github.com/bazelbuild/rules_go/tests/core/go_binary/stamp_override_lib.Version": "bin_version",
     },
+    deps = [":stamp_override_lib"],
 )
 
 go_test(
