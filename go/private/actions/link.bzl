@@ -80,6 +80,8 @@ def emit_link(
     gc_linkopts = gc_linkopts + go.mode.gc_linkopts
     gc_linkopts, extldflags = _extract_extldflags(gc_linkopts, extldflags)
     builder_args = go.builder_args(go, "link")
+    if go.mode.compress_archives:
+        builder_args.add("-compress_archives")
     tool_args = go.tool_args(go)
 
     # use ar tool from cc toolchain if cc toolchain provides it

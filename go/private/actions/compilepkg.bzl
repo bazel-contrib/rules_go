@@ -141,6 +141,8 @@ def emit_compilepkg(
         shared_args.add("-p", importmap)
     shared_args.add("-package_list", sdk.package_list)
 
+    if go.mode.compress_archives:
+        compile_args.add("-compress_archives")
     compile_args.add("-lo", out_lib)
     compile_args.add("-o", out_export)
     compile_args.add("-imports", out_imports)

@@ -98,6 +98,13 @@ or using `Bazel configuration transitions`_.
 | golangci-lint or another tool that relies on GOPACKAGESDRIVER.               |
 +------------------------+---------------------+-------------------------------+
 
+``--@io_bazel_rules_go//go/config:compress_archives`` defaults to false.
+When enabled, package link archives are stored as deterministic gzip streams;
+compilation export data and linked executables retain their normal formats.
+The linker expands archives into temporary files, trading CPU and disk I/O for
+smaller cache objects. Tools consuming archive output groups directly must
+decompress them when this setting is enabled.
+
 Platforms
 ---------
 

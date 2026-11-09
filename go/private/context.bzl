@@ -568,6 +568,7 @@ default_go_config_info = GoConfigInfo(
     arm = None,
     pgoprofile = None,
     export_stdlib = False,
+    compress_archives = False,
 )
 
 def _cc_runtime_libs_for_mode(mode, cgo_tools):
@@ -1112,6 +1113,7 @@ def _go_config_impl(ctx):
         arm = ctx.attr.arm,
         pgoprofile = pgoprofile,
         export_stdlib = ctx.attr.export_stdlib[BuildSettingInfo].value,
+        compress_archives = ctx.attr.compress_archives[BuildSettingInfo].value,
     )
     validate_mode(go_config_info)
 
@@ -1167,6 +1169,10 @@ go_config = rule(
         "pgoprofile": attr.label(
             mandatory = True,
             allow_files = True,
+        ),
+        "compress_archives": attr.label(
+            mandatory = True,
+            providers = [BuildSettingInfo],
         ),
         "export_stdlib": attr.label(
             mandatory = False,
