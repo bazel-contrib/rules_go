@@ -24,6 +24,7 @@ load(
 )
 load(
     "//go/private:mode.bzl",
+    "LINKMODE_C_SHARED",
     "LINKMODE_NORMAL",
     "LINKMODE_PLUGIN",
     "extld_from_cc_toolchain",
@@ -77,6 +78,18 @@ def emit_link(
 
     if go.coverage_enabled:
         extldflags.append("--coverage")
+    if go.mode.linkmode == LINKMODE_C_SHARED and go.mode.goos in ("darwin", "ios"):
+        # The Go linker doesn't pass -install_name, so ld64 would use the
+        # execroot-relative output path as the install name. Binaries linking
+        # against the dylib record that path and fail to load it at runtime.
+        # Match Bazel's C++ rules, which use @rpath/<basename> together with the
+        # rpaths they add to dependents. This comes before user-provided
+        # -extldflags so that those can still override it.
+        # TODO: C++ toolchains already emit this flag via their
+        # set_install_name feature when the runtime_solib_name variable is set,
+        # but cc_common.create_link_variables doesn't allow setting it. Pass
+        # runtime_solib_name instead of hardcoding the flag once it does.
+        extldflags.append("-Wl,-install_name,@rpath/" + executable.basename)
     gc_linkopts = gc_linkopts + go.mode.gc_linkopts
     gc_linkopts, extldflags = _extract_extldflags(gc_linkopts, extldflags)
     builder_args = go.builder_args(go, "link")
