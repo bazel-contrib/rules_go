@@ -410,6 +410,12 @@ Attributes
 | the analyzers they implement are called by nogo.                                                 |
 |                                                                                                  |
 +----------------------------+-----------------------------+---------------------------------------+
+| :param:`suites`            | :type:`dict`                | :value:`{}`                           |
++----------------------------+-----------------------------+---------------------------------------+
+| Go libraries that export a ``[]*analysis.Analyzer`` variable, mapped to that variable's name,    |
+| for example ``{"@org_golang_x_tools//go/analysis/suite/fix": "Suite"}``. nogo runs every         |
+| analyzer in each list. An analyzer that ``deps`` or another suite already adds runs once.        |
++----------------------------+-----------------------------+---------------------------------------+
 | :param:`config`            | :type:`label`               | :value:`None`                         |
 +----------------------------+-----------------------------+---------------------------------------+
 | JSON configuration file that configures one or more of the analyzers in ``deps``.                |
