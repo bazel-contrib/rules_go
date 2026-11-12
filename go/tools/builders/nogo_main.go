@@ -571,6 +571,8 @@ type goPackage struct {
 	// typeCheckError contains any error encountered during type-checking. It is
 	// only set when illTyped is true.
 	typeCheckError error
+	// generated caches generatedFiles.
+	generated map[string]bool
 	// typesInfo provides type information about the package's syntax trees.
 	// It is set only when syntax is set.
 	typesInfo *types.Info
@@ -622,9 +624,10 @@ func checkAnalysisResults(actions []*action, pkg *goPackage) ([]diagnosticEntry,
 			if actionConfig.excludeFiles != nil {
 				currentConfig.excludeFiles = actionConfig.excludeFiles
 			}
+			currentConfig.excludeGenerated = currentConfig.excludeGenerated || actionConfig.excludeGenerated
 		}
 
-		if currentConfig.onlyFiles == nil && currentConfig.excludeFiles == nil {
+		if currentConfig.onlyFiles == nil && currentConfig.excludeFiles == nil && !currentConfig.excludeGenerated {
 			for _, diag := range act.diagnostics {
 				diagnostics = append(diagnostics, diagnosticEntry{Diagnostic: diag, analyzerName: act.a.Name})
 			}
@@ -644,8 +647,8 @@ func checkAnalysisResults(actions []*action, pkg *goPackage) ([]diagnosticEntry,
 					filename = relname
 				}
 			}
-			include := true
-			if len(currentConfig.onlyFiles) > 0 {
+			include := !(currentConfig.excludeGenerated && p.IsValid() && generatedFiles(pkg)[p.Filename])
+			if include && len(currentConfig.onlyFiles) > 0 {
 				// This analyzer emits diagnostics for only a set of files.
 				include = false
 				for _, pattern := range currentConfig.onlyFiles {
@@ -701,6 +704,9 @@ type config struct {
 	// excludeFiles is a list of regular expressions that match files that an
 	// analyzer will not emit diagnostics for.
 	excludeFiles []*regexp.Regexp
+
+	// excludeGenerated skips files marked per https://go.dev/s/generatedcode.
+	excludeGenerated bool
 
 	// analyzerFlags is a map of flag names to flag values which will be passed
 	// to Analyzer.Flags. Note that no leading '-' should be present in a flag
@@ -798,4 +804,27 @@ func (m *factMultiFlag) Set(v string) error {
 	}
 	(*m)[parts[0]] = parts[1]
 	return nil
+}
+
+// ast.IsGenerated needs Go 1.21.
+var generatedCodeComment = regexp.MustCompile(`^// Code generated .* DO NOT EDIT\.$`)
+
+func generatedFiles(pkg *goPackage) map[string]bool {
+	if pkg.generated != nil {
+		return pkg.generated
+	}
+	pkg.generated = map[string]bool{}
+	for _, f := range pkg.syntax {
+		for _, group := range f.Comments {
+			if group.Pos() > f.Package {
+				break
+			}
+			for _, c := range group.List {
+				if generatedCodeComment.MatchString(c.Text) {
+					pkg.generated[pkg.fset.File(f.Pos()).Name()] = true
+				}
+			}
+		}
+	}
+	return pkg.generated
 }

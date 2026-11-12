@@ -71,6 +71,9 @@ var configs = map[string]config{
 			{{- end}}
 		},
 		{{- end -}}
+		{{- if $config.ExcludeGenerated}}
+		excludeGenerated: true,
+		{{- end -}}
 		{{- if $config.ExcludeFiles}}
 		excludeFiles: []*regexp.Regexp{
 			{{- range $path, $comment := $config.ExcludeFiles}}
@@ -183,9 +186,10 @@ func buildConfig(path string) (Configs, error) {
 		}
 		configs[name] = Config{
 			// Description is currently unused.
-			OnlyFiles:     config.OnlyFiles,
-			ExcludeFiles:  config.ExcludeFiles,
-			AnalyzerFlags: config.AnalyzerFlags,
+			OnlyFiles:        config.OnlyFiles,
+			ExcludeFiles:     config.ExcludeFiles,
+			ExcludeGenerated: config.ExcludeGenerated,
+			AnalyzerFlags:    config.AnalyzerFlags,
 		}
 	}
 	return configs, nil
@@ -194,8 +198,9 @@ func buildConfig(path string) (Configs, error) {
 type Configs map[string]Config
 
 type Config struct {
-	Description   string
-	OnlyFiles     map[string]string `json:"only_files"`
-	ExcludeFiles  map[string]string `json:"exclude_files"`
-	AnalyzerFlags map[string]string `json:"analyzer_flags"`
+	Description      string
+	OnlyFiles        map[string]string `json:"only_files"`
+	ExcludeFiles     map[string]string `json:"exclude_files"`
+	ExcludeGenerated bool              `json:"exclude_generated"`
+	AnalyzerFlags    map[string]string `json:"analyzer_flags"`
 }
