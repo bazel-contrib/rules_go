@@ -128,10 +128,6 @@ tasks:
       # selects the C++ toolchain via toolchain resolution. objc_library needs
       # the Apple CC toolchain either way.
       - "--extra_toolchains=@local_config_apple_cc_toolchains//:all"
-      # It's unclear why the two following flags are needed.
-      # TODO: Investigate and fix.
-      - "--macos_minimum_os=11.0"
-      - "--host_macos_minimum_os=11.0"
     build_targets:
       - "//..."
       - "-//docs:all"
@@ -141,10 +137,6 @@ tasks:
       - "--crosstool_top=@local_config_apple_cc//:toolchain"
       - "--host_crosstool_top=@local_config_apple_cc//:toolchain"
       - "--extra_toolchains=@local_config_apple_cc_toolchains//:all"
-      # It's unclear why the two following flags are needed.
-      # TODO: Investigate and fix.
-      - "--macos_minimum_os=11.0"
-      - "--host_macos_minimum_os=11.0"
     test_targets:
       - "//..."
       - "-//docs:all"
