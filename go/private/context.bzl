@@ -639,6 +639,15 @@ def go_context(
             "load(\"@io_bazel_rules_go//go:def.bzl\", \"go_context\", \"go_rule\")."
         ).format(ctx.label))
 
+    if (cgo_context_info == None and not cgo_disabled and
+        CPP_TOOLCHAIN_TYPE in ctx.toolchains and _sources_use_cgo(attr, [])):
+        cc_toolchain = find_cc_toolchain(ctx, mandatory = False)
+        if cc_toolchain and cc_toolchain.compiler in _UNSUPPORTED_C_COMPILERS:
+            fail((
+                "{} uses cgo, but the C++ toolchain compiler '{}' is not supported by cgo. " +
+                "Select a gcc or clang toolchain, or set pure = \"on\" and remove the cgo sources."
+            ).format(ctx.label, cc_toolchain.compiler))
+
     cgo_available = cgo_context_info != None
 
     if goos == "auto" and goarch == "auto" and cgo_available and go_config_info != None and not go_config_info.pure:
