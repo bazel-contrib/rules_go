@@ -88,7 +88,9 @@ def emit_link(
         # TODO: C++ toolchains already emit this flag via their
         # set_install_name feature when the runtime_solib_name variable is set,
         # but cc_common.create_link_variables doesn't allow setting it. Pass
-        # runtime_solib_name instead of hardcoding the flag once it does.
+        # variables_extension = {"runtime_solib_name": ...} instead of
+        # hardcoding the flag once it does (requires Bazel 9 and
+        # https://github.com/bazelbuild/rules_cc/pull/982).
         extldflags.append("-Wl,-install_name,@rpath/" + executable.basename)
     gc_linkopts = gc_linkopts + go.mode.gc_linkopts
     gc_linkopts, extldflags = _extract_extldflags(gc_linkopts, extldflags)
