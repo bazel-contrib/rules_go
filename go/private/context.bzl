@@ -1059,7 +1059,10 @@ def cgo_context_data_impl(ctx):
             ld_static_lib_path = ld_static_lib_path,
             ld_dynamic_lib_path = ld_dynamic_lib_path,
             ld_dynamic_lib_options = ld_dynamic_lib_options,
-            ar_path = cc_toolchain.ar_executable,
+            # Don't use cc_toolchain.ar_executable: on Bazel 8, it is a
+            # non-existent placeholder (<toolchain package>/ar) for toolchains
+            # that only specify action configs, such as rule-based toolchains.
+            ar_path = ld_static_lib_path,
         ),
     )
 

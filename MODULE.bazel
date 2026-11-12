@@ -80,6 +80,10 @@ use_repo(
     "org_golang_x_crypto",
 )
 
+# Work around https://github.com/bazel-contrib/rules_go/issues/4715.  See
+# https://github.com/bazel-contrib/rules_go/issues/4715#issuecomment-5813617412.
+bazel_dep(name = "apple_support", version = "2.9.0", repo_name = None)
+
 ### Dev dependencies
 
 bazel_dep(name = "stardoc", version = "0.8.0", dev_dependency = True)
