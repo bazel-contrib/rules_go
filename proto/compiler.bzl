@@ -43,7 +43,7 @@ load(
 # changes.
 # TODO: Revisit this after --incompatible_enable_proto_toolchain_resolution has been enabled by
 #  default.
-_PROTO_TOOLCHAIN_TYPE = "@rules_proto//proto:toolchain_type"
+_PROTO_TOOLCHAIN_TYPE = "@com_google_protobuf//bazel/private:proto_toolchain_type"
 
 def _incompatible_toolchains_enabled():
     return getattr(proto_common, "INCOMPATIBLE_ENABLE_PROTO_TOOLCHAIN_RESOLUTION", False)

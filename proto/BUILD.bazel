@@ -174,7 +174,6 @@ bzl_library(
     name = "def",
     srcs = ["def.bzl"],
     visibility = ["//visibility:public"],
-    # Don't list dependency on @rules_proto//proto:defs
     deps = [
         "//go:def",
         "//go/private:providers",
