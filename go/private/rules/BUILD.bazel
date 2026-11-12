@@ -103,7 +103,10 @@ bzl_library(
     name = "sdk",
     srcs = ["sdk.bzl"],
     visibility = ["//go:__subpackages__"],
-    deps = ["//go/private:providers"],
+    deps = [
+        "//go/private:common",
+        "//go/private:providers",
+    ],
 )
 
 bzl_library(

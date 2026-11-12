@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("//go/private:common.bzl", "GO_TOOLCHAIN_LABEL", "SUPPORTS_PATH_MAPPING_REQUIREMENT")
 load(
     "//go/private:providers.bzl",
     "GoSDK",
@@ -117,6 +118,60 @@ go_sdk = rule(
     doc = ("Collects information about a Go SDK. The SDK must have a normal " +
            "GOROOT directory structure."),
     provides = [GoSDK],
+)
+
+def _dirname(file):
+    return file.dirname
+
+def _go_sdk_tool_impl(ctx):
+    toolchain = ctx.toolchains[GO_TOOLCHAIN_LABEL]
+    sdk = toolchain.sdk
+    name = ctx.attr.tool
+    if not name or "/" in name or "\\" in name or name in [".", ".."]:
+        fail("tool must be a command name in the Go SDK")
+    suffix = ".exe" if toolchain.default_goos == "windows" else ""
+    out = ctx.actions.declare_file(ctx.label.name + suffix)
+    if (toolchain.default_goos, toolchain.default_goarch) == (sdk.goos, sdk.goarch):
+        path = "%s/pkg/tool/%s_%s/%s%s" % (sdk.root_file.dirname, sdk.goos, sdk.goarch, name, suffix)
+        for tool in sdk.tools.to_list():
+            if tool.path == path:
+                ctx.actions.symlink(output = out, target_file = tool, is_executable = True)
+                return [DefaultInfo(executable = out)]
+
+    args = ctx.actions.args()
+    args.add("sdktool")
+    args.add_all("-sdk", [sdk.root_file], map_each = _dirname, expand_directories = False)
+    args.add("-out", out)
+    args.add(name)
+    ctx.actions.run(
+        executable = toolchain._builder,
+        arguments = [args],
+        inputs = depset([sdk.go, sdk.root_file], transitive = [sdk.headers, sdk.srcs, sdk.tools, sdk.libs]),
+        outputs = [out],
+        env = {
+            "CGO_ENABLED": "0",
+            "GO111MODULE": "off",
+            "GOARCH": toolchain.default_goarch,
+            "GOENV": "off",
+            "GOEXPERIMENT": sdk.experiments,
+            "GOOS": toolchain.default_goos,
+            "GOTELEMETRY": "off",
+            "GOTOOLCHAIN": "local",
+        },
+        mnemonic = "GoSDKTool",
+        toolchain = GO_TOOLCHAIN_LABEL,
+        execution_requirements = SUPPORTS_PATH_MAPPING_REQUIREMENT,
+    )
+    return [DefaultInfo(executable = out)]
+
+go_sdk_tool = rule(
+    _go_sdk_tool_impl,
+    doc = "Provides a Go SDK command as an executable. Use it in the exec configuration to run it in a build action.",
+    attrs = {
+        "tool": attr.string(mandatory = True, doc = "Command name under the Go SDK's cmd directory, such as objdump."),
+    },
+    executable = True,
+    toolchains = [GO_TOOLCHAIN_LABEL],
 )
 
 def _package_list_impl(ctx):

@@ -161,3 +161,26 @@ You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 	}
 	return nil
 }
+
+// sdkTool builds a command, including its cmd/internal dependencies, from the SDK.
+func sdkTool(args []string) error {
+	flags := flag.NewFlagSet("sdktool", flag.ExitOnError)
+	goenv := envFlags(flags)
+	out := flags.String("out", "", "Path to the executable")
+	if err := flags.Parse(args); err != nil {
+		return err
+	}
+	goenv.goroot = abs(goenv.sdk)
+	if err := goenv.checkFlagsAndSetGoroot(); err != nil {
+		return err
+	}
+	cache, cleanup, err := goenv.workDir()
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+	if err := os.Setenv("GOCACHE", abs(cache)); err != nil {
+		return err
+	}
+	return goenv.runCommand(goenv.goCmd("build", "-trimpath", "-ldflags=-buildid=", "-o", *out, "cmd/"+flags.Arg(0)))
+}

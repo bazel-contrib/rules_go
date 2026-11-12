@@ -1,13 +1,19 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_test")
+load("@io_bazel_rules_go//go:def.bzl", "go_sdk_tool", "go_test")
 load(":stdlib_files.bzl", "stdlib_files")
+
+go_sdk_tool(
+    name = "buildid",
+    tool = "buildid",
+)
 
 go_test(
     name = "buildid_test",
     srcs = ["buildid_test.go"],
     data = [
+        ":buildid",
         ":stdlib_files",
-        "@go_default_sdk//:files",
     ],
+    env = {"BUILDID": "$(rlocationpath :buildid)"},
     deps = ["//go/runfiles"],
 )
 
