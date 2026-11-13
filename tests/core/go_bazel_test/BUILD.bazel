@@ -3,7 +3,18 @@ load("@io_bazel_rules_go//go/tools/bazel_testing:def.bzl", "go_bazel_test")
 go_bazel_test(
     name = "dataargtest_test",
     srcs = ["dataargtest_test.go"],
-    args = ["-binaryPath=$(location //tests/core/go_binary:hello)"],
-    data = ["//tests/core/go_binary:hello"],
-    deps = ["//go/tools/bazel:go_default_library"],
+    args = [
+        "-binaryPath=$(location //tests/core/go_binary:hello)",
+        "-expectedBazel=$(rlocationpath //tests:bazel_binary)",
+        "-expectedBazelVersion=$(rlocationpath //tests:bazel_version)",
+    ],
+    data = [
+        "//tests:bazel_version",
+        "//tests/core/go_binary:hello",
+    ],
+    deps = [
+        "//go/runfiles",
+        "//go/tools/bazel:go_default_library",
+        "//go/tools/bazel_testing",
+    ],
 )

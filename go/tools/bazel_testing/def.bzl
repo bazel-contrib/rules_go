@@ -15,10 +15,49 @@
 load("//go:def.bzl", "go_test")
 
 def go_bazel_test(rule_files = None, **kwargs):
-    """go_bazel_test is a wrapper for go_test that simplifies the use of
-    //go/tools/bazel_testing. Tests may be written
-    that don't explicitly depend on bazel_testing or rules_go files.
+    """Runs a Go integration test in a private Bazel workspace.
+
+    Adds the bazel_testing library and rule files automatically. Each test gets
+    a unique workspace and output root beneath TEST_TMPDIR, with private home,
+    temporary, and cache directories for nested commands. System and fixture
+    workspace rc files remain enabled; home rc files are disabled. System rc
+    support preserves required host settings, such as macOS JVM networking.
+
+    The native Bazel executable selected by the enclosing build is an internal
+    test dependency. Callers need neither a binary attribute nor a Bazel
+    installation on PATH at test runtime. For example:
+
+        go_bazel_test(
+            name = "example_test",
+            srcs = ["example_test.go"],
+        )
+
+    //tests:bazel_binary captures and validates the executable during repository
+    setup, then copies its bytes into a declared input. //tests:bazel_version
+    records its version. Both Bzlmod and WORKSPACE register this lazily, so
+    ordinary builds do not fetch it. No Bazelisk launcher or Bazel download is
+    needed while the test runs.
+
+    LTS jobs use their enclosing Bazel version. An absolute USE_BAZEL_VERSION
+    preserves the exact executable under test. To supply a native executable
+    explicitly, set --repo_env=GO_BAZEL_TEST_BINARY=/absolute/native/bazel; its
+    version must match the enclosing Bazel. There is no fixed-version fallback.
+
+    Private state does not make every fixture hermetic: nested repository rules
+    may fetch dependencies, PATH is inherited, and cgo tests need a compatible
+    C/C++ toolchain. Remote execution also requires matching client and worker
+    OS and CPU for the captured Bazel executable and host-compatible Go SDK.
+    Cross-platform execution needs separate worker-compatible Bazel and SDK
+    selection.
+
+    Args:
+        rule_files: Labels providing the rule files copied into the fixture.
+            Defaults to //:all_files.
+        **kwargs: Arguments forwarded to go_test. size defaults to "large" for
+            the nested JVM and cold dependency setup; explicit sizes are kept.
     """
+
+    bazel_binary = Label("//tests:bazel_binary")
 
     if not rule_files:
         rule_files = [Label("//:all_files")]
@@ -26,8 +65,8 @@ def go_bazel_test(rule_files = None, **kwargs):
     # Add dependency on bazel_testing library.
     kwargs.setdefault("deps", [])
 
-    bazel_testing_library = "@io_bazel_rules_go//go/tools/bazel_testing"
-    if bazel_testing_library not in kwargs["deps"]:
+    bazel_testing_library = Label("//go/tools/bazel_testing")
+    if bazel_testing_library not in [native.package_relative_label(dep) for dep in kwargs["deps"]]:
         kwargs["deps"].append(bazel_testing_library)
 
     # Add data dependency on rules_go files. bazel_testing will copy or link
@@ -43,20 +82,18 @@ def go_bazel_test(rule_files = None, **kwargs):
                       ["-end_files"] +
                       kwargs["args"])
 
+    kwargs["data"].append(bazel_binary)
+    kwargs["args"].append("-bazel_binary=$(rlocationpath {})".format(bazel_binary))
+
     # Set rundir to the workspace root directory to ensure relative paths
     # are interpreted correctly.
     kwargs.setdefault("rundir", ".")
 
-    # Set tags.
-    # local: don't run in sandbox or on remote executor.
-    # exclusive: run one test at a time, since they share a Bazel
-    #   output directory. If we don't do this, tests must extract the bazel
-    #   installation and start with a fresh cache every time, making them
-    #   much slower.
-    kwargs.setdefault("tags", [])
-    if "local" not in kwargs["tags"]:
-        kwargs["tags"].append("local")
-    if "exclusive" not in kwargs["tags"]:
-        kwargs["tags"].append("exclusive")
+    # Each test starts a Bazel server and resolves/builds cold dependencies.
+    # Account for its JVM memory and setup time, unless the caller sizes it.
+    kwargs.setdefault("size", "large")
+
+    # Nested repository rules fetch dependencies even with private test state.
+    kwargs["tags"] = kwargs.get("tags", []) + ["requires-network"]
 
     go_test(**kwargs)

@@ -45,6 +45,13 @@ import (
 // Set via x_defs.
 var goRootFile string
 
+var (
+	bazelBinary      = flag.String("bazel_binary", "", "Runfile path of the Bazel executable to use")
+	bazelPath        = "bazel"
+	bazelRunfilesEnv []string
+	isolatedRoot     string
+)
+
 const (
 	// Standard Bazel exit codes.
 	// A subset of codes in https://cs.opensource.google/bazel/bazel/+/master:src/main/java/com/google/devtools/build/lib/util/ExitCode.java.
@@ -102,7 +109,7 @@ const debug = false
 // outputUserRoot is set to the directory where Bazel should put its internal files.
 // Since Bazel 2.0.0, this needs to be set explicitly to avoid it defaulting to a
 // deeply nested directory within the test, which runs into Windows path length limits.
-// We try to detect the original value in setupWorkspace and set it to that.
+// Each test uses a private root beneath TEST_TMPDIR.
 var outputUserRoot string
 
 // TestMain should be called by tests using this framework from a function named
@@ -133,6 +140,19 @@ func TestMain(m *testing.M, args Args) {
 	}
 
 	flag.Parse()
+	if *bazelBinary != "" {
+		bazelPath, err = runfiles.Rlocation(*bazelBinary)
+		if err == nil {
+			bazelPath, err = filepath.Abs(bazelPath)
+		}
+		if err == nil {
+			bazelRunfilesEnv, err = runfiles.Env()
+		}
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "locating bazel_binary: %v\n", err)
+			return
+		}
+	}
 
 	workspaceDir, cleanup, err := setupWorkspace(args, files)
 	defer func() {
@@ -156,11 +176,19 @@ func TestMain(m *testing.M, args Args) {
 		return
 	}
 
+	originalDir, err := os.Getwd()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return
+	}
 	if err := os.Chdir(workspaceDir); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		return
 	}
-	defer exec.Command("bazel", "shutdown").Run()
+	defer os.Chdir(originalDir)
+	shutdown := BazelCmd("shutdown")
+	shutdown.Dir = workspaceDir
+	defer shutdown.Run()
 
 	if args.SetUp != nil {
 		if err := args.SetUp(); err != nil {
@@ -172,25 +200,56 @@ func TestMain(m *testing.M, args Args) {
 	code = m.Run()
 }
 
-// BazelCmd prepares a bazel command for execution. It chooses the correct
-// bazel binary based on the environment and sanitizes the environment to
-// hide that this code is executing inside a bazel test.
+// BazelCmd prepares a nested Bazel command using the selected executable and
+// private writable state for this test.
 func BazelCmd(args ...string) *exec.Cmd {
-	cmd := exec.Command("bazel")
-	// --nosystem_rc isn't used here because Bazel may need essential flags set in
-	// system rc to be able to work correctly
+	cmd := bazelCommand()
+	// Keep system rc support: CI machines may need settings such as IPv6 JVM
+	// flags. Ignore home rc, but retain the fixture's workspace rc.
 	// See https://github.com/bazelbuild/rules_go/pull/3969#issuecomment-2220405416
-	cmd.Args = append(cmd.Args, "--nohome_rc")
+	// Set the root on the command line so a fixture replacing .bazelrc cannot
+	// discard isolation. Distinct workspaces still get distinct output bases.
+	cmd.Args = append(cmd.Args, "--nohome_rc", "--output_user_root="+outputUserRoot)
 	cmd.Args = append(cmd.Args, args...)
+	return cmd
+}
+
+// bazelCommand also serves --version, which cannot accept startup options.
+func bazelCommand(args ...string) *exec.Cmd {
+	cmd := exec.Command(bazelPath, args...)
 	for _, e := range os.Environ() {
 		// Filter environment variables set by the bazel test wrapper script.
 		// These confuse recursive invocations of Bazel.
 		if strings.HasPrefix(e, "TEST_") || strings.HasPrefix(e, "RUNFILES_") {
 			continue
 		}
+		key, _, _ := strings.Cut(e, "=")
+		if _, replace := isolatedEnvironment[key]; replace {
+			continue
+		}
 		cmd.Env = append(cmd.Env, e)
 	}
+	// Declared launchers may need runfiles of their own. Their dependencies
+	// are already in the enclosing test's runfiles tree.
+	cmd.Env = append(cmd.Env, bazelRunfilesEnv...)
+	for key, dir := range isolatedEnvironment {
+		cmd.Env = append(cmd.Env, key+"="+filepath.Join(isolatedRoot, dir))
+	}
 	return cmd
+}
+
+var isolatedEnvironment = map[string]string{
+	"HOME":           "h",
+	"USERPROFILE":    "h",
+	"XDG_CACHE_HOME": "c",
+	"TMPDIR":         "t",
+	"TMP":            "t",
+	"TEMP":           "t",
+	"TEST_TMPDIR":    "t",
+	"GOCACHE":        "c/go-build",
+	"GOPATH":         "g",
+	"GOMODCACHE":     "g/pkg/mod",
+	"BAZELISK_HOME":  "c/bazelisk",
 }
 
 // RunBazel invokes a bazel command with a list of arguments.
@@ -277,43 +336,48 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 		}
 	}()
 
-	// Find a suitable cache directory. We want something persistent where we
-	// can store a bazel output base across test runs, even for multiple tests.
-	var cacheDir, outBaseDir string
-	if tmpDir := os.Getenv("TEST_TMPDIR"); tmpDir != "" {
-		// TEST_TMPDIR is set by Bazel's test wrapper. Bazel itself uses this to
-		// detect that it's run by a test. When invoked like this, Bazel sets
-		// its output base directory to a temporary directory. This wastes a lot
-		// of time (a simple test takes 45s instead of 3s). We use TEST_TMPDIR
-		// to find a persistent location in the execroot. We won't pass TEST_TMPDIR
-		// to bazel in RunBazel.
-		tmpDir = filepath.Clean(tmpDir)
-		if i := strings.Index(tmpDir, string(os.PathSeparator)+"execroot"+string(os.PathSeparator)); i >= 0 {
-			outBaseDir = tmpDir[:i]
-			if dir, err := filepath.Abs(filepath.Dir(outBaseDir)); err == nil {
-				// Use forward slashes, even on Windows. Bazel's rc file parser
-				// reports an error if there are backslashes.
-				outputUserRoot = strings.ReplaceAll(dir, `\`, `/`)
-			}
-			cacheDir = filepath.Join(outBaseDir, "bazel_testing")
-		} else {
-			cacheDir = filepath.Join(tmpDir, "bazel_testing")
-		}
-	} else {
-		// The test is not invoked by Bazel, so just use the user's cache.
-		cacheDir, err = os.UserCacheDir()
-		if err != nil {
-			return "", cleanup, err
-		}
-		cacheDir = filepath.Join(cacheDir, "bazel_testing")
-	}
-
-	// TODO(jayconrod): any other directories needed for caches?
-	execDir := filepath.Join(cacheDir, "bazel_go_test")
-	if err := os.RemoveAll(execDir); err != nil {
+	// Own a unique root below TEST_TMPDIR. Never delete or escape another
+	// test's directories. Direct callers without TEST_TMPDIR use the OS temp dir.
+	cacheDir, err := os.MkdirTemp(os.Getenv("TEST_TMPDIR"), "bt-")
+	if err != nil {
 		return "", cleanup, err
 	}
-	cleanups = append(cleanups, func() error { return os.RemoveAll(execDir) })
+	cleanups = append(cleanups, func() error {
+		if err := os.RemoveAll(cacheDir); !os.IsPermission(err) {
+			return err
+		}
+		// Nested Bazel outputs may contain read-only directories. Repair only
+		// directories in our private tree; WalkDir does not follow symlinks to
+		// runfiles or SDK inputs owned by the enclosing build.
+		if err := filepath.WalkDir(cacheDir, func(path string, d os.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if !d.IsDir() {
+				return nil
+			}
+			info, err := d.Info()
+			if err != nil {
+				return err
+			}
+			return os.Chmod(path, info.Mode()|0700)
+		}); err != nil {
+			return err
+		}
+		return os.RemoveAll(cacheDir)
+	})
+	cacheDir, err = filepath.Abs(cacheDir)
+	if err != nil {
+		return "", cleanup, err
+	}
+	isolatedRoot = cacheDir
+	outputUserRoot = filepath.Join(cacheDir, "o")
+	for _, dir := range isolatedEnvironment {
+		if err := os.MkdirAll(filepath.Join(cacheDir, dir), 0777); err != nil {
+			return "", cleanup, err
+		}
+	}
+	execDir := filepath.Join(cacheDir, "w")
 
 	// Copy or link the files for the tested repository.
 	testedRepoDir := filepath.Join(execDir, "tested_repo")
@@ -363,7 +427,7 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 	bazelrcBuf := &bytes.Buffer{}
 	fmt.Fprintf(bazelrcBuf, "common --enable_bzlmod\n")
 	if outputUserRoot != "" {
-		fmt.Fprintf(bazelrcBuf, "startup --output_user_root=%s\n", outputUserRoot)
+		fmt.Fprintf(bazelrcBuf, "startup --output_user_root=%s\n", strconv.Quote(filepath.ToSlash(outputUserRoot)))
 	}
 	if flags := os.Getenv("GO_BAZEL_TEST_BAZELFLAGS"); flags != "" {
 		fmt.Fprintf(bazelrcBuf, "common %s\n", flags)
@@ -455,18 +519,12 @@ func BazelMajorVersion() int {
 	return bazelMajorVersion()
 }
 
-// bazelMajorVersion returns the major version of the bazel binary on PATH, or 0
+// bazelMajorVersion returns the major version of the selected Bazel binary, or 0
 // if it can't be determined.
 func bazelMajorVersion() int {
 	// --version can't be combined with other startup options, so this doesn't
 	// go through BazelCmd.
-	cmd := exec.Command("bazel", "--version")
-	for _, e := range os.Environ() {
-		if strings.HasPrefix(e, "TEST_") || strings.HasPrefix(e, "RUNFILES_") {
-			continue
-		}
-		cmd.Env = append(cmd.Env, e)
-	}
+	cmd := bazelCommand("--version")
 	out, err := cmd.Output()
 	if err != nil {
 		return 0
