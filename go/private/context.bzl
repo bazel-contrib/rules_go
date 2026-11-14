@@ -126,6 +126,17 @@ _UNSUPPORTED_C_COMPILERS = {
     "clang-cl": None,
 }
 
+_LTO_REQUIRED_CFI_SANITIZERS = {
+    "cfi": None,
+    "cfi-cast-strict": None,
+    "cfi-derived-cast": None,
+    "cfi-icall": None,
+    "cfi-mfcall": None,
+    "cfi-nvcall": None,
+    "cfi-unrelated-cast": None,
+    "cfi-vcall": None,
+}
+
 _COMPILER_OPTIONS_DENYLIST = dict({
     # cgo parses the error messages from the compiler.  It can't handle colors.
     # Ignore both variants of the diagnostics color flag.
@@ -148,6 +159,24 @@ _COMPILER_OPTIONS_DENYLIST = dict({
     "-fprofile-instr-generate": None,
     "-fcoverage-mapping": None,
 }, **COVERAGE_OPTIONS_DENYLIST)
+
+def filter_cgo_compiler_options(options):
+    options = _filter_options(options, _COMPILER_OPTIONS_DENYLIST)
+    filtered_options = []
+    for option in options:
+        if not option.startswith("-fsanitize="):
+            filtered_options.append(option)
+            continue
+
+        sanitizers = [
+            sanitizer
+            for sanitizer in option[len("-fsanitize="):].split(",")
+            if sanitizer not in _LTO_REQUIRED_CFI_SANITIZERS
+        ]
+        if sanitizers:
+            filtered_options.append("-fsanitize=" + ",".join(sanitizers))
+
+    return filtered_options
 
 _LINKER_OPTIONS_DENYLIST = {
     "-Wl,--gc-sections": None,
@@ -874,13 +903,12 @@ def cgo_context_data_impl(ctx):
         feature_configuration = feature_configuration,
         action_name = C_COMPILE_ACTION_NAME,
     )
-    c_compile_options = _filter_options(
+    c_compile_options = filter_cgo_compiler_options(
         cc_common.get_memory_inefficient_command_line(
             feature_configuration = feature_configuration,
             action_name = C_COMPILE_ACTION_NAME,
             variables = c_compile_variables,
         ) + ctx.fragments.cpp.copts + ctx.fragments.cpp.conlyopts,
-        _COMPILER_OPTIONS_DENYLIST,
     )
     env.update(cc_common.get_environment_variables(
         feature_configuration = feature_configuration,
@@ -892,13 +920,12 @@ def cgo_context_data_impl(ctx):
         feature_configuration = feature_configuration,
         cc_toolchain = cc_toolchain,
     )
-    cxx_compile_options = _filter_options(
+    cxx_compile_options = filter_cgo_compiler_options(
         cc_common.get_memory_inefficient_command_line(
             feature_configuration = feature_configuration,
             action_name = CPP_COMPILE_ACTION_NAME,
             variables = cxx_compile_variables,
         ) + ctx.fragments.cpp.copts + ctx.fragments.cpp.cxxopts,
-        _COMPILER_OPTIONS_DENYLIST,
     )
     env.update(cc_common.get_environment_variables(
         feature_configuration = feature_configuration,
@@ -910,13 +937,12 @@ def cgo_context_data_impl(ctx):
         feature_configuration = feature_configuration,
         cc_toolchain = cc_toolchain,
     )
-    objc_compile_options = _filter_options(
+    objc_compile_options = filter_cgo_compiler_options(
         cc_common.get_memory_inefficient_command_line(
             feature_configuration = feature_configuration,
             action_name = OBJC_COMPILE_ACTION_NAME,
             variables = objc_compile_variables,
         ),
-        _COMPILER_OPTIONS_DENYLIST,
     )
     env.update(cc_common.get_environment_variables(
         feature_configuration = feature_configuration,
@@ -928,13 +954,12 @@ def cgo_context_data_impl(ctx):
         feature_configuration = feature_configuration,
         cc_toolchain = cc_toolchain,
     )
-    objcxx_compile_options = _filter_options(
+    objcxx_compile_options = filter_cgo_compiler_options(
         cc_common.get_memory_inefficient_command_line(
             feature_configuration = feature_configuration,
             action_name = OBJCPP_COMPILE_ACTION_NAME,
             variables = objcxx_compile_variables,
         ),
-        _COMPILER_OPTIONS_DENYLIST,
     )
     env.update(cc_common.get_environment_variables(
         feature_configuration = feature_configuration,
