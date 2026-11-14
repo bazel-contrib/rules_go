@@ -44,6 +44,32 @@ func replicatePaths(paths ...string) replicateOption {
 	}
 }
 
+// replicateSDK copies only declared sources: the physical SDK may contain files
+// that aren't inputs to the action when the builder runs outside a sandbox.
+func replicateSDK(root, dst string, srcs []string) error {
+	if err := replicate(root, dst, replicatePaths("pkg/tool", "pkg/include")); err != nil {
+		return err
+	}
+	source := filepath.Join(root, "src")
+	target := filepath.Join(dst, "src")
+	if err := os.RemoveAll(target); err != nil {
+		return err
+	}
+	for _, src := range srcs {
+		rel, err := filepath.Rel(source, abs(src))
+		if err != nil {
+			return err
+		}
+		if !filepath.IsLocal(rel) {
+			return fmt.Errorf("SDK source %q is outside %q", src, source)
+		}
+		if err := replicateFile(src, filepath.Join(target, rel), &replicateConfig{}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // replicatePrepare is the common preparation steps for a replication entry
 func replicatePrepare(dst string, config *replicateConfig) error {
 	dir := filepath.Dir(dst)
