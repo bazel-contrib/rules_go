@@ -57,3 +57,17 @@ func (b *JSONPackagesDriver) GetResponse(labels []string) *packages.DriverRespon
 		Packages:   paks,
 	}
 }
+
+// GetResponseFromIDs builds a driver response from package IDs already known
+// to be canonical (e.g. from .pkg.json), without Bazel version label rewriting.
+func (b *JSONPackagesDriver) GetResponseFromIDs(ids []string) *packages.DriverResponse {
+	rootPkgs, paks := b.registry.MatchCanonicalIDs(ids)
+
+	return &packages.DriverResponse{
+		NotHandled: false,
+		Compiler:   buildContext.Compiler,
+		Arch:       buildContext.GOARCH,
+		Roots:      rootPkgs,
+		Packages:   paks,
+	}
+}
