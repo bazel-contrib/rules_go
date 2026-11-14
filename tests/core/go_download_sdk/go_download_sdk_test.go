@@ -42,6 +42,11 @@ go_test(
     srcs = ["patch_test.go"],
 )
 
+go_test(
+    name = "fips_test",
+    srcs = ["fips_test.go"],
+)
+
 -- version_test.go --
 package version_test
 
@@ -69,6 +74,21 @@ import (
 func Test(t *testing.T) {
 	if v := os.SayHello; v != "Hello"{
 		t.Errorf("got version %q; want \"Hello\"", v)
+	}
+}
+-- fips_test.go --
+package version_test
+
+import (
+	"crypto/fips140"
+	"testing"
+)
+
+// Only meaningful under an SDK built with gofips140 set to a snapshot version:
+// the FIPS module must be linked in and active by default.
+func Test(t *testing.T) {
+	if !fips140.Enabled() {
+		t.Error("crypto/fips140.Enabled() is false; want true under a GOFIPS140 build")
 	}
 }
 `,
@@ -342,6 +362,152 @@ use_repo(go_sdk, "go_sdk_with_experiments")
 	}
 	if !strings.Contains(gotExperiment, "rangefunc") {
 		t.Fatalf("builder built from an SDK with experiments = [\"rangefunc\"] should report GOEXPERIMENT containing \"rangefunc\", got %q (settings: %+v)", gotExperiment, info.Settings)
+	}
+}
+
+// withModuleSDK replaces the SDK the test framework wraps by default with the
+// go_sdk tags in sdkTags, so the first SDK they declare becomes the default
+// toolchain, and restores the original MODULE.bazel when the test ends.
+func withModuleSDK(t *testing.T, sdkTags string) {
+	t.Helper()
+	origModuleData, err := os.ReadFile("MODULE.bazel")
+	if err != nil {
+		t.Fatal(err)
+	}
+	i := bytes.Index(origModuleData, []byte("_host_go_sdk = use_extension"))
+	if i < 0 {
+		t.Fatal("could not find the default Go SDK declaration")
+	}
+
+	buf := &bytes.Buffer{}
+	buf.Write(origModuleData[:i])
+	buf.WriteString("go_sdk = use_extension(\"@io_bazel_rules_go//go:extensions.bzl\", \"go_sdk\")\n\n")
+	buf.WriteString(sdkTags)
+	if err := os.WriteFile("MODULE.bazel", buf.Bytes(), 0666); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := os.WriteFile("MODULE.bazel", origModuleData, 0666); err != nil {
+			t.Errorf("error restoring MODULE.bazel: %v", err)
+		}
+	})
+}
+
+// A gofips140 SDK must build the standard library against the frozen FIPS
+// module snapshot and default the binary to GODEBUG=fips140=on, so a test
+// binary sees crypto/fips140.Enabled() == true. This also covers the
+// fetch-time snapshot enumeration end to end: if the generated package lists
+// were wrong, the stdlib build or the link would fail before the test ran.
+func TestGoFIPS140(t *testing.T) {
+	withModuleSDK(t, `go_sdk.download(
+    name = "go_sdk_fips",
+    version = "1.24.0",
+    gofips140 = "v1.0.0",
+)
+use_repo(go_sdk, "go_sdk_fips")
+`)
+
+	if err := bazel_testing.RunBazel("test", "//:fips_test"); err != nil {
+		t.Fatal(err)
+	}
+
+	// A race build installs the standard library under pkg/<goos>_<goarch>_race,
+	// so the snapshot archives have to be placed there for the link to find them.
+	if err := bazel_testing.RunBazel("test", "--@io_bazel_rules_go//go/config:race", "//:fips_test"); err != nil {
+		t.Fatal(err)
+	}
+
+	// The dedicated snapshot package list must hold exactly the packages the
+	// stdlib builder has to place into pkg/.
+	if err := bazel_testing.RunBazel("build", "@go_sdk_fips//:fips_packages.txt"); err != nil {
+		t.Fatal(err)
+	}
+	out, err := bazel_testing.BazelOutput("cquery", "@go_sdk_fips//:fips_packages.txt", "--output=files")
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := strings.TrimSpace(string(out))
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got := make(map[string]bool)
+	for _, line := range strings.Split(strings.TrimSpace(string(data)), "\n") {
+		if line == "" {
+			continue
+		}
+		if !strings.HasPrefix(line, "crypto/internal/fips140/v1.0.0") {
+			t.Errorf("unexpected entry %q in %s", line, path)
+		}
+		got[line] = true
+	}
+
+	// The bare prefix covers a source file at the snapshot root, and the nested
+	// package covers a multi-segment directory: the two branches of the
+	// path-to-import-path mapping, checked here against the real snapshot zip
+	// rather than a synthetic list.
+	for _, want := range []string{
+		"crypto/internal/fips140/v1.0.0",
+		"crypto/internal/fips140/v1.0.0/aes/gcm",
+	} {
+		if !got[want] {
+			t.Errorf("%s does not list %q; got %d entries", path, want, len(got))
+		}
+	}
+}
+
+// An SDK predating lib/fips140 cannot satisfy a snapshot request. The
+// enumeration must fail loudly at fetch time rather than quietly producing an
+// empty package list and a non-FIPS build.
+func TestGoFIPS140MissingSnapshotFails(t *testing.T) {
+	withModuleSDK(t, `go_sdk.download(
+    name = "go_sdk_nofips",
+    version = "1.21.1",
+    gofips140 = "v1.0.0",
+)
+use_repo(go_sdk, "go_sdk_nofips")
+`)
+
+	err := bazel_testing.RunBazel("build", "@go_sdk_nofips//:fips_packages.txt")
+	if err == nil {
+		t.Fatal("expected the build to fail for an SDK without lib/fips140")
+	}
+	if !strings.Contains(err.Error(), "snapshot zip") {
+		t.Errorf("error does not mention the missing snapshot zip: %v", err)
+	}
+}
+
+// Vendor FIPS toolchains set GOFIPS140 in $GOROOT/go.env instead of expecting
+// it in the environment. With gofips140 left unset, the SDK must still build
+// against the snapshot that go.env selects rather than the in-tree module.
+func TestGoFIPS140FromGoEnv(t *testing.T) {
+	patch := []byte(`--- a/go.env
++++ b/go.env
+@@ -10,3 +10,4 @@
+ # Automatically download newer toolchains as directed by go.mod files.
+ # See https://go.dev/doc/toolchain for details.
+ GOTOOLCHAIN=auto
++GOFIPS140=v1.0.0
+`)
+	if err := os.WriteFile("go_env_fips.patch", patch, 0666); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := os.Remove("go_env_fips.patch"); err != nil {
+			t.Errorf("error removing go_env_fips.patch: %v", err)
+		}
+	})
+	withModuleSDK(t, `go_sdk.download(
+    name = "go_sdk_fips_go_env",
+    version = "1.24.0",
+    patch_strip = 1,
+    patches = ["//:go_env_fips.patch"],
+)
+`)
+
+	if err := bazel_testing.RunBazel("test", "//:fips_test"); err != nil {
+		t.Fatal(err)
 	}
 }
 
