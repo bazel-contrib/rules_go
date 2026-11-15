@@ -15,9 +15,12 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"go/build"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -29,7 +32,8 @@ func stdlib(args []string) error {
 	// process the args
 	flags := flag.NewFlagSet("stdlib", flag.ExitOnError)
 	goenv := envFlags(flags)
-	out := flags.String("out", "", "Path to output go root")
+	out := flags.String("out", "", "Path to output go root or analysis export directory")
+	export := flags.Bool("export", false, "Copy go list export data for analysis instead of installing archives")
 	race := flags.Bool("race", false, "Build in race mode")
 	msan := flags.Bool("msan", false, "Build in msan mode")
 	shared := flags.Bool("shared", false, "Build in shared mode")
@@ -50,6 +54,14 @@ func stdlib(args []string) error {
 		return fmt.Errorf("GOROOT not set")
 	}
 	output := abs(*out)
+	if *export {
+		work, cleanup, err := goenv.workDir()
+		if err != nil {
+			return err
+		}
+		defer cleanup()
+		output = filepath.Join(work, "goroot")
+	}
 
 	// Fail fast if cgo is required but a toolchain is not configured.
 	if os.Getenv("CGO_ENABLED") == "1" && filepath.Base(os.Getenv("CC")) == "vc_installation_error.bat" {
@@ -93,7 +105,20 @@ You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 	sandboxPath := abs(".")
 
 	// Strip path prefix from source files in debug information.
-	os.Setenv("CGO_CFLAGS", os.Getenv("CGO_CFLAGS")+" "+strings.Join(defaultCFlags(output), " "))
+	cflags := defaultCFlags(output)
+	if *export {
+		// go list -trimpath supplies its own source path mappings. Explicit
+		// mappings contain our temporary GOROOT and would make the cache's
+		// build IDs (and thus exported archives) nondeterministic.
+		var nonPathFlags []string
+		for _, f := range cflags {
+			if !strings.HasPrefix(f, "-ffile-prefix-map=") {
+				nonPathFlags = append(nonPathFlags, f)
+			}
+		}
+		cflags = nonPathFlags
+	}
+	os.Setenv("CGO_CFLAGS", os.Getenv("CGO_CFLAGS")+" "+strings.Join(cflags, " "))
 	os.Setenv("CGO_LDFLAGS", os.Getenv("CGO_LDFLAGS")+" "+strings.Join(defaultLdFlags(), " "))
 
 	// Allow flags in CGO_LDFLAGS that wouldn't pass the security check.
@@ -121,12 +146,23 @@ You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 	// CGO_CFLAGS, which frequently contains absolute paths. As a workaround,
 	// we strip the build ids, since they won't be used after this.
 	installArgs := goenv.goCmd("install", "-toolexec", abs(os.Args[0])+" filterbuildid")
+	if *export {
+		// go list needs build IDs to populate Export from its cache. Unlike
+		// install, it must not use filterbuildid. Trim source paths instead.
+		installArgs = goenv.goCmd("list", "-export", "-deps", "-json", "-trimpath")
+	}
 	if len(build.Default.BuildTags) > 0 {
 		installArgs = append(installArgs, "-tags", strings.Join(build.Default.BuildTags, ","))
 	}
 
 	ldflags := []string{"-trimpath", sandboxPath}
 	asmflags := []string{"-trimpath", output}
+	if *export {
+		// These absolute paths also enter go list's cache keys. Let its
+		// -trimpath option provide the compiler and assembler mappings.
+		ldflags = nil
+		asmflags = nil
+	}
 	if *race {
 		installArgs = append(installArgs, "-race")
 	}
@@ -134,7 +170,7 @@ You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 		installArgs = append(installArgs, "-msan")
 	}
 	if *pgoprofile != "" {
-		gcflags = append(gcflags, "-pgoprofile=" + abs(*pgoprofile))
+		gcflags = append(gcflags, "-pgoprofile="+abs(*pgoprofile))
 	}
 	if *shared {
 		gcflags = append(gcflags, "-shared")
@@ -154,10 +190,63 @@ You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 	if err := absCCCompiler(cgoEnvVars, cgoAbsEnvFlags); err != nil {
 		return fmt.Errorf("error modifying cgo environment to absolute path: %v", err)
 	}
+	if *export {
+		// The Go cache hashes CC verbatim. Resolve the builder through PATH
+		// so that sandbox-specific executable paths do not enter build IDs.
+		// GO_CC still identifies the actual compiler for the cc wrapper.
+		builder := abs(os.Args[0])
+		os.Setenv("PATH", filepath.Dir(builder)+string(os.PathListSeparator)+os.Getenv("PATH"))
+		os.Setenv("CC", quotePathIfNeeded(filepath.Base(builder))+" cc")
+	}
 
 	installArgs = append(installArgs, packages...)
+	if *export {
+		return exportStdlib(goenv, installArgs, abs(*out))
+	}
 	if err := goenv.runCommand(installArgs); err != nil {
 		return err
 	}
 	return nil
+}
+
+// exportStdlib copies the files advertised by go list's supported Export API.
+// Older SDKs return archives, while newer SDKs may return analysis-specific
+// export data. Keep them opaque here: the analysis importer handles both forms.
+func exportStdlib(goenv *env, args []string, out string) error {
+	var data bytes.Buffer
+	if err := goenv.runCommandToFile(&data, os.Stderr, args); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(out, 0777); err != nil {
+		return err
+	}
+	decoder := json.NewDecoder(&data)
+	for {
+		var pkg struct {
+			ImportPath string
+			Export     string
+			GoFiles    []string
+			CgoFiles   []string
+		}
+		if err := decoder.Decode(&pkg); err == io.EOF {
+			return nil
+		} else if err != nil {
+			return fmt.Errorf("decoding standard library export metadata: %v", err)
+		}
+		// unsafe is synthesized by go/types. Test-only packages also have
+		// no export data, although they may appear in the std pattern.
+		if pkg.ImportPath == "unsafe" || (len(pkg.GoFiles) == 0 && len(pkg.CgoFiles) == 0) {
+			continue
+		}
+		if pkg.Export == "" {
+			return fmt.Errorf("no export data for standard library package %q", pkg.ImportPath)
+		}
+		dst := filepath.Join(out, filepath.FromSlash(pkg.ImportPath)+".x")
+		if err := os.MkdirAll(filepath.Dir(dst), 0777); err != nil {
+			return err
+		}
+		if err := copyFile(pkg.Export, dst); err != nil {
+			return fmt.Errorf("copying export data for %q: %v", pkg.ImportPath, err)
+		}
+	}
 }
