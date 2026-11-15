@@ -41,7 +41,7 @@ func fakeCCompiler(t *testing.T, supported, diagnostic string) string {
 	t.Helper()
 	cc, err := os.Executable()
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("os.Executable: %v", err)
 	}
 	t.Setenv("RULES_GO_TEST_C_COMPILER_FLAGS", supported)
 	t.Setenv("RULES_GO_TEST_C_COMPILER_DIAGNOSTIC", diagnostic)
@@ -50,15 +50,26 @@ func fakeCCompiler(t *testing.T, supported, diagnostic string) string {
 
 func TestDefaultCFlags(t *testing.T) {
 	t.Setenv("GOOS", "linux")
-	for _, tc := range []struct {
+	testCases := []struct {
 		name      string
 		supported string
 		prefix    string
 	}{
-		{"prefer_file", "-ffile-prefix-map=a=b -fdebug-prefix-map=a=b", "-ffile-prefix-map"},
-		{"fallback_debug", "-fdebug-prefix-map=a=b", "-fdebug-prefix-map"},
-		{"neither_supported", "", ""},
-	} {
+		{
+			name:      "prefer file prefix map",
+			supported: "-ffile-prefix-map=a=b -fdebug-prefix-map=a=b",
+			prefix:    "-ffile-prefix-map",
+		},
+		{
+			name:      "fall back to debug prefix map",
+			supported: "-fdebug-prefix-map=a=b",
+			prefix:    "-fdebug-prefix-map",
+		},
+		{
+			name: "neither flag supported",
+		},
+	}
+	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			workDir := t.TempDir()
 			cc := fakeCCompiler(t, tc.supported, "unrecognized command-line option")
@@ -68,28 +79,30 @@ func TestDefaultCFlags(t *testing.T) {
 			}
 			want = append(want, "-pthread")
 			if got := defaultCFlags(workDir, cc); !reflect.DeepEqual(got, want) {
-				t.Errorf("defaultCFlags() = %q, want %q", got, want)
+				t.Errorf("defaultCFlags(%q, %q) = %q, want %q", workDir, cc, got, want)
 			}
 		})
 	}
 }
 
 func TestCCompilerSupportsFlag(t *testing.T) {
-	for _, tc := range []struct {
+	testCases := []struct {
+		name       string
 		diagnostic string
 		want       bool
 	}{
-		{"", true},
-		{"unrecognized command-line option", false},
-		{"unknown argument", false},
-		{"unrecognised option", false},
-		{"option is not supported", false},
-		{"option not recognized", false},
-		{"unsupported option", false},
+		{name: "no diagnostic", want: true},
+		{name: "unrecognized", diagnostic: "unrecognized command-line option"},
+		{name: "unknown", diagnostic: "unknown argument"},
+		{name: "unrecognised", diagnostic: "unrecognised option"},
+		{name: "not supported", diagnostic: "option is not supported"},
+		{name: "not recognized", diagnostic: "option not recognized"},
+		{name: "unsupported", diagnostic: "unsupported option"},
 		// An unrelated compilation failure does not imply an unsupported flag.
-		{"fatal error: cannot create output file", true},
-	} {
-		t.Run(tc.diagnostic, func(t *testing.T) {
+		{name: "unrelated error", diagnostic: "fatal error: cannot create output file", want: true},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
 			cc := fakeCCompiler(t, "", tc.diagnostic)
 			if got := cCompilerSupportsFlag(t.TempDir(), cc, "-ffile-prefix-map=a=b"); got != tc.want {
 				t.Errorf("cCompilerSupportsFlag() = %t, want %t", got, tc.want)
