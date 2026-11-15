@@ -26,6 +26,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -68,7 +69,7 @@ func cgo2(goenv *env, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSr
 	workDir = gen.workDir
 
 	// Compile C, C++, Objective-C/C++, and assembly code.
-	defaultCFlags := defaultCFlags(workDir)
+	defaultCFlags := defaultCFlags(workDir, cc)
 	combinedCFlags := combineFlags(cppFlags, gen.hdrIncludes, cFlags, defaultCFlags)
 	asmCFlags := combineFlags(cppFlags, cFlags, defaultCFlags)
 	for _, lang := range []struct{ srcs, flags []string }{
@@ -388,7 +389,7 @@ func compileCSources(goenv *env, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSrcs, hS
 		}
 	}
 
-	defaultCFlags := defaultCFlags(workDir)
+	defaultCFlags := defaultCFlags(workDir, cc)
 	for _, lang := range []struct{ srcs, flags []string }{
 		{cSrcs, combineFlags(cppFlags, hdrIncludes, cFlags, defaultCFlags)},
 		{cxxSrcs, combineFlags(cppFlags, hdrIncludes, cxxFlags, defaultCFlags)},
@@ -426,10 +427,18 @@ func cCompile(goenv *env, src, cc string, flags []string, out string) error {
 	return goenv.runCommand(args)
 }
 
-func defaultCFlags(workDir string) []string {
-	flags := []string{
-		"-ffile-prefix-map=" + abs(".") + "=.",
-		"-ffile-prefix-map=" + workDir + "=.",
+func defaultCFlags(workDir, cc string) []string {
+	var flags []string
+	// Prefer -ffile-prefix-map, which also remaps __FILE__. Fall back to
+	// -fdebug-prefix-map, or omit path remapping if neither is supported.
+	for _, prefixMap := range []string{"-ffile-prefix-map", "-fdebug-prefix-map"} {
+		if cCompilerSupportsFlag(workDir, cc, prefixMap+"=a=b") {
+			flags = append(flags,
+				prefixMap+"="+abs(".")+"=.",
+				prefixMap+"="+workDir+"=.",
+			)
+			break
+		}
 	}
 	goos := os.Getenv("GOOS")
 	switch {
@@ -438,6 +447,30 @@ func defaultCFlags(workDir string) []string {
 	default:
 		return append(flags, "-pthread")
 	}
+}
+
+func cCompilerSupportsFlag(workDir, cc, flag string) bool {
+	out := os.DevNull
+	// Some Windows compilers create a literal NUL file instead of using the
+	// null device, causing cleanup failures. See golang.org/issue/36000.
+	if runtime.GOOS == "windows" {
+		f, err := os.CreateTemp(workDir, "")
+		if err != nil {
+			return false
+		}
+		f.Close()
+		out = f.Name()
+		defer os.Remove(out)
+	}
+	cmd := exec.Command(cc, flag, "-c", "-x", "c", "-", "-o", out)
+	cmd.Env = append(cmd.Environ(), "LC_ALL=C")
+	output, _ := cmd.CombinedOutput()
+	for _, diagnostic := range []string{"unrecognized", "unknown", "unrecognised", "is not supported", "not recognized", "unsupported"} {
+		if bytes.Contains(output, []byte(diagnostic)) {
+			return false
+		}
+	}
+	return true
 }
 
 func defaultLdFlags() []string {
