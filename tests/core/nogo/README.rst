@@ -15,6 +15,7 @@ Contents
 * `nogo test with coverage <coverage/README.rst>`_
 * `nogo Go version plumbing <go_version/README.rst>`_
 * `nogo crashes <crash/README.rst>`_
+* `nogo exclude_generated <exclude_generated/README.rst>`_
 
 .. Child list end
 
