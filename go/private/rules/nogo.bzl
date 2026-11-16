@@ -34,16 +34,17 @@ load(
 )
 
 def _nogo_impl(ctx):
-    if not ctx.attr.deps:
+    if not ctx.attr.deps and not ctx.attr.suites:
         # If there aren't any analyzers to run, don't generate a binary.
         # go_context will check for this condition.
         return None
 
     # Generate the source for the nogo binary.
     analyzer_archives = [dep[GoArchive] for dep in ctx.attr.deps]
+    suite_archives = [suite[GoArchive] for suite in ctx.attr.suites]
     go = go_context(
         ctx,
-        maybe_needs_cc_toolchain = maybe_needs_cc_toolchain(ctx.attr, go_infos = ctx.attr.deps),
+        maybe_needs_cc_toolchain = maybe_needs_cc_toolchain(ctx.attr, go_infos = ctx.attr.deps + ctx.attr.suites.keys()),
     )
     nogo_main = go.declare_file(go, path = "nogo_main.go")
     nogo_args = ctx.actions.args()
@@ -54,6 +55,10 @@ def _nogo_impl(ctx):
     nogo_inputs = []
     analyzer_importpaths = [archive.data.importpath for archive in analyzer_archives]
     nogo_args.add_all(analyzer_importpaths, before_each = "-analyzer_importpath")
+    nogo_args.add_all(
+        ["{}={}".format(suite[GoArchive].data.importpath, var) for suite, var in ctx.attr.suites.items()],
+        before_each = "-analyzer_suite",
+    )
     if ctx.file.config:
         nogo_args.add("-config", ctx.file.config)
         nogo_inputs.append(ctx.file.config)
@@ -71,7 +76,7 @@ def _nogo_impl(ctx):
         go,
         struct(
             embed = [ctx.attr._nogo_srcs],
-            deps = analyzer_archives + [dep[GoArchive] for dep in ctx.attr._diff_deps],
+            deps = analyzer_archives + suite_archives + [dep[GoArchive] for dep in ctx.attr._diff_deps],
         ),
         generated_srcs = [nogo_main],
         name = go.label.name + "~nogo",
@@ -95,6 +100,9 @@ _nogo = go_rule(
     implementation = _nogo_impl,
     attrs = {
         "deps": attr.label_list(
+            providers = [GoArchive],
+        ),
+        "suites": attr.label_keyed_string_dict(
             providers = [GoArchive],
         ),
         "config": attr.label(

@@ -22,11 +22,13 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"go/token"
 	"io/ioutil"
 	"math"
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 	"text/template"
 )
 
@@ -41,14 +43,33 @@ import (
 {{- range $import := .Imports}}
 	{{$import.Name}} "{{$import.Path}}"
 {{- end}}
+{{- range $suite := .Suites}}
+	{{$suite.Name}} "{{$suite.Path}}"
+{{- end}}
 	"golang.org/x/tools/go/analysis"
 )
 
-var analyzers = []*analysis.Analyzer{
+var analyzers = {{if .Suites}}appendUnique({{end}}[]*analysis.Analyzer{
 {{- range $import := .Imports}}
 	{{$import.Name}}.Analyzer,
 {{- end}}
-}
+}{{if .Suites}}{{range $suite := .Suites}}, {{$suite.Name}}.{{$suite.Var}}{{end}})
+
+func appendUnique(analyzers []*analysis.Analyzer, suites ...[]*analysis.Analyzer) []*analysis.Analyzer {
+	seen := make(map[*analysis.Analyzer]bool, len(analyzers))
+	for _, a := range analyzers {
+		seen[a] = true
+	}
+	for _, suite := range suites {
+		for _, a := range suite {
+			if !seen[a] {
+				seen[a] = true
+				analyzers = append(analyzers, a)
+			}
+		}
+	}
+	return analyzers
+}{{end}}
 
 // configs maps analysis names to configurations.
 var configs = map[string]config{
@@ -93,6 +114,8 @@ func genNogoMain(args []string) error {
 	flags := flag.NewFlagSet("generate_nogo_main", flag.ExitOnError)
 	out := flags.String("output", "", "output file to write (defaults to stdout)")
 	flags.Var(&analyzerImportPaths, "analyzer_importpath", "import path of an analyzer library")
+	suiteSpecs := multiFlag{}
+	flags.Var(&suiteSpecs, "analyzer_suite", "importpath=Var of a library exporting Var []*analysis.Analyzer")
 	configFile := flags.String("config", "", "nogo config file")
 	debug := flags.Bool("debug", false, "enable debug mode")
 	if err := flags.Parse(args); err != nil {
@@ -134,13 +157,26 @@ func genNogoMain(args []string) error {
 		}
 		suffix++
 	}
+	type Suite struct {
+		Path, Name, Var string
+	}
+	suites := make([]Suite, 0, len(suiteSpecs))
+	for i, spec := range suiteSpecs {
+		path, name, ok := strings.Cut(spec, "=")
+		if !ok || path == "" || !token.IsExported(name) {
+			return fmt.Errorf("-analyzer_suite %q: want importpath=ExportedVar", spec)
+		}
+		suites = append(suites, Suite{Path: path, Name: "suite" + strconv.Itoa(i+1), Var: name})
+	}
 	data := struct {
 		Imports    []Import
+		Suites     []Suite
 		Configs    Configs
 		NeedRegexp bool
 		Debug      bool
 	}{
 		Imports: imports,
+		Suites:  suites,
 		Configs: config,
 		Debug:   *debug,
 	}
