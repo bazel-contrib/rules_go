@@ -81,7 +81,8 @@ You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 	os.Setenv("GO111MODULE", "off")
 
 	// Make sure we have an absolute path to the C compiler.
-	os.Setenv("CC", quotePathIfNeeded(abs(os.Getenv("CC"))))
+	cc := abs(os.Getenv("CC"))
+	os.Setenv("CC", quotePathIfNeeded(cc))
 
 	// Ensure paths are absolute.
 	absPaths := []string{}
@@ -93,7 +94,7 @@ You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 	sandboxPath := abs(".")
 
 	// Strip path prefix from source files in debug information.
-	os.Setenv("CGO_CFLAGS", os.Getenv("CGO_CFLAGS")+" "+strings.Join(defaultCFlags(output), " "))
+	os.Setenv("CGO_CFLAGS", os.Getenv("CGO_CFLAGS")+" "+strings.Join(defaultCFlags(output, cc), " "))
 	os.Setenv("CGO_LDFLAGS", os.Getenv("CGO_LDFLAGS")+" "+strings.Join(defaultLdFlags(), " "))
 
 	// Allow flags in CGO_LDFLAGS that wouldn't pass the security check.
