@@ -61,6 +61,7 @@ load(
 load(
     "//go/private/rules:sdk.bzl",
     _go_sdk = "go_sdk",
+    _go_sdk_tool = "go_sdk_tool",
 )
 load(
     "//go/private/rules:source.bzl",
@@ -146,6 +147,7 @@ go_context = _go_context
 go_rule = _go_rule
 gomock = _gomock
 go_sdk = _go_sdk
+go_sdk_tool = _go_sdk_tool
 go_tool_library = _go_tool_library
 go_toolchain = _go_toolchain
 nogo = _nogo
