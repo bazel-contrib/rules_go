@@ -29,7 +29,7 @@ def _test_cc_config_impl(ctx):
         target_system_name = "local",
         target_cpu = "local",
         target_libc = "local",
-        compiler = "gcc",
+        compiler = ctx.attr.compiler,
         abi_version = "local",
         abi_libc_version = "local",
         tool_paths = tool_paths,
@@ -40,6 +40,7 @@ def _test_cc_config_impl(ctx):
 
 test_cc_config = rule(
     implementation = _test_cc_config_impl,
+    attrs = {"compiler": attr.string(default = "gcc")},
     provides = [CcToolchainConfigInfo],
 )
 
@@ -55,6 +56,21 @@ missing_cc_toolchain_explicit_pure_off_test = analysistest.make(
     expect_failure = True,
     config_settings = {
         "//command_line_option:extra_toolchains": str(Label("//tests/core/starlark/cgo:fake_go_toolchain")),
+    },
+)
+
+def _unsupported_compiler_cgo_test(ctx):
+    env = analysistest.begin(ctx)
+
+    asserts.expect_failure(env, "uses cgo, but the C++ toolchain compiler 'clang-cl' is not supported by cgo")
+
+    return analysistest.end(env)
+
+unsupported_compiler_cgo_test = analysistest.make(
+    _unsupported_compiler_cgo_test,
+    expect_failure = True,
+    config_settings = {
+        "//command_line_option:extra_toolchains": str(Label("//tests/core/starlark/cgo:clang_cl_test_cc_toolchain")),
     },
 )
 
@@ -151,6 +167,45 @@ def cgo_test_suite():
         toolchain_type = "@bazel_tools//tools/cpp:toolchain_type",
     )
 
+    test_cc_config(
+        name = "clang_cl_test_cc_toolchain_config",
+        compiler = "clang-cl",
+    )
+
+    cc_toolchain(
+        name = "clang_cl_test_cc_toolchain_impl",
+        all_files = ":empty",
+        compiler_files = ":empty",
+        dwp_files = ":empty",
+        linker_files = ":empty",
+        objcopy_files = ":empty",
+        strip_files = ":empty",
+        supports_param_files = 0,
+        toolchain_config = ":clang_cl_test_cc_toolchain_config",
+        toolchain_identifier = "runtime-libs-test-toolchain",
+    )
+
+    native.toolchain(
+        name = "clang_cl_test_cc_toolchain",
+        toolchain = ":clang_cl_test_cc_toolchain_impl",
+        toolchain_type = "@bazel_tools//tools/cpp:toolchain_type",
+    )
+
+    go_binary(
+        name = "unsupported_compiler_cgo_binary",
+        srcs = [
+            "runtime_libs.cc",
+            "runtime_libs.go",
+        ],
+        cgo = True,
+        tags = ["manual"],
+    )
+
+    unsupported_compiler_cgo_test(
+        name = "unsupported_compiler_cgo_test",
+        target_under_test = ":unsupported_compiler_cgo_binary",
+    )
+
     go_binary(
         name = "cross_impure",
         srcs = ["main.go"],
@@ -241,5 +296,6 @@ def cgo_test_suite():
             ":missing_cc_toolchain_explicit_pure_off_test",
             ":static_runtime_lib_inputs_test",
             ":stdlib_runtime_lib_inputs_test",
+            ":unsupported_compiler_cgo_test",
         ],
     )
