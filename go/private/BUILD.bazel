@@ -73,6 +73,17 @@ bzl_library(
 )
 
 bzl_library(
+    name = "bazel_toolchains",
+    srcs = ["bazel_toolchains.bzl"],
+    visibility = ["//go:__subpackages__"],
+    deps = [
+        "//go/private:common",
+        "//go/private:platforms",
+        "@bazel_skylib//lib:selects",
+    ],
+)
+
+bzl_library(
     name = "go_toolchain",
     srcs = ["go_toolchain.bzl"],
     visibility = [
@@ -86,7 +97,6 @@ bzl_library(
         "//go/private/actions:binary",
         "//go/private/actions:link",
         "//go/private/actions:stdlib",
-        "@bazel_skylib//lib:selects",
     ],
 )
 
