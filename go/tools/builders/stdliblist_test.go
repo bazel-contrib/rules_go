@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -17,6 +18,36 @@ func sdkDir() string {
 	return path.Dir(goSDKRootFileRlocationPath)
 }
 
+// This test-only package exists in the SDK runfiles but is excluded from
+// the standard library's declared sources.
+const omittedPackage = "net/internal/socktest"
+
+func sdkSourceArgs(t *testing.T) []string {
+	t.Helper()
+	src := filepath.Join("..", sdkDir(), "src")
+	var args []string
+	found := false
+	if err := fs.WalkDir(os.DirFS(src), ".", func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() && p == omittedPackage {
+			found = true
+			return fs.SkipDir
+		}
+		if !d.IsDir() {
+			args = append(args, "-src="+filepath.Join(src, p))
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if !found {
+		t.Fatalf("SDK runfiles lack %q", omittedPackage)
+	}
+	return args
+}
+
 func Test_stdliblist_noexport(t *testing.T) {
 	testDir := t.TempDir()
 	outJSON := filepath.Join(testDir, "out.json")
@@ -26,23 +57,26 @@ func Test_stdliblist_noexport(t *testing.T) {
 		"-sdk=../" + sdkDir(),
 	}
 
-	if err := stdliblist(test_args); err != nil {
-		t.Errorf("calling stdliblist got err: %v", err)
+	if err := stdliblist(append(test_args, sdkSourceArgs(t)...)); err != nil {
+		t.Fatal(err)
 	}
 	f, err := os.Open(outJSON)
 	if err != nil {
-		t.Errorf("cannot open output json: %v", err)
+		t.Fatal(err)
 	}
 	defer func() { _ = f.Close() }()
 	decoder := json.NewDecoder(f)
 	for decoder.More() {
 		var result *flatPackage
 		if err := decoder.Decode(&result); err != nil {
-			t.Errorf("unable to decode output json: %v\n", err)
+			t.Fatal(err)
+		}
+		if result.PkgPath == omittedPackage {
+			t.Errorf("go list reported undeclared package %q", result.PkgPath)
 		}
 
-		if !strings.HasPrefix(result.ID, "@@//stdlib:") {
-			t.Errorf("ID should be prefixed with @@//stdlib: :%v", result)
+		if want := rulesGoStdlibPrefix + result.PkgPath; result.ID != want {
+			t.Errorf("ID = %q, want %q", result.ID, want)
 		}
 		if result.ExportFile != "" {
 			t.Errorf("ExportsFile should be empty when disabled but got: %v", result)
@@ -67,12 +101,12 @@ func Test_stdliblist_export(t *testing.T) {
 	// Disable CGO otherwise, this takes forever to build.
 	t.Setenv("CGO_ENABLED", "0")
 
-	if err := stdliblist(test_args); err != nil {
-		t.Errorf("calling stdliblist got err: %v", err)
+	if err := stdliblist(append(test_args, sdkSourceArgs(t)...)); err != nil {
+		t.Fatal(err)
 	}
 	f, err := os.Open(outJSON)
 	if err != nil {
-		t.Errorf("cannot open output json: %v", err)
+		t.Fatal(err)
 	}
 	defer func() { _ = f.Close() }()
 	decoder := json.NewDecoder(f)
@@ -80,11 +114,11 @@ func Test_stdliblist_export(t *testing.T) {
 	for decoder.More() {
 		var result *flatPackage
 		if err := decoder.Decode(&result); err != nil {
-			t.Errorf("unable to decode output json: %v\n", err)
+			t.Fatal(err)
 		}
 
-		if !strings.HasPrefix(result.ID, "@@//stdlib:") {
-			t.Errorf("ID should be prefixed with @@//stdlib: :%v", result)
+		if want := rulesGoStdlibPrefix + result.PkgPath; result.ID != want {
+			t.Errorf("ID = %q, want %q", result.ID, want)
 		}
 		if result.ExportFile != "" {
 			anyExportSet = true

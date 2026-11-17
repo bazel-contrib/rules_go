@@ -201,6 +201,8 @@ func stdliblist(args []string) error {
 	// process the args
 	flags := flag.NewFlagSet("stdliblist", flag.ExitOnError)
 	goenv := envFlags(flags)
+	var srcs multiFlag
+	flags.Var(&srcs, "src", "Go SDK source file")
 	out := flags.String("out", "", "Path to output go list json")
 	cachePath := flags.String("cache", "", "Path to use for GOCACHE")
 	export := flags.Bool("export", false, "Should -export be passed to go list")
@@ -239,7 +241,7 @@ func stdliblist(args []string) error {
 	defer func() { cleanup() }()
 
 	newGoRoot := filepath.Join(cloneBase, goenv.sdk)
-	if err := replicate(abs(goenv.sdk), abs(newGoRoot), replicatePaths("src", "pkg/tool", "pkg/include")); err != nil {
+	if err := replicateSDK(abs(goenv.sdk), abs(newGoRoot), srcs); err != nil {
 		return err
 	}
 
