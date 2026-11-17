@@ -36,8 +36,10 @@ def _go_sdk_impl(ctx):
             goos = ctx.attr.goos,
             goarch = ctx.attr.goarch,
             experiments = ",".join(ctx.attr.experiments),
+            gofips140 = ctx.attr.gofips140,
             root_file = ctx.file.root_file,
             package_list = package_list,
+            fips_package_list = ctx.file.fips_package_list,
             libs = depset(ctx.files.libs),
             headers = depset(ctx.files.headers),
             srcs = depset(ctx.files.srcs),
@@ -62,6 +64,10 @@ go_sdk = rule(
             mandatory = False,
             doc = "Go experiments to enable via GOEXPERIMENT",
         ),
+        "gofips140": attr.string(
+            default = "",
+            doc = "GOFIPS140 version to build with (e.g. 'v1.0.0', 'latest', 'certified'). Empty string disables.",
+        ),
         "root_file": attr.label(
             mandatory = True,
             allow_single_file = True,
@@ -72,6 +78,12 @@ go_sdk = rule(
             allow_single_file = True,
             doc = ("A text file containing a list of packages in the " +
                    "standard library that may be imported."),
+        ),
+        "fips_package_list": attr.label(
+            allow_single_file = True,
+            doc = ("A text file listing the versioned GOFIPS140 snapshot " +
+                   "packages the stdlib builder must place into pkg/. " +
+                   "Empty/absent for non-FIPS SDKs."),
         ),
         "libs": attr.label_list(
             # allow_files is not set to [".a"] because that wouldn't allow
@@ -120,8 +132,32 @@ go_sdk = rule(
 )
 
 def _package_list_impl(ctx):
-    _build_package_list(ctx, ctx.files.srcs, ctx.file.root_file, ctx.outputs.out)
-    return [DefaultInfo(files = depset([ctx.outputs.out]))]
+    out = ctx.outputs.out
+    fips_out = ctx.outputs.fips_out
+
+    # Normal standard-library package list, derived from the source tree layout
+    # (package File paths, which are available during analysis).
+    normal = _package_names(ctx.files.srcs, ctx.file.root_file)
+
+    # Versioned GOFIPS140 snapshot packages. The snapshot zip under lib/fips140
+    # cannot be read during analysis, so it is enumerated at SDK-fetch time and
+    # baked into this attribute (see _fips_snapshot_packages in go/private/sdk.bzl).
+    # That lets both outputs be produced with plain ctx.actions.write: no shell
+    # action, no external tool, and no dependency on the SDK itself.
+    fips = ctx.attr.fips_packages
+
+    # fips_out: the versioned FIPS packages only, read verbatim by the stdlib
+    # builder (installFIPSSnapshotArchives). Empty for non-FIPS SDKs.
+    ctx.actions.write(fips_out, _lines(sorted(fips)))
+
+    # out (packages.txt): normal stdlib list plus the FIPS packages, consumed by
+    # the linker's importcfg.
+    combined = dict(normal)
+    for pkg in fips:
+        combined[pkg] = None
+    ctx.actions.write(out, _lines(sorted(combined.keys())))
+
+    return [DefaultInfo(files = depset([out]))]
 
 package_list = rule(
     _package_list_impl,
@@ -135,6 +171,11 @@ package_list = rule(
             allow_single_file = True,
             doc = "A file in the SDK root directory. Used to determine GOROOT.",
         ),
+        "fips_packages": attr.string_list(
+            doc = "Versioned GOFIPS140 snapshot import paths (e.g. " +
+                  "crypto/internal/fips140/<ver>/aes), enumerated from the " +
+                  "snapshot zip at SDK-fetch time. Empty for non-FIPS SDKs.",
+        ),
         "out": attr.output(
             mandatory = True,
             doc = "File to write. Must be 'packages.txt'.",
@@ -143,17 +184,26 @@ package_list = rule(
             # produces this file.
             # TODO(jayconrod): Update Gazelle and simplify this.
         ),
+        "fips_out": attr.output(
+            mandatory = True,
+            doc = "File to write listing the versioned GOFIPS140 snapshot " +
+                  "packages (empty for non-FIPS SDKs). Read by the stdlib builder.",
+        ),
     },
 )
 
-def _build_package_list(ctx, srcs, root_file, out):
+def _lines(items):
+    return "".join([item + "\n" for item in items])
+
+def _package_names(srcs, root_file):
     packages = {}
     src_dir = root_file.dirname + "/src/"
     for src in srcs:
         pkg_src_dir = src.dirname
         if not pkg_src_dir.startswith(src_dir):
             continue
-        pkg_name = pkg_src_dir[len(src_dir):]
-        packages[pkg_name] = None
-    content = "\n".join(sorted(packages.keys())) + "\n"
-    ctx.actions.write(out, content)
+        packages[pkg_src_dir[len(src_dir):]] = None
+    return packages
+
+def _build_package_list(ctx, srcs, root_file, out):
+    ctx.actions.write(out, _lines(sorted(_package_names(srcs, root_file).keys())))
