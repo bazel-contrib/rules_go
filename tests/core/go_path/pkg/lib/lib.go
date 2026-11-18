@@ -2,7 +2,7 @@ package lib
 
 import (
 	"C"
-	_ "embed" // for go:embed
+	"embed"
 )
 
 //go:embed embedded_src.txt
@@ -13,3 +13,6 @@ var renamedEmbeddedSource string
 
 //go:embed template/index.html.tmpl
 var indexTmpl string
+
+//go:embed directory
+var directorySource embed.FS
