@@ -60,7 +60,6 @@ bzl_library(
         ":mode",
         ":providers",
         "//go/platform:apple",
-        "//go/private:go_toolchain",
         "//go/private/actions:preprofile",
         "//go/private/rules:transition",
         "@bazel_skylib//lib:paths",
