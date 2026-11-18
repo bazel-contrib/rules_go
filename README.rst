@@ -61,7 +61,7 @@ Go rules for Bazel_
 .. External rules
 .. _git_repository: https://docs.bazel.build/versions/master/repo/git.html
 .. _http_archive: https://docs.bazel.build/versions/master/repo/http.html#http_archive
-.. _proto_library: https://github.com/bazelbuild/rules_proto
+.. _proto_library: https://github.com/protocolbuffers/protobuf/blob/main/bazel/proto_library.bzl
 
 .. Issues
 .. _#265: https://github.com/bazelbuild/rules_go/issues/265

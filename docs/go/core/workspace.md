@@ -250,10 +250,11 @@ platform where Bazel runs actions) to build protoc.
 
 The `proto_library` rule is provided by the `com_google_protobuf` repository.
 `protoc-gen-go`, the Go proto compiler plugin, is provided by the
-`com_github_golang_protobuf` repository. Both are declared by
-`go_rules_dependencies`. You won't need to declare an explicit dependency
-unless you specifically want to use a different version. See `Overriding
-dependencies` for instructions on using a different version.
+`com_github_golang_protobuf` repository and is declared by
+`go_rules_dependencies` by default. You won't need to declare an explicit
+dependency on the plugin unless you specifically want to use a
+different version. See `Overriding dependencies` for instructions on
+using a different version.
 
 gRPC dependencies are not declared by default (there are too many). You can
 declare them in WORKSPACE using `go_repository`. You may want to use

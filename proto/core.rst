@@ -1,7 +1,7 @@
 Go Protocol buffers
 ===================
 
-.. _proto_library: https://docs.bazel.build/versions/master/be/protocol-buffer.html#proto_library
+.. _proto_library: https://github.com/protocolbuffers/protobuf/blob/main/bazel/proto_library.bzl
 .. _default Go plugin: https://github.com/golang/protobuf
 .. _common plugins: #predefined-plugins
 .. _Go providers: /go/providers.rst
@@ -31,7 +31,8 @@ Overview
 Protocol buffers are built with the three rules below. ``go_proto_library`` and
 ``go_proto_compiler`` may be loaded from ``@io_bazel_rules_go//proto:def.bzl``.
 
-* `proto_library`_: This is a Bazel built-in rule. It lists a set of .proto
+* `proto_library`_: Provided by ``protobuf`` (load it from
+  ``@com_google_protobuf//bazel:proto_library.bzl``). It lists a set of .proto
   files in its ``srcs`` attribute and lists other ``proto_library`` dependencies
   in its ``deps`` attribute. ``proto_library`` rules may be referenced by
   language-specific code generation rules like ``java_proto_library`` and
