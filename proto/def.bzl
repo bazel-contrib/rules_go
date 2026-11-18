@@ -74,6 +74,12 @@ def get_imports(attr, importpath):
 
 def _go_proto_aspect_impl(_target, ctx):
     attr = ctx.rule.attr
+    if ctx.rule.kind == "proto_library":
+        # The most common way to end up here: listing the protos to compile in
+        # deps instead of protos.
+        fail("""While processing go_proto_library deps: {label} is a proto_library, which go_proto_library \
+expects in 'protos', not in 'deps' or 'embed'. Move it to 'protos'. 'deps' is for the Go targets the generated \
+code imports, such as the go_proto_library targets of imported protos.""".format(label = _target.label))
     for attr_name in ["importpath", "_go_context_data"]:
         if not hasattr(attr, attr_name):
             fail("""While processing go_proto_library deps: {label}, which is a {kind} is missing the '{attr_name}' \
