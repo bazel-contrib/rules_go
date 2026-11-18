@@ -87,12 +87,6 @@ func (e *env) checkFlagsAndSetGoroot() error {
 	if e.sdk == "" {
 		return errors.New("-sdk was not set")
 	}
-	if e.goroot != "" {
-		err := os.Setenv("GOROOT", e.goroot)
-		if err != nil {
-			return err
-		}
-	}
 	return nil
 }
 

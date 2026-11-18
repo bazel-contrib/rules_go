@@ -81,6 +81,7 @@ def _stdlib_execution_requirements(go):
 
 def _build_env(go):
     env = go.env
+    env["GOROOT"] = go.sdk.root_file.dirname
 
     if go.mode.pure:
         env.update({"CGO_ENABLED": "0"})
