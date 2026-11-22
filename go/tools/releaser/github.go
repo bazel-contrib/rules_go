@@ -22,7 +22,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/google/go-github/v36/github"
+	"github.com/google/go-github/v93/github"
 )
 
 type githubClient struct {

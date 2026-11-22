@@ -34,12 +34,6 @@ This runs tests from the repository `golang.org/x/crypto <https://golang.org/x/c
 * @org_golang_x_crypto//nacl/box:box_test
 * @org_golang_x_crypto//nacl/sign:sign_test
 * @org_golang_x_crypto//ocsp:ocsp_test
-* @org_golang_x_crypto//openpgp:openpgp_test
-* @org_golang_x_crypto//openpgp/armor:armor_test
-* @org_golang_x_crypto//openpgp/clearsign:clearsign_test
-* @org_golang_x_crypto//openpgp/elgamal:elgamal_test
-* @org_golang_x_crypto//openpgp/packet:packet_test
-* @org_golang_x_crypto//openpgp/s2k:s2k_test
 * @org_golang_x_crypto//otr:otr_test
 * @org_golang_x_crypto//pbkdf2:pbkdf2_test
 * @org_golang_x_crypto//pkcs12:pkcs12_test
@@ -73,7 +67,6 @@ This runs tests from the repository `golang.org/x/net <https://golang.org/x/net>
 * @org_golang_x_net//http2/hpack:hpack_test
 * @org_golang_x_net//idna:idna_test
 * @org_golang_x_net//internal/gate:gate_test
-* @org_golang_x_net//internal/http3:http3_test
 * @org_golang_x_net//internal/httpcommon:httpcommon_test
 * @org_golang_x_net//internal/httpsfv:httpsfv_test
 * @org_golang_x_net//internal/quic/cmd/interop:interop_test
