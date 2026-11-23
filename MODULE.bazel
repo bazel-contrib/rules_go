@@ -115,14 +115,14 @@ dev_go_deps.gazelle_override(
 
 # Needed by //go/tools/releaser.
 dev_go_deps.module(
-    path = "github.com/google/go-github/v36",
-    sum = "h1:ndCzM616/oijwufI7nBRa+5eZHLldT+4yIB68ib5ogs=",
-    version = "v36.0.0",
+    path = "github.com/google/go-github/v93",
+    sum = "h1:qElXPLv+XbSz1qrLdWyb0t3gSYGsWBTzr9T4/PZTCfk=",
+    version = "v93.0.0",
 )
 dev_go_deps.module(
     path = "github.com/google/go-querystring",
-    sum = "h1:Xkwi/a1rcvNg1PPYe5vI8GbeBY/jrVuDX5ASuANWTrk=",
-    version = "v1.0.0",
+    sum = "h1:yhqkPbu2/OH+V9BfpCVPZkNmUXhb2gBxJArfhIxNtP0=",
+    version = "v1.2.0",
 )
 dev_go_deps.module(
     path = "golang.org/x/oauth2",
@@ -149,7 +149,7 @@ use_repo(
     dev_go_deps,
     "com_github_bazelbuild_buildtools",
     "com_github_golang_glog",
-    "com_github_google_go_github_v36",
+    "com_github_google_go_github_v93",
     "org_golang_x_oauth2",
     "org_golang_x_tools_go_vcs",
 )
