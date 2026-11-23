@@ -95,6 +95,7 @@ def define_sdk_repository_targets(
         name = "package_list",
         srcs = package_list_srcs,
         out = "packages.txt",
+        fips_out = "fips_packages.txt",
         root_file = "ROOT",
     )
 
