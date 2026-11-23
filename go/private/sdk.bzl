@@ -464,6 +464,10 @@ def _local_sdk(ctx, path):
         ctx.symlink(entry, entry.basename)
 
 def _sdk_build_file(ctx, platform, version, experiments, gofips140 = "", sdk_build_file_override = None):
+    parsed_version = parse_version(version)
+    if gofips140 not in ("", "off") and parsed_version and parsed_version[:2] < (1, 24):
+        fail("gofips140 = '{}' requires Go 1.24 or later, but the SDK version is {}".format(gofips140, version))
+
     ctx.file("ROOT")
     goos, _, goarch = platform.partition("_")
 

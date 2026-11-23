@@ -47,6 +47,12 @@ go_test(
     srcs = ["fips_test.go"],
 )
 
+go_test(
+    name = "fips_godebug_x_def_test",
+    srcs = ["fips_test.go"],
+    x_defs = {"runtime.godebugDefault": "httpmuxgo121=1"},
+)
+
 -- version_test.go --
 package version_test
 
@@ -402,32 +408,38 @@ func TestGoFIPS140Latest(t *testing.T) {
 use_repo(go_sdk, "go_sdk_fips")
 `)
 
-	if err := bazel_testing.RunBazel("test", "//:fips_test"); err != nil {
+	if err := bazel_testing.RunBazel("test", "//:fips_test", "//:fips_godebug_x_def_test"); err != nil {
 		t.Fatal(err)
 	}
 }
 
-// Snapshot versions are not supported yet, and the bootstrap SDK build file
-// does not pass GOFIPS140 on. Both must be rejected rather than silently
-// producing a non-FIPS build.
+// Snapshot versions are not supported yet, SDKs before Go 1.24 do not know
+// GOFIPS140, and the bootstrap SDK build file does not pass it on. All must be
+// rejected rather than silently producing a non-FIPS build.
 func TestGoFIPS140Unsupported(t *testing.T) {
 	for _, test := range []struct {
 		desc, attrs string
 	}{
 		{
-			desc:  "snapshot_version",
-			attrs: `gofips140 = "v1.0.0",`,
+			desc: "snapshot_version",
+			attrs: `version = "1.24.0",
+    gofips140 = "v1.0.0",`,
+		},
+		{
+			desc: "sdk_before_go_1_24",
+			attrs: `version = "1.23.5",
+    gofips140 = "latest",`,
 		},
 		{
 			desc: "build_compiler_from_source",
-			attrs: `gofips140 = "latest",
+			attrs: `version = "1.24.0",
+    gofips140 = "latest",
     experimental_build_compiler_from_source = True,`,
 		},
 	} {
 		t.Run(test.desc, func(t *testing.T) {
 			withModuleSDK(t, `go_sdk.download(
     name = "go_sdk_fips",
-    version = "1.24.0",
     `+test.attrs+`
 )
 use_repo(go_sdk, "go_sdk_fips")
