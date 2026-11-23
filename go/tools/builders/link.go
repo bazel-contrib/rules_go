@@ -191,6 +191,12 @@ func link(args []string) error {
 	if *buildmode != "" {
 		goargs = append(goargs, "-buildmode", *buildmode)
 	}
+
+	// cmd/go defaults a GOFIPS140 binary to GODEBUG=fips140=on. Do the same
+	// here, since the linker is invoked directly.
+	if v := os.Getenv("GOFIPS140"); v != "" && v != "off" {
+		goargs = append(goargs, "-X", "runtime.godebugDefault=fips140=on")
+	}
 	goargs = append(goargs, "-o", *outFile)
 
 	// substitute `builder cc` for the linker with a symlink to builder called `builder-cc`.

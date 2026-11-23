@@ -42,6 +42,11 @@ go_test(
     srcs = ["patch_test.go"],
 )
 
+go_test(
+    name = "fips_test",
+    srcs = ["fips_test.go"],
+)
+
 -- version_test.go --
 package version_test
 
@@ -69,6 +74,19 @@ import (
 func Test(t *testing.T) {
 	if v := os.SayHello; v != "Hello"{
 		t.Errorf("got version %q; want \"Hello\"", v)
+	}
+}
+-- fips_test.go --
+package fips_test
+
+import (
+	"crypto/fips140"
+	"testing"
+)
+
+func Test(t *testing.T) {
+	if !fips140.Enabled() {
+		t.Error("crypto/fips140.Enabled() is false; want true under a GOFIPS140 build")
 	}
 }
 `,
@@ -342,6 +360,87 @@ use_repo(go_sdk, "go_sdk_with_experiments")
 	}
 	if !strings.Contains(gotExperiment, "rangefunc") {
 		t.Fatalf("builder built from an SDK with experiments = [\"rangefunc\"] should report GOEXPERIMENT containing \"rangefunc\", got %q (settings: %+v)", gotExperiment, info.Settings)
+	}
+}
+
+// withModuleSDK replaces the SDK the test framework wraps by default with the
+// go_sdk tags in sdkTags, so the first SDK they declare becomes the default
+// toolchain, and restores the original MODULE.bazel when the test ends.
+func withModuleSDK(t *testing.T, sdkTags string) {
+	t.Helper()
+	origModuleData, err := os.ReadFile("MODULE.bazel")
+	if err != nil {
+		t.Fatal(err)
+	}
+	i := bytes.Index(origModuleData, []byte("_host_go_sdk = use_extension"))
+	if i < 0 {
+		t.Fatal("could not find the default Go SDK declaration")
+	}
+
+	buf := &bytes.Buffer{}
+	buf.Write(origModuleData[:i])
+	buf.WriteString("go_sdk = use_extension(\"@io_bazel_rules_go//go:extensions.bzl\", \"go_sdk\")\n\n")
+	buf.WriteString(sdkTags)
+	if err := os.WriteFile("MODULE.bazel", buf.Bytes(), 0666); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := os.WriteFile("MODULE.bazel", origModuleData, 0666); err != nil {
+			t.Errorf("error restoring MODULE.bazel: %v", err)
+		}
+	})
+}
+
+// With gofips140 = "latest" the standard library is built in FIPS mode from
+// the SDK's own sources and binaries default to GODEBUG=fips140=on.
+func TestGoFIPS140Latest(t *testing.T) {
+	withModuleSDK(t, `go_sdk.download(
+    name = "go_sdk_fips",
+    version = "1.24.0",
+    gofips140 = "latest",
+)
+use_repo(go_sdk, "go_sdk_fips")
+`)
+
+	if err := bazel_testing.RunBazel("test", "//:fips_test"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// Snapshot versions are not supported yet, and the bootstrap SDK build file
+// does not pass GOFIPS140 on. Both must be rejected rather than silently
+// producing a non-FIPS build.
+func TestGoFIPS140Unsupported(t *testing.T) {
+	for _, test := range []struct {
+		desc, attrs string
+	}{
+		{
+			desc:  "snapshot_version",
+			attrs: `gofips140 = "v1.0.0",`,
+		},
+		{
+			desc: "build_compiler_from_source",
+			attrs: `gofips140 = "latest",
+    experimental_build_compiler_from_source = True,`,
+		},
+	} {
+		t.Run(test.desc, func(t *testing.T) {
+			withModuleSDK(t, `go_sdk.download(
+    name = "go_sdk_fips",
+    version = "1.24.0",
+    `+test.attrs+`
+)
+use_repo(go_sdk, "go_sdk_fips")
+`)
+
+			err := bazel_testing.RunBazel("build", "@go_sdk_fips//:go_sdk")
+			if err == nil {
+				t.Fatal("expected the SDK to be rejected")
+			}
+			if !strings.Contains(err.Error(), "gofips140") {
+				t.Fatalf("expected an error about gofips140, got: %v", err)
+			}
+		})
 	}
 }
 

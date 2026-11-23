@@ -36,6 +36,7 @@ def _go_sdk_impl(ctx):
             goos = ctx.attr.goos,
             goarch = ctx.attr.goarch,
             experiments = ",".join(ctx.attr.experiments),
+            gofips140 = ctx.attr.gofips140,
             root_file = ctx.file.root_file,
             package_list = package_list,
             libs = depset(ctx.files.libs),
@@ -61,6 +62,9 @@ go_sdk = rule(
         "experiments": attr.string_list(
             mandatory = False,
             doc = "Go experiments to enable via GOEXPERIMENT",
+        ),
+        "gofips140": attr.string(
+            doc = "GOFIPS140 mode to build with. Empty means off.",
         ),
         "root_file": attr.label(
             mandatory = True,

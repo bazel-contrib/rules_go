@@ -61,6 +61,7 @@ define_sdk_repository_targets(
     go = "bin/go{exe}",
     go_sdk_root_file = "ROOT",
     goarch = "{goarch}",
+    gofips140 = {gofips140},
     goos = "{goos}",
     package_list_srcs = [":srcs"],
     version = "{version}",

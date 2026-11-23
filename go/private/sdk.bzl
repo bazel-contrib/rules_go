@@ -23,7 +23,7 @@ def _go_host_sdk_impl(ctx):
     goroot = _detect_host_sdk(ctx)
     platform = _detect_sdk_platform(ctx, goroot)
     version = _detect_sdk_version(ctx, goroot)
-    _sdk_build_file(ctx, platform, version, experiments = ctx.attr.experiments)
+    _sdk_build_file(ctx, platform, version, experiments = ctx.attr.experiments, gofips140 = ctx.attr.gofips140)
     _local_sdk(ctx, goroot)
 
 go_host_sdk_rule = repository_rule(
@@ -33,6 +33,10 @@ go_host_sdk_rule = repository_rule(
         "version": attr.string(),
         "experiments": attr.string_list(
             doc = "Go experiments to enable via GOEXPERIMENT",
+        ),
+        "gofips140": attr.string(
+            values = ["", "off", "latest"],
+            doc = "GOFIPS140 mode to build with. Only 'off' and 'latest' are supported for now; empty means off.",
         ),
         "_sdk_build_file": attr.label(
             default = Label("//go/private:BUILD.sdk.bazel"),
@@ -63,6 +67,10 @@ def _go_download_sdk_impl(ctx):
             fail("goos set but goarch not set")
         goos, goarch = ctx.attr.goos, ctx.attr.goarch
     platform = goos + "_" + goarch
+
+    # The bootstrap SDK build file does not pass GOFIPS140 on to the toolchain.
+    if ctx.attr.gofips140 not in ("", "off") and ctx.attr.experimental_build_compiler_from_source:
+        fail("gofips140 = '{}' is not supported together with experimental_build_compiler_from_source".format(ctx.attr.gofips140))
 
     version = ctx.attr.version
     sdks = ctx.attr.sdks
@@ -109,7 +117,7 @@ def _go_download_sdk_impl(ctx):
     sdk_build_file_override = ctx.attr._bootstrap_sdk_build_file if ctx.attr.experimental_build_compiler_from_source else None
 
     detected_version = _detect_sdk_version(ctx, ".")
-    _sdk_build_file(ctx, platform, detected_version, experiments = ctx.attr.experiments, sdk_build_file_override = sdk_build_file_override)
+    _sdk_build_file(ctx, platform, detected_version, experiments = ctx.attr.experiments, gofips140 = ctx.attr.gofips140, sdk_build_file_override = sdk_build_file_override)
 
     if not ctx.attr.sdks and not ctx.attr.version:
         # Returning this makes Bazel print a message that 'version' must be
@@ -138,6 +146,10 @@ go_download_sdk_rule = repository_rule(
         "sdks": attr.string_list_dict(),
         "experiments": attr.string_list(
             doc = "Go experiments to enable via GOEXPERIMENT",
+        ),
+        "gofips140": attr.string(
+            values = ["", "off", "latest"],
+            doc = "GOFIPS140 mode to build with. Only 'off' and 'latest' are supported for now; empty means off.",
         ),
         "urls": attr.string_list(default = ["https://dl.google.com/go/{}"]),
         "version": attr.string(),
@@ -336,7 +348,7 @@ def _go_local_sdk_impl(ctx):
     goroot = ctx.attr.path
     platform = _detect_sdk_platform(ctx, goroot)
     version = _detect_sdk_version(ctx, goroot)
-    _sdk_build_file(ctx, platform, version, ctx.attr.experiments)
+    _sdk_build_file(ctx, platform, version, ctx.attr.experiments, gofips140 = ctx.attr.gofips140)
     _local_sdk(ctx, goroot)
 
 _go_local_sdk = repository_rule(
@@ -346,6 +358,10 @@ _go_local_sdk = repository_rule(
         "version": attr.string(),
         "experiments": attr.string_list(
             doc = "Go experiments to enable via GOEXPERIMENT",
+        ),
+        "gofips140": attr.string(
+            values = ["", "off", "latest"],
+            doc = "GOFIPS140 mode to build with. Only 'off' and 'latest' are supported for now; empty means off.",
         ),
         "_sdk_build_file": attr.label(
             default = Label("//go/private:BUILD.sdk.bazel"),
@@ -382,7 +398,7 @@ def _go_wrap_sdk_impl(ctx):
     goroot = str(ctx.path(root_file).dirname)
     platform = _detect_sdk_platform(ctx, goroot)
     version = _detect_sdk_version(ctx, goroot)
-    _sdk_build_file(ctx, platform, version, ctx.attr.experiments)
+    _sdk_build_file(ctx, platform, version, ctx.attr.experiments, gofips140 = ctx.attr.gofips140)
     _local_sdk(ctx, goroot)
 
 go_wrap_sdk_rule = repository_rule(
@@ -399,6 +415,10 @@ go_wrap_sdk_rule = repository_rule(
         "version": attr.string(),
         "experiments": attr.string_list(
             doc = "Go experiments to enable via GOEXPERIMENT",
+        ),
+        "gofips140": attr.string(
+            values = ["", "off", "latest"],
+            doc = "GOFIPS140 mode to build with. Only 'off' and 'latest' are supported for now; empty means off.",
         ),
         "_sdk_build_file": attr.label(
             default = Label("//go/private:BUILD.sdk.bazel"),
@@ -443,7 +463,7 @@ def _local_sdk(ctx, path):
             continue
         ctx.symlink(entry, entry.basename)
 
-def _sdk_build_file(ctx, platform, version, experiments, sdk_build_file_override = None):
+def _sdk_build_file(ctx, platform, version, experiments, gofips140 = "", sdk_build_file_override = None):
     ctx.file("ROOT")
     goos, _, goarch = platform.partition("_")
 
@@ -457,6 +477,7 @@ def _sdk_build_file(ctx, platform, version, experiments, sdk_build_file_override
             "{exe}": ".exe" if goos == "windows" else "",
             "{version}": version,
             "{experiments}": repr(experiments),
+            "{gofips140}": repr(gofips140),
             "{exec_compatible_with}": repr([
                 GOARCH_CONSTRAINTS[goarch],
                 GOOS_CONSTRAINTS[goos],
