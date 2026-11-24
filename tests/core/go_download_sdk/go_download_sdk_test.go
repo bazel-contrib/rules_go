@@ -49,8 +49,8 @@ go_test(
 
 go_test(
     name = "fips_godebug_x_def_test",
-    srcs = ["fips_test.go"],
-    x_defs = {"runtime.godebugDefault": "httpmuxgo121=1"},
+    srcs = ["fips_godebug_x_def_test.go"],
+    x_defs = {"runtime.godebugDefault": "panicnil=1"},
 )
 
 -- version_test.go --
@@ -94,6 +94,27 @@ func Test(t *testing.T) {
 	if !fips140.Enabled() {
 		t.Error("crypto/fips140.Enabled() is false; want true under a GOFIPS140 build")
 	}
+}
+-- fips_godebug_x_def_test.go --
+package fips_test
+
+import (
+	"crypto/fips140"
+	"testing"
+)
+
+// The target sets runtime.godebugDefault to panicnil=1 through x_defs. That
+// setting and fips140=on must both apply.
+func Test(t *testing.T) {
+	if !fips140.Enabled() {
+		t.Error("crypto/fips140.Enabled() is false; want true under a GOFIPS140 build")
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("recover() = %v; want nil under panicnil=1", r)
+		}
+	}()
+	panic(nil)
 }
 `,
 	})

@@ -14,7 +14,7 @@
 
 load("//go/private:go_mod.bzl", "version_from_go_mod", "version_from_go_work")
 load("//go/private:nogo.bzl", "DEFAULT_NOGO", "NOGO_DEFAULT_EXCLUDES", "NOGO_DEFAULT_INCLUDES", "go_register_nogo")
-load("//go/private:sdk.bzl", "detect_host_platform", "fetch_sdks_by_version", "go_download_sdk_rule", "go_host_sdk_rule", "go_multiple_toolchains", "go_wrap_sdk_rule")
+load("//go/private:sdk.bzl", "GOFIPS140_DOC", "detect_host_platform", "fetch_sdks_by_version", "go_download_sdk_rule", "go_host_sdk_rule", "go_multiple_toolchains", "go_wrap_sdk_rule")
 
 def host_compatible_toolchain_impl(ctx):
     ctx.file("BUILD.bazel")
@@ -44,7 +44,8 @@ _COMMON_TAG_ATTRS = {
         doc = "Go experiments to enable via GOEXPERIMENT",
     ),
     "gofips140": attr.string(
-        doc = "GOFIPS140 mode to build with. Only 'off' and 'latest' are supported for now; empty means off.",
+        default = "off",
+        doc = GOFIPS140_DOC,
     ),
     "urls": attr.string_list(default = ["https://dl.google.com/go/{}"]),
     "patches": attr.label_list(
@@ -76,7 +77,8 @@ _host_tag = tag_class(
             doc = "Go experiments to enable via GOEXPERIMENT",
         ),
         "gofips140": attr.string(
-            doc = "GOFIPS140 mode to build with. Only 'off' and 'latest' are supported for now; empty means off.",
+            default = "off",
+            doc = GOFIPS140_DOC,
         ),
     },
 )
@@ -121,7 +123,8 @@ _wrap_tag = tag_class(
             doc = "Go experiments to enable via GOEXPERIMENT.",
         ),
         "gofips140": attr.string(
-            doc = "GOFIPS140 mode to build with. Only 'off' and 'latest' are supported for now; empty means off.",
+            default = "off",
+            doc = GOFIPS140_DOC,
         ),
         "goos": attr.string(),
         "goarch": attr.string(),

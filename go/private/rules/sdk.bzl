@@ -64,7 +64,8 @@ go_sdk = rule(
             doc = "Go experiments to enable via GOEXPERIMENT",
         ),
         "gofips140": attr.string(
-            doc = "GOFIPS140 mode to build with. Empty means off.",
+            default = "off",
+            doc = "The GOFIPS140 mode to build with.",
         ),
         "root_file": attr.label(
             mandatory = True,

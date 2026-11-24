@@ -42,7 +42,7 @@ def define_sdk_repository_targets(
         files_srcs,
         go,
         goarch,
-        gofips140 = "",
+        gofips140 = "off",
         goos,
         go_sdk_srcs = [":srcs"],
         go_sdk_root_file,
