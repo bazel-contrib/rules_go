@@ -1,6 +1,13 @@
 startup --host_jvm_args=-DBAZEL_TRACK_SOURCE_DIRECTORIES=1
 
 common --enable_platform_specific_config
+
+# All repos needed by this repository are provided via MODULE.bazel. Bazel 7
+# would otherwise evaluate WORKSPACE to compute the main repo mapping, which ends
+# in a cycle since go/deps.bzl transitively loads rules_cc .bzl files that are
+# backed by a module extension repo (rules_cc 0.2.20+). No-op on Bazel 8+.
+common --noenable_workspace
+
 # Improve caching, but allow integration tests to find `bazel` in PATH.
 # Doesn't work on Windows as protoc requires DLLs outside the default PATH.
 common:macos --incompatible_strict_action_env

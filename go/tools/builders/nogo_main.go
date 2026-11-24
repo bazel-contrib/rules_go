@@ -544,7 +544,7 @@ func load(packagePath, goVersion string, imp *importer, filenames []string) (*go
 	}
 	pkg.types, pkg.typesInfo = types, info
 
-	pkg.facts, err = facts.NewDecoder(pkg.types).Decode(imp.readFacts)
+	pkg.facts, err = facts.NewDecoder(pkg.types, imp.cachedPackage).Decode(imp.readFacts)
 	if err != nil {
 		return nil, fmt.Errorf("internal error decoding facts: %v", err)
 	}
@@ -765,6 +765,13 @@ func (i *importer) Import(path string) (*types.Package, error) {
 	}
 
 	return gcexportdata.Read(r, i.fset, i.packageCache, path)
+}
+
+// cachedPackage returns the already-imported package with the given path, or
+// nil. The package cache holds every package (perhaps indirect) that may own an
+// object facts are attached to, which is the lookup facts.NewDecoder needs.
+func (i *importer) cachedPackage(path string) *types.Package {
+	return i.packageCache[path]
 }
 
 func (i *importer) readFacts(pkgPath string) ([]byte, error) {

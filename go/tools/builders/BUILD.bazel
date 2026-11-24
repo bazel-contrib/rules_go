@@ -35,6 +35,18 @@ go_test(
 )
 
 go_test(
+    name = "cgo2_test",
+    size = "small",
+    srcs = [
+        "cgo2_test.go",
+        ":builder_srcs",
+    ],
+    x_defs = {
+        "rulesGoStdlibPrefix": RULES_GO_STDLIB_PREFIX,
+    },
+)
+
+go_test(
     name = "cover_test",
     size = "small",
     srcs = [

@@ -260,7 +260,7 @@ def go_toolchains_build_file_content(
         fail("all lists must have the same length")
 
     loads = [
-        """load("@io_bazel_rules_go//go/private:go_toolchain.bzl", "declare_bazel_toolchains")""",
+        """load("@io_bazel_rules_go//go/private:bazel_toolchains.bzl", "declare_bazel_toolchains")""",
     ]
     chunks = [
         """package(default_visibility = ["//visibility:public"])""",

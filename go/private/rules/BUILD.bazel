@@ -51,6 +51,7 @@ bzl_library(
         "//go/private:rpath",
         "//go/private/actions:baseline_coverage",
         "//go/private/rules:transition",
+        "@rules_cc//cc/common",
     ],
 )
 
@@ -61,6 +62,7 @@ bzl_library(
     deps = [
         "//go/private:common",
         "//go/private:mode",
+        "@rules_cc//cc/common",
     ],  # keep
 )
 
@@ -169,6 +171,7 @@ bzl_library(
     deps = [
         "//go/private:providers",
         "//go/private/rules:transition",
+        "@rules_cc//cc/common",
     ],
 )
 

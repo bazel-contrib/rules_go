@@ -1,5 +1,6 @@
-load("@bazel_skylib//lib:unittest.bzl", "asserts", "unittest")
+load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts", "unittest")
 load("//go/private:sdk.bzl", "go_toolchains_single_definition")
+load("//go/private/rules:sdk.bzl", "package_list")
 
 def _go_toolchains_single_definition_with_version_test(ctx):
     env = unittest.begin(ctx)
@@ -80,7 +81,34 @@ def _go_toolchains_single_definition_without_version_test(ctx):
 
 go_toolchains_single_definition_without_version_test = unittest.make(_go_toolchains_single_definition_without_version_test)
 
+def _package_list_fips_out_test_impl(ctx):
+    env = analysistest.begin(ctx)
+
+    contents = {
+        action.outputs.to_list()[0].basename: action.content
+        for action in analysistest.target_actions(env)
+    }
+    asserts.equals(env, "a/x\nb\n", contents["sdk_tests_fips_packages.txt"])
+
+    return analysistest.end(env)
+
+package_list_fips_out_test = analysistest.make(_package_list_fips_out_test_impl)
+
 def sdk_test_suite():
+    package_list(
+        name = "sdk_tests_package_list",
+        out = "sdk_tests_packages.txt",
+        fips_out = "sdk_tests_fips_packages.txt",
+        fips_packages = ["b", "a/x"],
+        root_file = "sdk_tests.bzl",
+        tags = ["manual"],
+    )
+
+    package_list_fips_out_test(
+        name = "package_list_fips_out_test",
+        target_under_test = ":sdk_tests_package_list",
+    )
+
     unittest.suite(
         "sdk_tests",
         go_toolchains_single_definition_with_version_test,
