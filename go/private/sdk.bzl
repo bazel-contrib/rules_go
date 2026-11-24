@@ -134,6 +134,7 @@ def _go_download_sdk_impl(ctx):
             "version": version,
             "strip_prefix": ctx.attr.strip_prefix,
             "experimental_build_compiler_from_source": ctx.attr.experimental_build_compiler_from_source,
+            "gofips140": ctx.attr.gofips140,
         }
 
     if hasattr(ctx, "repo_metadata"):
