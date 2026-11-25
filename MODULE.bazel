@@ -19,6 +19,11 @@ bazel_dep(name = "rules_shell", version = "0.3.0")
 bazel_dep(name = "rules_cc", version = "0.1.5")
 bazel_dep(name = "package_metadata", version = "0.0.5")
 
+# Loading and analysis code cannot read native.bazel_version directly.
+bazel_version_repo = use_repo_rule("//go/private:bazel_version.bzl", "bazel_version_repo")
+
+bazel_version_repo(name = "io_bazel_rules_go_bazel_version")
+
 # Only applies when rules_go is the root module, so it doesn't raise the version
 # users get. Building protobuf from source fails on Windows, and the prebuilt
 # protoc its toolchains offer is only available from protobuf 33 on.
