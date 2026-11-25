@@ -259,9 +259,9 @@ func Test(t *testing.T) {
 				"@go_sdk//:builder",
 			)
 			cmd.Dir = dir
-			if err := cmd.Run(); err != nil {
+			if output, err := cmd.CombinedOutput(); err != nil {
 				mu.Lock()
-				errs = append(errs, fmt.Errorf("in %s, error running %s: %v", dir, strings.Join(cmd.Args, " "), err))
+				errs = append(errs, fmt.Errorf("in %s, error running %s: %v\n%s", dir, strings.Join(cmd.Args, " "), err, output))
 				mu.Unlock()
 			}
 		}(dir)

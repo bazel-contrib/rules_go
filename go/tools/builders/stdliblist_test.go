@@ -63,12 +63,24 @@ func Test_stdliblist_export(t *testing.T) {
 		"-out=" + outJSON,
 		"-sdk=../" + sdkDir(),
 		"-export",
+		"-cache=" + filepath.Join(testDir, "gocache"),
 	}
 	// Disable CGO otherwise, this takes forever to build.
 	t.Setenv("CGO_ENABLED", "0")
+	// Exercise path-mapped actions with a relative scratch root and a cold cache.
+	// GOROOT must stay absolute when go list invokes tools from package directories.
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	workRoot, err := filepath.Rel(cwd, testDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("RULES_GO_WORKDIR_ROOT", workRoot)
 
 	if err := stdliblist(test_args); err != nil {
-		t.Errorf("calling stdliblist got err: %v", err)
+		t.Fatalf("calling stdliblist got err: %v", err)
 	}
 	f, err := os.Open(outJSON)
 	if err != nil {
