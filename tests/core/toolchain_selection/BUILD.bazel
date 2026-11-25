@@ -1,0 +1,8 @@
+load("//go/tools/bazel_testing:def.bzl", "go_bazel_test")
+
+go_bazel_test(
+    name = "selection_test",
+    size = "large",
+    srcs = ["selection_test.go"],
+    embedsrcs = ["selection_test.bzl"],
+)

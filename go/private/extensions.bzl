@@ -36,6 +36,10 @@ host_compatible_toolchain = repository_rule(
 )
 
 _COMMON_TAG_ATTRS = {
+    "register_toolchains": attr.bool(
+        default = True,
+        doc = "Whether to include this SDK in the automatically registered toolchain catalogue. Disable for SDKs used only through direct repository references.",
+    ),
     "name": attr.string(),
     "goos": attr.string(),
     "goarch": attr.string(),
@@ -314,6 +318,11 @@ def _go_sdk_impl(ctx):
                 goarch = download_tag.goarch,
                 download_tag = download_tag,
             )
+
+            # Repository-only SDKs remain available to direct users (for example gofmt
+            # and SDK wrappers), without duplicating every target-platform declaration.
+            if not download_tag.register_toolchains:
+                continue
 
             if (not download_tag.goos or download_tag.goos == host_detected_goos) and (not download_tag.goarch or download_tag.goarch == host_detected_goarch):
                 first_host_compatible_toolchain = first_host_compatible_toolchain or "@{}//:host_compatible_root_file".format(name)
