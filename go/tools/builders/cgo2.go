@@ -26,9 +26,9 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 )
 
@@ -62,13 +62,152 @@ func cgo2(goenv *env, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSr
 	}
 	defer cleanup()
 
+	gen, err := generateCgoSources(goenv, workDir, "cgo", cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, hSrcs, packagePath, cppFlags, cFlags, ldFlags, cgoExportHPath)
+	if err != nil {
+		return "", nil, nil, err
+	}
+	workDir = gen.workDir
+
+	// Compile C, C++, Objective-C/C++, and assembly code.
+	defaultCFlags := defaultCFlags(workDir, cc)
+	combinedCFlags := combineFlags(cppFlags, gen.hdrIncludes, cFlags, defaultCFlags)
+	asmCFlags := combineFlags(cppFlags, cFlags, defaultCFlags)
+	for _, lang := range []struct{ srcs, flags []string }{
+		{gen.genCSrcs, combinedCFlags},
+		{cSrcs, combinedCFlags},
+		{cxxSrcs, combineFlags(cppFlags, gen.hdrIncludes, cxxFlags, defaultCFlags)},
+		{objcSrcs, combineFlags(cppFlags, gen.hdrIncludes, objcFlags, defaultCFlags)},
+		{objcxxSrcs, combineFlags(cppFlags, gen.hdrIncludes, objcxxFlags, defaultCFlags)},
+		{sSrcs, asmCFlags},
+	} {
+		for _, src := range lang.srcs {
+			obj := filepath.Join(workDir, fmt.Sprintf("_x%d.o", len(cObjs)))
+			cObjs = append(cObjs, obj)
+			if err := cCompile(goenv, src, cc, lang.flags, obj); err != nil {
+				return "", nil, nil, err
+			}
+		}
+	}
+
+	mainObj := filepath.Join(workDir, "_cgo_main.o")
+	if err := cCompile(goenv, gen.cgoMainC, cc, combinedCFlags, mainObj); err != nil {
+		return "", nil, nil, err
+	}
+
+	// Link cgo binary and use the symbols to generate _cgo_import.go.
+	mainBin := filepath.Join(workDir, "_cgo_.o") // .o is a lie; it's an executable
+	args := append([]string{cc, "-o", mainBin, mainObj}, cObjs...)
+	args = append(args, gen.combinedLdFlags...)
+	var originalErrBuf bytes.Buffer
+	if err := goenv.runCommandToFile(os.Stdout, &originalErrBuf, args); err != nil {
+		// If linking the binary for cgo fails, this is usually because the
+		// object files reference external symbols that can't be resolved yet.
+		// Since the binary is only produced to have its symbols read by the cgo
+		// command, there is no harm in trying to build it allowing unresolved
+		// symbols - the real link that happens at the end will fail if they
+		// rightfully can't be resolved.
+		var allowUnresolvedSymbolsLdFlag string
+		switch os.Getenv("GOOS") {
+		case "windows":
+			// MinGW's linker doesn't seem to support --unresolved-symbols
+			// and MSVC isn't supported at all.
+			os.Stderr.Write(relativizePaths(originalErrBuf.Bytes()))
+			return "", nil, nil, err
+		case "darwin", "ios":
+			allowUnresolvedSymbolsLdFlag = "-Wl,-undefined,dynamic_lookup"
+		default:
+			allowUnresolvedSymbolsLdFlag = "-Wl,--unresolved-symbols=ignore-all"
+		}
+		// Print and return the original error if we can't link the binary with
+		// the additional linker flags as they may simply be incorrect for the
+		// particular compiler/linker pair and would obscure the true reason for
+		// the failure of the original command.
+		if err2 := goenv.runCommandToFile(
+			os.Stdout,
+			ioutil.Discard,
+			append(args, allowUnresolvedSymbolsLdFlag),
+		); err2 != nil {
+			os.Stderr.Write(relativizePaths(originalErrBuf.Bytes()))
+			return "", nil, nil, err
+		}
+		// Do not print the original error - rerunning the command with the
+		// additional linker flag fixed it.
+	}
+
+	cgoImportsGo := filepath.Join(workDir, "_cgo_imports.go")
+	args = goenv.goTool("cgo", "-dynpackage", packageName, "-dynimport", mainBin, "-dynout", cgoImportsGo)
+	if err := goenv.runCommand(args); err != nil {
+		return "", nil, nil, err
+	}
+	gen.genGoSrcs = append(gen.genGoSrcs, cgoImportsGo)
+	if cgoGoSrcsPath != "" {
+		if err := copyGeneratedGoSrcs(gen.genGoSrcs, cgoGoSrcsPath); err != nil {
+			return "", nil, nil, err
+		}
+	}
+
+	// Copy regular Go source files into the work directory so that we can
+	// use -trimpath=workDir.
+	goBases, err := gatherSrcs(workDir, goSrcs)
+	if err != nil {
+		return "", nil, nil, err
+	}
+
+	allGoSrcs = make([]string, len(goSrcs)+len(gen.genGoSrcs))
+	for i := range goSrcs {
+		allGoSrcs[i] = filepath.Join(workDir, goBases[i])
+	}
+	copy(allGoSrcs[len(goSrcs):], gen.genGoSrcs)
+	return workDir, allGoSrcs, cObjs, nil
+}
+
+func cgo2GeneratedGoSrcsForNogo(goenv *env, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, hSrcs []string, packagePath string, cc string, cppFlags, cFlags, ldFlags []string, cgoGoSrcsPath string, cgoImportsSrc string) error {
+	if cc == "" {
+		err := cgoError(cgoSrcs[:])
+		err = append(err, cSrcs...)
+		err = append(err, cxxSrcs...)
+		err = append(err, objcSrcs...)
+		err = append(err, objcxxSrcs...)
+		return err
+	}
+	if len(cgoSrcs) == 0 {
+		return nil
+	}
+
+	workDir, cleanup, err := goenv.workDir()
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+
+	gen, err := generateCgoSources(goenv, workDir, "cgo_nogo", cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, hSrcs, packagePath, cppFlags, cFlags, ldFlags, "")
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(cgoGoSrcsPath, 0777); err != nil {
+		return err
+	}
+	gen.genGoSrcs = append(gen.genGoSrcs, cgoImportsSrc)
+	return copyGeneratedGoSrcs(gen.genGoSrcs, cgoGoSrcsPath)
+}
+
+type cgoGenResult struct {
+	workDir         string
+	hdrIncludes     []string
+	combinedLdFlags []string
+	genGoSrcs       []string
+	genCSrcs        []string
+	cgoMainC        string
+}
+
+func generateCgoSources(goenv *env, baseWorkDir, subdir string, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, hSrcs []string, packagePath string, cppFlags, cFlags, ldFlags []string, cgoExportHPath string) (*cgoGenResult, error) {
 	// cgo2 will gather sources into a single temporary directory, since nogo
 	// scanners might want to include or exclude these sources we need to ensure
 	// that a fragment of the path is stable and human friendly enough to be
 	// referenced in nogo configuration.
-	workDir = filepath.Join(workDir, "cgo", packagePath)
+	workDir := filepath.Join(baseWorkDir, subdir, packagePath)
 	if err := os.MkdirAll(workDir, 0700); err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
 
 	// Filter out -lstdc++ and -lc++ from ldflags if we don't have C++ sources,
@@ -101,7 +240,7 @@ func cgo2(goenv *env, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSr
 	// https://go-review.googlesource.com/c/go/+/584655
 	canUseLdflagsFile, err := onVersionOrHigher(23)
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
 
 	var ldflagsFile *os.File
@@ -115,15 +254,15 @@ func cgo2(goenv *env, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSr
 		// https://go-review.googlesource.com/c/go/+/596615
 		ldflagsFile, err = os.CreateTemp("", "cgo-ldflags-*.txt")
 		if err != nil {
-			return "", nil, nil, fmt.Errorf("failed to create temporary file for ldflags: %w", err)
+			return nil, fmt.Errorf("failed to create temporary file for ldflags: %w", err)
 		}
 		defer os.Remove(ldflagsFile.Name())
-		if _, err := ldflagsFile.WriteString(combinedLdFlagsStr); err != nil {
+		if _, err := ldflagsFile.WriteString(formatLdFlagsFileContent(combinedLdFlagsStr)); err != nil {
 			ldflagsFile.Close()
-			return "", nil, nil, fmt.Errorf("failed to write ldflags to temporary file: %w", err)
+			return nil, fmt.Errorf("failed to write ldflags to temporary file: %w", err)
 		}
 		if err := ldflagsFile.Close(); err != nil {
-			return "", nil, nil, fmt.Errorf("failed to close temporary ldflags file: %w", err)
+			return nil, fmt.Errorf("failed to close temporary ldflags file: %w", err)
 		}
 	} else {
 		// Fallback to env variable for backwards compatibility with older `go` versions.
@@ -132,7 +271,7 @@ func cgo2(goenv *env, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSr
 
 	// If cgo sources are in different directories, gather them into a temporary
 	// directory so we can use -srcdir.
-	srcDir = filepath.Dir(cgoSrcs[0])
+	srcDir := filepath.Dir(cgoSrcs[0])
 	srcsInSingleDir := true
 	for _, src := range cgoSrcs[1:] {
 		if filepath.Dir(src) != srcDir {
@@ -148,11 +287,11 @@ func cgo2(goenv *env, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSr
 	} else {
 		srcDir = filepath.Join(workDir, "cgosrcs")
 		if err := os.Mkdir(srcDir, 0777); err != nil {
-			return "", nil, nil, err
+			return nil, err
 		}
 		copiedSrcs, err := gatherSrcs(srcDir, cgoSrcs)
 		if err != nil {
-			return "", nil, nil, err
+			return nil, err
 		}
 		cgoSrcs = copiedSrcs
 	}
@@ -172,7 +311,7 @@ func cgo2(goenv *env, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSr
 	// Trim the path in //line comments emitted by cgo.
 	trimPath, err := createTrimPath()
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
 	args := goenv.goTool("cgo", "-srcdir", srcDir, "-objdir", workDir, "-trimpath", trimPath)
 	if ldflagsFile != nil {
@@ -188,12 +327,12 @@ func cgo2(goenv *env, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSr
 	args = append(args, cFlags...)
 	args = append(args, cgoSrcs...)
 	if err := goenv.runCommand(args); err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
 
 	if cgoExportHPath != "" {
 		if err := copyFile(filepath.Join(workDir, "_cgo_export.h"), cgoExportHPath); err != nil {
-			return "", nil, nil, err
+			return nil, err
 		}
 	}
 	// Note: The tools/gopackagesdriver will break if the naming convention
@@ -209,98 +348,23 @@ func cgo2(goenv *env, goSrcs, cgoSrcs, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSr
 		genCSrcs[i+1] = filepath.Join(workDir, stem+".cgo2.c")
 	}
 	cgoMainC := filepath.Join(workDir, "_cgo_main.c")
+	return &cgoGenResult{
+		workDir:         workDir,
+		hdrIncludes:     hdrIncludes,
+		combinedLdFlags: combinedLdFlags,
+		genGoSrcs:       genGoSrcs,
+		genCSrcs:        genCSrcs,
+		cgoMainC:        cgoMainC,
+	}, nil
+}
 
-	// Compile C, C++, Objective-C/C++, and assembly code.
-	defaultCFlags := defaultCFlags(workDir)
-	combinedCFlags := combineFlags(cppFlags, hdrIncludes, cFlags, defaultCFlags)
-	for _, lang := range []struct{ srcs, flags []string }{
-		{genCSrcs, combinedCFlags},
-		{cSrcs, combinedCFlags},
-		{cxxSrcs, combineFlags(cppFlags, hdrIncludes, cxxFlags, defaultCFlags)},
-		{objcSrcs, combineFlags(cppFlags, hdrIncludes, objcFlags, defaultCFlags)},
-		{objcxxSrcs, combineFlags(cppFlags, hdrIncludes, objcxxFlags, defaultCFlags)},
-		{sSrcs, nil},
-	} {
-		for _, src := range lang.srcs {
-			obj := filepath.Join(workDir, fmt.Sprintf("_x%d.o", len(cObjs)))
-			cObjs = append(cObjs, obj)
-			if err := cCompile(goenv, src, cc, lang.flags, obj); err != nil {
-				return "", nil, nil, err
-			}
+func copyGeneratedGoSrcs(srcs []string, outDir string) error {
+	for _, src := range srcs {
+		if err := copyFile(src, filepath.Join(outDir, filepath.Base(src))); err != nil {
+			return err
 		}
 	}
-
-	mainObj := filepath.Join(workDir, "_cgo_main.o")
-	if err := cCompile(goenv, cgoMainC, cc, combinedCFlags, mainObj); err != nil {
-		return "", nil, nil, err
-	}
-
-	// Link cgo binary and use the symbols to generate _cgo_import.go.
-	mainBin := filepath.Join(workDir, "_cgo_.o") // .o is a lie; it's an executable
-	args = append([]string{cc, "-o", mainBin, mainObj}, cObjs...)
-	args = append(args, combinedLdFlags...)
-	var originalErrBuf bytes.Buffer
-	if err := goenv.runCommandToFile(os.Stdout, &originalErrBuf, args); err != nil {
-		// If linking the binary for cgo fails, this is usually because the
-		// object files reference external symbols that can't be resolved yet.
-		// Since the binary is only produced to have its symbols read by the cgo
-		// command, there is no harm in trying to build it allowing unresolved
-		// symbols - the real link that happens at the end will fail if they
-		// rightfully can't be resolved.
-		var allowUnresolvedSymbolsLdFlag string
-		switch os.Getenv("GOOS") {
-		case "windows":
-			// MinGW's linker doesn't seem to support --unresolved-symbols
-			// and MSVC isn't supported at all.
-			return "", nil, nil, err
-		case "darwin", "ios":
-			allowUnresolvedSymbolsLdFlag = "-Wl,-undefined,dynamic_lookup"
-		default:
-			allowUnresolvedSymbolsLdFlag = "-Wl,--unresolved-symbols=ignore-all"
-		}
-		// Print and return the original error if we can't link the binary with
-		// the additional linker flags as they may simply be incorrect for the
-		// particular compiler/linker pair and would obscure the true reason for
-		// the failure of the original command.
-		if err2 := goenv.runCommandToFile(
-			os.Stdout,
-			ioutil.Discard,
-			append(args, allowUnresolvedSymbolsLdFlag),
-		); err2 != nil {
-			os.Stderr.Write(relativizePaths(originalErrBuf.Bytes()))
-			return "", nil, nil, err
-		}
-		// Do not print the original error - rerunning the command with the
-		// additional linker flag fixed it.
-	}
-
-	cgoImportsGo := filepath.Join(workDir, "_cgo_imports.go")
-	args = goenv.goTool("cgo", "-dynpackage", packageName, "-dynimport", mainBin, "-dynout", cgoImportsGo)
-	if err := goenv.runCommand(args); err != nil {
-		return "", nil, nil, err
-	}
-	genGoSrcs = append(genGoSrcs, cgoImportsGo)
-	if cgoGoSrcsPath != "" {
-		for _, src := range genGoSrcs {
-			if err := copyFile(src, filepath.Join(cgoGoSrcsPath, filepath.Base(src))); err != nil {
-				return "", nil, nil, err
-			}
-		}
-	}
-
-	// Copy regular Go source files into the work directory so that we can
-	// use -trimpath=workDir.
-	goBases, err := gatherSrcs(workDir, goSrcs)
-	if err != nil {
-		return "", nil, nil, err
-	}
-
-	allGoSrcs = make([]string, len(goSrcs)+len(genGoSrcs))
-	for i := range goSrcs {
-		allGoSrcs[i] = filepath.Join(workDir, goBases[i])
-	}
-	copy(allGoSrcs[len(goSrcs):], genGoSrcs)
-	return workDir, allGoSrcs, cObjs, nil
+	return nil
 }
 
 // compileCSources compiles a list of C, C++, Objective-C, Objective-C++,
@@ -325,13 +389,13 @@ func compileCSources(goenv *env, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSrcs, hS
 		}
 	}
 
-	defaultCFlags := defaultCFlags(workDir)
+	defaultCFlags := defaultCFlags(workDir, cc)
 	for _, lang := range []struct{ srcs, flags []string }{
 		{cSrcs, combineFlags(cppFlags, hdrIncludes, cFlags, defaultCFlags)},
 		{cxxSrcs, combineFlags(cppFlags, hdrIncludes, cxxFlags, defaultCFlags)},
 		{objcSrcs, combineFlags(cppFlags, hdrIncludes, objcFlags, defaultCFlags)},
 		{objcxxSrcs, combineFlags(cppFlags, hdrIncludes, objcxxFlags, defaultCFlags)},
-		{sSrcs, nil},
+		{sSrcs, combineFlags(cppFlags, cFlags, defaultCFlags)},
 	} {
 		for _, src := range lang.srcs {
 			obj := filepath.Join(workDir, fmt.Sprintf("_x%d.o", len(cObjs)))
@@ -363,31 +427,59 @@ func cCompile(goenv *env, src, cc string, flags []string, out string) error {
 	return goenv.runCommand(args)
 }
 
-func defaultCFlags(workDir string) []string {
-	flags := []string{
-		"-fdebug-prefix-map=" + abs(".") + "=.",
-		"-fdebug-prefix-map=" + workDir + "=.",
+func defaultCFlags(workDir, cc string) []string {
+	var flags []string
+	// Prefer -ffile-prefix-map, which also remaps __FILE__. Fall back to
+	// -fdebug-prefix-map, or omit path remapping if neither is supported.
+	for _, prefixMap := range []string{"-ffile-prefix-map", "-fdebug-prefix-map"} {
+		if cCompilerSupportsFlag(workDir, cc, prefixMap+"=a=b") {
+			flags = append(flags,
+				prefixMap+"="+abs(".")+"=.",
+				prefixMap+"="+workDir+"=.",
+			)
+			break
+		}
 	}
-	goos, goarch := os.Getenv("GOOS"), os.Getenv("GOARCH")
+	goos := os.Getenv("GOOS")
 	switch {
 	case goos == "darwin" || goos == "ios":
 		return flags
-	case goos == "windows" && goarch == "amd64":
-		return append(flags, "-mthreads")
 	default:
 		return append(flags, "-pthread")
 	}
 }
 
+func cCompilerSupportsFlag(workDir, cc, flag string) bool {
+	out := os.DevNull
+	// Some Windows compilers create a literal NUL file instead of using the
+	// null device, causing cleanup failures. See golang.org/issue/36000.
+	if runtime.GOOS == "windows" {
+		f, err := os.CreateTemp(workDir, "")
+		if err != nil {
+			return false
+		}
+		f.Close()
+		out = f.Name()
+		defer os.Remove(out)
+	}
+	cmd := exec.Command(cc, flag, "-c", "-x", "c", "-", "-o", out)
+	cmd.Env = append(cmd.Environ(), "LC_ALL=C")
+	output, _ := cmd.CombinedOutput()
+	for _, diagnostic := range []string{"unrecognized", "unknown", "unrecognised", "is not supported", "not recognized", "unsupported"} {
+		if bytes.Contains(output, []byte(diagnostic)) {
+			return false
+		}
+	}
+	return true
+}
+
 func defaultLdFlags() []string {
-	goos, goarch := os.Getenv("GOOS"), os.Getenv("GOARCH")
+	goos := os.Getenv("GOOS")
 	switch {
 	case goos == "android":
 		return []string{"-llog", "-ldl"}
 	case goos == "darwin" || goos == "ios":
 		return nil
-	case goos == "windows" && goarch == "amd64":
-		return []string{"-mthreads"}
 	default:
 		return []string{"-pthread"}
 	}
@@ -464,17 +556,10 @@ func copyOrLinkFile(inPath, outPath string) error {
 	}
 }
 
-func onVersionOrHigher(version int) (bool, error) {
-	v := runtime.Version()
-	m := versionExp.FindStringSubmatch(v)
-	if len(m) != 2 {
-		return false, fmt.Errorf("failed to match against Go version %q", v)
+func formatLdFlagsFileContent(flags string) string {
+	shouldEscape, _ := onVersionOrHigher(27)
+	if shouldEscape {
+		return encodeResponseFileArg(flags) + "\n"
 	}
-	mvStr := m[1]
-	mv, err := strconv.Atoi(mvStr)
-	if err != nil {
-		return false, fmt.Errorf("convert minor version %q to int: %w", mvStr, err)
-	}
-
-	return mv >= version, nil
+	return flags
 }

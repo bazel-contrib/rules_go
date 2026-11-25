@@ -32,6 +32,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"text/template"
@@ -61,15 +62,15 @@ const (
 // Args is a list of arguments to TestMain. It's defined as a struct so
 // that new optional arguments may be added without breaking compatibility.
 type Args struct {
-	// Main is a text archive containing files in the main workspace.
+	// Main is a text archive containing files in the main module.
 	// The text archive format is parsed by
 	// //go/tools/internal/txtar:go_default_library, which is copied from
-	// cmd/go/internal/txtar. If this archive does not contain a WORKSPACE file,
-	// a default file will be synthesized.
+	// cmd/go/internal/txtar. If this archive does not contain a MODULE.bazel
+	// file, a default file will be synthesized.
 	Main string
 
-	// Nogo is the nogo target to pass to go_register_toolchains. By default,
-	// nogo is not used.
+	// Nogo is the nogo target to register with the go_sdk extension. By
+	// default, nogo is not used.
 	Nogo string
 
 	// NogoIncludes is the list of targets to include for Nogo linting.
@@ -78,18 +79,14 @@ type Args struct {
 	// NogoExcludes is the list of targets to include for Nogo linting.
 	NogoExcludes []string
 
-	// WorkspacePrefix is a string that should be inserted at the beginning
-	// of the default generated WORKSPACE file.
-	WorkspacePrefix string
-
-	// WorkspaceSuffix is a string that should be appended to the end
-	// of the default generated WORKSPACE file.
-	WorkspaceSuffix string
-
-	// ModuleFileSuffix is a string that should be appended to the end of a
-	// default generated MODULE.bazel file. If this is empty, no such file is
-	// generated.
+	// ModuleFileSuffix is a string that should be appended to the end of the
+	// default generated MODULE.bazel file.
 	ModuleFileSuffix string
+
+	// SkipHostGoSDK disables wrapping the Go SDK of the enclosing build as
+	// @go_sdk. Tests that declare an SDK under that name themselves have to
+	// set it.
+	SkipHostGoSDK bool
 
 	// SetUp is a function that is executed inside the context of the testing
 	// workspace. It is executed once and only once before the beginning of
@@ -364,11 +361,7 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 	// The test can override this with its own .bazelrc or with flags in commands.
 	bazelrcPath := filepath.Join(mainDir, ".bazelrc")
 	bazelrcBuf := &bytes.Buffer{}
-	if args.ModuleFileSuffix == "" {
-		fmt.Fprintf(bazelrcBuf, "common --noenable_bzlmod\n")
-	} else {
-		fmt.Fprintf(bazelrcBuf, "common --enable_bzlmod\n")
-	}
+	fmt.Fprintf(bazelrcBuf, "common --enable_bzlmod\n")
 	if outputUserRoot != "" {
 		fmt.Fprintf(bazelrcBuf, "startup --output_user_root=%s\n", outputUserRoot)
 	}
@@ -384,48 +377,26 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 		return "", cleanup, fmt.Errorf("building main workspace: %v", err)
 	}
 
-	// If there's no WORKSPACE file, create one.
-	workspacePath := filepath.Join(mainDir, "WORKSPACE")
-	if _, err = os.Stat(workspacePath); os.IsNotExist(err) {
-		var w *os.File
-		w, err = os.Create(workspacePath)
-		if err != nil {
-			return "", cleanup, err
-		}
-		defer func() {
-			if cerr := w.Close(); err == nil && cerr != nil {
-				err = cerr
-			}
-		}()
-		goRootFilePath, err := runfiles.Rlocation(goRootFile)
-		if err != nil {
-			return "", cleanup, fmt.Errorf("unknown runfile %s: %v", goRootFile, err)
-		}
-		// TODO: This is only necessary because of https://github.com/golang/go/issues/59924.
-		goRootFileRealPath, err := filepath.EvalSymlinks(goRootFilePath)
-		if err != nil {
-			return "", cleanup, fmt.Errorf("unknown runfile %s: %v", goRootFile, err)
-		}
-		info := workspaceTemplateInfo{
-			TestedModuleRepoName: testedModuleRepoName,
-			TestedModulePath:     strings.ReplaceAll(testedRepoDir, "\\", "\\\\"),
-			Prefix:               args.WorkspacePrefix,
-			Suffix:               args.WorkspaceSuffix,
-			Nogo:                 args.Nogo,
-			NogoIncludes:         args.NogoIncludes,
-			NogoExcludes:         args.NogoExcludes,
-			GoSDKPath:            strings.ReplaceAll(filepath.Dir(goRootFileRealPath), "\\", "\\\\"),
-		}
-		if err := defaultWorkspaceTpl.Execute(w, info); err != nil {
-			return "", cleanup, err
-		}
+	goRootFilePath, err := runfiles.Rlocation(goRootFile)
+	if err != nil {
+		return "", cleanup, fmt.Errorf("unknown runfile %s: %v", goRootFile, err)
 	}
+	// TODO: This is only necessary because of https://github.com/golang/go/issues/59924.
+	// Resolving is best effort: Bazel 9 doesn't materialize a runfiles symlink
+	// tree on Windows, where the path is already the real one.
+	if goRootFileRealPath, err := filepath.EvalSymlinks(goRootFilePath); err == nil {
+		goRootFilePath = goRootFileRealPath
+	}
+	goSDKPath := strings.ReplaceAll(filepath.Dir(goRootFilePath), "\\", "\\\\")
 
-	// If a MODULE.bazel file is requested, create one.
-	if args.ModuleFileSuffix != "" {
+	// If there's no MODULE.bazel file, create one.
+	{
 		moduleBazelPath := filepath.Join(mainDir, "MODULE.bazel")
 		if _, err = os.Stat(moduleBazelPath); err == nil {
-			return "", cleanup, fmt.Errorf("ModuleFileSuffix set but MODULE.bazel exists")
+			if args.ModuleFileSuffix != "" {
+				return "", cleanup, fmt.Errorf("ModuleFileSuffix set but MODULE.bazel exists")
+			}
+			return mainDir, cleanup, nil
 		}
 		var w *os.File
 		w, err = os.Create(moduleBazelPath)
@@ -441,6 +412,11 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 			TestedModuleName:     testedModuleName,
 			TestedModuleRepoName: testedModuleRepoName,
 			TestedModulePath:     strings.ReplaceAll(testedRepoDir, "\\", "\\\\"),
+			GoSDKPath:            goSDKPathOrEmpty(args, goSDKPath),
+			RulesCCVersion:       rulesCCVersion(),
+			Nogo:                 args.Nogo,
+			NogoIncludes:         args.NogoIncludes,
+			NogoExcludes:         args.NogoExcludes,
 			Suffix:               args.ModuleFileSuffix,
 		}
 		if err := defaultModuleBazelTpl.Execute(w, info); err != nil {
@@ -449,6 +425,63 @@ func setupWorkspace(args Args, files []string) (dir string, cleanup func() error
 	}
 
 	return mainDir, cleanup, nil
+}
+
+// goSDKPathOrEmpty returns the empty string for tests that declare their own Go
+// SDK, which makes the module file template omit the wrapped host SDK.
+func goSDKPathOrEmpty(args Args, goSDKPath string) string {
+	if args.SkipHostGoSDK {
+		return ""
+	}
+	return goSDKPath
+}
+
+// rulesCCVersion picks the oldest rules_cc that works with the Bazel version
+// under test. Bazel 7 cannot load rules_cc 0.2.14 and later, which introduced
+// the compatibility proxy, while the C++ toolchain of releases before 0.2.18
+// emits a malformed -fuse-ld flag on macOS. Bazel 9 selects a new enough
+// version through its own dependencies either way.
+func rulesCCVersion() string {
+	if bazelMajorVersion() >= 8 {
+		return "0.2.18"
+	}
+	return "0.2.13"
+}
+
+// BazelMajorVersion returns the major version of the bazel binary the test runs
+// against, or 0 if it can't be determined. Tests use it to pass flags that only
+// exist in some versions.
+func BazelMajorVersion() int {
+	return bazelMajorVersion()
+}
+
+// bazelMajorVersion returns the major version of the bazel binary on PATH, or 0
+// if it can't be determined.
+func bazelMajorVersion() int {
+	// --version can't be combined with other startup options, so this doesn't
+	// go through BazelCmd.
+	cmd := exec.Command("bazel", "--version")
+	for _, e := range os.Environ() {
+		if strings.HasPrefix(e, "TEST_") || strings.HasPrefix(e, "RUNFILES_") {
+			continue
+		}
+		cmd.Env = append(cmd.Env, e)
+	}
+	out, err := cmd.Output()
+	if err != nil {
+		return 0
+	}
+	// The output has the form "bazel <version>".
+	fields := strings.Fields(string(out))
+	if len(fields) < 2 {
+		return 0
+	}
+	major, _, _ := strings.Cut(fields[1], ".")
+	n, err := strconv.Atoi(major)
+	if err != nil {
+		return 0
+	}
+	return n
 }
 
 func extractTxtar(dir, txt string) error {
@@ -485,90 +518,86 @@ func loadName(bazelFilePath string) (string, error) {
 	return name, nil
 }
 
-type workspaceTemplateInfo struct {
-	TestedModuleRepoName string
-	TestedModulePath     string
-	GoSDKPath            string
-	Nogo                 string
-	NogoIncludes         []string
-	NogoExcludes         []string
-	Prefix               string
-	Suffix               string
-}
-
-var defaultWorkspaceTpl = template.Must(template.New("").Parse(`
-local_repository(
-    name = "{{.TestedModuleRepoName}}",
-    path = "{{.TestedModulePath}}",
-)
-
-{{.Prefix}}
-
-new_local_repository(
-    name = "local_go_sdk",
-    path = "{{.GoSDKPath}}",
-    build_file_content = "",
-)
-
-load("@io_bazel_rules_go//go:deps.bzl", "go_rules_dependencies", "go_register_toolchains", "go_wrap_sdk", "go_register_nogo")
-
-go_rules_dependencies()
-
-go_wrap_sdk(
-    name = "go_sdk",
-    root_file = "@local_go_sdk//:ROOT",
-)
-
-go_register_toolchains()
-
-{{if .Nogo}}
-go_register_nogo(
-	nogo = "{{.Nogo}}",
-	{{ if .NogoIncludes }}
-	includes = [
-	{{range .NogoIncludes }}
-		"{{ . }}",
-	{{ end }}
-	],
-	{{ end}}
-	{{ if .NogoExcludes }}
-	excludes = [
-	{{range .NogoExcludes }}
-		"{{ . }}",
-	{{ end }}
-	],
-	{{ else }}
-	excludes = None,
-	{{ end}}
-)
-{{end}}
-
-# Create the host platform repository transitively required by rules_go.
-load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
-load("@platforms//host:extension.bzl", "host_platform_repo")
-
-maybe(
-	host_platform_repo,
-	name = "host_platform",
-)
-
-{{.Suffix}}
-`))
-
 type moduleFileTemplateInfo struct {
 	TestedModuleName     string
 	TestedModuleRepoName string
 	TestedModulePath     string
+	GoSDKPath            string
+	RulesCCVersion       string
+	Nogo                 string
+	NogoIncludes         []string
+	NogoExcludes         []string
 	Suffix               string
 }
 
-// TODO: Also reuse the current Go SDK as in the WORKSPACE file.
 var defaultModuleBazelTpl = template.Must(template.New("").Parse(`
 bazel_dep(name = "{{.TestedModuleName}}", repo_name = "{{.TestedModuleRepoName}}")
 local_path_override(
     module_name = "{{.TestedModuleName}}",
     path = "{{.TestedModulePath}}",
 )
+
+# Provided by default so that fixtures don't have to declare them themselves.
+bazel_dep(name = "platforms", version = "1.1.0")
+bazel_dep(name = "rules_cc", version = "{{.RulesCCVersion}}")
+
+# GO_BAZEL_TEST_BAZELFLAGS refers to this repository on Windows, where the
+# mingw toolchain has to be requested explicitly.
+_cc_configure = use_extension("@rules_cc//cc:extensions.bzl", "cc_configure_extension")
+use_repo(_cc_configure, "local_config_cc")
+
+{{if .GoSDKPath}}
+_new_local_repository = use_repo_rule("@bazel_tools//tools/build_defs/repo:local.bzl", "new_local_repository")
+
+_new_local_repository(
+    name = "local_go_sdk",
+    path = "{{.GoSDKPath}}",
+    build_file_content = "",
+)
+
+# The extension proxy is named to not collide with a "go_sdk" the suffix may
+# declare itself.
+_host_go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk")
+_host_go_sdk.wrap(
+    root_file = "@local_go_sdk//:ROOT",
+)
+
+# The wrap tag has no name attribute; "main___wrap_0" is what the go_sdk
+# extension derives for the first wrap tag of a root module. Expose it as
+# @go_sdk, which is the name fixtures refer to it by.
+use_repo(_host_go_sdk, go_sdk = "main___wrap_0")
+{{if .Nogo}}
+# Custom nogo analyzers need the analysis framework, which is provided by the
+# golang.org/x/tools module fetched via gazelle's go_deps below.
+bazel_dep(name = "gazelle", version = "0.51.3")
+
+_nogo_go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
+_nogo_go_deps.module(
+    path = "golang.org/x/tools",
+    sum = "h1:qIpSLOxeCYGg9TrcJokLBG4KFA6d795g0xkBkiESGlo=",
+    version = "v0.34.0",
+)
+use_repo(_nogo_go_deps, "org_golang_x_tools")
+
+_host_go_sdk.nogo(
+    nogo = "{{.Nogo}}",
+    {{ if .NogoIncludes }}
+    includes = [
+    {{range .NogoIncludes }}
+        "{{ . }}",
+    {{ end }}
+    ],
+    {{ end}}
+    {{ if .NogoExcludes }}
+    excludes = [
+    {{range .NogoExcludes }}
+        "{{ . }}",
+    {{ end }}
+    ],
+    {{ end}}
+)
+{{end}}
+{{end}}
 {{.Suffix}}
 `))
 

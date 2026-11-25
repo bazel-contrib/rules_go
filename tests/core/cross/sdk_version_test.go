@@ -31,32 +31,32 @@ var testCases = []testcase{
 	{
 		Name:            "major_version",
 		SDKVersion:      "1",
-		expectedVersion: "go1.16",
+		expectedVersion: "go1.20",
 	},
 	{
 		Name:            "minor_version",
-		SDKVersion:      "1.16",
-		expectedVersion: "go1.16",
+		SDKVersion:      "1.20",
+		expectedVersion: "go1.20",
 	},
 	{
 		Name:            "patch_version",
-		SDKVersion:      "1.16.0",
-		expectedVersion: "go1.16",
+		SDKVersion:      "1.20.0",
+		expectedVersion: "go1.20",
 	},
 	{
-		Name:            "1_17_minor_version",
-		SDKVersion:      "1.17",
-		expectedVersion: "go1.17",
+		Name:            "1_21_minor_version",
+		SDKVersion:      "1.21",
+		expectedVersion: "go1.21.0",
 	},
 	{
-		Name:            "1_17_patch_version",
-		SDKVersion:      "1.17.1",
-		expectedVersion: "go1.17.1",
+		Name:            "1_21_patch_version",
+		SDKVersion:      "1.21.1",
+		expectedVersion: "go1.21.1",
 	},
 	{
-		Name:            "1_17_release_candidate",
-		SDKVersion:      "1.17rc1",
-		expectedVersion: "go1.17rc1",
+		Name:            "1_21_release_candidate",
+		SDKVersion:      "1.21rc2",
+		expectedVersion: "go1.21rc2",
 	},
 }
 
@@ -100,24 +100,25 @@ go_cross_binary(
 
 	bazel_testing.TestMain(m, bazel_testing.Args{
 		Main: mainFilesBuilder.String(),
-		WorkspacePrefix: `
-load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk")
-
-go_download_sdk(
+		// The test declares its own @go_sdk.
+		SkipHostGoSDK: true,
+		ModuleFileSuffix: `
+go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk")
+go_sdk.download(
     name = "go_sdk",
-    version = "1.16",
+    version = "1.20",
 )
-go_download_sdk(
-    name = "go_sdk_1_17",
-    version = "1.17",
+go_sdk.download(
+    name = "go_sdk_1_21_0",
+    version = "1.21.0",
 )
-go_download_sdk(
-    name = "go_sdk_1_17_1",
-    version = "1.17.1",
+go_sdk.download(
+    name = "go_sdk_1_21_1",
+    version = "1.21.1",
 )
-go_download_sdk(
-    name = "go_sdk_1_17_rc1",
-    version = "1.17rc1",
+go_sdk.download(
+    name = "go_sdk_1_21_rc2",
+    version = "1.21rc2",
 )
 `,
 	})

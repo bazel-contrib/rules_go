@@ -21,7 +21,13 @@ load(
     "BuildSettingInfo",
 )
 load(
-    "@bazel_tools//tools/build_defs/cc:action_names.bzl",
+    "@io_bazel_rules_nogo//:scope.bzl",
+    NOGO_EXCLUDES = "EXCLUDES",
+    NOGO_INCLUDES = "INCLUDES",
+)
+load("@package_metadata//providers:package_metadata_info.bzl", "PackageMetadataInfo")
+load(
+    "@rules_cc//cc:action_names.bzl",
     "CPP_COMPILE_ACTION_NAME",
     "CPP_LINK_DYNAMIC_LIBRARY_ACTION_NAME",
     "CPP_LINK_EXECUTABLE_ACTION_NAME",
@@ -31,23 +37,18 @@ load(
     "OBJC_COMPILE_ACTION_NAME",
 )
 load(
-    "@bazel_tools//tools/cpp:toolchain_utils.bzl",
-    "find_cpp_toolchain",
-)
-load(
-    "@io_bazel_rules_nogo//:scope.bzl",
-    NOGO_EXCLUDES = "EXCLUDES",
-    NOGO_INCLUDES = "INCLUDES",
+    "@rules_cc//cc:find_cc_toolchain.bzl",
+    "find_cc_toolchain",
 )
 load("@rules_cc//cc/common:cc_common.bzl", "cc_common")
 load(
     "//go/platform:apple.bzl",
     "apple_ensure_options",
+    "apple_macos_minimum_os",
 )
 load(
-    "//go/private/rules:transition.bzl",
-    "non_request_nogo_transition",
-    "request_nogo_transition",
+    "//go/private/actions:preprofile.bzl",
+    "emit_preprofile",
 )
 load(
     ":common.bzl",
@@ -57,8 +58,11 @@ load(
 )
 load(
     ":mode.bzl",
+    "LINKMODE_C_SHARED",
     "LINKMODE_NORMAL",
     "LINKMODE_PIE",
+    "LINKMODE_PLUGIN",
+    "LINKMODE_SHARED",
     "installsuffix",
     "validate_mode",
 )
@@ -79,7 +83,6 @@ load(
 
 CPP_TOOLCHAIN_TYPE = Label("@bazel_tools//tools/cpp:toolchain_type")
 CGO_ATTRS = {
-    "_cc_toolchain": attr.label(default = "@bazel_tools//tools/cpp:optional_current_cc_toolchain"),
     "_xcode_config": attr.label(default = configuration_field(fragment = "apple", name = "xcode_config_label")),
     "_pure_flag": attr.label(default = "//go/config:pure"),
     "_pure_constraint": attr.label(default = "//go/toolchain:cgo_off"),
@@ -92,17 +95,46 @@ CGO_TOOLCHAINS = [
 ]
 CGO_FRAGMENTS = ["apple", "cpp"]
 
+def go_rule(implementation, attrs = {}, fragments = [], toolchains = [], **kwargs):
+    """Declares a rule with the toolchains and fragments required by go_context.
+
+    Args:
+        implementation: The implementation function passed to rule.
+        attrs: Additional rule attributes.
+        fragments: Additional configuration fragments.
+        toolchains: Additional toolchain requirements.
+        **kwargs: Additional keyword arguments passed to rule.
+
+    Returns:
+        A rule that can call go_context.
+    """
+    return rule(
+        implementation = implementation,
+        attrs = attrs | CGO_ATTRS,
+        fragments = fragments + CGO_FRAGMENTS,
+        toolchains = [GO_TOOLCHAIN] + CGO_TOOLCHAINS + toolchains,
+        **kwargs
+    )
+
 # cgo requires a gcc/clang style compiler.
-# We use a denylist instead of an allowlist:
-# - Bazel's auto-detected toolchains used to set the compiler name to "compiler"
-#   for gcc (fixed in 6.0.0), which defeats the purpose of an allowlist.
-# - The compiler name field is free-form and user-defined, so we would have to
-#   provide a way to override this list.
-# TODO: Convert to a denylist once we can assume Bazel 6.0.0 or later and have a
-#       way for users to extend the list.
+# We use a denylist instead of an allowlist because the compiler name field is
+# free-form and user-defined, so we would have to provide a way to override
+# this list.
+# TODO: Convert to an allowlist once there is a way for users to extend it.
 _UNSUPPORTED_C_COMPILERS = {
     "msvc-cl": None,
     "clang-cl": None,
+}
+
+_LTO_REQUIRED_CFI_SANITIZERS = {
+    "cfi": None,
+    "cfi-cast-strict": None,
+    "cfi-derived-cast": None,
+    "cfi-icall": None,
+    "cfi-mfcall": None,
+    "cfi-nvcall": None,
+    "cfi-unrelated-cast": None,
+    "cfi-vcall": None,
 }
 
 _COMPILER_OPTIONS_DENYLIST = dict({
@@ -128,6 +160,24 @@ _COMPILER_OPTIONS_DENYLIST = dict({
     "-fcoverage-mapping": None,
 }, **COVERAGE_OPTIONS_DENYLIST)
 
+def filter_cgo_compiler_options(options):
+    options = _filter_options(options, _COMPILER_OPTIONS_DENYLIST)
+    filtered_options = []
+    for option in options:
+        if not option.startswith("-fsanitize="):
+            filtered_options.append(option)
+            continue
+
+        sanitizers = [
+            sanitizer
+            for sanitizer in option[len("-fsanitize="):].split(",")
+            if sanitizer not in _LTO_REQUIRED_CFI_SANITIZERS
+        ]
+        if sanitizers:
+            filtered_options.append("-fsanitize=" + ",".join(sanitizers))
+
+    return filtered_options
+
 _LINKER_OPTIONS_DENYLIST = {
     "-Wl,--gc-sections": None,
     "-pie": None,  # See https://github.com/bazelbuild/rules_go/issues/3691.
@@ -145,20 +195,55 @@ _UNSUPPORTED_FEATURES = [
     # This is a nonspecific unsupported feature which allows the authors of C++
     # toolchain to apply separate flags when compiling Go code.
     "rules_go_unsupported_feature",
+    # This is a rules_cc feature which sets PWD=/proc/self/cwd.
+    # When enabled, absolute paths computed by go/tools/builders
+    # can look like /proc/self/cwd/sometool, which changes meaning
+    # as the working directory changes, contrary to the intention
+    # of an absolute path.
+    "sanitize_pwd",
 ]
 
-def _match_option(option, pattern):
-    if pattern.endswith("="):
-        return option.startswith(pattern)
-    else:
-        return option == pattern
-
 def _filter_options(options, denylist):
+    # The denylist is a dict. Split into exact-match and prefix-match patterns.
+    # Exact matches use O(1) dict lookup; only the rare prefix patterns (ending
+    # in "=", e.g. "-fmax-errors=") need a linear scan.
+    prefix_patterns = [p for p in denylist if p.endswith("=")]
     return [
         option
         for option in options
-        if not any([_match_option(option, pattern) for pattern in denylist])
+        if option not in denylist and
+           not any([option.startswith(p) for p in prefix_patterns])
     ]
+
+def _strip_bind_now(options):
+    """Remove -z now from -Wl, linker flags to prevent BIND_NOW.
+
+    BIND_NOW breaks Go libraries that use dlopen/dlsym to load symbols at
+    runtime (e.g., NVIDIA's go-nvml). The CC toolchain may pass flags like
+    -Wl,-z,relro,-z,now in any order; this function strips only the -z,now
+    pair and preserves everything else (e.g., -z,relro).
+
+    See https://github.com/bazel-contrib/rules_go/issues/4377.
+    """
+    result = []
+    for opt in options:
+        if not opt.startswith("-Wl,"):
+            result.append(opt)
+            continue
+        parts = opt[len("-Wl,"):].split(",")
+        filtered = []
+        skip_next = False
+        for i in range(len(parts)):
+            if skip_next:
+                skip_next = False
+                continue
+            if parts[i] == "-z" and i + 1 < len(parts) and parts[i + 1] == "now":
+                skip_next = True
+                continue
+            filtered.append(parts[i])
+        if filtered:
+            result.append("-Wl," + ",".join(filtered))
+    return result
 
 def _child_name(go, path, ext, name):
     if not name:
@@ -188,7 +273,10 @@ def _builder_args(go, command = None):
     if command:
         args.add(command)
     sdk_root_file = go.sdk.root_file
-    args.add("-sdk", sdk_root_file.dirname)
+
+    # Use a file rather than sdk_root_file.dirname as the latter is just a
+    # string and thus not subject to path mapping.
+    args.add_all("-sdk", [sdk_root_file], map_each = _dirname, expand_directories = False)
 
     # Path mapping can't map the values of environment variables, so we need to pass GOROOT to the
     # action via an argument instead.
@@ -211,6 +299,16 @@ def _tool_args(go):
     args.use_param_file("-param=%s")
     return args
 
+def package_metadata_file_from_metadata(package_metadata = (), applicable_licenses = ()):
+    # Bazel may surface repo-level metadata through either spelling depending on
+    # the version and rule surface, so probe both.
+    for metadata_group in (package_metadata, applicable_licenses):
+        for metadata in metadata_group:
+            if PackageMetadataInfo in metadata:
+                return metadata[PackageMetadataInfo].metadata
+
+    return None
+
 def _merge_embed(source, embed):
     s = get_source(embed)
     source["srcs"] = s.srcs + source["srcs"]
@@ -220,6 +318,9 @@ def _merge_embed(source, embed):
     source["x_defs"].update(s.x_defs)
     source["gc_goopts"] = source["gc_goopts"] + s.gc_goopts
     source["runfiles"] = source["runfiles"].merge(s.runfiles)
+    package_metadata = getattr(s, "_package_metadata", None)
+    if not source["_package_metadata"] and package_metadata:
+        source["_package_metadata"] = package_metadata
 
     if s.cgo:
         if source["cgo"]:
@@ -331,6 +432,11 @@ def new_go_info(
     if deps == None:
         deps = [get_archive(dep) for dep in getattr(attr, "deps", [])]
 
+    package_metadata = package_metadata_file_from_metadata(
+        getattr(attr, "package_metadata", ()),
+        getattr(attr, "applicable_licenses", ()),
+    )
+
     go_info = {
         "name": go.label.name if not name else name,
         "label": go.label,
@@ -355,6 +461,7 @@ def new_go_info(
         "cxxopts": _expand_opts(go, "cxxopts", getattr(attr, "cxxopts", [])),
         "clinkopts": _expand_opts(go, "clinkopts", getattr(attr, "clinkopts", [])),
         "pgoprofile": getattr(attr, "pgoprofile", None),
+        "_package_metadata": package_metadata,
     }
 
     for e in getattr(attr, "embed", []):
@@ -369,7 +476,7 @@ def new_go_info(
             v = go._ctx.expand_location(v, data)
         if "." not in k:
             k = "%s.%s" % (importmap, k)
-        x_defs[k] = v
+        x_defs[k] = go._ctx.expand_make_variables("x_defs." + k, v, {})
     go_info["x_defs"] = x_defs
 
     if not go_info["cgo"]:
@@ -457,6 +564,22 @@ def _matches_scopes(label, scopes):
             return True
     return False
 
+def _go_infos_use_cgo(go_infos):
+    for go_info in go_infos:
+        if GoInfo in go_info and go_info[GoInfo].cgo:
+            return True
+    return False
+
+def _sources_use_cgo(attr, go_infos):
+    """Returns whether attr's sources may need cgo processing."""
+    if getattr(attr, "cgo", False):
+        return True
+    return _go_infos_use_cgo(getattr(attr, "embed", [])) or _go_infos_use_cgo(go_infos)
+
+def maybe_needs_cc_toolchain(attr, go_infos = []):
+    """Returns whether this rule's own sources may use the C/C++ toolchain."""
+    return _sources_use_cgo(attr, go_infos)
+
 def validate_nogo(go):
     """Whether nogo should be run as a validation action rather than just to generate fact files for the current
     target."""
@@ -482,6 +605,11 @@ default_go_config_info = GoConfigInfo(
     export_stdlib = False,
 )
 
+def _cc_runtime_libs_for_mode(mode, cgo_tools):
+    if mode.linkmode in (LINKMODE_SHARED, LINKMODE_PLUGIN, LINKMODE_C_SHARED):
+        return cgo_tools.cc_toolchain.dynamic_runtime_lib(feature_configuration = cgo_tools.feature_configuration)
+    return cgo_tools.cc_toolchain.static_runtime_lib(feature_configuration = cgo_tools.feature_configuration)
+
 def _defaults_to_pie(goos, race):
     # based on DefaultPIE in src/internal/platform/supported.go
     if goos in ["android", "darwin", "ios"]:
@@ -493,14 +621,16 @@ def _defaults_to_pie(goos, race):
 def go_context(
         ctx,
         attr = None,
-        include_deprecated_properties = True,
+        include_deprecated_properties = False,
         importpath = None,
         importmap = None,
         embed = None,
         importpath_aliases = None,
         go_context_data = None,
+        maybe_needs_cc_toolchain = True,
         goos = "auto",
-        goarch = "auto"):
+        goarch = "auto",
+        static = "auto"):
     """Returns an API used to build Go code.
 
     See /go/toolchains.rst#go-context
@@ -528,16 +658,25 @@ def go_context(
         stdlib = go_context_data[GoStdLib]
         go_context_info = go_context_data[GoContextInfo]
 
-    if getattr(attr, "_cc_toolchain", None) and CPP_TOOLCHAIN_TYPE in ctx.toolchains:
-        cgo_context_info = cgo_context_data_impl(ctx)
-    elif go_context_data and CgoContextInfo in go_context_data:
-        cgo_context_info = go_context_data[CgoContextInfo]
-    elif getattr(attr, "_cgo_context_data", None) and CgoContextInfo in attr._cgo_context_data:
-        cgo_context_info = attr._cgo_context_data[CgoContextInfo]
-    elif getattr(attr, "cgo_context_data", None) and CgoContextInfo in attr.cgo_context_data:
-        cgo_context_info = attr.cgo_context_data[CgoContextInfo]
+    cgo_disabled = (go_config_info and go_config_info.pure) or (
+        getattr(attr, "_pure_constraint", None) and
+        ctx.target_platform_has_constraint(attr._pure_constraint[platform_common.ConstraintValueInfo])
+    )
 
-    if goos == "auto" and goarch == "auto" and cgo_context_info and (go_config_info == None or not go_config_info.pure):
+    needs_cgo_context = maybe_needs_cc_toolchain or go_config_info != None
+    if not cgo_disabled and needs_cgo_context and CPP_TOOLCHAIN_TYPE in ctx.toolchains:
+        cgo_context_info = cgo_context_data_impl(ctx)
+    elif not cgo_disabled and maybe_needs_cc_toolchain and _sources_use_cgo(attr, []):
+        fail((
+            "{} calls go_context() without declaring the C++ toolchain, " +
+            "configuration fragments, and attributes required by rules_go. " +
+            "Define this rule with go_rule(...) instead of rule(...): " +
+            "load(\"@io_bazel_rules_go//go:def.bzl\", \"go_context\", \"go_rule\")."
+        ).format(ctx.label))
+
+    cgo_available = cgo_context_info != None
+
+    if goos == "auto" and goarch == "auto" and cgo_available and go_config_info != None and not go_config_info.pure:
         # Fast-path to reuse the GoConfigInfo as-is
         mode = go_config_info or default_go_config_info
     else:
@@ -546,12 +685,21 @@ def go_context(
         mode_kwargs = structs.to_dict(go_config_info)
         mode_kwargs["goos"] = toolchain.default_goos if goos == "auto" else goos
         mode_kwargs["goarch"] = toolchain.default_goarch if goarch == "auto" else goarch
-        if not cgo_context_info:
+        if not cgo_available and (maybe_needs_cc_toolchain or CPP_TOOLCHAIN_TYPE in ctx.toolchains):
             if getattr(ctx.attr, "pure", None) == "off":
                 fail("{} has pure explicitly set to off, but no C++ toolchain could be found for its platform".format(ctx.label))
             mode_kwargs["pure"] = True
         mode = GoConfigInfo(**mode_kwargs)
         validate_mode(mode)
+
+    if static not in ("on", "off", "auto"):
+        fail('static: must be "on", "off", or "auto", got "{}"'.format(static))
+
+    # Static linking only affects the link action of the rule it is set on, so
+    # the static attribute is applied here rather than through a configuration
+    # transition, which would give every dependency a configuration of its own.
+    # It is kept out of mode since that describes how archives are compiled.
+    static_link = mode.static if static == "auto" else static == "on"
 
     if stdlib:
         goroot = stdlib.root_file.dirname
@@ -602,8 +750,11 @@ def go_context(
 
     if cgo_context_info:
         env.update(cgo_context_info.env)
-        cc_toolchain_files = cgo_context_info.cc_toolchain_files
         cgo_tools = cgo_context_info.cgo_tools
+        cc_toolchain_files = depset(transitive = [
+            cgo_context_info.cc_toolchain_files,
+            _cc_runtime_libs_for_mode(mode, cgo_tools),
+        ])
     else:
         cc_toolchain_files = depset()
         cgo_tools = None
@@ -649,6 +800,8 @@ def go_context(
         toolchain = toolchain,
         sdk = toolchain.sdk,
         mode = mode,
+        macos_minimum_os = apple_macos_minimum_os(ctx, mode.goos),
+        static_link = static_link,
         stdlib = stdlib,
         actions = ctx.actions,
         cc_toolchain_files = cc_toolchain_files,
@@ -657,7 +810,7 @@ def go_context(
         importpath_aliases = importpath_aliases,
         pathtype = pathtype,
         cgo_tools = cgo_tools,
-        nogo = go_context_info.nogo if go_context_info else None,
+        nogo = ctx.attr._nogo[DefaultInfo].files_to_run if hasattr(ctx.attr, "_nogo") else None,
         coverdata = go_context_info.coverdata if go_context_info else None,
         coverage_enabled = ctx.configuration.coverage_enabled,
         coverage_instrumented = ctx.coverage_instrumented(),
@@ -696,47 +849,34 @@ def _go_context_data_impl(ctx):
         print("WARNING: --features=race is no longer supported. Use --@io_bazel_rules_go//go/config:race instead.")
     if "msan" in ctx.features:
         print("WARNING: --features=msan is no longer supported. Use --@io_bazel_rules_go//go/config:msan instead.")
-    providers = [
+
+    return [
         GoContextInfo(
-            coverdata = ctx.attr.coverdata[0][GoArchive],
-            nogo = ctx.attr.nogo[DefaultInfo].files_to_run,
+            coverdata = ctx.attr.coverdata[GoArchive],
         ),
         ctx.attr.stdlib[GoStdLib],
         ctx.attr.go_config[GoConfigInfo],
     ]
-    if ctx.attr.cgo_context_data and CgoContextInfo in ctx.attr.cgo_context_data:
-        providers.append(ctx.attr.cgo_context_data[CgoContextInfo])
-    return providers
 
 go_context_data = rule(
     _go_context_data_impl,
     attrs = {
-        "cgo_context_data": attr.label(),
         "coverdata": attr.label(
             mandatory = True,
-            cfg = non_request_nogo_transition,
             providers = [GoArchive],
         ),
         "go_config": attr.label(
             mandatory = True,
             providers = [GoConfigInfo],
         ),
-        "nogo": attr.label(
-            mandatory = True,
-            cfg = "exec",
-        ),
         "stdlib": attr.label(
             mandatory = True,
             providers = [GoStdLib],
-        ),
-        "_allowlist_function_transition": attr.label(
-            default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
         ),
     },
     doc = """go_context_data gathers information about the build configuration.
     It is a common dependency of all Go targets.""",
     toolchains = [GO_TOOLCHAIN],
-    cfg = request_nogo_transition,
 )
 
 def cgo_context_data_impl(ctx):
@@ -747,9 +887,7 @@ def cgo_context_data_impl(ctx):
 
     # TODO(jayconrod): find a way to get a list of files that comprise the
     # toolchain (to be inputs into actions that need it).
-    # ctx.files._cc_toolchain won't work when cc toolchain resolution
-    # is switched on.
-    cc_toolchain = find_cpp_toolchain(ctx, mandatory = False)
+    cc_toolchain = find_cc_toolchain(ctx, mandatory = False)
     if not cc_toolchain or cc_toolchain.compiler in _UNSUPPORTED_C_COMPILERS:
         return None
 
@@ -771,13 +909,12 @@ def cgo_context_data_impl(ctx):
         feature_configuration = feature_configuration,
         action_name = C_COMPILE_ACTION_NAME,
     )
-    c_compile_options = _filter_options(
+    c_compile_options = filter_cgo_compiler_options(
         cc_common.get_memory_inefficient_command_line(
             feature_configuration = feature_configuration,
             action_name = C_COMPILE_ACTION_NAME,
             variables = c_compile_variables,
         ) + ctx.fragments.cpp.copts + ctx.fragments.cpp.conlyopts,
-        _COMPILER_OPTIONS_DENYLIST,
     )
     env.update(cc_common.get_environment_variables(
         feature_configuration = feature_configuration,
@@ -789,13 +926,12 @@ def cgo_context_data_impl(ctx):
         feature_configuration = feature_configuration,
         cc_toolchain = cc_toolchain,
     )
-    cxx_compile_options = _filter_options(
+    cxx_compile_options = filter_cgo_compiler_options(
         cc_common.get_memory_inefficient_command_line(
             feature_configuration = feature_configuration,
             action_name = CPP_COMPILE_ACTION_NAME,
             variables = cxx_compile_variables,
         ) + ctx.fragments.cpp.copts + ctx.fragments.cpp.cxxopts,
-        _COMPILER_OPTIONS_DENYLIST,
     )
     env.update(cc_common.get_environment_variables(
         feature_configuration = feature_configuration,
@@ -807,13 +943,12 @@ def cgo_context_data_impl(ctx):
         feature_configuration = feature_configuration,
         cc_toolchain = cc_toolchain,
     )
-    objc_compile_options = _filter_options(
+    objc_compile_options = filter_cgo_compiler_options(
         cc_common.get_memory_inefficient_command_line(
             feature_configuration = feature_configuration,
             action_name = OBJC_COMPILE_ACTION_NAME,
             variables = objc_compile_variables,
         ),
-        _COMPILER_OPTIONS_DENYLIST,
     )
     env.update(cc_common.get_environment_variables(
         feature_configuration = feature_configuration,
@@ -825,13 +960,12 @@ def cgo_context_data_impl(ctx):
         feature_configuration = feature_configuration,
         cc_toolchain = cc_toolchain,
     )
-    objcxx_compile_options = _filter_options(
+    objcxx_compile_options = filter_cgo_compiler_options(
         cc_common.get_memory_inefficient_command_line(
             feature_configuration = feature_configuration,
             action_name = OBJCPP_COMPILE_ACTION_NAME,
             variables = objcxx_compile_variables,
         ),
-        _COMPILER_OPTIONS_DENYLIST,
     )
     env.update(cc_common.get_environment_variables(
         feature_configuration = feature_configuration,
@@ -848,14 +982,14 @@ def cgo_context_data_impl(ctx):
         feature_configuration = feature_configuration,
         action_name = CPP_LINK_EXECUTABLE_ACTION_NAME,
     )
-    ld_executable_options = _filter_options(
+    ld_executable_options = _strip_bind_now(_filter_options(
         cc_common.get_memory_inefficient_command_line(
             feature_configuration = feature_configuration,
             action_name = CPP_LINK_EXECUTABLE_ACTION_NAME,
             variables = ld_executable_variables,
         ) + ctx.fragments.cpp.linkopts,
         _LINKER_OPTIONS_DENYLIST,
-    )
+    ))
     env.update(cc_common.get_environment_variables(
         feature_configuration = feature_configuration,
         action_name = CPP_LINK_EXECUTABLE_ACTION_NAME,
@@ -889,14 +1023,14 @@ def cgo_context_data_impl(ctx):
         feature_configuration = feature_configuration,
         action_name = CPP_LINK_DYNAMIC_LIBRARY_ACTION_NAME,
     )
-    ld_dynamic_lib_options = _filter_options(
+    ld_dynamic_lib_options = _strip_bind_now(_filter_options(
         cc_common.get_memory_inefficient_command_line(
             feature_configuration = feature_configuration,
             action_name = CPP_LINK_DYNAMIC_LIBRARY_ACTION_NAME,
             variables = ld_dynamic_lib_variables,
         ) + ctx.fragments.cpp.linkopts,
         _LINKER_OPTIONS_DENYLIST,
-    )
+    ))
 
     env.update(cc_common.get_environment_variables(
         feature_configuration = feature_configuration,
@@ -956,48 +1090,21 @@ def cgo_context_data_impl(ctx):
             ld_static_lib_path = ld_static_lib_path,
             ld_dynamic_lib_path = ld_dynamic_lib_path,
             ld_dynamic_lib_options = ld_dynamic_lib_options,
-            ar_path = cc_toolchain.ar_executable,
+            # Don't use cc_toolchain.ar_executable: on Bazel 8, it is a
+            # non-existent placeholder (<toolchain package>/ar) for toolchains
+            # that only specify action configs, such as rule-based toolchains.
+            ar_path = ld_static_lib_path,
         ),
     )
 
-cgo_context_data = rule(
-    implementation = cgo_context_data_impl,
-    attrs = {
-        "_allowlist_function_transition": attr.label(
-            default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
-        ),
-    } | CGO_ATTRS,
-    toolchains = CGO_TOOLCHAINS,
-    fragments = CGO_FRAGMENTS,
-    doc = """Collects information about the C/C++ toolchain. The C/C++ toolchain
-    is needed to build cgo code, but is generally optional. Rules can't have
-    optional toolchains, so instead, we have an optional dependency on this
-    rule.""",
-    cfg = non_request_nogo_transition,
-)
-
-def _cgo_context_data_proxy_impl(ctx):
-    if ctx.attr.actual and CgoContextInfo in ctx.attr.actual:
-        return [ctx.attr.actual[CgoContextInfo]]
-    return []
-
-cgo_context_data_proxy = rule(
-    implementation = _cgo_context_data_proxy_impl,
-    attrs = {
-        "actual": attr.label(),
-    },
-    doc = """Conditionally depends on cgo_context_data and forwards it provider.
-
-    Useful in situations where select cannot be used, like attribute defaults.
-    """,
-)
-
 def _go_config_impl(ctx):
+    toolchain = ctx.toolchains[GO_TOOLCHAIN]
+
     pgo_profiles = ctx.attr.pgoprofile.files.to_list()
     if len(pgo_profiles) > 2:
         fail("providing more than one pprof file to pgoprofile is not supported")
     if len(pgo_profiles) == 1:
-        pgoprofile = pgo_profiles[0]
+        pgoprofile = emit_preprofile(ctx, toolchain, pgo_profiles[0])
     else:
         pgoprofile = None
 
@@ -1013,12 +1120,12 @@ def _go_config_impl(ctx):
     if msan:
         tags.append("msan")
 
-    toolchain = ctx.toolchains[GO_TOOLCHAIN]
-
     linkmode = ctx.attr.linkmode[BuildSettingInfo].value
     if linkmode == "auto":
-        # Mirror Go's logic by defaulting to PIE on supported platforms
-        linkmode = LINKMODE_PIE if _defaults_to_pie(toolchain.default_goos, race) else LINKMODE_NORMAL
+        if ctx.attr.force_pic or _defaults_to_pie(toolchain.default_goos, race):
+            linkmode = LINKMODE_PIE
+        else:
+            linkmode = LINKMODE_NORMAL
 
     go_config_info = GoConfigInfo(
         goos = toolchain.default_goos,
@@ -1099,6 +1206,7 @@ go_config = rule(
             mandatory = False,
             providers = [BuildSettingInfo],
         ),
+        "force_pic": attr.bool(mandatory = True),
     },
     provides = [GoConfigInfo],
     doc = """Collects information about build settings in the current

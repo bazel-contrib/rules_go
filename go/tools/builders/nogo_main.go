@@ -76,6 +76,7 @@ func run(args []string) (error, int) {
 	flags.Var(&factMap, "fact", "Import path and file containing facts for that library, separated by '=' (may be repeated)'")
 	factsOnly := flags.Bool("facts_only", false, "If true, only facts are emitted, no analyzers are run")
 	importcfg := flags.String("importcfg", "", "The import configuration file")
+	goVersion := flags.String("go_version", "", "The SDK Go version from rules_go, without the leading 'go' prefix (for example 1.24.3); nogo normalizes it for go/types")
 	packagePath := flags.String("p", "", "The package path (importmap) of the package being compiled")
 	xPath := flags.String("x", "", "The archive file where serialized facts should be written")
 	nogoFixDir := flags.String("fix_dir", "", "The path of the directory to store the nogo fixes in")
@@ -89,7 +90,9 @@ func run(args []string) (error, int) {
 		return fmt.Errorf("error parsing importcfg: %v", err), nogoError
 	}
 
-	diagnostics, pkg, err := checkPackage(analyzers, *packagePath, packageFile, importMap, factMap, *factsOnly, srcs, ignores)
+	normalizedGoVersion := normalizeGoVersion(*goVersion)
+
+	diagnostics, pkg, err := checkPackage(analyzers, *packagePath, normalizedGoVersion, packageFile, importMap, factMap, *factsOnly, srcs, ignores)
 	if err != nil {
 		return fmt.Errorf("error running analyzers: %v", err), nogoError
 	}
@@ -229,7 +232,7 @@ func setAnalyzerFlags(a *analysis.Analyzer, flags map[string]string) error {
 // It returns an empty string if no source code diagnostics need to be printed.
 //
 // This implementation was adapted from that of golang.org/x/tools/go/checker/internal/checker.
-func checkPackage(analyzers []*analysis.Analyzer, packagePath string, packageFile, importMap, factMap map[string]string, factsOnly bool, filenames, ignoreFiles []string) ([]diagnosticEntry, *goPackage, error) {
+func checkPackage(analyzers []*analysis.Analyzer, packagePath, goVersion string, packageFile, importMap, factMap map[string]string, factsOnly bool, filenames, ignoreFiles []string) ([]diagnosticEntry, *goPackage, error) {
 	// Register fact types and establish dependencies between analyzers.
 	actions := make(map[*analysis.Analyzer]*action)
 	var visit func(a *analysis.Analyzer) *action
@@ -271,9 +274,19 @@ func checkPackage(analyzers []*analysis.Analyzer, packagePath string, packageFil
 		}
 	}
 
+	// In facts-only mode diagnostics are discarded, so we only need to run
+	// analyzers that produce facts.
+	//
+	// Note that this set may be disjoint from the initial set of analyzers: root
+	// analyzers may consume results from required analyzers which themselves use
+	// facts.
 	roots := make([]*action, 0, len(analyzers))
-	for _, a := range analyzers {
-		if !factsOnly || len(a.FactTypes) > 0 {
+	if factsOnly {
+		for _, a := range factProducers(analyzers) {
+			roots = append(roots, visit(a))
+		}
+	} else {
+		for _, a := range analyzers {
 			roots = append(roots, visit(a))
 		}
 	}
@@ -284,7 +297,7 @@ func checkPackage(analyzers []*analysis.Analyzer, packagePath string, packageFil
 
 	// Load the package, including AST, types, and facts.
 	imp := newImporter(importMap, packageFile, factMap)
-	pkg, err := load(packagePath, imp, filenames)
+	pkg, err := load(packagePath, goVersion, imp, filenames)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error loading package: %v", err)
 	}
@@ -344,6 +357,30 @@ func checkPackage(analyzers []*analysis.Analyzer, packagePath string, packageFil
 type Range struct {
 	from token.Position
 	to   int
+}
+
+// factProducers returns the set of analyzers that declare facts among the
+// transitive closure of as.
+func factProducers(as []*analysis.Analyzer) []*analysis.Analyzer {
+	var producers []*analysis.Analyzer
+	seen := make(map[*analysis.Analyzer]bool)
+	var visit func(a *analysis.Analyzer)
+	visit = func(a *analysis.Analyzer) {
+		if seen[a] {
+			return
+		}
+		seen[a] = true
+		if len(a.FactTypes) > 0 {
+			producers = append(producers, a)
+		}
+		for _, req := range a.Requires {
+			visit(req)
+		}
+	}
+	for _, a := range as {
+		visit(a)
+	}
+	return producers
 }
 
 // An action represents one unit of analysis work: the application of
@@ -471,7 +508,7 @@ func (act *action) execOnce() {
 
 // load parses and type checks the source code in each file in filenames.
 // load also deserializes facts stored for imported packages.
-func load(packagePath string, imp *importer, filenames []string) (*goPackage, error) {
+func load(packagePath, goVersion string, imp *importer, filenames []string) (*goPackage, error) {
 	if len(filenames) == 0 {
 		return nil, errors.New("no filenames")
 	}
@@ -485,9 +522,13 @@ func load(packagePath string, imp *importer, filenames []string) (*goPackage, er
 	}
 	pkg := &goPackage{fset: imp.fset, syntax: syntax}
 
-	config := types.Config{Importer: imp}
+	config := types.Config{
+		GoVersion: goVersion,
+		Importer:  imp,
+	}
 	info := &types.Info{
 		Types:      make(map[ast.Expr]types.TypeAndValue),
+		Instances:  make(map[*ast.Ident]types.Instance),
 		Uses:       make(map[*ast.Ident]types.Object),
 		Defs:       make(map[*ast.Ident]types.Object),
 		Implicits:  make(map[ast.Node]types.Object),
@@ -495,7 +536,7 @@ func load(packagePath string, imp *importer, filenames []string) (*goPackage, er
 		Selections: make(map[*ast.SelectorExpr]*types.Selection),
 	}
 
-	initInstanceInfo(info)
+	initFileVersions(info)
 
 	types, err := config.Check(packagePath, pkg.fset, syntax, info)
 	if err != nil {
@@ -503,7 +544,7 @@ func load(packagePath string, imp *importer, filenames []string) (*goPackage, er
 	}
 	pkg.types, pkg.typesInfo = types, info
 
-	pkg.facts, err = facts.NewDecoder(pkg.types).Decode(imp.readFacts)
+	pkg.facts, err = facts.NewDecoder(pkg.types, imp.cachedPackage).Decode(imp.readFacts)
 	if err != nil {
 		return nil, fmt.Errorf("internal error decoding facts: %v", err)
 	}
@@ -724,6 +765,13 @@ func (i *importer) Import(path string) (*types.Package, error) {
 	}
 
 	return gcexportdata.Read(r, i.fset, i.packageCache, path)
+}
+
+// cachedPackage returns the already-imported package with the given path, or
+// nil. The package cache holds every package (perhaps indirect) that may own an
+// object facts are attached to, which is the lookup facts.NewDecoder needs.
+func (i *importer) cachedPackage(path string) *types.Package {
+	return i.packageCache[path]
 }
 
 func (i *importer) readFacts(pkgPath string) ([]byte, error) {

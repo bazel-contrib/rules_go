@@ -47,6 +47,8 @@ containing sources for the Go toolchain and standard library and pre-compiled
 binaries for the same. You can download this from by visiting the `Go website`_
 and downloading a `binary distribution`_.
 
+rules_go requires Go SDK 1.20 or later.
+
 There are several Bazel rules for obtaining and configuring a Go SDK:
 
 * `go_download_sdk`_: downloads a toolchain for a specific version of Go for a
@@ -73,9 +75,9 @@ ensure that you have declared a Go SDK of that version using one of the above ru
 (`go_download_sdk`_, `go_host_sdk`_, `go_local_sdk`_, `go_wrap_sdk`_). Then you
 can specify the sdk version to build with when running a ``bazel build`` by passing
 the flag ``--@io_bazel_rules_go//go/toolchain:sdk_version="version"`` where
-``"version"`` is the SDK version you would like to build with, eg. ``"1.18.3"``.
+``"version"`` is the SDK version you would like to build with, eg. ``"1.20.3"``.
 The SDK version can omit the patch, or include a prerelease part, eg. ``"1"``,
-``"1.18"``, ``"1.18.0"``, and ``"1.19.0beta1"`` are all valid values for ``sdk_version``.
+``"1.20"``, ``"1.20.1"``, and ``"1.21rc2"`` are all valid values for ``sdk_version``.
 When ``go_host_sdk`` is used, ``"version"`` can be set to ``host`` to refer to the host Go SDK.
 It can also be set ``remote`` to match any non-host version.
 
@@ -112,6 +114,12 @@ with the same Go SDK version, but have different experiments enabled or patches 
       version = "1.23.5",
       experiments = ["rangefunc"],
     )
+
+To experiment with source-bootstrapped compiler binaries instead of prebuilt
+ones, set ``experimental_build_compiler_from_source = True`` on the
+`go_download_sdk`_ or ``go_sdk.download`` SDK definition. This option is
+experimental and may change. See `Customizing go_sdk`_ for WORKSPACE /
+MODULE.bazel setup and prerequisites.
 
 The toolchain
 ~~~~~~~~~~~~~
@@ -210,32 +218,88 @@ temporary limitation that will be removed in the future.
 
     go_register_toolchains()
 
+.. _customizing_go_sdk:
+
+Customizing go_sdk
+~~~~~~~~~~~~~~~~~~
+
+``go_download_sdk`` applies ``patches`` / ``patch_strip`` to the downloaded SDK
+tree before it is exposed to rules_go. This includes the standard library source
+under ``src/``, so normal stdlib source patches are applied automatically.
+
+Use this default flow when you only need source-level changes (for example,
+patching ``src/net/http`` or other stdlib packages).
+
+If you need compiler/linker binaries themselves (for example, ``compile`` or
+``link`` under ``pkg/tool``) to reflect source changes, use
+``experimental_build_compiler_from_source = True``:
+
+.. code:: bzl
+
+    # WORKSPACE
+    load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk", "go_register_toolchains", "go_rules_dependencies")
+
+    go_download_sdk(
+        name = "go_sdk",
+        version = "1.23.5",
+        patches = ["//:my_go_patch.diff"],
+        patch_strip = 1,
+        experimental_build_compiler_from_source = True,
+    )
+
+    go_rules_dependencies()
+    load("@rules_shell//shell:repositories.bzl", "rules_shell_toolchains")
+    rules_shell_toolchains()
+    go_register_toolchains()
+
+Bzlmod equivalent:
+
+.. code:: bzl
+
+    # MODULE.bazel
+    go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk")
+
+    go_sdk.download(
+        name = "go_sdk",
+        version = "1.23.5",
+        patches = ["//:my_go_patch.diff"],
+        patch_strip = 1,
+        experimental_build_compiler_from_source = True,
+    )
+
+    use_repo(go_sdk, "go_sdk")
+
+The SDK will use the bootstrapped compiler/linker binaries directly.
+
 
 Writing new Go rules
 ~~~~~~~~~~~~~~~~~~~~
 
-If you are writing a new Bazel rule that uses the Go toolchain, you need to
-do several things to ensure you have full access to the toolchain and common
-dependencies.
+If you are writing a new Bazel rule that may compile or link Go code with cgo,
+declare it with ``go_rule`` instead of ``rule``. ``go_rule`` adds the Go
+toolchain, the optional C/C++ toolchain, the Apple and C++ configuration
+fragments, and the implicit attributes needed by ``go_context``. The C/C++
+toolchain remains optional so that pure Go and cross-compiling rules do not
+require a C/C++ toolchain.
 
-* Declare a dependency on a toolchain of type
-  ``@io_bazel_rules_go//go:toolchain``. Bazel will select an appropriate,
-  registered toolchain automatically.
-* Declare an implicit attribute named ``_go_context_data`` that defaults to
-  ``@io_bazel_rules_go//:go_context_data``. This target gathers configuration
-  information and several common dependencies.
-* Use the ``go_context`` function to gain access to `the context`_. This is
-  your main interface to the Go toolchain.
+Rules that only use the Go SDK or generate Go sources can use ``rule``, declare
+only the ``@io_bazel_rules_go//go:toolchain`` toolchain, and call
+``go_context(ctx, maybe_needs_cc_toolchain = False)``.
+
+Declare an implicit attribute named ``_go_context_data`` that defaults to
+``@io_bazel_rules_go//:go_context_data`` when the rule needs the standard
+library and target Go configuration. Rules that only need the Go SDK can omit
+this attribute. Use ``go_context`` to gain access to `the context`_.
 
 .. code:: bzl
 
-    load("@io_bazel_rules_go//go:def.bzl", "go_context")
+    load("@io_bazel_rules_go//go:def.bzl", "go_context", "go_rule")
 
     def _my_rule_impl(ctx):
         go = go_context(ctx)
         ...
 
-    my_rule = rule(
+    my_rule = go_rule(
         implementation = _my_rule_impl,
         attrs = {
             ...
@@ -243,7 +307,6 @@ dependencies.
                 default = "@io_bazel_rules_go//:go_context_data",
             ),
         },
-        toolchains = ["@io_bazel_rules_go//go:toolchain"],
     )
 
 
@@ -254,7 +317,7 @@ go_register_toolchains
 ~~~~~~~~~~~~~~~~~~~~~~
 
 Installs the Go toolchains. If :param:`version` is specified, it sets the
-SDK version to use (for example, :value:`"1.15.5"`).
+SDK version to use (for example, :value:`"1.20.1"`).
 
 +--------------------------------+-----------------------------+-----------------------------------+
 | **Name**                       | **Type**                    | **Default value**                 |
@@ -266,7 +329,7 @@ SDK version to use (for example, :value:`"1.15.5"`).
 | If a toolchain was already declared with `go_download_sdk`_ or a similar rule,                   |
 | this parameter may not be set.                                                                   |
 |                                                                                                  |
-| Normally this is set to a Go version like :value:`"1.15.5"`. It may also be                      |
+| Normally this is set to a Go version like :value:`"1.20.1"`. It may also be                      |
 | set to :value:`"host"`, which will cause rules_go to use the Go toolchain                        |
 | installed on the host system (found using ``GOROOT`` or ``PATH``).                               |
 |                                                                                                  |
@@ -314,7 +377,7 @@ This downloads a Go SDK for use in toolchains.
 +--------------------------------+-----------------------------+---------------------------------------------+
 | :param:`version`               | :type:`string`              | :value:`latest Go version`                  |
 +--------------------------------+-----------------------------+---------------------------------------------+
-| The version of Go to download, for example ``1.12.5``. If unspecified,                                     |
+| The version of Go to download, for example ``1.20.1``. If unspecified,                                     |
 | ``go_download_sdk`` will list available versions of Go from golang.org, then                               |
 | pick the highest version. If ``version`` is specified but ``sdks`` is                                      |
 | unspecified, ``go_download_sdk`` will list available versions on golang.org                                |
@@ -356,6 +419,14 @@ This downloads a Go SDK for use in toolchains.
 +--------------------------------+-----------------------------+---------------------------------------------+
 | The number of leading slashes to be stripped from the file name in thepatches.                             |
 +--------------------------------+-----------------------------+---------------------------------------------+
+| ``experimental_build_``        | :type:`bool`                | :value:`False`                              |
+| ``compiler_from_source``       |                             |                                             |
++--------------------------------+-----------------------------+---------------------------------------------+
+| Experimental: if true, bootstraps Go compiler binaries from the downloaded source instead                  |
+| of using the prebuilt compiler binaries in the SDK archive.                                                |
+| In WORKSPACE mode, call ``rules_shell_toolchains()`` from                                                   |
+| ``@rules_shell//shell:repositories.bzl`` before ``go_register_toolchains()``.                              |
++--------------------------------+-----------------------------+---------------------------------------------+
 
 **Example**:
 
@@ -372,7 +443,7 @@ This downloads a Go SDK for use in toolchains.
         name = "go_sdk",
         goos = "linux",
         goarch = "amd64",
-        version = "1.18.1",
+        version = "1.20.1",
         sdks = {
             # NOTE: In most cases the whole sdks attribute is not needed.
             # There are 2 "common" reasons you might want it:
@@ -383,8 +454,8 @@ This downloads a Go SDK for use in toolchains.
             # 2. You want to avoid the dependency on the index file for the
             #    SHA-256 checksums. In this case, You can get the expected
             #    filenames and checksums from https://go.dev/dl/
-            "linux_amd64": ("go1.18.1.linux-amd64.tar.gz", "b3b815f47ababac13810fc6021eb73d65478e0b2db4b09d348eefad9581a2334"),
-            "darwin_amd64": ("go1.18.1.darwin-amd64.tar.gz", "3703e9a0db1000f18c0c7b524f3d378aac71219b4715a6a4c5683eb639f41a4d"),
+            "linux_amd64": ("go1.20.1.linux-amd64.tar.gz", "000a5b1fca4f75895f78befeb2eecf10bfff3c428597f3f1e69133b63b911b02"),
+            "darwin_amd64": ("go1.20.1.darwin-amd64.tar.gz", "a300a45e801ab459f3008aae5bb9efbe9a6de9bcd12388f5ca9bbd14f70236de"),
         },
         patch_strip = 1,
         patches = [
@@ -603,6 +674,12 @@ Fields
 | Controls the compilation setup affecting things like enabling profilers and sanitizers.          |
 | See `compilation modes`_ for more information about the allowed values.                          |
 +--------------------------------+-----------------------------------------------------------------+
+| :param:`static_link`           | :type:`bool`                                                    |
++--------------------------------+-----------------------------------------------------------------+
+| Whether binaries linked through this context are statically linked. This is the value of the     |
+| ``static`` mode after applying the ``static`` attribute of the rule, which only affects linking  |
+| and thus isn't part of :param:`mode`.                                                            |
++--------------------------------+-----------------------------------------------------------------+
 | :param:`stdlib`                | :type:`GoStdLib`                                                |
 +--------------------------------+-----------------------------------------------------------------+
 | The standard library and tools to use in this build mode. This may be the                        |
@@ -697,6 +774,9 @@ embedding, cgo dependencies, coverage, and assembling and packing .s files.
 It returns a tuple containing GoArchive_, the output executable file, and
 a ``runfiles`` object.
 
+.. |main package path| replace:: :param:`buildinfo_main_package_path`
+.. |module metadata| replace:: :param:`buildinfo_module_metadata`
+
 +--------------------------------+-----------------------------+-----------------------------------+
 | **Name**                       | **Type**                    | **Default value**                 |
 +--------------------------------+-----------------------------+-----------------------------------+
@@ -732,6 +812,15 @@ a ``runfiles`` object.
 +--------------------------------+-----------------------------+-----------------------------------+
 | Optional output file to write. If not set, ``binary`` will generate an output                    |
 | file name based on ``name``, the target platform, and the link mode.                             |
++--------------------------------+-----------------------------+-----------------------------------+
+| |main package path|            | :type:`string`              | :value:`None`                     |
++--------------------------------+-----------------------------+-----------------------------------+
+| Main package path recorded in ``runtime/debug.BuildInfo``. Defaults to ``source.importpath``.    |
++--------------------------------+-----------------------------+-----------------------------------+
+| |module metadata|              | :type:`File`                | :value:`None`                     |
++--------------------------------+-----------------------------+-----------------------------------+
+| Package metadata JSON file used to populate ``BuildInfo.Main``. Defaults to the metadata         |
+| propagated by :param:`source`.                                                                   |
 +--------------------------------+-----------------------------+-----------------------------------+
 
 
@@ -775,6 +864,15 @@ It does not return anything.
 | :param:`info_file`             | :type:`File`                | :value:`None`                     |
 +--------------------------------+-----------------------------+-----------------------------------+
 | Info file used for link stamping.                                                                |
++--------------------------------+-----------------------------+-----------------------------------+
+| |main package path|            | :type:`string`              | :value:`None`                     |
++--------------------------------+-----------------------------+-----------------------------------+
+| Main package path recorded in ``runtime/debug.BuildInfo``. Defaults to the archive import path.  |
++--------------------------------+-----------------------------+-----------------------------------+
+| |module metadata|              | :type:`File`                | :value:`None`                     |
++--------------------------------+-----------------------------+-----------------------------------+
+| Package metadata JSON file used to populate ``BuildInfo.Main``. Defaults to metadata propagated  |
+| by :param:`archive`.                                                                             |
 +--------------------------------+-----------------------------+-----------------------------------+
 
 

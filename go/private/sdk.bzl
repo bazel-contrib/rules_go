@@ -17,7 +17,7 @@ load("//go/private:common.bzl", "executable_path")
 load("//go/private:nogo.bzl", "go_register_nogo")
 load("//go/private:platforms.bzl", "GOARCH_CONSTRAINTS", "GOOS_CONSTRAINTS")
 
-MIN_SUPPORTED_VERSION = (1, 14, 0)
+MIN_SUPPORTED_VERSION = (1, 20, 0)
 
 def _go_host_sdk_impl(ctx):
     goroot = _detect_host_sdk(ctx)
@@ -101,13 +101,15 @@ def _go_download_sdk_impl(ctx):
 
     if platform not in sdks:
         fail("unsupported platform {}".format(platform))
-    filename, sha256 = sdks[platform]
 
+    filename, sha256 = sdks[platform]
     _remote_sdk(ctx, [url.format(filename) for url in ctx.attr.urls], ctx.attr.strip_prefix, sha256)
     patch(ctx, patch_args = _get_patch_args(ctx.attr.patch_strip))
 
+    sdk_build_file_override = ctx.attr._bootstrap_sdk_build_file if ctx.attr.experimental_build_compiler_from_source else None
+
     detected_version = _detect_sdk_version(ctx, ".")
-    _sdk_build_file(ctx, platform, detected_version, experiments = ctx.attr.experiments)
+    _sdk_build_file(ctx, platform, detected_version, experiments = ctx.attr.experiments, sdk_build_file_override = sdk_build_file_override)
 
     if not ctx.attr.sdks and not ctx.attr.version:
         # Returning this makes Bazel print a message that 'version' must be
@@ -120,8 +122,13 @@ def _go_download_sdk_impl(ctx):
             "urls": ctx.attr.urls,
             "version": version,
             "strip_prefix": ctx.attr.strip_prefix,
+            "experimental_build_compiler_from_source": ctx.attr.experimental_build_compiler_from_source,
         }
-    return None
+
+    if hasattr(ctx, "repo_metadata"):
+        return ctx.repo_metadata(reproducible = True)
+    else:
+        return None
 
 go_download_sdk_rule = repository_rule(
     implementation = _go_download_sdk_impl,
@@ -142,8 +149,15 @@ go_download_sdk_rule = repository_rule(
             default = 0,
             doc = "The number of leading path segments to be stripped from the file name in the patches.",
         ),
+        "experimental_build_compiler_from_source": attr.bool(
+            default = False,
+            doc = "Experimental: whether to bootstrap compiler tool binaries from source instead of using the prebuilt SDK compiler binaries.",
+        ),
         "_sdk_build_file": attr.label(
             default = Label("//go/private:BUILD.sdk.bazel"),
+        ),
+        "_bootstrap_sdk_build_file": attr.label(
+            default = Label("//go/private:experimental/BUILD.bootstrap.sdk.bazel"),
         ),
     },
 )
@@ -211,8 +225,8 @@ def go_toolchains_single_definition(ctx, *, prefix, goos, goarch, sdk_repo, sdk_
     chunks.append("""declare_bazel_toolchains(
     prefix = "{prefix}",
     go_toolchain_repo = "@{sdk_repo}",
-    host_goarch = "{goarch}",
-    host_goos = "{goos}",
+    exec_goarch = "{goarch}",
+    exec_goos = "{goos}",
     major = {identifier_prefix}MAJOR_VERSION,
     minor = {identifier_prefix}MINOR_VERSION,
     patch = {identifier_prefix}PATCH_VERSION,
@@ -246,7 +260,7 @@ def go_toolchains_build_file_content(
         fail("all lists must have the same length")
 
     loads = [
-        """load("@io_bazel_rules_go//go/private:go_toolchain.bzl", "declare_bazel_toolchains")""",
+        """load("@io_bazel_rules_go//go/private:bazel_toolchains.bzl", "declare_bazel_toolchains")""",
     ]
     chunks = [
         """package(default_visibility = ["//visibility:public"])""",
@@ -371,12 +385,6 @@ def _go_wrap_sdk_impl(ctx):
     _sdk_build_file(ctx, platform, version, ctx.attr.experiments)
     _local_sdk(ctx, goroot)
 
-# string_keyed_label_dict was added in 8.0.0
-_maybe_string_keyed_label_dict = getattr(
-    attr,
-    "string_keyed_label_dict",
-    attr.string_dict,
-)
 go_wrap_sdk_rule = repository_rule(
     implementation = _go_wrap_sdk_impl,
     attrs = {
@@ -384,7 +392,7 @@ go_wrap_sdk_rule = repository_rule(
             mandatory = False,
             doc = "A file in the SDK root direcotry. Used to determine GOROOT.",
         ),
-        "root_files": _maybe_string_keyed_label_dict(
+        "root_files": attr.string_keyed_label_dict(
             mandatory = False,
             doc = "A set of mappings from the host platform to a file in the SDK's root directory",
         ),
@@ -435,13 +443,13 @@ def _local_sdk(ctx, path):
             continue
         ctx.symlink(entry, entry.basename)
 
-def _sdk_build_file(ctx, platform, version, experiments):
+def _sdk_build_file(ctx, platform, version, experiments, sdk_build_file_override = None):
     ctx.file("ROOT")
     goos, _, goarch = platform.partition("_")
 
     ctx.template(
         "BUILD.bazel",
-        ctx.path(ctx.attr._sdk_build_file),
+        ctx.path(sdk_build_file_override or ctx.attr._sdk_build_file),
         executable = False,
         substitutions = {
             "{goos}": goos,
@@ -466,6 +474,8 @@ def detect_host_platform(ctx):
     goos = ctx.os.name
     if goos == "mac os x":
         goos = "darwin"
+    elif goos == "dragonflybsd":
+        goos = "dragonfly"
     elif goos.startswith("windows"):
         goos = "windows"
 
@@ -474,6 +484,8 @@ def detect_host_platform(ctx):
         goarch = "arm64"
     elif goarch == "x86_64":
         goarch = "amd64"
+    elif goarch == "loongarch64":
+        goarch = "loong64"
 
     return goos, goarch
 
@@ -508,7 +520,7 @@ def _detect_sdk_platform(ctx, goroot):
 def _detect_sdk_version(ctx, goroot):
     version_file_path = goroot + "/VERSION"
     if ctx.path(version_file_path).exists:
-        # VERSION file has version prefixed by go, eg. go1.18.3
+        # VERSION file has version prefixed by go, eg. go1.20.3
         # 1.21: The version is the first line
         version_line = ctx.read(version_file_path).splitlines()[0]
         version = version_line[2:]
@@ -523,8 +535,8 @@ def _detect_sdk_version(ctx, goroot):
     if result.return_code != 0:
         fail("Could not detect SDK version: '%s version' exited with exit code %d" % (go_binary_path, result.return_code))
 
-    # go version output is of the form "go version go1.18.3 linux/amd64" or "go
-    # version devel go1.19-fd1b5904ae Tue Mar 22 21:38:10 2022 +0000
+    # go version output is of the form "go version go1.20.3 linux/amd64" or "go
+    # version devel go1.21-fd1b5904ae Tue Mar 22 21:38:10 2022 +0000
     # linux/amd64". See the following links for how this output is generated:
     # - https://github.com/golang/go/blob/2bdb5c57f1efcbddab536028d053798e35de6226/src/cmd/go/internal/version/version.go#L75
     # - https://github.com/golang/go/blob/2bdb5c57f1efcbddab536028d053798e35de6226/src/cmd/dist/build.go#L333
@@ -553,9 +565,9 @@ def _parse_versions_json(data):
             JSON, is spaced and indented, and is in a particular format.
 
     Return:
-        A dict mapping version strings (like "1.15.5") to dicts mapping
+        A dict mapping version strings (like "1.20.1") to dicts mapping
         platform names (like "linux_amd64") to pairs of filenames
-        (like "go1.15.5.linux-amd64.tar.gz") and hex-encoded SHA-256 sums.
+        (like "go1.20.1.linux-amd64.tar.gz") and hex-encoded SHA-256 sums.
     """
     sdks = json.decode(data)
     return {
@@ -596,7 +608,7 @@ def fetch_sdks_by_version(ctx, allow_fail = False):
     return _parse_versions_json(data)
 
 def parse_version(version):
-    """Parses a version string like "1.15.5" and returns a tuple of numbers or None"""
+    """Parses a version string like "1.20.1" and returns a tuple of numbers or None"""
     l, r = 0, 0
     parsed = []
     for c in version.elems():
@@ -670,13 +682,13 @@ def go_register_toolchains(version = None, nogo = None, go_version = None, exper
         fail("go_register_toolchains: version set after go sdk rule declared ({})".format(", ".join([r["name"] for r in sdk_rules])))
     if len(sdk_rules) == 0:
         if not version:
-            fail('go_register_toolchains: version must be a string like "1.15.5" or "host"')
+            fail('go_register_toolchains: version must be a string like "1.20.1" or "host"')
         elif version == "host":
             go_host_sdk(name = "go_sdk", experiments = experiments)
         else:
             pv = parse_version(version)
             if not pv:
-                fail('go_register_toolchains: version must be a string like "1.15.5" or "host"')
+                fail('go_register_toolchains: version must be a string like "1.20.1" or "host"')
             if _version_less(pv, MIN_SUPPORTED_VERSION):
                 print("DEPRECATED: Go versions before {} are not supported and may not work".format(_version_string(MIN_SUPPORTED_VERSION)))
             go_download_sdk(

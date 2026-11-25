@@ -106,6 +106,7 @@ _LINK_PLUGIN_PLATFORMS = {
     "linux/s390x": None,
     "linux/ppc64le": None,
     "linux/riscv64": None,
+    "linux/loong64": None,
     "android/amd64": None,
     "android/arm": None,
     "android/arm64": None,
@@ -124,6 +125,7 @@ _LINK_PIE_PLATFORMS = {
     "linux/s390x": None,
     "linux/ppc64le": None,
     "linux/riscv64": None,
+    "linux/loong64": None,
     "android/amd64": None,
     "android/arm": None,
     "android/arm64": None,
@@ -167,6 +169,16 @@ def extldflags_from_cc_toolchain(go):
         # However, we still need to set them for cgo, which links a binary
         # in each package. We use the executable options for this.
         return go.cgo_tools.ld_executable_options
+
+def runtime_libs_from_cc_toolchain(go):
+    if not go.cgo_tools:
+        return depset()
+    elif go.mode.linkmode in (LINKMODE_SHARED, LINKMODE_PLUGIN, LINKMODE_C_SHARED):
+        return go.cgo_tools.cc_toolchain.dynamic_runtime_lib(feature_configuration = go.cgo_tools.feature_configuration)
+    else:
+        # Match extldflags_from_cc_toolchain: c-archive still uses executable
+        # link semantics for cgo's per-package link probe.
+        return go.cgo_tools.cc_toolchain.static_runtime_lib(feature_configuration = go.cgo_tools.feature_configuration)
 
 def extld_from_cc_toolchain(go):
     if not go.cgo_tools:

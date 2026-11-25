@@ -61,13 +61,25 @@ bzl_library(
         ":providers",
         "//go/platform:apple",
         "//go/private:go_toolchain",
+        "//go/private/actions:preprofile",
         "//go/private/rules:transition",
         "@bazel_skylib//lib:paths",
         "@bazel_skylib//rules:common_settings",
-        "@bazel_tools//tools/build_defs/cc:action_names.bzl",
-        "@bazel_tools//tools/cpp:toolchain_utils.bzl",
         "@io_bazel_rules_nogo//:scope.bzl",
-        "@rules_cc//cc:find_cc_toolchain_bzl",  # Transitive dep of @bazel_tools//tools/cpp:toolchain_utils.bzl
+        "@package_metadata//providers:package_metadata_info.bzl",
+        "@rules_cc//cc:action_names_bzl",
+        "@rules_cc//cc:find_cc_toolchain_bzl",
+    ],
+)
+
+bzl_library(
+    name = "bazel_toolchains",
+    srcs = ["bazel_toolchains.bzl"],
+    visibility = ["//go:__subpackages__"],
+    deps = [
+        "//go/private:common",
+        "//go/private:platforms",
+        "@bazel_skylib//lib:selects",
     ],
 )
 
@@ -85,7 +97,6 @@ bzl_library(
         "//go/private/actions:binary",
         "//go/private/actions:link",
         "//go/private/actions:stdlib",
-        "@bazel_skylib//lib:selects",
     ],
 )
 
@@ -161,38 +172,22 @@ bzl_library(
     ],
 )
 
-# Usually false. This is only true when we are building nogo itself in which
-# because that rule uses an incoming transition to switch this to true.
+# Usually false. go_tool_transition sets this to true when building nogo and
+# other Go tools.
 bool_setting(
     name = "bootstrap_nogo",
     build_setting_default = False,
-    visibility = ["//visibility:public"],
-)
-
-# Usually true. The entire toolchain gets nogo to use in builds via the
-# go_context_data rule, which has an incoming transition that flips this flag
-# to true. This will only be false in host mode (which disallows any
-# transitions) or accessing nogo without going through go_context_data (which
-# does not happen in rules_go and does not seem to be useful).
-bool_setting(
-    name = "request_nogo",
-    build_setting_default = False,
+    scope = "universal",
     visibility = ["//visibility:public"],
 )
 
 # Controls whether nogo alias will reference a noop or the configured nogo.
-# This *MUST* default to the noop to allow for tools to be built in the
-# deprecated "host" mode. Host mode cannot perform configuration transitions
-# so it cannot avoid circular dependencies. Therefore the default must work
-# without performing any transitions. The tradeoff is that nogo analysis is not
-# performed for any target built in host mode - this is not as bad as it seems
-# as most tools can (and should) use "exec" configuration instead of host which
-# does support transitions.
+# bootstrap_nogo makes this False, so nogo's own dependencies resolve the nogo
+# alias to a noop (circular dep guard).
 config_setting(
     name = "nogo_active",
     flag_values = {
         ":bootstrap_nogo": "False",
-        ":request_nogo": "True",
     },
     visibility = ["//visibility:public"],
 )
@@ -216,6 +211,14 @@ config_setting(
     name = "is_pure",
     flag_values = {
         "//go/config:pure": "True",
+    },
+    visibility = ["//:__pkg__"],
+)
+
+config_setting(
+    name = "force_pic",
+    values = {
+        "force_pic": "true",
     },
     visibility = ["//:__pkg__"],
 )

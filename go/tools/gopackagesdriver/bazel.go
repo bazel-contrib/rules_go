@@ -21,13 +21,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"log/slog"
 	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 )
 
@@ -42,7 +43,6 @@ type Bazel struct {
 	bazelCommonFlags      []string
 	bazelStartupFlags     []string
 	info                  map[string]string
-	version               bazelVersion
 }
 
 // Minimal BEP structs to access the build outputs
@@ -71,7 +71,7 @@ func NewBazel(ctx context.Context, bazelBin, workspaceRoot string, buildWorkingD
 
 func (b *Bazel) fillInfo(ctx context.Context) error {
 	b.info = map[string]string{}
-	output, err := b.run(ctx, "info")
+	output, err := b.run(ctx, "info", "execution_root", "output_base", "output_path")
 	if err != nil {
 		return err
 	}
@@ -79,12 +79,6 @@ func (b *Bazel) fillInfo(ctx context.Context) error {
 	for scanner.Scan() {
 		parts := strings.SplitN(strings.TrimSpace(scanner.Text()), ":", 2)
 		b.info[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
-	}
-	release := strings.Split(b.info["release"], " ")
-	if len(release) == 2 {
-		if version, ok := parseBazelVersion(release[1]); ok {
-			b.version = version
-		}
 	}
 	return nil
 }
@@ -98,8 +92,21 @@ func (b *Bazel) run(ctx context.Context, command string, args ...string) (string
 	cmd := exec.CommandContext(ctx, b.bazelBin, concatStringsArrays(b.bazelStartupFlags, defaultArgs, args)...)
 	fmt.Fprintln(os.Stderr, "Running:", cmd.Args)
 	cmd.Dir = b.WorkspaceRoot()
-	cmd.Stderr = os.Stderr
+	var stderrBuf bytes.Buffer
+	cmd.Stderr = io.MultiWriter(os.Stderr, &stderrBuf)
+
 	output, err := cmd.Output()
+
+	exitCode := 0
+	if err != nil {
+		if exitErr := (*exec.ExitError)(nil); errors.As(err, &exitErr) {
+			exitCode = exitErr.ExitCode()
+		} else {
+			exitCode = -1
+		}
+	}
+	slog.Info("bazel", "command", command, "args", cmd.Args, "exit_code", exitCode, "stderr", stderrBuf)
+
 	return string(output), err
 }
 
@@ -118,14 +125,8 @@ func (b *Bazel) Build(ctx context.Context, args ...string) ([]string, error) {
 		"--build_event_json_file=" + jsonFile.Name(),
 		"--build_event_json_file_path_conversion=no",
 	}, args...)
-	if _, err := b.run(ctx, "build", args...); err != nil {
-		// Ignore a regular build failure to get partial data.
-		// See https://docs.bazel.build/versions/main/guide.html#what-exit-code-will-i-get on
-		// exit codes.
-		var exerr *exec.ExitError
-		if !errors.As(err, &exerr) || exerr.ExitCode() != 1 {
-			return nil, fmt.Errorf("bazel build failed: %w", err)
-		}
+	if _, err := b.run(ctx, "build", args...); err != nil && !isAllowedBazelError(err) {
+		return nil, fmt.Errorf("bazel build failed: %w", err)
 	}
 
 	files := make([]string, 0)
@@ -154,7 +155,7 @@ var newlineRe = regexp.MustCompile(`\r?\n`)
 
 func (b *Bazel) Query(ctx context.Context, args ...string) ([]string, error) {
 	output, err := b.run(ctx, "query", args...)
-	if err != nil {
+	if err != nil && !isAllowedBazelError(err) {
 		return nil, fmt.Errorf("bazel query failed: %w", err)
 	}
 
@@ -187,40 +188,22 @@ func (b *Bazel) OutputBase() string {
 	return b.info["output_base"]
 }
 
-type bazelVersion [3]int
-
-func parseBazelVersion(raw string) (bazelVersion, bool) {
-	parts := strings.Split(raw, ".")
-	if len(parts) != 3 {
-		return [3]int{}, false
+// isAllowedBazelError if err is an *exec.ExitError with an expected exit code
+// for a bazel command. gopackagesdriver is often invoked when the user
+// is editing code, and the build isn't expected to work. When we get one of
+// these codes, we should suppress the error and return partial results.
+func isAllowedBazelError(err error) bool {
+	var exitErr *exec.ExitError
+	if !errors.As(err, &exitErr) {
+		return false
 	}
-	var version [3]int
-	for i, part := range parts {
-		v, err := strconv.Atoi(part)
-		if err != nil {
-			return [3]int{}, false
-		}
-		version[i] = v
+	switch exitErr.ExitCode() {
+	// Refer to https://github.com/bazelbuild/bazel/blob/master/src/main/java/com/google/devtools/build/lib/util/ExitCode.java.
+	case 1, // BUILD_FAILURE
+		3, // PARTIAL_ANALYSIS_FAILURE
+		7: // ANALYSIS_FAILURE
+		return true
+	default:
+		return false
 	}
-	return version, true
-}
-
-func (a bazelVersion) compare(b bazelVersion) int {
-	for i := 0; i < len(a); i++ {
-		if c := a[i] - b[i]; c != 0 {
-			return c
-		}
-	}
-	return 0
-}
-
-// isAtLeast returns true if a.compare(b) >= 0 (that is, if a is greater than
-// or equal to be) or if a is the zero value.
-//
-// Development versions of Bazel do not have valid version strings, not even a
-// prerelease, so parseBazelVersion fails and returns the zero value. If we
-// have such a version, we assume it's newer than whatever we're comparing
-// it with.
-func (a bazelVersion) isAtLeast(b bazelVersion) bool {
-	return a.compare(b) >= 0 || a == bazelVersion{}
 }

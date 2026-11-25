@@ -1,0 +1,21 @@
+load("//go:go_binary.bzl", "go_binary")
+load("//go:go_library.bzl", "go_library")
+load("//go:go_test.bzl", "go_test")
+
+go_library(
+    name = "entry_lib",
+    srcs = ["entry_lib.go"],
+    importpath = "entry_lib",
+)
+
+go_binary(
+    name = "entry_bin",
+    srcs = ["entry_bin.go"],
+    deps = [":entry_lib"],
+)
+
+go_test(
+    name = "entry_test",
+    srcs = ["entry_test.go"],
+    embed = [":entry_lib"],
+)

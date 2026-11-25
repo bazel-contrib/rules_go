@@ -5,9 +5,11 @@
 # We just implement the checks we've seen we actually need, and hope to delete this completely when we are in a pure-bzlmod world.
 
 _POLYFILL_BAZEL_FEATURES = """bazel_features = struct(
-  external_deps = struct(
-    # WORKSPACE users have no use for bazel mod tidy.
-    bazel_mod_tidy = False,
+  rules = struct(
+    # coverage_common.instrumented_files_info gained baseline_coverage_files in
+    # Bazel 9, which is also the release that removed WORKSPACE support. Any
+    # Bazel reaching this polyfill therefore predates the parameter.
+    instrumented_files_info_has_baseline_coverage_files = False,
   ),
 )
 """
@@ -26,6 +28,4 @@ exports_files(["features.bzl"])
 
 polyfill_bazel_features = repository_rule(
     implementation = _polyfill_bazel_features_impl,
-    # Force reruns on server restarts to keep native.bazel_version up-to-date.
-    local = True,
 )

@@ -132,6 +132,10 @@ non_go_reset_target(
     name = "protoc",
     dep = "@com_google_protobuf//:protoc",
     deprecation = "No longer used by rules_go, will be removed in a future release.",
+    # Building this means building protobuf from source, which doesn't work
+    # with every C++ toolchain rules_go is tested with. Keep it out of wildcard
+    # target patterns.
+    tags = ["manual"],
     visibility = ["//visibility:public"],
 )
 

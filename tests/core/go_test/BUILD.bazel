@@ -78,6 +78,12 @@ go_test(
 )
 
 go_test(
+    name = "testmain_signature_test",
+    size = "small",
+    srcs = ["testmain_signature_test.go"],
+)
+
+go_test(
     name = "external_importmap_test",
     size = "small",
     srcs = ["external_importmap_test.go"],
@@ -201,6 +207,26 @@ go_library(
     deps = [":indirect_import_lib"],
 )
 
+go_test(
+    name = "indirect_import_other_test",
+    srcs = [
+        "indirect_import_i_test.go",
+        "indirect_import_x_test.go",
+    ],
+    embed = [":indirect_import_lib"],
+    deps = [":indirect_import_dep"],
+)
+
+go_test(
+    name = "indirect_import/slash_test",
+    srcs = [
+        "indirect_import_i_test.go",
+        "indirect_import_x_test.go",
+    ],
+    embed = [":indirect_import_lib"],
+    deps = [":indirect_import_dep"],
+)
+
 [
     go_test(
         name = "same_package_{}_test".format(i),
@@ -247,9 +273,9 @@ go_test(
 go_test(
     name = "env_test",
     srcs = ["env_test.go"],
-    data = ["@go_sdk//:lib/time/zoneinfo.zip"],
+    data = ["@go_default_sdk//:lib/time/zoneinfo.zip"],
     env = {
-        "ZONEINFO": "$(rlocationpath @go_sdk//:lib/time/zoneinfo.zip)",
+        "ZONEINFO": "$(rlocationpath @go_default_sdk//:lib/time/zoneinfo.zip)",
     },
     deps = [
         "//go/runfiles",

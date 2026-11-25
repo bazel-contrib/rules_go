@@ -37,6 +37,5 @@ bzl_library(
     srcs = ["toolchains.bzl"],
     deps = [
         "//go/private:platforms",
-        "//go/private:sdk",
     ],
 )

@@ -66,6 +66,7 @@ go_sdk = rule(
             mandatory = True,
             allow_single_file = True,
             doc = "A file in the SDK root directory. Used to determine GOROOT.",
+            cfg = "exec",
         ),
         "package_list": attr.label(
             allow_single_file = True,
@@ -76,16 +77,23 @@ go_sdk = rule(
             # allow_files is not set to [".a"] because that wouldn't allow
             # for zero files to be present, as is the case in Go 1.20+.
             # See also https://github.com/bazelbuild/bazel/issues/7516
+            #
+            # These pre-compiled .a files are semantically target-configured,
+            # so unlike the other SDK layout attrs they are left unpinned. In
+            # practice this is moot: since none are present the bootstrap SDK
+            # never produces them under a mismatched configuration.
             allow_files = True,
             doc = ("Pre-compiled .a files for the standard library, " +
                    "built for the execution platform"),
         ),
         "headers": attr.label_list(
+            cfg = "exec",
             allow_files = [".h"],
             doc = (".h files from pkg/include that may be included in " +
                    "assembly sources"),
         ),
         "srcs": attr.label_list(
+            cfg = "exec",
             allow_files = True,
             doc = "Source files for packages in the standard library",
         ),
@@ -113,6 +121,8 @@ go_sdk = rule(
 
 def _package_list_impl(ctx):
     _build_package_list(ctx, ctx.files.srcs, ctx.file.root_file, ctx.outputs.out)
+    fips_content = "".join([pkg + "\n" for pkg in sorted(ctx.attr.fips_packages)])
+    ctx.actions.write(ctx.outputs.fips_out, fips_content)
     return [DefaultInfo(files = depset([ctx.outputs.out]))]
 
 package_list = rule(
@@ -127,6 +137,11 @@ package_list = rule(
             allow_single_file = True,
             doc = "A file in the SDK root directory. Used to determine GOROOT.",
         ),
+        "fips_packages": attr.string_list(
+            doc = "Import paths of the GOFIPS140 snapshot packages, e.g. " +
+                  "crypto/internal/fips140/v1.0.0-c2097c7c/aes. Empty unless " +
+                  "the SDK builds against a snapshot.",
+        ),
         "out": attr.output(
             mandatory = True,
             doc = "File to write. Must be 'packages.txt'.",
@@ -134,6 +149,10 @@ package_list = rule(
             # attribute because Bazel has no other way of knowing what rule
             # produces this file.
             # TODO(jayconrod): Update Gazelle and simplify this.
+        ),
+        "fips_out": attr.output(
+            mandatory = True,
+            doc = "File to write with one fips_packages entry per line.",
         ),
     },
 )

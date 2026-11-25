@@ -25,11 +25,7 @@ load(
     "//go:def.bzl",
     "GoInfo",
     "go_context",
-)
-load(
-    "//go/private:common.bzl",
-    "GO_TOOLCHAIN",
-    "GO_TOOLCHAIN_LABEL",
+    "go_rule",
 )
 load(
     "//go/private:context.bzl",
@@ -177,7 +173,7 @@ def go_proto_compile(go, compiler, protos, imports, importpath):
         progress_message = "Generating into %s" % go_srcs[0].dirname,
         mnemonic = "GoProtocGen",
         executable = compiler.internal.go_protoc,
-        toolchain = GO_TOOLCHAIN_LABEL,
+        exec_group = "internal_use_only_go_proto_gen",
         tools = [compiler.internal.protoc, compiler.internal.plugin],
         arguments = [args],
         env = go.env,
@@ -216,7 +212,10 @@ def proto_path(src, proto):
     return src.path[len(prefix):]
 
 def _go_proto_compiler_impl(ctx):
-    go = go_context(ctx, include_deprecated_properties = False)
+    go = go_context(
+        ctx,
+        maybe_needs_cc_toolchain = False,
+    )
     go_info = new_go_info(go, ctx.attr)
     proto_toolchain = _find_toolchain(
         ctx,
@@ -242,9 +241,9 @@ def _go_proto_compiler_impl(ctx):
         go_info,
     ]
 
-_go_proto_compiler = rule(
+_go_proto_compiler = go_rule(
     implementation = _go_proto_compiler_impl,
-    attrs = dict({
+    attrs = {
         "deps": attr.label_list(providers = [GoInfo]),
         "options": attr.string_list(),
         "suffix": attr.string(default = ".pb.go"),
@@ -268,7 +267,7 @@ _go_proto_compiler = rule(
         "_go_context_data": attr.label(
             default = "//:go_context_data",
         ),
-    }, **_if_legacy_toolchain({
+    } | _if_legacy_toolchain({
         "_legacy_proto_toolchain": attr.label(
             # Setting cfg = "exec" here as the legacy_proto_toolchain target
             # already needs to apply the non_go_tool_transition. Flipping the
@@ -277,8 +276,8 @@ _go_proto_compiler = rule(
             cfg = "exec",
             default = "//proto/private:legacy_proto_toolchain",
         ),
-    })),
-    toolchains = [GO_TOOLCHAIN] + _use_toolchain(_PROTO_TOOLCHAIN_TYPE),
+    }),
+    toolchains = _use_toolchain(_PROTO_TOOLCHAIN_TYPE),
 )
 
 def go_proto_compiler(name, **kwargs):

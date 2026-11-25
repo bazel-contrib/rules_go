@@ -1,0 +1,66 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary")
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+load(":mock_cc_deb_library.bzl", "mock_cc_deb_library")
+load(":mock_so_library.bzl", "mock_so_library")
+
+# Verifies that a .so provided via LibraryToLink(interface_library,
+# dynamic_library) is available in the GoLink sandbox and that the binary
+# links successfully.
+cc_binary(
+    name = "libgreeting.so",
+    srcs = ["greeting.c"],
+    linkshared = True,
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+mock_so_library(
+    name = "greeting_so_lib",
+    dynamic_libs = [":libgreeting.so"],
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+mock_cc_deb_library(
+    name = "greeting_deb_lib",
+    additional_linker_inputs = [":libgreeting.so"],
+    linkopts = [
+        "-L$(BINDIR)/" + package_name(),
+        "-lgreeting",
+    ],
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [":greeting_so_lib"],
+)
+
+go_binary(
+    name = "use_greeting",
+    srcs = ["use_greeting.go"],
+    cdeps = [":greeting_deb_lib"],
+    cgo = True,
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+# Verifies that many LibraryToLink(interface_library, dynamic_library) pairs
+# do not cause "Argument list too long" from rpath flag generation.
+[mock_so_library(
+    name = "greeting_so_lib_%d" % i,
+    dynamic_libs = [":libgreeting.so"],
+    target_compatible_with = ["@platforms//os:linux"],
+) for i in range(50)]
+
+mock_cc_deb_library(
+    name = "many_greeting_libs",
+    additional_linker_inputs = [":libgreeting.so"],
+    linkopts = [
+        "-L$(BINDIR)/" + package_name(),
+        "-lgreeting",
+    ],
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = ["greeting_so_lib_%d" % i for i in range(50)],
+)
+
+go_binary(
+    name = "use_many_greetings",
+    srcs = ["use_greeting.go"],
+    cdeps = [":many_greeting_libs"],
+    cgo = True,
+    target_compatible_with = ["@platforms//os:linux"],
+)

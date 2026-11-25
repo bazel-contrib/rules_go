@@ -30,7 +30,7 @@ func TestMain(m *testing.M) {
 	bazel_testing.TestMain(m, bazel_testing.Args{
 		Main: `
 -- BUILD.bazel --
-load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_source", "go_test")
 
 go_library(
     name = "racy",
@@ -86,6 +86,17 @@ go_library(
 		name = "coverrace",
 		srcs = ["coverrace.go"],
 		importpath = "example.com/coverrace",
+)
+
+go_source(
+    name = "race_source",
+    srcs = ["coverrace.go"],
+)
+
+go_library(
+    name = "race_source_library",
+    embed = [":race_source"],
+    importpath = "example.com/race_source",
 )
 
 go_test(
@@ -269,6 +280,16 @@ func Test(t *testing.T) {
 			target:      "//:racy_test",
 			featureFlag: true,
 			wantRace:    true,
+		}, {
+			desc:        "source_feature",
+			cmd:         "build",
+			target:      "//:race_source",
+			featureFlag: true,
+		}, {
+			desc:        "source_library_feature",
+			cmd:         "build",
+			target:      "//:race_source_library",
+			featureFlag: true,
 		}, {
 			desc:        "pure_bin",
 			cmd:         "build",

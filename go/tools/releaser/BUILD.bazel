@@ -9,11 +9,8 @@ go_binary(
 go_library(
     name = "releaser_lib",
     srcs = [
-        "boilerplate.go",
         "file.go",
-        "git.go",
         "github.go",
-        "prepare.go",
         "releaser.go",
         "run.go",
         "upgradedep.go",
@@ -22,7 +19,7 @@ go_library(
     visibility = ["//visibility:private"],
     deps = [
         "@com_github_bazelbuild_buildtools//build:go_default_library",
-        "@com_github_google_go_github_v36//github",
+        "@com_github_google_go_github_v93//github",
         "@org_golang_x_mod//semver",
         "@org_golang_x_oauth2//:oauth2",
         "@org_golang_x_sync//errgroup",

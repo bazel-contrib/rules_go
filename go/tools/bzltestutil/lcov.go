@@ -73,6 +73,7 @@ const (
 	_pathIdx      = 1
 	_startLineIdx = 2
 	_endLineIdx   = 4
+	_numStmtIdx   = 6
 	_countIdx     = 7
 )
 
@@ -100,6 +101,16 @@ func convertCoverToLcov(coverReader io.Reader, lcovWriter io.Writer) error {
 			}
 			currentPath = m[_pathIdx]
 			lineCounts = make(map[uint32]uint32)
+		}
+
+		// Blocks without statements, such as empty function bodies, have
+		// nothing to cover. "go tool cover" excludes them as well.
+		numStmt, err := strconv.ParseUint(m[_numStmtIdx], 10, 32)
+		if err != nil {
+			return err
+		}
+		if numStmt == 0 {
+			continue
 		}
 
 		startLine, err := strconv.ParseUint(m[_startLineIdx], 10, 32)

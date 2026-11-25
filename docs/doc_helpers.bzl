@@ -14,13 +14,12 @@
 
 load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
-load("@io_bazel_stardoc//stardoc:stardoc.bzl", "stardoc")
+load("@stardoc//stardoc:stardoc.bzl", "stardoc")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 
 def stardoc_with_diff_test(
         bzl_library_target,
-        out_label,
-        rule_template = "@io_bazel_stardoc//stardoc:templates/markdown_tables/rule.vm"):
+        out_label):
     """Creates a stardoc target coupled with a diff_test for a given bzl_library.
 
     This is helpful for minimizing boilerplate when lots of stardoc targets are to be generated.
@@ -28,7 +27,6 @@ def stardoc_with_diff_test(
     Args:
         bzl_library_target: the label of the bzl_library target to generate documentation for
         out_label: the label of the output MD file
-        rule_template: the label or path to the Velocity rule template to use with stardoc
     """
 
     out_file = out_label.replace("//", "").replace(":", "/")
@@ -38,7 +36,6 @@ def stardoc_with_diff_test(
         name = out_file.replace("/", "_").replace(".md", "-docgen"),
         out = out_file.replace(".md", "-docgen.md"),
         input = bzl_library_target + ".bzl",
-        rule_template = rule_template,
         deps = [bzl_library_target],
     )
 
@@ -77,7 +74,7 @@ def update_docs(
     content = ["#!/usr/bin/env bash", "cd ${BUILD_WORKSPACE_DIRECTORY}"]
     data = []
     for r in native.existing_rules().values():
-        if r["kind"] == "stardoc":
+        if r["kind"] == "stardoc_markdown_renderer":
             doc_gen = r["out"]
             if doc_gen.startswith(":"):
                 doc_gen = doc_gen[1:]

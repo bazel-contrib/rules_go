@@ -32,7 +32,7 @@ import (
 	"time"
 
 	bzl "github.com/bazelbuild/buildtools/build"
-	"github.com/google/go-github/v36/github"
+	"github.com/google/go-github/v93/github"
 	"golang.org/x/mod/semver"
 	"golang.org/x/oauth2"
 	"golang.org/x/sync/errgroup"
@@ -123,7 +123,11 @@ func runUpgradeDep(ctx context.Context, stderr io.Writer, args []string) error {
 		ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: string(githubToken)})
 		httpClient = oauth2.NewClient(ctx, ts)
 	}
-	gh := &githubClient{Client: github.NewClient(httpClient)}
+	client, err := github.NewClient(github.WithHTTPClient(httpClient))
+	if err != nil {
+		return err
+	}
+	gh := &githubClient{Client: client}
 
 	workDir, err := os.MkdirTemp("", "releaser-upgrade-dep-*")
 	if leaveWorkDir {
@@ -398,7 +402,7 @@ func upgradeDepDecl(ctx context.Context, gh *githubClient, workDir, name, versio
 		if version != "" {
 			// This tag is not necessarily latest as of today, so get the commit
 			// so we can report the actual date.
-			commit, _, _ := gh.Repositories.GetCommit(ctx, orgName, repoName, *highestTag.Commit.SHA)
+			commit, _, _ := gh.Repositories.GetCommit(ctx, orgName, repoName, *highestTag.Commit.SHA, nil)
 			if commit := commit.GetCommit(); commit != nil {
 				if d := commit.Committer.GetDate(); !d.IsZero() {
 					date = d.Format("2006-01-02")
@@ -413,7 +417,7 @@ func upgradeDepDecl(ctx context.Context, gh *githubClient, workDir, name, versio
 	} else {
 		var commit *github.RepositoryCommit
 		if version != "" {
-			commit, _, err = gh.Repositories.GetCommit(ctx, orgName, repoName, version)
+			commit, _, err = gh.Repositories.GetCommit(ctx, orgName, repoName, version, nil)
 			if err != nil {
 				return err
 			}
@@ -428,7 +432,7 @@ func upgradeDepDecl(ctx context.Context, gh *githubClient, workDir, name, versio
 			if repo.DefaultBranch != nil {
 				defaultBranchName = *repo.DefaultBranch
 			}
-			branch, _, err := gh.Repositories.GetBranch(ctx, orgName, repoName, defaultBranchName)
+			branch, _, err := gh.Repositories.GetBranch(ctx, orgName, repoName, defaultBranchName, 1)
 			if err != nil {
 				return err
 			}

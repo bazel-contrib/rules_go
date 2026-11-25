@@ -1,7 +1,6 @@
 Using rules_go on Windows
 =========================
 
-.. _--incompatible_enable_cc_toolchain_resolution: https://github.com/bazelbuild/bazel/issues/7260
 .. _Installing Bazel on Windows: https://docs.bazel.build/versions/master/install-windows.html
 
 This document provides a list of instructions for setting up Bazel to build
@@ -88,10 +87,9 @@ commands executed by Bazel to confirm MinGW is actually used.
 
     bazel build --cpu=x64_windows --compiler=mingw-gcc //:hello
 
-Future versions of Bazel will select a C/C++ toolchain using the same platform
-and toolchain system used by other rules. This will be the default after the
-`--incompatible_enable_cc_toolchain_resolution`_ flag is flipped. To ensure
-that the MinGW toolchain is registered, either build against a ``platform``
+Bazel selects a C/C++ toolchain using the same platform and toolchain system
+used by other rules. To ensure that the MinGW toolchain is registered, either
+build against a ``platform``
 target with the ``@bazel_tools//tools/cpp:mingw`` constraint such as
 ``@io_bazel_rules_go//go/toolchain:windows_amd64_cgo``, or define your own
 target explicitly, as below:
@@ -112,7 +110,7 @@ registered (it is not, by default).
 
 .. code::
 
-    bazel build --extra_toolchains=@local_config_cc//:cc-toolchain-x64_windows_mingw --host_platform=//:windows_amd64_mingw --platforms=//:windows_amd64_mingw --incompatible_enable_cc_toolchain_resolution //:hello
+    bazel build --extra_toolchains=@local_config_cc//:cc-toolchain-x64_windows_mingw --host_platform=//:windows_amd64_mingw --platforms=//:windows_amd64_mingw //:hello
 
 You may want to add these flags to a ``.bazelrc`` file in your project root
 directory or in your home directory.
@@ -124,7 +122,6 @@ directory or in your home directory.
     build --extra_toolchains=@local_config_cc//:cc-toolchain-x64_windows_mingw
     build --host_platform=//:windows_amd64_mingw
     build --platforms=//:windows_amd64_mingw
-    build --incompatible_enable_cc_toolchain_resolution
 
 Confirm Go works
 ----------------

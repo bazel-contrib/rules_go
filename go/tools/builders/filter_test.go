@@ -130,6 +130,49 @@ func runTest(t *testing.T, bctx build.Context, inputs []string, expect []string)
 	}
 }
 
+func TestApplyTestFilter(t *testing.T) {
+	inputs := []fileInfo{
+		{filename: "lib.go", pkg: "example"},
+		{filename: "internal_test.go", pkg: "example"},
+		{filename: "external_test.go", pkg: "example_test"},
+	}
+	for _, tc := range []struct {
+		name       string
+		testFilter string
+		want       []string
+	}{
+		{
+			name:       "off",
+			testFilter: "off",
+			want:       []string{"lib.go", "internal_test.go", "external_test.go"},
+		},
+		{
+			name:       "only",
+			testFilter: "only",
+			want:       []string{"external_test.go"},
+		},
+		{
+			name:       "exclude",
+			testFilter: "exclude",
+			want:       []string{"lib.go", "internal_test.go"},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			srcs := archiveSrcs{goSrcs: append([]fileInfo(nil), inputs...)}
+			if err := applyTestFilter(tc.testFilter, &srcs); err != nil {
+				t.Fatalf("applyTestFilter(%q): %v", tc.testFilter, err)
+			}
+			got := make([]string, len(srcs.goSrcs))
+			for i, src := range srcs.goSrcs {
+				got[i] = src.filename
+			}
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("applyTestFilter(%q): got %v, want %v", tc.testFilter, got, tc.want)
+			}
+		})
+	}
+}
+
 // abs is a dummy env.go abs to avoid depending on env.go and flags.go.
 func abs(p string) string {
 	return p

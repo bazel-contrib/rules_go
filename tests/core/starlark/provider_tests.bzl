@@ -1,5 +1,32 @@
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
-load("//go:def.bzl", "go_binary", "go_library", "go_test")
+load("//go:def.bzl", "GoArchive", "go_binary", "go_library", "go_test")
+
+GoArchiveAspectInfo = provider()
+
+def _go_archive_aspect_impl(_target, _ctx):
+    return [GoArchiveAspectInfo()]
+
+_go_archive_aspect = aspect(
+    implementation = _go_archive_aspect_impl,
+    required_providers = [GoArchive],
+)
+
+def _go_archive_aspect_consumer_impl(ctx):
+    if GoArchiveAspectInfo not in ctx.attr.dep:
+        fail("GoArchive aspect was not applied to {}".format(ctx.attr.dep.label))
+
+go_archive_aspect_consumer = rule(
+    implementation = _go_archive_aspect_consumer_impl,
+    attrs = {
+        "dep": attr.label(aspects = [_go_archive_aspect]),
+    },
+)
+
+def _required_provider_test_impl(ctx):
+    env = analysistest.begin(ctx)
+    return analysistest.end(env)
+
+required_provider_test = analysistest.make(_required_provider_test_impl)
 
 # go_binary and go_test targets must not be used as deps/embed attributes;
 # their dependencies may be built in different modes, resulting in conflicts and opaque errors.
@@ -45,6 +72,24 @@ def provider_test_suite():
         name = "go_test",
         tags = ["manual"],
     )
+
+    go_library(
+        name = "go_library",
+        tags = ["manual"],
+    )
+
+    for rule_name in ["go_binary", "go_library", "go_test"]:
+        go_archive_aspect_consumer(
+            name = rule_name + "_go_archive_aspect_consumer",
+            dep = ":" + rule_name,
+            tags = ["manual"],
+            testonly = True,
+        )
+
+        required_provider_test(
+            name = rule_name + "_go_archive_required_provider_test",
+            target_under_test = ":" + rule_name + "_go_archive_aspect_consumer",
+        )
 
     go_library(
         name = "lib_test_deps",

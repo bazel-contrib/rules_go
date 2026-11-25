@@ -352,10 +352,11 @@ go_binary(
     out = "binary_with_rpath",
     cgo = True,
     gc_linkopts = LARGE_EXT_LDFLAGS,
-    target_compatible_with = [
-        "@platforms//os:linux",
-        "@platforms//os:macos",
-    ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "@platforms//os:macos": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )
 
 go_binary(

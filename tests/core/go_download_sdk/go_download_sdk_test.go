@@ -16,7 +16,11 @@ package go_download_sdk_test
 
 import (
 	"bytes"
-	"io/ioutil"
+	"debug/buildinfo"
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel_testing"
@@ -80,132 +84,121 @@ func Test(t *testing.T) {
 		{
 			desc: "version",
 			rule: `
-load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk")
-
-go_download_sdk(
+go_sdk.download(
     name = "go_sdk",
-    version = "1.16",
+    version = "1.20",
 )
-
 `,
-			optToWantVersion: map[string]string{"": "go1.16"},
+			optToWantVersion: map[string]string{"": "go1.20"},
 		},
 		{
 			desc: "custom_archives",
 			rule: `
-load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk")
-
-go_download_sdk(
+go_sdk.download(
     name = "go_sdk",
     sdks = {
-        "darwin_amd64": ("go1.16.darwin-amd64.tar.gz", "6000a9522975d116bf76044967d7e69e04e982e9625330d9a539a8b45395f9a8"),
-        "darwin_arm64": ("go1.16.darwin-arm64.tar.gz", "4dac57c00168d30bbd02d95131d5de9ca88e04f2c5a29a404576f30ae9b54810"),
-        "linux_amd64": ("go1.16.linux-amd64.tar.gz", "013a489ebb3e24ef3d915abe5b94c3286c070dfe0818d5bca8108f1d6e8440d2"),
-        "windows_amd64": ("go1.16.windows-amd64.zip", "5cc88fa506b3d5c453c54c3ea218fc8dd05d7362ae1de15bb67986b72089ce93"),
+        "darwin_amd64": ["go1.20.darwin-amd64.tar.gz", "777025500f62d14bb5a4923072cd97431887961d24de08433a60c2fe1120531d"],
+        "darwin_arm64": ["go1.20.darwin-arm64.tar.gz", "32864d6fe888714ca7b421b5997269c7f6349d7e2675c3a399133e521787608b"],
+        "linux_amd64": ["go1.20.linux-amd64.tar.gz", "5a9ebcc65c1cce56e0d2dc616aff4c4cedcfbda8cc6f0288cc08cda3b18dcbf1"],
+        "windows_amd64": ["go1.20.windows-amd64.zip", "e8f6d8bbcf3df58d2ba29818e13b04c2e42ba2e4d90d580720b21c34d10bbf68"],
     },
 )
 `,
-			optToWantVersion: map[string]string{"": "go1.16"},
+			optToWantVersion: map[string]string{"": "go1.20"},
 		},
 		{
 			desc: "multiple_sdks",
 			rule: `
-load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk", "go_host_sdk")
-
-go_download_sdk(
+go_sdk.download(
     name = "go_sdk",
-    version = "1.16",
+    version = "1.20",
 )
-go_download_sdk(
-    name = "go_sdk_1_17",
-    version = "1.17",
+go_sdk.download(
+    name = "go_sdk_1_21_0",
+    version = "1.21.0",
 )
-go_download_sdk(
-    name = "go_sdk_1_17_1",
-    version = "1.17.1",
+go_sdk.download(
+    name = "go_sdk_1_21_1",
+    version = "1.21.1",
 )
 `,
 			optToWantVersion: map[string]string{
-				"": "go1.16",
-				"--@io_bazel_rules_go//go/toolchain:sdk_version=remote": "go1.16",
-				"--@io_bazel_rules_go//go/toolchain:sdk_version=1":      "go1.16",
-				"--@io_bazel_rules_go//go/toolchain:sdk_version=1.17":   "go1.17",
-				"--@io_bazel_rules_go//go/toolchain:sdk_version=1.17.0": "go1.17",
-				"--@io_bazel_rules_go//go/toolchain:sdk_version=1.17.1": "go1.17.1",
+				"": "go1.20",
+				"--@io_bazel_rules_go//go/toolchain:sdk_version=remote": "go1.20",
+				"--@io_bazel_rules_go//go/toolchain:sdk_version=1":      "go1.20",
+				"--@io_bazel_rules_go//go/toolchain:sdk_version=1.21":   "go1.21.0",
+				"--@io_bazel_rules_go//go/toolchain:sdk_version=1.21.0": "go1.21.0",
+				"--@io_bazel_rules_go//go/toolchain:sdk_version=1.21.1": "go1.21.1",
 			},
 		},
 		{
 			// Cover workaround for #2771.
 			desc: "windows_zip",
 			rule: `
-load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk")
-
-go_download_sdk(
+go_sdk.download(
     name = "go_sdk",
-	goarch = "amd64",
-	goos = "windows",
-	version = "1.20.4",
+    goarch = "amd64",
+    goos = "windows",
+    version = "1.20.4",
 )
+use_repo(go_sdk, "go_sdk")
 `,
 			fetchOnly: "@go_sdk//:BUILD.bazel",
 		},
 		{
 			desc: "multiple_sdks_by_name",
 			rule: `
-load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk", "go_host_sdk")
-
-go_download_sdk(
+go_sdk.download(
     name = "go_sdk",
     version = "1.23.5",
 )
-go_download_sdk(
-    name = "go_sdk_1_17",
-    version = "1.17",
+go_sdk.download(
+    name = "go_sdk_1_20",
+    version = "1.20",
 )
-go_download_sdk(
-    name = "go_sdk_1_17_1",
-    version = "1.17.1",
+go_sdk.download(
+    name = "go_sdk_1_20_1",
+    version = "1.20.1",
 )
-go_download_sdk(
+go_sdk.download(
     name = "go_sdk_with_experiments",
     version = "1.23.5",
-	experiments = ["rangefunc"],
+    experiments = ["rangefunc"],
 )
 `,
 			optToWantVersion: map[string]string{
 				"": "go1.23.5",
-				"--@io_bazel_rules_go//go/toolchain:sdk_name=go_sdk_1_17_1":           "go1.17.1",
-				"--@io_bazel_rules_go//go/toolchain:sdk_name=go_sdk_1_17":             "go1.17",
+				"--@io_bazel_rules_go//go/toolchain:sdk_name=go_sdk_1_20_1":           "go1.20.1",
+				"--@io_bazel_rules_go//go/toolchain:sdk_name=go_sdk_1_20":             "go1.20",
 				"--@io_bazel_rules_go//go/toolchain:sdk_name=go_sdk":                  "go1.23.5",
 				"--@io_bazel_rules_go//go/toolchain:sdk_name=go_sdk_with_experiments": "go1.23.5 X:rangefunc",
 			},
 		},
 	} {
 		t.Run(test.desc, func(t *testing.T) {
-			origWorkspaceData, err := ioutil.ReadFile("WORKSPACE")
+			origModuleData, err := os.ReadFile("MODULE.bazel")
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			i := bytes.Index(origWorkspaceData, []byte("go_rules_dependencies()"))
+			// Replace the SDK the test framework wraps by default with the
+			// ones declared by the test case.
+			i := bytes.Index(origModuleData, []byte("_host_go_sdk = use_extension"))
 			if i < 0 {
-				t.Fatal("could not find call to go_rules_dependencies()")
+				t.Fatal("could not find the default Go SDK declaration")
 			}
 
 			buf := &bytes.Buffer{}
-			buf.Write(origWorkspaceData[:i])
-			buf.WriteString(test.rule)
-			buf.WriteString(`
-go_rules_dependencies()
-
-go_register_toolchains()
+			buf.Write(origModuleData[:i])
+			buf.WriteString(`go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk")
 `)
-			if err := ioutil.WriteFile("WORKSPACE", buf.Bytes(), 0666); err != nil {
+			buf.WriteString(test.rule)
+			if err := os.WriteFile("MODULE.bazel", buf.Bytes(), 0666); err != nil {
 				t.Fatal(err)
 			}
 			defer func() {
-				if err := ioutil.WriteFile("WORKSPACE", origWorkspaceData, 0666); err != nil {
-					t.Errorf("error restoring WORKSPACE: %v", err)
+				if err := os.WriteFile("MODULE.bazel", origModuleData, 0666); err != nil {
+					t.Errorf("error restoring MODULE.bazel: %v", err)
 				}
 			}()
 
@@ -236,33 +229,29 @@ go_register_toolchains()
 }
 
 func TestPatch(t *testing.T) {
-	origWorkspaceData, err := ioutil.ReadFile("WORKSPACE")
+	origModuleData, err := os.ReadFile("MODULE.bazel")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	i := bytes.Index(origWorkspaceData, []byte("go_rules_dependencies()"))
+	i := bytes.Index(origModuleData, []byte("_host_go_sdk = use_extension"))
 	if i < 0 {
-		t.Fatal("could not find call to go_rules_dependencies()")
+		t.Fatal("could not find the default Go SDK declaration")
 	}
 
 	buf := &bytes.Buffer{}
-	buf.Write(origWorkspaceData[:i])
+	buf.Write(origModuleData[:i])
+	buf.WriteString("go_sdk = use_extension(\"@io_bazel_rules_go//go:extensions.bzl\", \"go_sdk\")\n")
 	buf.WriteString(`
-load("@io_bazel_rules_go//go:deps.bzl", "go_download_sdk")
-
-go_download_sdk(
+go_sdk.download(
     name = "go_sdk_patched",
 	version = "1.21.1",
     patch_strip = 1,
     patches = ["//:test.patch"],
 )
 
-go_rules_dependencies()
-
-go_register_toolchains()
 `)
-	if err := ioutil.WriteFile("WORKSPACE", buf.Bytes(), 0666); err != nil {
+	if err := os.WriteFile("MODULE.bazel", buf.Bytes(), 0666); err != nil {
 		t.Fatal(err)
 	}
 
@@ -281,12 +270,12 @@ index 5306bcb..d110a19 100644
  // by Lstat, in directory order. Subsequent calls on the same file will yield
 `)
 
-	if err := ioutil.WriteFile("test.patch", patchContent, 0666); err != nil {
+	if err := os.WriteFile("test.patch", patchContent, 0666); err != nil {
 		t.Fatal(err)
 	}
 	defer func() {
-		if err := ioutil.WriteFile("WORKSPACE", origWorkspaceData, 0666); err != nil {
-			t.Errorf("error restoring WORKSPACE: %v", err)
+		if err := os.WriteFile("MODULE.bazel", origModuleData, 0666); err != nil {
+			t.Errorf("error restoring MODULE.bazel: %v", err)
 		}
 	}()
 
@@ -296,4 +285,312 @@ index 5306bcb..d110a19 100644
 	); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestGoToolBinaryExperiments(t *testing.T) {
+	origModuleData, err := os.ReadFile("MODULE.bazel")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i := bytes.Index(origModuleData, []byte("_host_go_sdk = use_extension"))
+	if i < 0 {
+		t.Fatal("could not find the default Go SDK declaration")
+	}
+
+	buf := &bytes.Buffer{}
+	buf.Write(origModuleData[:i])
+	buf.WriteString(`
+go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk")
+
+go_sdk.download(
+    name = "go_sdk_with_experiments",
+    version = "1.23.5",
+    experiments = ["rangefunc"],
+)
+use_repo(go_sdk, "go_sdk_with_experiments")
+`)
+	if err := os.WriteFile("MODULE.bazel", buf.Bytes(), 0666); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := os.WriteFile("MODULE.bazel", origModuleData, 0666); err != nil {
+			t.Errorf("error restoring MODULE.bazel: %v", err)
+		}
+	}()
+
+	if err := bazel_testing.RunBazel("build", "@go_sdk_with_experiments//:builder"); err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := bazel_testing.BazelOutput("cquery", "@go_sdk_with_experiments//:builder", "--output=files")
+	if err != nil {
+		t.Fatal(err)
+	}
+	builderPath := strings.TrimSpace(string(out))
+
+	info, err := buildinfo.ReadFile(builderPath)
+	if err != nil {
+		t.Fatalf("reading build info from %s: %v", builderPath, err)
+	}
+	var gotExperiment string
+	for _, s := range info.Settings {
+		if s.Key == "GOEXPERIMENT" {
+			gotExperiment = s.Value
+			break
+		}
+	}
+	if !strings.Contains(gotExperiment, "rangefunc") {
+		t.Fatalf("builder built from an SDK with experiments = [\"rangefunc\"] should report GOEXPERIMENT containing \"rangefunc\", got %q (settings: %+v)", gotExperiment, info.Settings)
+	}
+}
+
+func TestExperimentalBuildCompilerFromSourceDoesNotRequireToolchainBuildSetting(t *testing.T) {
+	for _, test := range []struct {
+		name, bootstrapAttr string
+	}{
+		{
+			name:          "experimental_build_compiler_from_source",
+			bootstrapAttr: "experimental_build_compiler_from_source = True,",
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			origModuleData, err := os.ReadFile("MODULE.bazel")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			i := bytes.Index(origModuleData, []byte("_host_go_sdk = use_extension"))
+			if i < 0 {
+				t.Fatal("could not find the default Go SDK declaration")
+			}
+
+			buf := &bytes.Buffer{}
+			buf.Write(origModuleData[:i])
+			buf.WriteString("go_sdk = use_extension(\"@io_bazel_rules_go//go:extensions.bzl\", \"go_sdk\")\n")
+			buf.WriteString(`
+go_sdk.download(
+    name = "go_sdk",
+    version = "1.26.0",
+    ` + test.bootstrapAttr + `
+)
+use_repo(go_sdk, "go_toolchains")
+`)
+			if err := os.WriteFile("MODULE.bazel", buf.Bytes(), 0666); err != nil {
+				t.Fatal(err)
+			}
+			defer func() {
+				if err := os.WriteFile("MODULE.bazel", origModuleData, 0666); err != nil {
+					t.Errorf("error restoring MODULE.bazel: %v", err)
+				}
+			}()
+
+			if err := bazel_testing.RunBazel("query", "@go_toolchains//:all"); err != nil {
+				t.Fatal(err)
+			}
+
+			toolchainsBuildFile := filepath.Join(repoDir(t, "go_toolchains"), "BUILD.bazel")
+			toolchainsBuildData, err := os.ReadFile(toolchainsBuildFile)
+			if err != nil {
+				t.Fatalf("reading %s: %v", toolchainsBuildFile, err)
+			}
+
+			if bytes.Contains(toolchainsBuildData, []byte(`sdk_source = `)) {
+				t.Fatalf("go_toolchains should not require an sdk_source build setting when go_sdk.download(%s):\n%s", test.bootstrapAttr, toolchainsBuildData)
+			}
+		})
+	}
+}
+
+func TestExperimentalBootstrapWithRulesShellToolchains(t *testing.T) {
+	origModuleData, err := os.ReadFile("MODULE.bazel")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i := bytes.Index(origModuleData, []byte("_host_go_sdk = use_extension"))
+	if i < 0 {
+		t.Fatal("could not find the default Go SDK declaration")
+	}
+
+	buf := &bytes.Buffer{}
+	buf.Write(origModuleData[:i])
+	buf.WriteString("go_sdk = use_extension(\"@io_bazel_rules_go//go:extensions.bzl\", \"go_sdk\")\n")
+	buf.WriteString(`
+go_sdk.download(
+    name = "go_sdk",
+    version = "1.26.0",
+    experimental_build_compiler_from_source = True,
+)
+
+bazel_dep(name = "rules_shell", version = "0.3.0")
+`)
+	if err := os.WriteFile("MODULE.bazel", buf.Bytes(), 0666); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := os.WriteFile("MODULE.bazel", origModuleData, 0666); err != nil {
+			t.Errorf("error restoring MODULE.bazel: %v", err)
+		}
+	}()
+
+	if err := bazel_testing.RunBazel(
+		"cquery",
+		"//:version_test",
+	); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestExperimentalBootstrapHostCompatibleSDKRoot(t *testing.T) {
+	origModuleData, err := os.ReadFile("MODULE.bazel")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i := bytes.Index(origModuleData, []byte("_host_go_sdk = use_extension"))
+	if i < 0 {
+		t.Fatal("could not find the default Go SDK declaration")
+	}
+
+	buf := &bytes.Buffer{}
+	buf.Write(origModuleData[:i])
+	buf.WriteString("go_sdk = use_extension(\"@io_bazel_rules_go//go:extensions.bzl\", \"go_sdk\")\n")
+	buf.WriteString(`
+go_sdk.download(
+    name = "go_sdk",
+    version = "1.26.0",
+    experimental_build_compiler_from_source = True,
+)
+use_repo(go_sdk, "go_host_compatible_sdk_label", "go_sdk")
+`)
+	if err := os.WriteFile("MODULE.bazel", buf.Bytes(), 0666); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := os.WriteFile("MODULE.bazel", origModuleData, 0666); err != nil {
+			t.Errorf("error restoring MODULE.bazel: %v", err)
+		}
+	}()
+
+	if err := bazel_testing.RunBazel(
+		"query",
+		"set(@go_host_compatible_sdk_label//:all @go_sdk//:host_compatible_root_file)",
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	defsPath := filepath.Join(repoDir(t, "go_host_compatible_sdk_label"), "defs.bzl")
+	defsData, err := os.ReadFile(defsPath)
+	if err != nil {
+		t.Fatalf("reading %s: %v", defsPath, err)
+	}
+	if !bytes.Contains(defsData, []byte(`HOST_COMPATIBLE_SDK = Label("@go_sdk//:host_compatible_root_file")`)) {
+		t.Fatalf("go_host_compatible_sdk_label should point to :host_compatible_root_file:\n%s", defsData)
+	}
+
+	sdkBuildPath := filepath.Join(repoDir(t, "go_sdk"), "BUILD.bazel")
+	sdkBuildData, err := os.ReadFile(sdkBuildPath)
+	if err != nil {
+		t.Fatalf("reading %s: %v", sdkBuildPath, err)
+	}
+	if !bytes.Contains(sdkBuildData, []byte(`name = "host_compatible_root_file"`)) {
+		t.Fatalf("go_sdk BUILD.bazel should define :host_compatible_root_file:\n%s", sdkBuildData)
+	}
+	if !bytes.Contains(sdkBuildData, []byte(`srcs = [":bootstrap_root_file"]`)) {
+		t.Fatalf("go_sdk :host_compatible_root_file should point to :bootstrap_root_file in bootstrap mode:\n%s", sdkBuildData)
+	}
+	if !bytes.Contains(sdkBuildData, []byte(`exec_compatible_with = [`)) {
+		t.Fatalf("go_sdk bootstrap rule should constrain its execution platform to the SDK platform:\n%s", sdkBuildData)
+	}
+	if !bytes.Contains(sdkBuildData, []byte(`name = "go_sdk_srcs"`)) {
+		t.Fatalf("go_sdk BUILD.bazel should define :go_sdk_srcs in bootstrap mode:\n%s", sdkBuildData)
+	}
+	if !bytes.Contains(sdkBuildData, []byte(`srcs = [":bootstrap_srcs"]`)) {
+		t.Fatalf("go_sdk :go_sdk_srcs should point to :bootstrap_srcs in bootstrap mode:\n%s", sdkBuildData)
+	}
+	if !bytes.Contains(sdkBuildData, []byte(`go_sdk_srcs = [":go_sdk_srcs"]`)) {
+		t.Fatalf("go_sdk should wire go_sdk_srcs to :go_sdk_srcs in bootstrap mode:\n%s", sdkBuildData)
+	}
+	if !bytes.Contains(sdkBuildData, []byte(`package_list_srcs = [":srcs"]`)) {
+		t.Fatalf("go_sdk :package_list should be derived from filtered :srcs in bootstrap mode:\n%s", sdkBuildData)
+	}
+}
+
+func TestExperimentalBootstrapWithBzlmod(t *testing.T) {
+	origModuleData, err := os.ReadFile("MODULE.bazel")
+	hadModule := err == nil
+	if err != nil && !os.IsNotExist(err) {
+		t.Fatal(err)
+	}
+	defer func() {
+		if hadModule {
+			if err := os.WriteFile("MODULE.bazel", origModuleData, 0666); err != nil {
+				t.Errorf("error restoring MODULE.bazel: %v", err)
+			}
+			return
+		}
+		if err := os.Remove("MODULE.bazel"); err != nil && !os.IsNotExist(err) {
+			t.Errorf("error removing MODULE.bazel: %v", err)
+		}
+	}()
+
+	const moduleData = `
+module(name = "go_download_sdk_bzlmod_test")
+
+bazel_dep(name = "rules_go", repo_name = "io_bazel_rules_go")
+# Keep @local_config_cc visible under bzlmod for Windows CI, where
+# GO_BAZEL_TEST_BAZELFLAGS includes --extra_toolchains=@local_config_cc//...
+bazel_dep(name = "rules_cc", version = "0.1.5")
+local_path_override(
+    module_name = "rules_go",
+    path = "../tested_repo",
+)
+
+cc_configure = use_extension("@rules_cc//cc:extensions.bzl", "cc_configure_extension")
+use_repo(cc_configure, "local_config_cc")
+
+go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk")
+go_sdk.download(
+    name = "go_sdk",
+    version = "1.26.0",
+    experimental_build_compiler_from_source = True,
+)
+use_repo(go_sdk, "go_sdk")
+`
+	if err := os.WriteFile("MODULE.bazel", []byte(moduleData), 0666); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := bazel_testing.RunBazel(
+		"cquery",
+		"//:version_test",
+		"--enable_bzlmod",
+		"--noenable_workspace",
+	); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// repoDir returns the directory of an external repository. Its name below the
+// output base is the canonical repository name, which isn't known statically.
+func repoDir(t *testing.T, repo string) string {
+	t.Helper()
+	outputBase, err := bazel_testing.BazelOutput("info", "output_base")
+	if err != nil {
+		t.Fatal(err)
+	}
+	mapping, err := bazel_testing.BazelOutput("mod", "dump_repo_mapping", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var apparentToCanonical map[string]string
+	if err := json.Unmarshal(mapping, &apparentToCanonical); err != nil {
+		t.Fatalf("parsing repo mapping: %v", err)
+	}
+	canonical, ok := apparentToCanonical[repo]
+	if !ok {
+		t.Fatalf("no repository visible as %q", repo)
+	}
+	return filepath.Join(strings.TrimSpace(string(outputBase)), "external", canonical)
 }

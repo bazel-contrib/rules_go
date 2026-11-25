@@ -1,6 +1,5 @@
 # gazelle:exclude
 
-load("@io_bazel_rules_go_bazel_features//:features.bzl", "bazel_features")
 load("//go:def.bzl", "go_binary", "go_library")
 load("//go/private:common.bzl", "RULES_GO_IS_BZLMOD_REPO")
 load("//go/private/rules:go_bin_for_host.bzl", "go_bin_for_host")
@@ -37,7 +36,6 @@ go_binary(
     x_defs = {
         "GoBinRlocationPath": "$(rlocationpath :go_bin_for_host)",
         "ConfigRlocationPath": "$(rlocationpath @bazel_gazelle_go_repository_config//:config.json)" if RULES_GO_IS_BZLMOD_REPO else "WORKSPACE",
-        "HasBazelModTidy": str(bazel_features.external_deps.bazel_mod_tidy),
     },
 )
 

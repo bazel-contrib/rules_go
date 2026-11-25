@@ -24,14 +24,12 @@ import (
 type PackageRegistry struct {
 	packagesByID map[string]*packages.Package
 	stdlib       map[string]*packages.Package
-	bazelVersion bazelVersion
 }
 
-func NewPackageRegistry(bazelVersion bazelVersion, pkgs ...*FlatPackage) *PackageRegistry {
+func NewPackageRegistry(pkgs ...*FlatPackage) *PackageRegistry {
 	pr := &PackageRegistry{
 		packagesByID: map[string]*packages.Package{},
 		stdlib:       map[string]*packages.Package{},
-		bazelVersion: bazelVersion,
 	}
 	pr.Add(pkgs...)
 	return pr
@@ -124,9 +122,7 @@ func (pr *PackageRegistry) Match(labels []string) ([]string, []*packages.Package
 
 	for _, label := range labels {
 		// When packagesdriver is ran from rules go, rulesGoRepositoryName will just be @
-		if pr.bazelVersion.isAtLeast(bazelVersion{6, 0, 0}) &&
-			!strings.HasPrefix(label, "@") {
-			// Canonical labels is only since Bazel 6.0.0
+		if !strings.HasPrefix(label, "@") {
 			label = fmt.Sprintf("@%s", label)
 		}
 

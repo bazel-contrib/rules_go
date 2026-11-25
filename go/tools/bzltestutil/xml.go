@@ -43,13 +43,23 @@ type xmlTestSuite struct {
 }
 
 type xmlTestCase struct {
-	XMLName   xml.Name    `xml:"testcase"`
-	Classname string      `xml:"classname,attr"`
-	Name      string      `xml:"name,attr"`
-	Time      string      `xml:"time,attr"`
-	Failure   *xmlMessage `xml:"failure,omitempty"`
-	Error     *xmlMessage `xml:"error,omitempty"`
-	Skipped   *xmlMessage `xml:"skipped,omitempty"`
+	XMLName    xml.Name       `xml:"testcase"`
+	Classname  string         `xml:"classname,attr"`
+	Name       string         `xml:"name,attr"`
+	Time       string         `xml:"time,attr"`
+	Failure    *xmlMessage    `xml:"failure,omitempty"`
+	Error      *xmlMessage    `xml:"error,omitempty"`
+	Skipped    *xmlMessage    `xml:"skipped,omitempty"`
+	Properties *xmlProperties `xml:"properties,omitempty"`
+}
+
+type xmlProperties struct {
+	Property []xmlProperty `xml:"property"`
+}
+
+type xmlProperty struct {
+	Name  string `xml:"name,attr"`
+	Value string `xml:"value,attr"`
 }
 
 type xmlMessage struct {
@@ -66,14 +76,31 @@ type jsonEvent struct {
 	Test    string
 	Elapsed *float64
 	Output  string
+	Key     string
+	Value   string
 }
 
 type testCase struct {
-	state    string
-	output   strings.Builder
-	duration *float64
-	start *time.Time
-	end *time.Time
+	state      string
+	output     strings.Builder
+	duration   *float64
+	start      *time.Time
+	end        *time.Time
+	properties []xmlProperty
+}
+
+// setProperty records a key/value pair on the test case, overwriting any existing
+// value for the same key. testing.Attr does not define de-duplication semantics, so
+// last-write-wins was chosen to match the other JUnit XML producers Bazel consumes
+// (notably GTest's RecordProperty), which replace rather than append on a repeated key.
+func (c *testCase) setProperty(name, value string) {
+	for i := range c.properties {
+		if c.properties[i].Name == name {
+			c.properties[i].Value = value
+			return
+		}
+	}
+	c.properties = append(c.properties, xmlProperty{Name: name, Value: value})
 }
 
 const (
@@ -159,6 +186,10 @@ func json2xml(r io.Reader, pkgName string) ([]byte, error) {
 				c.state = s
 				c.end = e.Time
 			}
+		case "attr":
+			if c := testCaseByName(e.Test); c != nil {
+				c.setProperty(e.Key, e.Value)
+			}
 		}
 	}
 
@@ -209,6 +240,9 @@ func toXML(pkgName string, testcases map[string]*testCase) *xmlTestSuites {
 		newCase := xmlTestCase{
 			Name:      name,
 			Classname: path.Base(pkgName),
+		}
+		if len(c.properties) > 0 {
+			newCase.Properties = &xmlProperties{Property: c.properties}
 		}
 		if c.duration != nil {
 			newCase.Time = fmt.Sprintf("%.3f", *c.duration)

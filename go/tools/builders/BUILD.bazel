@@ -20,6 +20,33 @@ go_test(
 )
 
 go_test(
+    name = "baseline_coverage_test",
+    size = "small",
+    srcs = [
+        "baseline_coverage.go",
+        "baseline_coverage_test.go",
+        "cover.go",
+        "edit.go",
+        "env.go",
+        "filter.go",
+        "flags.go",
+        "read.go",
+    ],
+)
+
+go_test(
+    name = "cgo2_test",
+    size = "small",
+    srcs = [
+        "cgo2_test.go",
+        ":builder_srcs",
+    ],
+    x_defs = {
+        "rulesGoStdlibPrefix": RULES_GO_STDLIB_PREFIX,
+    },
+)
+
+go_test(
     name = "cover_test",
     size = "small",
     srcs = [
@@ -39,7 +66,7 @@ go_test(
         "nogo_fix_test.go",
     ],
     deps = [
-        "@com_github_pmezard_go_difflib//difflib:go_default_library",
+        "@com_github_aymanbagabas_go_udiff//:go_default_library",
         "@org_golang_x_tools//go/analysis",
     ],
 )
@@ -54,10 +81,16 @@ go_test(
         "stdliblist.go",
         "stdliblist_test.go",
     ],
-    data = ["@go_sdk//:files"],
+    data = [
+        "@go_default_sdk//:files",
+        "@go_default_sdk//:host_compatible_root_file",
+    ],
     rundir = ".",
     x_defs = {
         "rulesGoStdlibPrefix": RULES_GO_STDLIB_PREFIX,
+        # The SDK's directory in the runfiles tree is its canonical repository
+        # name, which isn't known statically.
+        "goSDKRootFileRlocationPath": "$(rlocationpath @go_default_sdk//:host_compatible_root_file)",
     },
 )
 
@@ -80,14 +113,41 @@ go_test(
     ],
 )
 
+go_test(
+    name = "buildinfo_test",
+    size = "small",
+    srcs = [
+        "buildinfo.go",
+        "buildinfo_test.go",
+    ],
+)
+
+go_test(
+    name = "nogo_version_test",
+    size = "small",
+    srcs = [
+        "nogo_goversions_go118.go",
+        "nogo_goversions_go121.go",
+        "nogo_goversions_go122.go",
+        "nogo_version.go",
+        "nogo_version_go121_test.go",
+        "nogo_version_pre121_test.go",
+        "nogo_version_test.go",
+    ],
+)
+
 filegroup(
     name = "builder_srcs",
     srcs = [
         "ar.go",
         "asm.go",
+        "baseline_coverage.go",
         "builder.go",
+        "buildid.go",
+        "buildinfo.go",
         "cc.go",
         "cgo2.go",
+        "codesign.go",
         "compilepkg.go",
         "constants.go",
         "cover.go",
@@ -103,6 +163,7 @@ filegroup(
         "link.go",
         "nogo.go",
         "nogo_validation.go",
+        "preprofile.go",
         "read.go",
         "replicate.go",
         "stdlib.go",
@@ -121,9 +182,11 @@ go_source(
         "env.go",
         "flags.go",
         "nogo_fix.go",
+        "nogo_goversions_go118.go",
+        "nogo_goversions_go121.go",
+        "nogo_goversions_go122.go",
         "nogo_main.go",
-        "nogo_typeparams_go117.go",
-        "nogo_typeparams_go118.go",
+        "nogo_version.go",
         "nolint.go",
     ],
     # //go/tools/builders:nogo_srcs is considered a different target by

@@ -14,14 +14,13 @@
 
 load(
     "//go/private:common.bzl",
-    "GO_TOOLCHAIN",
+    "GO_TOOLCHAIN_LABEL",
 )
 load(
     "//go/private:context.bzl",
-    "CGO_ATTRS",
-    "CGO_FRAGMENTS",
-    "CGO_TOOLCHAINS",
     "go_context",
+    "go_rule",
+    "maybe_needs_cc_toolchain",
     "new_go_info",
 )
 load(
@@ -41,7 +40,11 @@ def _nogo_impl(ctx):
         return None
 
     # Generate the source for the nogo binary.
-    go = go_context(ctx, include_deprecated_properties = False)
+    analyzer_archives = [dep[GoArchive] for dep in ctx.attr.deps]
+    go = go_context(
+        ctx,
+        maybe_needs_cc_toolchain = maybe_needs_cc_toolchain(ctx.attr, go_infos = ctx.attr.deps),
+    )
     nogo_main = go.declare_file(go, path = "nogo_main.go")
     nogo_args = ctx.actions.args()
     nogo_args.add("gennogomain")
@@ -49,7 +52,6 @@ def _nogo_impl(ctx):
     if ctx.attr.debug:
         nogo_args.add("-debug")
     nogo_inputs = []
-    analyzer_archives = [dep[GoArchive] for dep in ctx.attr.deps]
     analyzer_importpaths = [archive.data.importpath for archive in analyzer_archives]
     nogo_args.add_all(analyzer_importpaths, before_each = "-analyzer_importpath")
     if ctx.file.config:
@@ -60,7 +62,7 @@ def _nogo_impl(ctx):
         outputs = [nogo_main],
         mnemonic = "GoGenNogo",
         executable = go.toolchain._builder,
-        toolchain = GO_TOOLCHAIN,
+        toolchain = GO_TOOLCHAIN_LABEL,
         arguments = [nogo_args],
     )
 
@@ -69,7 +71,7 @@ def _nogo_impl(ctx):
         go,
         struct(
             embed = [ctx.attr._nogo_srcs],
-            deps = analyzer_archives + [ctx.attr._go_difflib[GoArchive]],
+            deps = analyzer_archives + [dep[GoArchive] for dep in ctx.attr._diff_deps],
         ),
         generated_srcs = [nogo_main],
         name = go.label.name + "~nogo",
@@ -89,7 +91,7 @@ def _nogo_impl(ctx):
         executable = executable,
     )]
 
-_nogo = rule(
+_nogo = go_rule(
     implementation = _nogo_impl,
     attrs = {
         "deps": attr.label_list(
@@ -104,29 +106,21 @@ _nogo = rule(
         "_nogo_srcs": attr.label(
             default = "//go/tools/builders:nogo_srcs",
         ),
-        "_cgo_context_data": attr.label(default = "//:cgo_context_data_proxy"),
+        "_go_context_data": attr.label(default = "//:go_context_data"),
         "_go_config": attr.label(default = "//:go_config"),
-        "_go_difflib": attr.label(default = "@com_github_pmezard_go_difflib//difflib:go_default_library"),
+        "_diff_deps": attr.label_list(default = [
+            "@com_github_aymanbagabas_go_udiff//:go_default_library",
+        ]),
         "_stdlib": attr.label(default = "//:stdlib"),
         "_allowlist_function_transition": attr.label(
             default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
         ),
-    } | CGO_ATTRS,
-    fragments = CGO_FRAGMENTS,
-    toolchains = [GO_TOOLCHAIN] + CGO_TOOLCHAINS,
+    },
     cfg = go_tool_transition,
 )
 
 def nogo(name, visibility = None, **kwargs):
     actual_name = "%s_actual" % name
-    native.alias(
-        name = name,
-        actual = select({
-            str(Label("//go/private:nogo_active")): actual_name,
-            "//conditions:default": Label("//:default_nogo"),
-        }),
-        visibility = visibility,
-    )
 
     # With --use_top_level_targets_for_symlinks, which is enabled by default in
     # Bazel 6.0.0, self-transitioning top-level targets prevent the bazel-bin
@@ -134,9 +128,23 @@ def nogo(name, visibility = None, **kwargs):
     # type, their presence would trigger this behavior. Work around this by
     # excluding them from wildcards - they are still transitively built as a
     # tool dependency of every Go target.
+    #
+    # The alias needs the tag too: a wildcard that matches it builds the nogo
+    # binary anyway, in a configuration derived from the target configuration
+    # rather than the exec configuration Go targets build it in.
     kwargs.setdefault("tags", [])
     if "manual" not in kwargs["tags"]:
         kwargs["tags"].append("manual")
+
+    native.alias(
+        name = name,
+        actual = select({
+            str(Label("//go/private:nogo_active")): actual_name,
+            "//conditions:default": Label("//:default_nogo"),
+        }),
+        tags = kwargs["tags"],
+        visibility = visibility,
+    )
 
     _nogo(
         name = actual_name,

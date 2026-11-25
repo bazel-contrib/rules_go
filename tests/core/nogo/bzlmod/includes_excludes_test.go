@@ -23,7 +23,9 @@ import (
 
 func TestMain(m *testing.M) {
 	bazel_testing.TestMain(m, bazel_testing.Args{
-		Nogo: "@io_bazel_rules_go//:tools_nogo",
+		Nogo:         "//:my_nogo",
+		NogoIncludes: []string{"//go:__subpackages__"},
+		NogoExcludes: []string{"//go/third_party:__subpackages__"},
 		Main: `
 -- BUILD.bazel --
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "nogo", "TOOLS_NOGO")
@@ -94,14 +96,6 @@ func useless() string {
 	return foo
 }
 `,
-		ModuleFileSuffix: `
-go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk")
-go_sdk.nogo(
-    nogo = "//:my_nogo",
-    includes = ["//go:__subpackages__"],
-    excludes = ["//go/third_party:__subpackages__"],
-)
-`,
 	})
 }
 
@@ -114,8 +108,8 @@ func TestNotIncluded(t *testing.T) {
 func TestIncluded(t *testing.T) {
 	if err := bazel_testing.RunBazel("build", "//go:lib"); err == nil {
 		t.Fatal("Expected build to fail")
-	} else if !strings.Contains(err.Error(), "lib.go:6:3: self-assignment of foo to foo (assign)") {
-		t.Fatalf("Expected error to contain \"lib.go:6:3: self-assignment of foo to foo (assign)\", got %s", err)
+	} else if !strings.Contains(err.Error(), "lib.go:6:3: self-assignment of foo (assign)") {
+		t.Fatalf("Expected error to contain \"lib.go:6:3: self-assignment of foo (assign)\", got %s", err)
 	}
 }
 

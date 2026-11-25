@@ -34,6 +34,9 @@ go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
 # platforms, using the version given from the `go.mod` file.
 go_sdk.from_file(go_mod = "//:go.mod")
 
+# Alternatively, use the version from a `go.work` file.
+go_sdk.from_file(go_work = "//:go.work")
+
 # Download an SDK for the host OS & architecture as well as common remote execution
 # platforms, with a specific version.
 go_sdk.download(version = "1.23.1")
@@ -52,6 +55,10 @@ go_sdk.host()
 Nota bene: The use of `go_sdk.host()` [may break builds](https://github.com/enola-dev/enola/issues/713) whenever the host Go version is upgraded
 (because many OS package managers, such as Debian/Ubuntu's `apt`, distribute Go into a directory which contains the version, such as `/usr/lib/go-1.22/`).
 As package upgrades happen outside of Bazel's control, this will lead to non-reproducible builds. Due to this, use of `go_sdk.host()` is discouraged.
+
+When using `go_sdk.from_file()`, exactly one of `go_mod` or `go_work` must be specified.
+Version extraction follows the same precedence for both file types: the `toolchain` directive takes precedence
+over the `go` directive. If neither directive is present, rules_go selects its minimum supported SDK, Go 1.20.
 
 You can register multiple Go SDKs and select which one to use on a per-target basis using [`go_cross_binary`](rules.md#go_cross_binary).
 As long as you specify the `version` of an SDK, it will be downloaded lazily, that is, only when it is actually needed during a particular build.
@@ -155,8 +162,8 @@ use_repo(
 )
 ```
 
-When using Bazel 7.1.1 or higher, the [`@rules_go//go` target](#using-a-go-sdk) automatically updates the `use_repo` call whenever the `go.mod` file changes, using `bazel mod tidy`.
-With older versions of Bazel, a warning with a fixup command will be emitted during a build if the `use_repo` call is out of date or missing.
+The [`@rules_go//go` target](#using-a-go-sdk) automatically updates the `use_repo` call whenever the `go.mod` file changes, using `bazel mod tidy`.
+If the `use_repo` call is out of date or missing, a warning with a fixup command will also be emitted during a build.
 
 Alternatively, you can specify a module extension tag to add an individual dependency:
 

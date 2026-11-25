@@ -47,6 +47,8 @@ func main() {
 
 	var action func(args []string) error
 	switch verb {
+	case "baselinecoverage":
+		action = baselineCoverage
 	case "compilepkg":
 		action = compilePkg
 	case "nogo":
@@ -61,6 +63,8 @@ func main() {
 		action = link
 	case "gennogomain":
 		action = genNogoMain
+	case "preprofile":
+		action = preprofile
 	case "stdlib":
 		action = stdlib
 	case "stdliblist":

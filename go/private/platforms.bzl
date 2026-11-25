@@ -22,6 +22,8 @@ BAZEL_GOOS_CONSTRAINTS = {
     "freebsd": "@platforms//os:freebsd",
     "ios": "@platforms//os:ios",
     "linux": "@platforms//os:linux",
+    "netbsd": "@platforms//os:netbsd",
+    "openbsd": "@platforms//os:openbsd",
     "qnx": "@platforms//os:qnx",
     "windows": "@platforms//os:windows",
 }
@@ -35,6 +37,7 @@ BAZEL_GOARCH_CONSTRAINTS = {
     "ppc64le": "@platforms//cpu:ppc64le",
     "s390x": "@platforms//cpu:s390x",
     "riscv64": "@platforms//cpu:riscv64",
+    "loong64": "@platforms//cpu:loongarch64",
 }
 
 GOOS_GOARCH = (
@@ -67,6 +70,7 @@ GOOS_GOARCH = (
     ("linux", "ppc64"),
     ("linux", "ppc64le"),
     ("linux", "riscv64"),
+    ("linux", "loong64"),
     ("linux", "s390x"),
     ("nacl", "386"),
     ("nacl", "amd64p32"),
@@ -135,6 +139,7 @@ CGO_GOOS_GOARCH = {
     ("linux", "mipsle"): None,
     ("linux", "ppc64le"): None,
     ("linux", "riscv64"): None,
+    ("linux", "loong64"): None,
     ("linux", "s390x"): None,
     ("linux", "sparc64"): None,
     ("netbsd", "386"): None,
@@ -160,6 +165,12 @@ def _generate_constraints(names, bazel_constraints):
 GOOS_CONSTRAINTS = _generate_constraints([p[0] for p in GOOS_GOARCH], BAZEL_GOOS_CONSTRAINTS)
 GOARCH_CONSTRAINTS = _generate_constraints([p[1] for p in GOOS_GOARCH], BAZEL_GOARCH_CONSTRAINTS)
 
+# Whether --enable_bzlmod is set, and thus, whether str(Label(...)) produces
+# canonical label literals (i.e. "@@repo//pkg:file"). Same detection as
+# bazel_features.external_deps.is_bzlmod_enabled, inlined to keep this file
+# free of external loads.
+_BZLMOD_ENABLED = str(Label("//:invalid")).startswith("@@")
+
 def _generate_platforms():
     platforms = []
     for goos, goarch in GOOS_GOARCH:
@@ -176,8 +187,18 @@ def _generate_platforms():
         ))
         if (goos, goarch) in CGO_GOOS_GOARCH:
             # On Windows, Bazel will pick an MSVC toolchain unless we
-            # specifically request mingw or msys.
-            mingw = ["@bazel_tools//tools/cpp:mingw"] if goos == "windows" else []
+            # specifically request mingw or msys. Bazel's built-in C++
+            # configuration and rules_cc use separate constraint settings, so
+            # pick the one matching where @local_config_cc comes from: rules_cc
+            # under Bzlmod, @bazel_tools under WORKSPACE.
+            #
+            # The two must not both be listed: since Bazel 8,
+            # @bazel_tools//tools/cpp:mingw is an alias for the rules_cc
+            # constraint value, so a platform listing both would declare the
+            # same constraint value twice.
+            mingw = [
+                "@rules_cc//cc/private/toolchain:mingw" if _BZLMOD_ENABLED else "@bazel_tools//tools/cpp:mingw",
+            ] if goos == "windows" else []
             platforms.append(struct(
                 name = goos + "_" + goarch + "_cgo",
                 goos = goos,

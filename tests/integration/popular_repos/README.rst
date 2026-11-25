@@ -13,7 +13,6 @@ ___________________
 
 This runs tests from the repository `golang.org/x/crypto <https://golang.org/x/crypto>`_
 
-* @org_golang_x_crypto//acme:acme_test
 * @org_golang_x_crypto//acme/autocert:autocert_test
 * @org_golang_x_crypto//argon2:argon2_test
 * @org_golang_x_crypto//bcrypt:bcrypt_test
@@ -35,12 +34,6 @@ This runs tests from the repository `golang.org/x/crypto <https://golang.org/x/c
 * @org_golang_x_crypto//nacl/box:box_test
 * @org_golang_x_crypto//nacl/sign:sign_test
 * @org_golang_x_crypto//ocsp:ocsp_test
-* @org_golang_x_crypto//openpgp:openpgp_test
-* @org_golang_x_crypto//openpgp/armor:armor_test
-* @org_golang_x_crypto//openpgp/clearsign:clearsign_test
-* @org_golang_x_crypto//openpgp/elgamal:elgamal_test
-* @org_golang_x_crypto//openpgp/packet:packet_test
-* @org_golang_x_crypto//openpgp/s2k:s2k_test
 * @org_golang_x_crypto//otr:otr_test
 * @org_golang_x_crypto//pbkdf2:pbkdf2_test
 * @org_golang_x_crypto//pkcs12:pkcs12_test
@@ -64,7 +57,6 @@ ________________
 
 This runs tests from the repository `golang.org/x/net <https://golang.org/x/net>`_
 
-* @org_golang_x_net//context:context_test
 * @org_golang_x_net//context/ctxhttp:ctxhttp_test
 * @org_golang_x_net//dns/dnsmessage:dnsmessage_test
 * @org_golang_x_net//html:html_test
@@ -74,7 +66,11 @@ This runs tests from the repository `golang.org/x/net <https://golang.org/x/net>
 * @org_golang_x_net//http2/h2c:h2c_test
 * @org_golang_x_net//http2/hpack:hpack_test
 * @org_golang_x_net//idna:idna_test
+* @org_golang_x_net//internal/gate:gate_test
+* @org_golang_x_net//internal/httpcommon:httpcommon_test
+* @org_golang_x_net//internal/httpsfv:httpsfv_test
 * @org_golang_x_net//internal/quic/cmd/interop:interop_test
+* @org_golang_x_net//internal/quic/quicwire:quicwire_test
 * @org_golang_x_net//internal/socks:socks_test
 * @org_golang_x_net//internal/sockstest:sockstest_test
 * @org_golang_x_net//internal/timeseries:timeseries_test
@@ -162,45 +158,54 @@ This runs tests from the repository `golang.org/x/tools <https://golang.org/x/to
 * @org_golang_x_tools//benchmark/parse:parse_test
 * @org_golang_x_tools//cmd/benchcmp:benchcmp_test
 * @org_golang_x_tools//cmd/bisect:bisect_test
+* @org_golang_x_tools//cmd/compilebench:compilebench_test
 * @org_golang_x_tools//cmd/digraph:digraph_test
 * @org_golang_x_tools//cmd/go-contrib-init:go-contrib-init_test
 * @org_golang_x_tools//cmd/splitdwarf/internal/macho:macho_test
 * @org_golang_x_tools//cover:cover_test
 * @org_golang_x_tools//go/analysis:analysis_test
 * @org_golang_x_tools//go/analysis/passes/directive/testdata/src/a:a_test
-* @org_golang_x_tools//go/analysis/passes/internal/analysisutil:analysisutil_test
+* @org_golang_x_tools//go/analysis/passes/gofix:gofix_test
+* @org_golang_x_tools//go/analysis/passes/hostport:hostport_test
+* @org_golang_x_tools//go/analysis/passes/modernize:modernize_test
+* @org_golang_x_tools//go/analysis/passes/modernize/testdata/src/bloop:bloop_test
+* @org_golang_x_tools//go/analysis/passes/modernize/testdata/src/stringsbuilder:stringsbuilder_test
+* @org_golang_x_tools//go/analysis/passes/scannererr:scannererr_test
+* @org_golang_x_tools//go/analysis/passes/sqlrowserr:sqlrowserr_test
 * @org_golang_x_tools//go/ast/astutil:astutil_test
+* @org_golang_x_tools//go/ast/edge:edge_test
 * @org_golang_x_tools//go/callgraph:callgraph_test
 * @org_golang_x_tools//go/callgraph/vta/internal/trie:trie_test
-* @org_golang_x_tools//godoc/redirect:redirect_test
-* @org_golang_x_tools//godoc/vfs:vfs_test
-* @org_golang_x_tools//godoc/vfs/gatefs:gatefs_test
-* @org_golang_x_tools//godoc/vfs/mapfs:mapfs_test
-* @org_golang_x_tools//internal/aliases:aliases_test
+* @org_golang_x_tools//internal/analysis/analyzerutil:analyzerutil_test
+* @org_golang_x_tools//internal/analysis/driverutil:driverutil_test
+* @org_golang_x_tools//internal/astutil:astutil_test
+* @org_golang_x_tools//internal/astutil/free:free_test
 * @org_golang_x_tools//internal/bisect:bisect_test
 * @org_golang_x_tools//internal/diff:diff_test
 * @org_golang_x_tools//internal/diff/lcs:lcs_test
-* @org_golang_x_tools//internal/diff/myers:myers_test
 * @org_golang_x_tools//internal/edit:edit_test
 * @org_golang_x_tools//internal/event:event_test
 * @org_golang_x_tools//internal/event/export:export_test
-* @org_golang_x_tools//internal/event/export/ocagent:ocagent_test
-* @org_golang_x_tools//internal/event/export/ocagent/wire:wire_test
+* @org_golang_x_tools//internal/event/export/otel:otel_test
 * @org_golang_x_tools//internal/event/keys:keys_test
 * @org_golang_x_tools//internal/event/label:label_test
+* @org_golang_x_tools//internal/flow:flow_test
 * @org_golang_x_tools//internal/gopathwalk:gopathwalk_test
+* @org_golang_x_tools//internal/graph:graph_test
 * @org_golang_x_tools//internal/jsonrpc2:jsonrpc2_test
 * @org_golang_x_tools//internal/jsonrpc2/servertest:servertest_test
+* @org_golang_x_tools//internal/jsonrpc2/stack:stack_test
 * @org_golang_x_tools//internal/jsonrpc2_v2:jsonrpc2_v2_test
-* @org_golang_x_tools//internal/memoize:memoize_test
 * @org_golang_x_tools//internal/modindex:modindex_test
+* @org_golang_x_tools//internal/packagepath:packagepath_test
 * @org_golang_x_tools//internal/packagestest/testdata:testdata_test
 * @org_golang_x_tools//internal/pkgbits:pkgbits_test
 * @org_golang_x_tools//internal/proxydir:proxydir_test
+* @org_golang_x_tools//internal/refactor:refactor_test
 * @org_golang_x_tools//internal/robustio:robustio_test
-* @org_golang_x_tools//internal/stack:stack_test
-* @org_golang_x_tools//internal/tokeninternal:tokeninternal_test
+* @org_golang_x_tools//internal/stdlib:stdlib_test
 * @org_golang_x_tools//internal/typesinternal:typesinternal_test
+* @org_golang_x_tools//internal/typesinternal/typeindex:typeindex_test
 * @org_golang_x_tools//playground/socket:socket_test
 * @org_golang_x_tools//refactor/satisfy:satisfy_test
 * @org_golang_x_tools//txtar:txtar_test
@@ -211,7 +216,7 @@ ______________________
 
 This runs tests from the repository `github.com/golang/glog <https://github.com/golang/glog>`_
 
-* @com_github_golang_glog//:glog_test
+* @com_github_golang_glog//internal/logsink:logsink_test
 
 
 org_golang_x_sync

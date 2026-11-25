@@ -16,10 +16,10 @@ load("@platforms//host:constraints.bzl", "HOST_CONSTRAINTS")
 load("//go/private:common.bzl", "GO_TOOLCHAIN")
 
 def _ensure_target_cfg(ctx):
-    # A target is assumed to be built in the target configuration if it is neither in the exec nor
-    # the host configuration (the latter has been removed in Bazel 6). Since there is no API for
-    # this, use the output directory to determine the configuration, which is a common pattern.
-    if "-exec" in ctx.bin_dir.path or "/host/" in ctx.bin_dir.path:
+    # A target is assumed to be built in the target configuration if it is not in the exec
+    # configuration. Since there is no API for this, use the output directory to determine the
+    # configuration, which is a common pattern.
+    if "-exec" in ctx.bin_dir.path:
         fail("//go is only meant to be used with 'bazel run', not as a tool. " +
              "If you need to use it as a tool (e.g. in a genrule), please " +
              "open an issue at " +

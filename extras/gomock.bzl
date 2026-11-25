@@ -24,7 +24,7 @@
 
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load("//go/private:common.bzl", "GO_TOOLCHAIN", "GO_TOOLCHAIN_LABEL")
-load("//go/private:context.bzl", "go_context")
+load("//go/private:context.bzl", "go_context", "go_rule")
 load("//go/private:providers.bzl", "GoInfo")
 load("//go/private/rules:wrappers.bzl", go_binary = "go_binary_macro")
 
@@ -32,7 +32,10 @@ _MOCKGEN_TOOL = Label("//extras/gomock:mockgen")
 _MOCKGEN_MODEL_LIB = Label("//extras/gomock:mockgen_model")
 
 def _gomock_source_impl(ctx):
-    go = go_context(ctx, include_deprecated_properties = False)
+    go = go_context(
+        ctx,
+        maybe_needs_cc_toolchain = False,
+    )
 
     # In Source mode, it's not necessary to pass through a library, as the only thing we use it for is setting up
     # the relative file locations. Forcing users to pass a library makes it difficult in the case where a mock should
@@ -103,7 +106,7 @@ def _gomock_source_impl(ctx):
             out = ctx.outputs.out.path,
         ),
         env = {
-            # GOCACHE is required starting in Go 1.12
+            # Keep generated cache data inside the action sandbox.
             "GOCACHE": "./.gocache",
             # gomock runs in the special GOPATH environment
             "GO111MODULE": "off",
@@ -111,7 +114,7 @@ def _gomock_source_impl(ctx):
         mnemonic = "GoMockSourceGen",
     )
 
-_gomock_source = rule(
+_gomock_source = go_rule(
     _gomock_source_impl,
     attrs = {
         "library": attr.label(
@@ -171,7 +174,6 @@ _gomock_source = rule(
             default = "//:go_context_data",
         ),
     },
-    toolchains = [GO_TOOLCHAIN],
 )
 
 def gomock(name, out, library = None, source_importpath = "", source = None, interfaces = [], package = "", self_package = "", aux_files = {}, mockgen_tool = _MOCKGEN_TOOL, mockgen_args = [], imports = {}, copyright_file = None, mock_names = {}, **kwargs):
@@ -313,7 +315,10 @@ _gomock_prog_gen = rule(
 )
 
 def _gomock_prog_exec_impl(ctx):
-    go = go_context(ctx, include_deprecated_properties = False)
+    go = go_context(
+        ctx,
+        maybe_needs_cc_toolchain = False,
+    )
 
     args = ["-exec_only", ctx.file.prog_bin.path]
     args, needed_files = _handle_shared_args(ctx, args)
@@ -341,13 +346,13 @@ def _gomock_prog_exec_impl(ctx):
             out = ctx.outputs.out.path,
         ),
         env = {
-            # GOCACHE is required starting in Go 1.12
+            # Keep generated cache data inside the action sandbox.
             "GOCACHE": "./.gocache",
         },
         mnemonic = "GoMockReflectExecOnlyGen",
     )
 
-_gomock_prog_exec = rule(
+_gomock_prog_exec = go_rule(
     _gomock_prog_exec_impl,
     attrs = {
         "library": attr.label(
@@ -406,7 +411,6 @@ _gomock_prog_exec = rule(
             default = "//:go_context_data",
         ),
     },
-    toolchains = [GO_TOOLCHAIN],
 )
 
 def _handle_shared_args(ctx, args):

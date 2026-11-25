@@ -34,7 +34,6 @@ import (
 	"flag"
 	"fmt"
 	"go/ast"
-	"go/build"
 	"go/doc"
 	"go/parser"
 	"go/token"
@@ -73,16 +72,6 @@ type Cases struct {
 	Covered     string
 	CoverFormat string
 	Pkgname     string
-}
-
-// Version returns whether v is a supported Go version (like "go1.18").
-func (c *Cases) Version(v string) bool {
-	for _, r := range build.Default.ReleaseTags {
-		if v == r {
-			return true
-		}
-	}
-	return false
 }
 
 const testMainTpl = `
@@ -131,13 +120,11 @@ var benchmarks = []testing.InternalBenchmark{
 {{end}}
 }
 
-{{if .Version "go1.18"}}
 var fuzzTargets = []testing.InternalFuzzTarget{
 {{range .FuzzTargets}}
   {"{{.Name}}", {{.Package}}.{{.Name}} },
 {{end}}
 }
-{{end}}
 
 var examples = []testing.InternalExample{
 {{range .Examples}}
@@ -205,11 +192,7 @@ func main() {
 		testdeps.CoverMarkProfileEmittedFunc = cfile.MarkProfileEmitted
 	{{end}}
 
-  {{if .Version "go1.18"}}
 	m := testing.MainStart(testdeps.TestDeps{}, testsInShard(), benchmarks, fuzzTargets, examples)
-  {{else}}
-	m := testing.MainStart(testdeps.TestDeps{}, testsInShard(), benchmarks, examples)
-  {{end}}
 
 	if filter := os.Getenv("TESTBRIDGE_TEST_ONLY"); filter != "" {
 		filters := strings.Split(filter, ",")
@@ -359,15 +342,8 @@ func genTestMain(args []string) error {
 			if fn.Recv != nil {
 				continue
 			}
-			if fn.Name.Name == "TestMain" {
-				// TestMain is not, itself, a test
-				pkgs[pkg] = true
-				cases.TestMain = fmt.Sprintf("%s.%s", pkg, fn.Name.Name)
-				continue
-			}
-
-			// Here we check the signature of the Test* function. To
-			// be considered a test:
+			// Here we check the signature of the TestMain / Test* function.
+			// To be considered a test:
 
 			// 1. The function should have a single argument.
 			if len(fn.Type.Params.List) != 1 {
@@ -394,6 +370,20 @@ func genTestMain(args []string) error {
 			// parameter being *testing.T. Instead we assert that it
 			// should be *<something>.T. This is because the import
 			// could have been aliased as a different identifier.
+
+			// `go test` decides whether a func named TestMain is the package
+			// entry point from its signature, not from its name: only
+			// func TestMain(*testing.M) is the entry point that wraps the run.
+			// A func TestMain(*testing.T) is an ordinary test that merely
+			// happens to be named TestMain, so it falls through to the Test*
+			// case below. See $GOROOT/src/cmd/go/internal/load/test.go, the
+			// TestMain case of testFuncs.load.
+			if fn.Name.Name == "TestMain" && selExpr.Sel.Name == "M" {
+				// TestMain is not, itself, a test
+				pkgs[pkg] = true
+				cases.TestMain = fmt.Sprintf("%s.%s", pkg, fn.Name.Name)
+				continue
+			}
 
 			if strings.HasPrefix(fn.Name.Name, "Test") {
 				if selExpr.Sel.Name != "T" {
@@ -436,6 +426,9 @@ func genTestMain(args []string) error {
 		cases.Imports = append(cases.Imports, importMap[name])
 	}
 	sort.Slice(cases.Imports, func(i, j int) bool {
+		if cases.Imports[i].Name == cases.Imports[j].Name {
+			return cases.Imports[i].Path < cases.Imports[j].Path
+		}
 		return cases.Imports[i].Name < cases.Imports[j].Name
 	})
 	tpl := template.Must(template.New("source").Parse(testMainTpl))

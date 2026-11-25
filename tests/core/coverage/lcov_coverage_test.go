@@ -27,6 +27,7 @@ func TestMain(m *testing.M) {
 	bazel_testing.TestMain(m, bazel_testing.Args{
 		Main: `
 -- src/BUILD.bazel --
+load("@rules_java//java:java_binary.bzl", "java_binary")
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
@@ -141,6 +142,9 @@ func TestTool(t *testing.T) {
 }
 
 `,
+		ModuleFileSuffix: `
+bazel_dep(name = "rules_java", version = "8.6.1")
+`,
 	})
 }
 
@@ -213,7 +217,7 @@ func TestLcovCoverageWithTool(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectedCoverage := append(expectedGoCoverage, expectedToolCoverage)
+	expectedCoverage := append(expectedGoCoverage, expectedToolCoverageFunctions, expectedToolCoverageLines)
 	for _, expected := range expectedCoverage {
 		if !strings.Contains(string(individualCoverageData), expected) {
 			t.Errorf(
@@ -271,16 +275,19 @@ LF:9
 end_of_record
 `}
 
-const expectedToolCoverage = `SF:src/Tool.java
+// The BRDA lines are omitted: which of the two branches JaCoCo reports as
+// taken depends on the Java toolchain, and the aggregate BRF and BRH counts
+// cover what this test cares about.
+const expectedToolCoverageFunctions = `SF:src/Tool.java
 FN:1,Tool::<init> ()V
 FN:3,Tool::main ([Ljava/lang/String;)V
 FNDA:0,Tool::<init> ()V
 FNDA:1,Tool::main ([Ljava/lang/String;)V
 FNF:2
 FNH:1
-BRDA:3,0,0,1
-BRDA:3,0,1,0
-BRF:2
+`
+
+const expectedToolCoverageLines = `BRF:2
 BRH:1
 DA:1,0
 DA:3,1

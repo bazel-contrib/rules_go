@@ -296,11 +296,39 @@ func TestWritePatch(t *testing.T) {
 		t.Fatalf("Failed to create temporary file2.go: %v", err)
 	}
 
+	// Multiple trailing newlines.
+	file3 := tmpDir + "/file3.go"
+	err = os.WriteFile(file3, []byte("package main\n\n\n"), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create temporary file3.go: %v", err)
+	}
+
+	// No trailing newlines.
+	file4 := tmpDir + "/file4.go"
+	err = os.WriteFile(file4, []byte("package main\nfunc Bye() {}"), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create temporary file4.go: %v", err)
+	}
+
+	// Tab indents.
+	file5 := tmpDir + "/file5.go"
+	err = os.WriteFile(file5, []byte("package main\n\nfunc foo() {\n\tx := 1\n\ty := 2\n}\n"), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create temporary file5.go: %v", err)
+	}
+
+	// Lines starting with diff markers.
+	file6 := tmpDir + "/file6.go"
+	err = os.WriteFile(file6, []byte("package main\n\n// -deprecated\nfunc bar() {} // +new\n"), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create temporary file6.go: %v", err)
+	}
+
 	tests := []struct {
-		name      string
-		fileChanges       []fileChange
-		expected  string
-		expectErr bool
+		name        string
+		fileChanges []fileChange
+		expected    string
+		expectErr   bool
 	}{
 		{
 			name: "valid patch for multiple files",
@@ -310,21 +338,79 @@ func TestWritePatch(t *testing.T) {
 			},
 			expected: fmt.Sprintf(`--- %s
 +++ %s
-@@ -1,3 +1,5 @@
+@@ -1,2 +1,4 @@
  package main
 -func Hello() {}
 +func Hello() {
 +Hello, world!
 +}
- 
 --- %s
 +++ %s
-@@ -1,3 +1,4 @@
+@@ -1,2 +1,3 @@
  package main
  var x = 10
 +var y = 20
- 
 `, filepath.Join("a", file1), filepath.Join("b", file1), filepath.Join("a", file2), filepath.Join("b", file2)),
+		},
+		{
+			name: "multiple trailing newlines",
+			fileChanges: []fileChange{
+				{fileName: file3, changes: []nogoEdit{{Start: 0, End: 15, New: "package main\n"}}},
+			},
+			expected: fmt.Sprintf(`--- %s
++++ %s
+@@ -1,3 +1 @@
+ package main
+-
+-
+`, filepath.Join("a", file3), filepath.Join("b", file3)),
+		},
+		{
+			name: "no trailing newline",
+			fileChanges: []fileChange{
+				{fileName: file4, changes: []nogoEdit{{Start: 18, End: 21, New: "Hello"}}},
+			},
+			expected: fmt.Sprintf(`--- %s
++++ %s
+@@ -1,2 +1,2 @@
+ package main
+-func Bye() {}
+\ No newline at end of file
++func Hello() {}
+\ No newline at end of file
+`, filepath.Join("a", file4), filepath.Join("b", file4)),
+		},
+		{
+			name: "tab-indented lines",
+			fileChanges: []fileChange{
+				{fileName: file5, changes: []nogoEdit{{Start: 33, End: 34, New: "42"}}},
+			},
+			expected: fmt.Sprintf(`--- %s
++++ %s
+@@ -1,6 +1,6 @@
+ package main
+ 
+ func foo() {
+-	x := 1
++	x := 42
+ 	y := 2
+ }
+`, filepath.Join("a", file5), filepath.Join("b", file5)),
+		},
+		{
+			name: "lines starting with diff markers",
+			fileChanges: []fileChange{
+				{fileName: file6, changes: []nogoEdit{{Start: 34, End: 37, New: "baz"}}},
+			},
+			expected: fmt.Sprintf(`--- %s
++++ %s
+@@ -1,4 +1,4 @@
+ package main
+ 
+ // -deprecated
+-func bar() {} // +new
++func baz() {} // +new
+`, filepath.Join("a", file6), filepath.Join("b", file6)),
 		},
 		{
 			name: "file not found",

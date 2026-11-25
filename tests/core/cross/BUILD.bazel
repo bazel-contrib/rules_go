@@ -80,7 +80,7 @@ go_cross_binary(
 )
 
 # Because pure = "on" on the underlying target, this doesn't actually need cgo (and won't try to use it).
-# This target ensures that (from Bazel 6) we don't require a C++ toolchain if we're not actually going to use cgo.
+# This target ensures that we don't require a C++ toolchain if we're not actually going to use cgo.
 go_cross_binary(
     name = "windows_go_cross_cgo",
     platform = "@io_bazel_rules_go//go/toolchain:windows_amd64_cgo",
@@ -88,7 +88,7 @@ go_cross_binary(
 )
 
 # Because pure = "on" on the underlying target, this doesn't actually need cgo (and won't try to use it).
-# This target ensures that (from Bazel 6) we don't require a C++ toolchain if we're not actually going to use cgo.
+# This target ensures that we don't require a C++ toolchain if we're not actually going to use cgo.
 go_cross_binary(
     name = "linux_go_cross_cgo",
     platform = "@io_bazel_rules_go//go/toolchain:linux_amd64_cgo",
@@ -96,7 +96,7 @@ go_cross_binary(
 )
 
 # Because pure = "on" on the underlying target, this doesn't actually need cgo (and won't try to use it).
-# This target ensures that (from Bazel 6) we don't require a C++ toolchain if we're not actually going to use cgo.
+# This target ensures that we don't require a C++ toolchain if we're not actually going to use cgo.
 go_cross_binary(
     name = "darwin_go_cross_cgo",
     platform = "@io_bazel_rules_go//go/toolchain:darwin_amd64_cgo",

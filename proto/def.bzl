@@ -24,6 +24,7 @@ load(
     "//go:def.bzl",
     "GoInfo",
     "go_context",
+    "go_rule",
 )
 load(
     "//go/private:common.bzl",
@@ -35,6 +36,7 @@ load(
     "CGO_FRAGMENTS",
     "CGO_TOOLCHAINS",
     "new_go_info",
+    rule_maybe_needs_cc_toolchain = "maybe_needs_cc_toolchain",
 )
 load(
     "//go/private/rules:transition.bzl",
@@ -86,9 +88,9 @@ declares the \"{attr_name}\" attribute.""".format(
     go = go_context(
         ctx,
         attr,
-        include_deprecated_properties = False,
         importpath = attr.importpath,
         go_context_data = attr._go_context_data,
+        maybe_needs_cc_toolchain = False,
     )
     imports = get_imports(attr, go.importpath)
     return [GoProtoImports(imports = imports)]
@@ -99,7 +101,9 @@ _go_proto_aspect = aspect(
         "deps",
         "embed",
     ],
-    toolchains = [GO_TOOLCHAIN],
+    attrs = CGO_ATTRS,
+    fragments = CGO_FRAGMENTS,
+    toolchains = [GO_TOOLCHAIN] + CGO_TOOLCHAINS,
 )
 
 def _proto_library_to_source(_go, attr, source, merge):
@@ -111,15 +115,19 @@ def _proto_library_to_source(_go, attr, source, merge):
         if GoInfo in compiler:
             merge(source, compiler[GoInfo])
 
+def _go_proto_library_maybe_needs_cc_toolchain(ctx):
+    compilers = [ctx.attr.compiler] if ctx.attr.compiler else ctx.attr.compilers
+    return rule_maybe_needs_cc_toolchain(ctx.attr, go_infos = compilers)
+
 def _go_proto_library_impl(ctx):
     go = go_context(
         ctx,
-        include_deprecated_properties = False,
         importpath = ctx.attr.importpath,
         importmap = ctx.attr.importmap,
         importpath_aliases = ctx.attr.importpath_aliases,
         embed = ctx.attr.embed,
         go_context_data = ctx.attr._go_context_data,
+        maybe_needs_cc_toolchain = _go_proto_library_maybe_needs_cc_toolchain(ctx),
     )
     if ctx.attr.compiler:
         #TODO: print("DEPRECATED: compiler attribute on {}, use compilers instead".format(ctx.label))
@@ -177,7 +185,7 @@ def _go_proto_library_impl(ctx):
         ])
     return providers + [OutputGroupInfo(**output_groups)]
 
-go_proto_library = rule(
+go_proto_library = go_rule(
     implementation = _go_proto_library_impl,
     attrs = {
         "proto": attr.label(
@@ -206,12 +214,26 @@ go_proto_library = rule(
         "_go_context_data": attr.label(
             default = "//:go_context_data",
         ),
+        "_nogo": attr.label(
+            default = Label("@io_bazel_rules_nogo//:nogo"),
+            cfg = "exec",
+        ),
         "_allowlist_function_transition": attr.label(
             default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
         ),
-    } | CGO_ATTRS,
-    fragments = CGO_FRAGMENTS,
-    toolchains = [GO_TOOLCHAIN] + CGO_TOOLCHAINS,
+    },
+    # go-protoc-bin is built via cfg = "exec" and lands on the first registered
+    # exec platform, while the Go toolchain may have constraints on the exec
+    # platform. Because of the possible differences in platform resolution,
+    # this may end up with a go-protoc-bin that is incompatible with the
+    # selected exec platform (when --incompatible_auto_exec_groups is unset).
+    # Assign it an explicit exec group with no toolchain constraints so it
+    # resolves to the same platform as the one resolved for the binary.
+    # Note that this exec platform matching is still fragile; the proper fix
+    # is to create proper toolchains for the protoc compiler.
+    exec_groups = {
+        "internal_use_only_go_proto_gen": exec_group(),
+    },
 )
 # go_proto_library is a rule that takes a proto_library (in the proto
 # attribute) and produces a go library for it.

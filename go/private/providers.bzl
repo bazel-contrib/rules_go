@@ -26,7 +26,21 @@ GoArchiveData = provider()
 # The compiled form of GoInfo, with everything needed to link it into a binary.
 # This is a configuration specific provider.
 # See go/providers.rst#GoArchive for full documentation.
-GoArchive = provider()
+GoArchive = provider(fields = [
+    "_buildinfo_link_inputs",
+    "_headers",
+    "cgo_deps",
+    "cgo_exports",
+    "cgo_link_inputs",
+    "data",
+    "direct",
+    "libs",
+    "mode",
+    "runfiles",
+    "source",
+    "transitive",
+    "x_defs",
+])
 
 GoPath = provider()
 

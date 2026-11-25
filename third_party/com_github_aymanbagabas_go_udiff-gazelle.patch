@@ -1,0 +1,37 @@
+diff -urN a/BUILD.bazel b/BUILD.bazel
+--- a/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
++++ b/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
+@@ -0,0 +1,15 @@
++load("@io_bazel_rules_go//go:def.bzl", "go_library")
++
++go_library(
++    name = "udiff",
++    srcs = glob(["*.go"], exclude = ["*_test.go"]),
++    importpath = "github.com/aymanbagabas/go-udiff",
++    visibility = ["//visibility:public"],
++    deps = ["//lcs:go_default_library"],
++)
++
++alias(
++    name = "go_default_library",
++    actual = ":udiff",
++    visibility = ["//visibility:public"],
++)
+diff -urN a/lcs/BUILD.bazel b/lcs/BUILD.bazel
+--- a/lcs/BUILD.bazel	1970-01-01 00:00:00.000000000 +0000
++++ b/lcs/BUILD.bazel	2000-01-01 00:00:00.000000000 -0000
+@@ -0,0 +1,14 @@
++load("@io_bazel_rules_go//go:def.bzl", "go_library")
++
++go_library(
++    name = "lcs",
++    srcs = glob(["*.go"], exclude = ["*_test.go"]),
++    importpath = "github.com/aymanbagabas/go-udiff/lcs",
++    visibility = ["//visibility:public"],
++)
++
++alias(
++    name = "go_default_library",
++    actual = ":lcs",
++    visibility = ["//visibility:public"],
++)

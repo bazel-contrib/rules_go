@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@io_bazel_rules_go_bazel_features//:features.bzl", "bazel_features")
-load("//go/private:go_mod.bzl", "version_from_go_mod")
+load("//go/private:go_mod.bzl", "version_from_go_mod", "version_from_go_work")
 load("//go/private:nogo.bzl", "DEFAULT_NOGO", "NOGO_DEFAULT_EXCLUDES", "NOGO_DEFAULT_INCLUDES", "go_register_nogo")
 load("//go/private:sdk.bzl", "detect_host_platform", "fetch_sdks_by_version", "go_download_sdk_rule", "go_host_sdk_rule", "go_multiple_toolchains", "go_wrap_sdk_rule")
 
@@ -53,6 +52,10 @@ _COMMON_TAG_ATTRS = {
         doc = "The number of leading path segments to be stripped from the file name in the patches.",
     ),
     "strip_prefix": attr.string(default = "go"),
+    "experimental_build_compiler_from_source": attr.bool(
+        default = False,
+        doc = "Whether to bootstrap compiler tool binaries from source instead of using the prebuilt SDK compiler binaries.",
+    ),
 }
 
 _download_tag = tag_class(
@@ -79,16 +82,15 @@ _nogo_tag = tag_class(
         ),
         "includes": attr.label_list(
             default = NOGO_DEFAULT_INCLUDES,
-            # The special include "all" is undocumented on purpose: With it, adding a new transitive
-            # dependency to a Go module can cause a build failure if the new dependency has lint
-            # issues.
             doc = """
 A Go target is checked with nogo if its package matches at least one of the entries in 'includes'
 and none of the entries in 'excludes'. By default, nogo is applied to all targets in the main
 repository.
 
 Uses the same format as 'visibility', i.e., every entry must be a label that ends with ':__pkg__' or
-':__subpackages__'.
+':__subpackages__'. As an exception to this rule, the special value ["all"] is allowed for 'includes'
+and means that nogo should be applied to all Go targets, including those in all external
+repositories.
 """,
         ),
         "excludes": attr.label_list(
@@ -98,20 +100,13 @@ Uses the same format as 'visibility', i.e., every entry must be a label that end
     },
 )
 
-# string_keyed_label_dict was added in 8.0.0
-_maybe_string_keyed_label_dict = getattr(
-    attr,
-    "string_keyed_label_dict",
-    attr.string_dict,
-)
-
 _wrap_tag = tag_class(
     attrs = {
         "root_file": attr.label(
             mandatory = False,
             doc = "A file in the SDK root directory. Use to determine GOROOT.",
         ),
-        "root_files": _maybe_string_keyed_label_dict(
+        "root_files": attr.string_keyed_label_dict(
             mandatory = False,
             doc = "A set of mappings from the host platform to a file in the SDK's root directory.",
         ),
@@ -125,10 +120,13 @@ _wrap_tag = tag_class(
 )
 
 _from_file_tag = tag_class(
-    doc = """Use a specific Go SDK version described by a `go.mod` file.  Optionally supply GOOS, GOARCH, and download from a customisable URL, and apply local patches or set experiments.""",
+    doc = """Use a specific Go SDK version described by a `go.mod` or `go.work` file.  Optionally supply GOOS, GOARCH, and download from a customisable URL, and apply local patches or set experiments.""",
     attrs = _COMMON_TAG_ATTRS | {
         "go_mod": attr.label(
             doc = "The go.mod file to read the SDK version from.",
+        ),
+        "go_work": attr.label(
+            doc = "The go.work file to read the SDK version from.",
         ),
     },
 )
@@ -151,11 +149,9 @@ _MAX_NUM_TOOLCHAINS = 9999
 _TOOLCHAIN_INDEX_PAD_LENGTH = len(str(_MAX_NUM_TOOLCHAINS))
 
 def _go_sdk_impl(ctx):
-    nogo_tag = struct(
-        nogo = DEFAULT_NOGO,
-        includes = NOGO_DEFAULT_INCLUDES,
-        excludes = NOGO_DEFAULT_EXCLUDES,
-    )
+    nogo = DEFAULT_NOGO
+    nogo_includes = NOGO_DEFAULT_INCLUDES
+    nogo_excludes = NOGO_DEFAULT_EXCLUDES
     for module in ctx.modules:
         if not module.is_root or not module.tags.nogo:
             continue
@@ -166,22 +162,25 @@ def _go_sdk_impl(ctx):
                 *[t for p in zip(module.tags.nogo, len(module.tags.nogo) * ["\n"]) for t in p]
             )
         nogo_tag = module.tags.nogo[0]
-        for scope in nogo_tag.includes + nogo_tag.excludes:
-            # Validate that the scope references a valid, visible repository.
-            # buildifier: disable=no-effect
-            scope.repo_name
-            if scope.name != "__pkg__" and scope.name != "__subpackages__":
-                fail(
-                    "go_sdk.nogo: all entries in includes and excludes must end with ':__pkg__' or ':__subpackages__', got '{}' in".format(scope.name),
-                    nogo_tag,
-                )
+        nogo = nogo_tag.nogo
+        nogo_includes = nogo_tag.includes
+        nogo_excludes = nogo_tag.excludes
+
+        # "all" is still processed into a Label instance, so we just check its name.
+        if len(nogo_includes) == 1 and nogo_includes[0].name == "all":
+            nogo_includes = ["all"]
+        else:
+            for scope in nogo_includes:
+                _check_nogo_scope(scope, nogo_tag)
+        for scope in nogo_excludes:
+            _check_nogo_scope(scope, nogo_tag)
     go_register_nogo(
         name = "io_bazel_rules_nogo",
-        nogo = str(nogo_tag.nogo),
+        nogo = str(nogo),
         # Go through canonical label literals to avoid a dependency edge on the packages in the
         # scope.
-        includes = [str(l) for l in nogo_tag.includes],
-        excludes = [str(l) for l in nogo_tag.excludes],
+        includes = [str(l) for l in nogo_includes],
+        excludes = [str(l) for l in nogo_excludes],
     )
 
     multi_version_module = {}
@@ -191,7 +190,7 @@ def _go_sdk_impl(ctx):
         else:
             multi_version_module[module.name] = False
 
-    # We remember the first host compatible toolchain declared by the download and host tags.
+    # We remember the first host compatible toolchain declared by the download, host, and from_file tags.
     # The order follows bazel's iteration over modules (the toolchains declared by the root module are considered first).
     # We know that at least `go_default_sdk` (which is declared by the `rules_go` module itself) is host compatible.
     first_host_compatible_toolchain = None
@@ -254,24 +253,37 @@ def _go_sdk_impl(ctx):
                 sdk_version = wrap_tag.version,
             ))
             if (not wrap_tag.goos or wrap_tag.goos == host_detected_goos) and (not wrap_tag.goarch or wrap_tag.goarch == host_detected_goarch):
-                first_host_compatible_toolchain = first_host_compatible_toolchain or "@{}//:ROOT".format(name)
+                first_host_compatible_toolchain = first_host_compatible_toolchain or "@{}//:host_compatible_root_file".format(name)
 
         additional_download_tags = []
 
-        # If the module suggests to read the toolchain version from a `go.mod` file, use that.
+        # If the module suggests to read the toolchain version from a `go.mod` or `go.work` file, use that.
         for index, from_file_tag in enumerate(module.tags.from_file):
-            version = version_from_go_mod(ctx, from_file_tag.go_mod)
+            if from_file_tag.go_mod and from_file_tag.go_work:
+                fail("go_sdk.from_file: either go_mod or go_work must be specified, but not both")
+            elif from_file_tag.go_mod:
+                version = version_from_go_mod(ctx, from_file_tag.go_mod)
+            elif from_file_tag.go_work:
+                version = version_from_go_work(ctx, from_file_tag.go_work)
+            else:
+                fail("go_sdk.from_file: either go_mod or go_work must be specified")
 
             # Synthesize a `download` tag so we can reuse the selection logic below.
             download_tag = {
                 key: getattr(from_file_tag, key)
                 for key in dir(from_file_tag)
-                if key not in ["go_mod"]
+                if key not in ["go_mod", "go_work"]
             }
             download_tag["version"] = version
             additional_download_tags.append(struct(**download_tag))
 
-        for index, download_tag in enumerate(module.tags.download + additional_download_tags):
+        # We handle the `additional_download_tags` first so that `from_file` takes precedence
+        # over extra SDKs specified with `download`. That way the `from_file` toolchains are registered
+        # with higher precedence and become default, while `download`'ed toolchains can still be
+        # requested explicitly.
+        # TODO(zbarsky/fmeum): This is still not the ideal ordering. We should respect the order that tags are
+        # specified in, but Bzlmod currently doesn't provide this information across tag classes.
+        for index, download_tag in enumerate(additional_download_tags + module.tags.download):
             # SDKs without an explicit version are fetched even when not selected by toolchain
             # resolution. This is acceptable if brought in by the root module, but transitive
             # dependencies should not slow down the build in this way.
@@ -291,6 +303,8 @@ def _go_sdk_impl(ctx):
                 multi_version = multi_version_module[module.name],
                 tag_type = "download",
                 index = index,
+                goos = download_tag.goos or host_detected_goos,
+                goarch = download_tag.goarch or host_detected_goarch,
             )
 
             _download_sdk(
@@ -302,7 +316,7 @@ def _go_sdk_impl(ctx):
             )
 
             if (not download_tag.goos or download_tag.goos == host_detected_goos) and (not download_tag.goarch or download_tag.goarch == host_detected_goarch):
-                first_host_compatible_toolchain = first_host_compatible_toolchain or "@{}//:ROOT".format(name)
+                first_host_compatible_toolchain = first_host_compatible_toolchain or "@{}//:host_compatible_root_file".format(name)
 
             toolchains.append(struct(
                 goos = download_tag.goos,
@@ -329,7 +343,8 @@ def _go_sdk_impl(ctx):
                         multi_version = multi_version_module[module.name],
                         tag_type = "download",
                         index = index,
-                        suffix = "_{}_{}".format(goos, goarch),
+                        goos = goos,
+                        goarch = goarch,
                     )
 
                     _download_sdk(
@@ -374,7 +389,7 @@ def _go_sdk_impl(ctx):
                 sdk_type = "host",
                 sdk_version = host_tag.version,
             ))
-            first_host_compatible_toolchain = first_host_compatible_toolchain or "@{}//:ROOT".format(name)
+            first_host_compatible_toolchain = first_host_compatible_toolchain or "@{}//:host_compatible_root_file".format(name)
 
     host_compatible_toolchain(name = "go_host_compatible_sdk_label", toolchain = first_host_compatible_toolchain)
     if len(toolchains) > _MAX_NUM_TOOLCHAINS:
@@ -398,21 +413,34 @@ def _go_sdk_impl(ctx):
         sdk_versions = [toolchain.sdk_version for toolchain in toolchains],
     )
 
-    if bazel_features.external_deps.extension_metadata_has_reproducible:
-        kwargs = {
-            "reproducible": True,
-        }
+    kwargs = {
+        "reproducible": True,
+    }
 
-        # See get_sdks_by_version_cached above for details on these facts.
-        if hasattr(ctx, "facts"):
-            kwargs["facts"] = used_sdks_by_version
-        return ctx.extension_metadata(**kwargs)
-    else:
-        return None
+    # See get_sdks_by_version_cached above for details on these facts.
+    if hasattr(ctx, "facts"):
+        kwargs["facts"] = used_sdks_by_version
+    return ctx.extension_metadata(**kwargs)
 
-def _default_go_sdk_name(*, module, multi_version, tag_type, index, suffix = ""):
+def _check_nogo_scope(scope, nogo_tag):
+    # Validate that the scope references a valid, visible repository.
+    # buildifier: disable=no-effect
+    scope.repo_name
+    if scope.name != "__pkg__" and scope.name != "__subpackages__":
+        fail(
+            "go_sdk.nogo: all entries in includes and excludes must end with ':__pkg__' or ':__subpackages__', got '{}' in".format(scope.name),
+            nogo_tag,
+        )
+
+def _default_go_sdk_name(*, module, multi_version, tag_type, index, goos = None, goarch = None):
     # Keep the version and name of the root module out of the repository name if possible to
     # prevent unnecessary rebuilds when it changes.
+    if goos and goarch:
+        suffix = "_{}_{}".format(goos, goarch)
+    elif not goos and not goarch:
+        suffix = ""
+    else:
+        fail("goos and goarch must be specified together")
     return "{name}_{version}_{tag_type}_{index}{suffix}".format(
         # "main_" is not a valid module name and thus can't collide.
         name = "main_" if module.is_root else module.name,
@@ -453,14 +481,8 @@ def _download_sdk(*, get_sdks_by_version, name, goos, goarch, download_tag):
         urls = download_tag.urls,
         version = download_tag.version,
         strip_prefix = download_tag.strip_prefix,
+        experimental_build_compiler_from_source = download_tag.experimental_build_compiler_from_source,
     )
-
-go_sdk_extra_kwargs = {
-    # The choice of a host-compatible SDK is expressed in repository rule attribute values and
-    # depends on host OS and architecture.
-    "os_dependent": True,
-    "arch_dependent": True,
-} if bazel_features.external_deps.module_extension_has_os_arch_dependent else {}
 
 go_sdk = module_extension(
     implementation = _go_sdk_impl,
@@ -471,5 +493,8 @@ go_sdk = module_extension(
         "wrap": _wrap_tag,
         "from_file": _from_file_tag,
     },
-    **go_sdk_extra_kwargs
+    # The choice of a host-compatible SDK is expressed in repository rule attribute values and
+    # depends on host OS and architecture.
+    os_dependent = True,
+    arch_dependent = True,
 )

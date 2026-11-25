@@ -60,20 +60,18 @@ func F() {}
 	})
 }
 
-const origWrapSDK = `go_wrap_sdk(
-    name = "go_sdk",
+const origWrapSDK = `_host_go_sdk.wrap(
     root_file = "@local_go_sdk//:ROOT",
 )`
 
-const wrapSDKBoringcrypto = `go_wrap_sdk(
-    name = "go_sdk",
+const wrapSDKBoringcrypto = `_host_go_sdk.wrap(
     root_file = "@local_go_sdk//:ROOT",
     experiments = ["boringcrypto"],
 )`
 
 func TestBoringcryptoExperimentPresent(t *testing.T) {
-	mustReplaceInFile(t, "WORKSPACE", origWrapSDK, wrapSDKBoringcrypto)
-	defer mustReplaceInFile(t, "WORKSPACE", wrapSDKBoringcrypto, origWrapSDK)
+	mustReplaceInFile(t, "MODULE.bazel", origWrapSDK, wrapSDKBoringcrypto)
+	defer mustReplaceInFile(t, "MODULE.bazel", wrapSDKBoringcrypto, origWrapSDK)
 
 	if _, err := exec.LookPath("go"); err != nil {
 		t.Skip("go command is necessary to evaluate if boringcrypto experiment is present")

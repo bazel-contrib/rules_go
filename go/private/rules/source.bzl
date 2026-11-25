@@ -28,7 +28,10 @@ load(
 
 def _go_source_impl(ctx):
     """Implements the go_source() rule."""
-    go = go_context(ctx, include_deprecated_properties = False)
+    go = go_context(
+        ctx,
+        maybe_needs_cc_toolchain = False,
+    )
     go_info = new_go_info(go, ctx.attr)
     return [
         go_info,
@@ -79,17 +82,15 @@ go_source = rule(
             """,
         ),
         "_go_config": attr.label(default = "//:go_config"),
-        "_cgo_context_data": attr.label(default = "//:cgo_context_data_proxy"),
     },
     toolchains = [GO_TOOLCHAIN],
     provides = [GoInfo],
     doc = """This declares a set of source files and related dependencies that can be embedded into one of the
     other rules.
-    This is used as a way of easily declaring a common set of sources re-used in multiple rules.<br><br>
+    This is used as a way of easily declaring a common set of sources re-used in multiple rules.
+
     **Providers:**
-    <ul>
-      <li>[GoInfo]</li>
-    </ul>
+    - [GoInfo]
     """,
 )
 # See docs/go/core/rules.md#go_source for full documentation.

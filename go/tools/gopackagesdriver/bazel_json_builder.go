@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -116,7 +117,9 @@ func (b *BazelJSONBuilder) adjustToRelativePathIfPossible(request string) string
 
 func (b *BazelJSONBuilder) packageQuery(importPath string) string {
 	if strings.HasSuffix(importPath, "/...") {
-		importPath = fmt.Sprintf(`^%s(/.+)?$`, strings.TrimSuffix(importPath, "/..."))
+		importPath = fmt.Sprintf(`%s(/.+)?$`, regexp.QuoteMeta(strings.TrimSuffix(importPath, "/...")))
+	} else {
+		importPath = regexp.QuoteMeta(importPath)
 	}
 
 	return fmt.Sprintf(
@@ -167,11 +170,8 @@ func (b *BazelJSONBuilder) outputGroupsForMode(mode packages.LoadMode) string {
 }
 
 func (b *BazelJSONBuilder) query(ctx context.Context, query string) ([]string, error) {
-	var bzlmodQueryFlags []string
-	if b.bazel.version.isAtLeast(bazelVersion{6, 4, 0}) {
-		bzlmodQueryFlags = []string{"--consistent_labels"}
-	}
-	queryArgs := concatStringsArrays(bazelQueryFlags, bzlmodQueryFlags, []string{
+	queryArgs := concatStringsArrays(bazelQueryFlags, []string{
+		"--consistent_labels",
 		"--ui_event_filters=-info,-stderr",
 		"--noshow_progress",
 		"--order_output=no",
@@ -218,6 +218,7 @@ func (b *BazelJSONBuilder) Build(ctx context.Context, labels []string, mode pack
 		buildArgs = append(buildArgs, labels...)
 	} else {
 		// To avoid hitting MAX_ARGS length, write labels to a file and use `--target_pattern_file`
+		slog.Info("bazel_build_targets", "labels", labels)
 		targetsFile, err := ioutil.TempFile("", "gopackagesdriver_targets_")
 		if err != nil {
 			return nil, fmt.Errorf("unable to create target pattern file: %w", err)

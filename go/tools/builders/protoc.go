@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"go/parser"
 	"go/token"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -32,13 +33,13 @@ import (
 )
 
 type genFileInfo struct {
-	base       string       // The basename of the path
-	path       string       // The full path to the final file
-	expected   bool         // Whether the file is expected by the rules
-	created    bool         // Whether the file was created by protoc
-	from       *genFileInfo // The actual file protoc produced if not Path
-	unique     bool         // True if this base name is unique in expected results
-	ambiguous  bool         // True if there were more than one possible outputs that matched this file
+	base      string       // The basename of the path
+	path      string       // The full path to the final file
+	expected  bool         // Whether the file is expected by the rules
+	created   bool         // Whether the file was created by protoc
+	from      *genFileInfo // The actual file protoc produced if not Path
+	unique    bool         // True if this base name is unique in expected results
+	ambiguous bool         // True if there were more than one possible outputs that matched this file
 }
 
 func run(args []string) error {
@@ -199,11 +200,7 @@ func run(args []string) error {
 		case f.expected && f.ambiguous:
 			fmt.Fprintf(buf, "ambiguous output %v.\n", f.path)
 		case f.from != nil:
-			data, err := ioutil.ReadFile(f.from.path)
-			if err != nil {
-				return err
-			}
-			if err := ioutil.WriteFile(abs(f.path), data, 0644); err != nil {
+			if err := copyGeneratedFile(f.from.path, f.path); err != nil {
 				return err
 			}
 		case !f.expected:
@@ -225,6 +222,24 @@ func run(args []string) error {
 	}
 
 	return nil
+}
+
+func copyGeneratedFile(srcPath, dstPath string) error {
+	src, err := os.Open(srcPath)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+
+	dst, err := os.OpenFile(abs(dstPath), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(dst, src); err != nil {
+		dst.Close()
+		return err
+	}
+	return dst.Close()
 }
 
 func main() {

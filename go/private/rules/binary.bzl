@@ -26,10 +26,10 @@ load(
 )
 load(
     "//go/private:context.bzl",
-    "CGO_ATTRS",
-    "CGO_FRAGMENTS",
     "CGO_TOOLCHAINS",
     "go_context",
+    "go_rule",
+    "maybe_needs_cc_toolchain",
     "new_go_info",
 )
 load(
@@ -46,6 +46,10 @@ load(
     "GoArchive",
     "GoInfo",
     "GoSDK",
+)
+load(
+    "//go/private/actions:baseline_coverage.bzl",
+    "baseline_coverage_kwargs",
 )
 load(
     "//go/private/rules:transition.bzl",
@@ -126,12 +130,13 @@ def _go_binary_impl(ctx):
     """go_binary_impl emits actions for compiling and linking a go executable."""
     go = go_context(
         ctx,
-        include_deprecated_properties = False,
         importpath = ctx.attr.importpath,
         embed = ctx.attr.embed,
         go_context_data = ctx.attr._go_context_data,
+        maybe_needs_cc_toolchain = maybe_needs_cc_toolchain(ctx.attr, go_infos = ctx.attr.deps),
         goos = ctx.attr.goos,
         goarch = ctx.attr.goarch,
+        static = ctx.attr.static,
     )
 
     generated_srcs = []
@@ -171,6 +176,7 @@ def _go_binary_impl(ctx):
         gc_linkopts = gc_linkopts(ctx),
         version_file = ctx.version_file,
         info_file = ctx.info_file,
+        link_exec_group = "go_link",
         executable = executable,
     )
     validation_output = archive.data._validation_output
@@ -217,7 +223,6 @@ def _go_binary_impl(ctx):
             "linkopts": {
                 "darwin": [],
                 "ios": [],
-                "windows": ["-mthreads"],
             }.get(go.mode.goos, ["-pthread"]),
         }
         cgo_exports = archive.cgo_exports.to_list()
@@ -246,6 +251,7 @@ def _go_binary_impl(ctx):
             source_attributes = ["srcs"],
             dependency_attributes = ["data", "deps", "embed", "embedsrcs"],
             extensions = ["go"],
+            **baseline_coverage_kwargs(go, ctx, ctx.files.srcs)
         ),
     )
 
@@ -255,6 +261,7 @@ def _go_binary_kwargs(go_cc_aspects = []):
     return {
         "cfg": go_transition,
         "implementation": _go_binary_impl,
+        "provides": [GoArchive],
         "attrs": {
             "srcs": attr.label_list(
                 allow_files = go_exts + asm_exts + cgo_exts + syso_exts,
@@ -459,7 +466,7 @@ def _go_binary_kwargs(go_cc_aspects = []):
                 values = ["auto"] + LINKMODES,
                 doc = """Determines how the binary should be built and linked. This accepts some of
                 the same values as `go build -buildmode` and works the same way.
-                <br><br>
+
                 <ul>
                 <li>`auto` (default): Controlled by `//go/config:linkmode`, which defaults to `pie` on supported platforms and `normal` elsewhere.</li>
                 <li>`normal`: Builds a normal executable with position-dependent code.</li>
@@ -475,11 +482,17 @@ def _go_binary_kwargs(go_cc_aspects = []):
                 doc = """Provides a pprof file to be used for profile guided optimization when compiling go targets.
                 A pprof file can also be provided via `--@io_bazel_rules_go//go/config:pgoprofile=<label of a pprof file>`.
                 Profile guided optimization is only supported on go 1.20+.
+                On go 1.23+, the profile is converted with `go tool preprofile` in a separate action.
+                A profile that has already been converted this way is accepted as is.
                 See https://go.dev/doc/pgo for more information.
                 """,
                 default = "//go/config:empty",
             ),
             "_go_context_data": attr.label(default = "//:go_context_data"),
+            "_nogo": attr.label(
+                default = Label("@io_bazel_rules_nogo//:nogo"),
+                cfg = "exec",
+            ),
             "_allowlist_function_transition": attr.label(
                 default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
             ),
@@ -490,22 +503,25 @@ def _go_binary_kwargs(go_cc_aspects = []):
             "_bincov": attr.label(
                 default = "//go/tools/bzltestutil/bincov",
             ),
-        } | CGO_ATTRS,
-        "fragments": CGO_FRAGMENTS,
-        "toolchains": [GO_TOOLCHAIN] + CGO_TOOLCHAINS,
+        },
+        "exec_groups": {
+            "go_link": exec_group(
+                toolchains = [GO_TOOLCHAIN] + CGO_TOOLCHAINS,
+            ),
+        },
         "doc": """This builds an executable from a set of source files,
         which must all be in the `main` package. You can run the binary with
-        `bazel run`, or you can build it with `bazel build` and run it directly.<br><br>
-        ***Note:*** `name` should be the same as the desired name of the generated binary.<br><br>
+        `bazel run`, or you can build it with `bazel build` and run it directly.
+
+        ***Note:*** `name` should be the same as the desired name of the generated binary.
+
         **Providers:**
-        <ul>
-          <li>[GoArchive]</li>
-        </ul>
+        - [GoArchive]
         """,
     }
 
-go_binary = rule(executable = True, **_go_binary_kwargs())
-go_non_executable_binary = rule(executable = False, **_go_binary_kwargs(
+go_binary = go_rule(executable = True, **_go_binary_kwargs())
+go_non_executable_binary = go_rule(executable = False, **_go_binary_kwargs(
     go_cc_aspects = [_go_cc_aspect],
 ))
 
@@ -539,7 +555,11 @@ set GOTOOLCHAIN=local
 set GO111MODULE=off
 set GOTELEMETRY=off
 set GOENV=off
+set GOEXPERIMENT={goexperiment}
 {go} build -trimpath -ldflags \"-buildid='' {ldflags}\" -o {out_pack} cmd/pack
+if %ERRORLEVEL% EQU 0 (
+  {go} build -trimpath -ldflags \"-buildid='' {ldflags}\" -o {out_covdata} cmd/covdata
+)
 if %ERRORLEVEL% EQU 0 (
   {go} build -trimpath -ldflags \"-buildid='' {ldflags}\" -o {out} {srcs}
 )
@@ -550,8 +570,10 @@ exit /b %GO_EXIT_CODE%
 """.format(
             gotmp = gotmp.path.replace("/", "\\"),
             go = sdk.go.path.replace("/", "\\"),
+            goexperiment = sdk.experiments,
             out = out.path,
             out_pack = ctx.outputs.out_pack.path,
+            out_covdata = ctx.outputs.out_covdata.path,
             srcs = " ".join([f.path for f in ctx.files.srcs]),
             ldflags = ctx.attr.ldflags,
         )
@@ -567,13 +589,14 @@ exit /b %GO_EXIT_CODE%
                 transitive = [sdk.headers, sdk.srcs, sdk.tools],
             ),
             toolchain = None,
-            outputs = [out, ctx.outputs.out_pack, gotmp],
+            outputs = [out, ctx.outputs.out_pack, ctx.outputs.out_covdata, gotmp],
             mnemonic = "GoToolchainBinaryBuild",
         )
     else:
         # Pass (potentially) generated files in via args to support path mapping.
         args = ctx.actions.args()
         args.add(ctx.outputs.out_pack)
+        args.add(ctx.outputs.out_covdata)
         args.add(out)
         args.add_all(ctx.files.srcs)
 
@@ -601,6 +624,7 @@ exit /b %GO_EXIT_CODE%
                 "GO111MODULE": "off",
                 "GOTELEMETRY": "off",
                 "GOENV": "off",
+                "GOEXPERIMENT": sdk.experiments,
                 "GO_BINARY": sdk.go.path,
                 "LD_FLAGS": ctx.attr.ldflags,
             },
@@ -609,7 +633,7 @@ exit /b %GO_EXIT_CODE%
                 transitive = [sdk.headers, sdk.srcs, sdk.libs, sdk.tools],
             ),
             toolchain = None,
-            outputs = [out, ctx.outputs.out_pack],
+            outputs = [out, ctx.outputs.out_pack, ctx.outputs.out_covdata],
             execution_requirements = SUPPORTS_PATH_MAPPING_REQUIREMENT,
             mnemonic = "GoToolchainBinaryBuild",
         )
@@ -635,6 +659,7 @@ go_tool_binary = rule(
             doc = "Raw value to pass to go build via -ldflags without tokenization",
         ),
         "out_pack": attr.output(),
+        "out_covdata": attr.output(),
         "_binary_wrapper": attr.label(
             allow_single_file = True,
             default = "//go/private/rules:binary_wrapper.sh",
@@ -652,9 +677,9 @@ just have a main package and only depend on the standard library and don't
 require build constraints.
 
 It is currently only used to build the `builder` tool maintained as part of
-rules_go as well as the `pack` tool provided by the Go SDK in source form
-only as of Go 1.25. Combining both builds into a single action drastically
-reduces the overall build time due to Go's own caching mechanism.
+rules_go as well as the `pack` and `covdata` tools provided by the Go SDK in
+source form only as of Go 1.25. Combining these builds into a single action
+drastically reduces the overall build time due to Go's own caching mechanism.
 """,
     toolchains = [config_common.toolchain_type("@bazel_tools//tools/sh:toolchain_type", mandatory = False)],
 )

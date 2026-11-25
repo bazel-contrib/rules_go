@@ -46,6 +46,9 @@ wrapped_test = rule(
     test = True,
 )
 -- BUILD.bazel --
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_shared_library.bzl", "cc_shared_library")
+
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 load("//:wrapped_test.bzl", "wrapped_test")
 

@@ -14,12 +14,13 @@
 
 """Public definitions for Go rules.
 
-All public Go rules, providers, and other definitions are imported and
-re-exported in this file. This allows the real location of definitions
-to change for easier maintenance.
+This file serves as the primary entry point for loading public Go rules,
+providers, and definitions. Re-exporting them here allows the underlying
+implementations to be maintained and relocated without breaking public APIs.
 
-Definitions outside this file are private unless otherwise noted, and
-may change without notice.
+Definitions outside this file are private and subject to change with the
+exception of (go/go_binary.bzl, go/go_library.bzl, go/go_test.bzl) which are provided as
+a convenience.
 """
 
 load(
@@ -29,6 +30,7 @@ load(
 load(
     "//go/private:context.bzl",
     _go_context = "go_context",
+    _go_rule = "go_rule",
     _new_go_info = "new_go_info",
 )
 load(
@@ -141,6 +143,7 @@ TOOLS_NOGO = [str(Label(l)) for l in _TOOLS_NOGO]
 RULES_GO_VERSION = "0.50.0"
 
 go_context = _go_context
+go_rule = _go_rule
 gomock = _gomock
 go_sdk = _go_sdk
 go_tool_library = _go_tool_library
@@ -196,9 +199,6 @@ go_cross_binary = _go_cross_binary
 
 def go_vet_test(*_args, **_kwargs):
     fail("The go_vet_test rule has been removed. Please migrate to nogo instead, which supports vet tests.")
-
-def go_rule(**_kwargs):
-    fail("The go_rule function has been removed. Use rule directly instead. See https://github.com/bazelbuild/rules_go/blob/master/go/toolchains.rst#writing-new-go-rules")
 
 def go_rules_dependencies():
     _moved("go_rules_dependencies")

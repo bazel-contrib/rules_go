@@ -22,6 +22,7 @@ POPULAR_REPOS = [
         importpath = "golang.org/x/crypto",
         commit = "e47973b1c1089f6c67ab89261f7aa067b3d611d2",
         excludes = [
+            "acme:acme_test", # TestWithPebble shells out to the go tool and fetches a module over the network
             "internal/wycheproof:wycheproof_test", # requires build cache
             "nacl/secretbox:secretbox_test", # panics in salsa2020_amd64.s
             "ssh/agent:agent_test",
@@ -86,10 +87,8 @@ POPULAR_REPOS = [
             "cmd/file2fuzz:file2fuzz_test", # Requires working GOROOT, uses go build
             "cmd/fiximports:fiximports_test", # requires working GOROOT, not present in CI.
             "cmd/deadcode:deadcode_test", # Needs GOROOT
-            "cmd/godoc:godoc_test", # TODO(#417)
+            "cmd/goimports:goimports_test", # requires x_telemetry
             "cmd/gonew:gonew_test", # requires build cache
-            "cmd/guru/testdata/src/referrers:referrers_test", # Not a real test
-            # "cmd/guru:guru_test", # Needs testdata directory
             "cmd/signature-fuzzer/fuzz-driver:fuzz-driver_test", # requires working GOROOT
             "cmd/signature-fuzzer/fuzz-runner:fuzz-runner_test", # requires working GOROOT
             "cmd/signature-fuzzer/internal/fuzz-generator:fuzz-generator_test", # requires working GOROOT
@@ -125,8 +124,10 @@ POPULAR_REPOS = [
             "go/analysis/passes/httpmux:httpmux_test", # Needs GOROOT
             "go/analysis/passes/httpresponse:httpresponse_test", # Needs testdata directory
             "go/analysis/passes/ifaceassert:ifaceassert_test", # Needs GOROOT
+            "go/analysis/passes/inline:inline_test", # Needs testdata directory
             "go/analysis/passes/loopclosure:loopclosure_test", # Needs testdata directory
             "go/analysis/passes/lostcancel:lostcancel_test", # Needs testdata directory
+            "go/analysis/passes/modernize/testdata/src/testingcontext:testingcontext_test", # Not a real test
             "go/analysis/passes/nilfunc:nilfunc_test", # Needs testdata directory
             "go/analysis/passes/nilness:nilness_test", # Needs testdata directory
             "go/analysis/passes/pkgfact:pkgfact_test", # requires go list
@@ -163,14 +164,10 @@ POPULAR_REPOS = [
             "go/callgraph/static:static_test", # Needs go tool
             "go/callgraph/vta:vta_test", # Needs testdata directory
             "go/cfg:cfg_test", # Needs GOROOT
-            "go/expect:expect_test", # Needs testdata directory
             "go/gccgoexportdata:gccgoexportdata_test", # Needs testdata directory
             "go/gcexportdata:gcexportdata_test", # Needs testdata directory
             "go/internal/gccgoimporter:gccgoimporter_test", # Needs testdata directory
             "go/loader:loader_test", # Needs testdata directory
-            "go/packages/packagestest/testdata/groups/two/primarymod/expect:expect_test", # Is testdata
-            "go/packages/packagestest/testdata:testdata_test", # Is testdata
-            "go/packages/packagestest:packagestest_test", # requires build cache
             "go/packages:packages_test", # Hah!
             # "go/pointer:pointer_test", # Needs testdata directory
             "go/ssa/interp:interp_test", # Needs testdata directory
@@ -178,25 +175,21 @@ POPULAR_REPOS = [
             "go/ssa:ssa_test", # Needs testdata directory
             "go/types/typeutil:typeutil_test", # requires GOROOT
             "go/types/objectpath:objectpath_test", # Incomaptible with Go SDK 1.18.3. Fixed in master but not yet released. TODO: fixme
-            "godoc/static:static_test", # requires data files
-            "godoc/vfs/zipfs:zipfs_test", # requires GOROOT
-            "godoc:godoc_test", # requires GOROOT and GOPATH
-            "internal/analysisinternal:analysisinternal_test", # requires GOROOT and GOPATH
-            "internal/apidiff:apidiff_test", # Needs testdata directory
-            "internal/astutil/cursor:cursor_test", # requires GOROOT
             "internal/diff/difftest:difftest_test", # Needs diff tool
             "internal/diffp:diffp_test", # Needs testdata directory
             "internal/drivertest:drivertest_test", # Needs go tool
             "internal/expect:expect_test", # Needs testdata directory
+            "internal/excfg:excfg_test", # Needs testdata directory
             "internal/facts:facts_test", # loads test package with go/packages, which probably needs go list
             "internal/gcimporter:gcimporter_test", # Needs testdata directory
             "internal/gocommand:gocommand_test", # Needs go tool
             "internal/imports:imports_test", # Needs testdata directory
+            "internal/mcp:mcp_test", # Reads resources via os.Root, which refuses to follow runfiles symlinks
+            "internal/mcp/jsonschema:jsonschema_test", # Needs testdata directory
             "internal/packagestest:packagestest_test", # Needs go tool
             "internal/packagestest/testdata/groups/two/primarymod/expect:expect_test",
             "internal/pprof:pprof_test", # Needs testdata directory
             "internal/refactor/inline:inline_test", # Needs GOROOT
-            "internal/refactor/inline/analyzer:analyzer_test", # Needs GOROOT
             "internal/typeparams:typeparams_test", # Needs go tool
             "internal/testfiles:testfiles_test", # Needs testdata directory
             "internal/versions:versions_test", # Needs GoVersion
@@ -208,8 +201,7 @@ POPULAR_REPOS = [
         build_excludes = [
             "blog:blog", # requires present
             "cmd/deadcode:deadcode", # requires x_telemetry
-            "cmd/godoc:godoc", # requires godoc
-            "godoc:godoc", # requires goldmark
+            "cmd/goimports:goimports", # requires x_telemetry
             "present:present", # Needs goldmark
         ],
     ),
@@ -218,6 +210,16 @@ POPULAR_REPOS = [
         name = "com_github_golang_glog",
         importpath = "github.com/golang/glog",
         commit = "23def4e6c14b4da8ac2ed8007337bc5eb5007998",
+        excludes = [
+            "internal/stackdump:stackdump_test", # Interpolates the source path into a regexp, which the "++" in canonical repo names breaks
+            # TestRollover creates its log file on the real clock and then
+            # expects a write at 2024-12-23 01:23:46.5 on a fake clock to
+            # rotate it. glog only rotates a file if the current time is more
+            # than a second after the file's creation or in a different second
+            # of the minute, so the test fails whenever it starts in second 46
+            # of a minute.
+            ":glog_test",
+        ],
     ),
 
     dict(

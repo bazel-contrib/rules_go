@@ -2,5 +2,12 @@ load("@io_bazel_rules_go//go/tools/bazel_testing:def.bzl", "go_bazel_test")
 
 go_bazel_test(
     name = "go_download_sdk_test",
+    size = "large",
     srcs = ["go_download_sdk_test.go"],
+)
+
+go_bazel_test(
+    name = "bootstrap_determinism_test",
+    size = "large",
+    srcs = ["bootstrap_determinism_test.go"],
 )

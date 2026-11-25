@@ -24,7 +24,7 @@ func TestConvertCoverToLcov(t *testing.T) {
 		{
 			"single file",
 			`mode: count
-file.go:0.4,2.10 0 0
+file.go:0.4,2.10 1 0
 `,
 			`SF:file.go
 DA:0,0
@@ -32,6 +32,24 @@ DA:1,0
 DA:2,0
 LH:0
 LF:3
+end_of_record
+`,
+		},
+		{
+			"blocks without statements",
+			`mode: set
+file.go:3.24,3.45 1 1
+file.go:5.36,5.37 0 0
+empty.go:1.30,1.31 0 0
+`,
+			`SF:file.go
+DA:3,1
+LH:1
+LF:1
+end_of_record
+SF:empty.go
+LH:0
+LF:0
 end_of_record
 `,
 		},

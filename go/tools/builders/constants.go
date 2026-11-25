@@ -20,9 +20,11 @@ package main
 
 const (
 	// The exit codes for nogo binaries.
-	nogoSuccess int = iota
-	nogoError
-	nogoViolation
+	// nogoViolation must not be 2, the exit status of a Go panic, or a crash of
+	// nogo would be reported as findings.
+	nogoSuccess   int = 0
+	nogoError     int = 1
+	nogoViolation int = 3
 
 	nogoLogBasename = "nogo.log"
 	nogoFixBasename = "nogo.patch"

@@ -17,7 +17,7 @@ load(
     "//go/private:mode.bzl",
     "link_mode_arg",
 )
-load("//go/private/actions:utils.bzl", "quote_opts")
+load("//go/private/actions:utils.bzl", "path_mapping_action_settings", "quote_opts")
 
 def _archive(v):
     importpaths = [v.data.importpath]
@@ -66,9 +66,10 @@ def emit_compilepkg(
         cxxopts = [],
         objcopts = [],
         objcxxopts = [],
-        clinkopts = [],
+        ldflags = None,
         out_lib = None,
         out_export = None,
+        out_imports = None,
         out_facts = None,
         out_diagnostics = None,
         out_nogo_validation = None,
@@ -83,6 +84,8 @@ def emit_compilepkg(
         fail("sources is a required parameter")
     if out_lib == None:
         fail("out_lib is a required parameter")
+    if out_imports == None:
+        fail("out_imports is a required parameter")
 
     have_nogo = nogo != None and nogo.executable != None
     if have_nogo != (out_facts != None):
@@ -97,7 +100,7 @@ def emit_compilepkg(
     inputs_direct = (sources + embedsrcs + [sdk.package_list, go.toolchain._pack] +
                      [archive.data.export_file for archive in archives])
     inputs_transitive = [sdk.headers, sdk.tools, go.stdlib.libs, headers]
-    outputs = [out_lib, out_export]
+    outputs = [out_lib, out_export, out_imports]
 
     shared_args = go.builder_args(go)
     shared_args.add_all(sources, before_each = "-src")
@@ -140,6 +143,7 @@ def emit_compilepkg(
 
     compile_args.add("-lo", out_lib)
     compile_args.add("-o", out_export)
+    compile_args.add("-imports", out_imports)
     if out_cgo_export_h:
         compile_args.add("-cgoexport", out_cgo_export_h)
         outputs.append(out_cgo_export_h)
@@ -165,13 +169,7 @@ def emit_compilepkg(
 
     # cgo and the linker action don't support path mapping yet
     # TODO: Remove the second condition after https://github.com/bazelbuild/bazel/pull/21921.
-    if cgo or "local" in go._ctx.attr.tags:
-        # cgo doesn't support path mapping yet
-        env = go.env
-        execution_requirements = {}
-    else:
-        env = go.env_for_path_mapping
-        execution_requirements = SUPPORTS_PATH_MAPPING_REQUIREMENT
+    env, execution_requirements = path_mapping_action_settings(go, cgo)
     cgo_go_srcs = None
     if cgo:
         if cgo_out_dir:
@@ -191,19 +189,21 @@ def emit_compilepkg(
             compile_args.add("-objcflags", quote_opts(objcopts))
         if objcxxopts:
             compile_args.add("-objcxxflags", quote_opts(objcxxopts))
-        if clinkopts:
-            compile_args.add("-ldflags", quote_opts(clinkopts))
 
     if go.mode.pgoprofile:
         compile_args.add("-pgoprofile", go.mode.pgoprofile)
         inputs_direct.append(go.mode.pgoprofile)
+
+    arguments = ["compilepkg", shared_args, compile_args]
+    if ldflags:
+        arguments.append(ldflags)
 
     go.actions.run(
         inputs = depset(inputs_direct, transitive = inputs_transitive),
         outputs = outputs,
         mnemonic = "GoCompilePkgExternal" if is_external_pkg else "GoCompilePkg",
         executable = go.toolchain._builder,
-        arguments = ["compilepkg", shared_args, compile_args],
+        arguments = arguments,
         env = env,
         toolchain = GO_TOOLCHAIN_LABEL,
         execution_requirements = execution_requirements,
@@ -216,6 +216,7 @@ def emit_compilepkg(
             sources = sources,
             cgo_go_srcs = cgo_go_srcs,
             archives = archives,
+            go_version = go.sdk.version,
             out_diagnostics = out_diagnostics,
             out_facts = out_facts,
             out_validation = out_nogo_validation,
@@ -229,6 +230,7 @@ def _run_nogo(
         sources,
         cgo_go_srcs,
         archives,
+        go_version,
         out_diagnostics,
         out_facts,
         out_validation,
@@ -249,10 +251,15 @@ def _run_nogo(
 
     nogo_args.add_all(archives, before_each = "-facts", map_each = _facts)
     if not out_validation:
-        # Since diagnostics are ignored, all analyzers that don't generated facts can be skipped.
+        # Since diagnostics are ignored, analyzers that don't generate facts can be skipped.
         nogo_args.add("-facts_only")
     nogo_args.add("-out_facts", out_facts)
     nogo_args.add_all("-out", [out_diagnostics], expand_directories = False)
+    if go_version:
+        # -go_version is the raw SDK version from go.sdk.version (for example
+        # "1.24.3"), without the leading "go" prefix expected by go/types.
+        # nogo_main.go normalizes it before type checking.
+        nogo_args.add("-go_version", go_version)
     nogo_args.add("-nogo", nogo.executable)
 
     # This action runs nogo and produces the facts files for downstream nogo actions.

@@ -1,0 +1,5 @@
+{"Action":"run","Test":"TestAttr"}
+{"Action":"output","Test":"TestAttr","Output":"=== RUN   TestAttr\n"}
+{"Action":"attr","Test":"TestAttr","Key":"requirement_id","Value":"REQ-1234"}
+{"Action":"output","Test":"TestAttr","Output":"--- PASS: TestAttr (0.00s)\n"}
+{"Action":"pass","Test":"TestAttr","Elapsed":0}

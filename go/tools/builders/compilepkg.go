@@ -17,6 +17,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"errors"
 	"flag"
@@ -41,7 +42,7 @@ func compilePkg(args []string) error {
 	var unfilteredSrcs, coverSrcs, embedSrcs, embedLookupDirs, embedRoots, recompileInternalDeps multiFlag
 	var deps archiveMultiFlag
 	var importPath, packagePath, packageListPath, coverMode string
-	var outLinkobjPath, outInterfacePath, cgoExportHPath, cgoGoSrcsPath string
+	var outLinkobjPath, outInterfacePath, outImportsPath, cgoExportHPath, cgoGoSrcsPath string
 	var testFilter string
 	var gcFlags, asmFlags, cppFlags, cFlags, cxxFlags, objcFlags, objcxxFlags, ldFlags quoteMultiFlag
 	var coverFormat string
@@ -67,6 +68,7 @@ func compilePkg(args []string) error {
 	fs.StringVar(&coverMode, "cover_mode", "", "The coverage mode to use. Empty if coverage instrumentation should not be added.")
 	fs.StringVar(&outLinkobjPath, "lo", "", "The full output archive file required by the linker")
 	fs.StringVar(&outInterfacePath, "o", "", "The export-only output archive required to compile dependent packages")
+	fs.StringVar(&outImportsPath, "imports", "", "Path to write the packagePaths actually imported by the filtered sources, one per line.")
 	fs.StringVar(&cgoExportHPath, "cgoexport", "", "The _cgo_exports.h file to write")
 	fs.StringVar(&cgoGoSrcsPath, "cgo_go_srcs", "", "The directory to emit cgo-generated Go sources for nogo consumption to")
 	fs.StringVar(&testFilter, "testfilter", "off", "Controls test package filtering")
@@ -131,6 +133,7 @@ func compilePkg(args []string) error {
 		packageListPath,
 		outLinkobjPath,
 		outInterfacePath,
+		outImportsPath,
 		cgoExportHPath,
 		cgoGoSrcsPath,
 		coverFormat,
@@ -163,6 +166,7 @@ func compileArchive(
 	packageListPath string,
 	outLinkObj string,
 	outInterfacePath string,
+	outImportsPath string,
 	cgoExportHPath string,
 	cgoGoSrcsForNogoPath string,
 	coverFormat string,
@@ -243,9 +247,8 @@ func compileArchive(
 
 	// When coverage is set, source files will be modified during instrumentation. We should only run static analysis
 	// over original source files and not the modified ones.
-	// goSrcsNogo and cgoSrcsNogo are copies of the original source files for nogo to run static analysis.
+	// cgoSrcsNogo is a copy of the original cgo source files for nogo to run static analysis.
 	// TODO: Use slices.Clone when 1.21 is the minimal supported version.
-	goSrcsNogo := append([]string{}, goSrcs...)
 	cgoSrcsNogo := append([]string{}, cgoSrcs...)
 
 	// Instrument source files in a package for coverage.
@@ -326,6 +329,12 @@ func compileArchive(
 		}
 	}
 
+	trimPath, err := createTrimPath()
+	if err != nil {
+		return err
+	}
+	trimPath = workDir + "=>;" + trimPath
+
 	// If we have cgo, generate separate C and go files, and compile the
 	// C files.
 	var objFiles []string
@@ -339,10 +348,9 @@ func compileArchive(
 				return err
 			}
 			// Also run cgo on original source files, not coverage instrumented, if using nogo.
-			// The compilation outputs are only used to run cgo, but the generated sources are
-			// passed to the separate nogo action via cgoGoSrcsForNogoPath.
-			_, _, _, err = cgo2(goenv, goSrcsNogo, cgoSrcsNogo, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, sSrcs, hSrcs, packagePath, packageName, cc, cppFlags, cFlags, cxxFlags, objcFlags, objcxxFlags, ldFlags, "", cgoGoSrcsForNogoPath)
-			if err != nil {
+			// Only the generated Go sources are passed to the separate nogo action via
+			// cgoGoSrcsForNogoPath, so skip the duplicate C compilation and cgo probe link.
+			if err := cgo2GeneratedGoSrcsForNogo(goenv, cgoSrcsNogo, cSrcs, cxxSrcs, objcSrcs, objcxxSrcs, hSrcs, packagePath, cc, cppFlags, cFlags, ldFlags, cgoGoSrcsForNogoPath, filepath.Join(srcDir, "_cgo_imports.go")); err != nil {
 				return err
 			}
 		} else {
@@ -353,16 +361,12 @@ func compileArchive(
 				return err
 			}
 		}
-		gcFlags = append(gcFlags, "-trimpath="+srcDir)
+		gcFlags = append(gcFlags, "-trimpath="+srcDir+";"+trimPath)
 	} else {
 		if cgoExportHPath != "" {
 			if err := os.WriteFile(cgoExportHPath, nil, 0o666); err != nil {
 				return err
 			}
-		}
-		trimPath, err := createTrimPath()
-		if err != nil {
-			return err
 		}
 		// Preserve an existing -trimpath argument, applying abs() to each prefix.
 		for i, flag := range gcFlags {
@@ -384,8 +388,12 @@ func compileArchive(
 		gcFlags = append(gcFlags, "-trimpath="+trimPath)
 	}
 
-	importcfgPath, err := checkImportsAndBuildCfg(goenv, importPath, srcs, deps, packageListPath, recompileInternalDeps, compilingWithCgo, coverMode, workDir)
+	importcfgPath, imports, err := checkImportsAndBuildCfg(goenv, importPath, srcs, deps, packageListPath, recompileInternalDeps, compilingWithCgo, coverMode, workDir)
 	if err != nil {
+		return err
+	}
+
+	if err := writeImports(outImportsPath, imports); err != nil {
 		return err
 	}
 
@@ -422,7 +430,7 @@ func compileArchive(
 		}
 	}
 
-	// If there are Go assembly files and this is go1.12+: generate symbol ABIs.
+	// If there are Go assembly files, generate symbol ABIs.
 	// This excludes Cgo packages: they use the C compiler for assembly.
 	asmHdrPath := ""
 	if len(srcs.sSrcs) > 0 {
@@ -489,12 +497,12 @@ func compileArchive(
 	return nil
 }
 
-func checkImportsAndBuildCfg(goenv *env, importPath string, srcs archiveSrcs, deps []archive, packageListPath string, recompileInternalDeps []string, compilingWithCgo bool, coverMode string, workDir string) (string, error) {
+func checkImportsAndBuildCfg(goenv *env, importPath string, srcs archiveSrcs, deps []archive, packageListPath string, recompileInternalDeps []string, compilingWithCgo bool, coverMode string, workDir string) (string, map[string]*archive, error) {
 	// Check that the filtered sources don't import anything outside of
 	// the standard library and the direct dependencies.
 	imports, err := checkImports(srcs.goSrcs, deps, packageListPath, importPath, recompileInternalDeps)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	if compilingWithCgo {
 		// cgo generated code imports some extra packages.
@@ -515,7 +523,7 @@ func checkImportsAndBuildCfg(goenv *env, importPath string, srcs archiveSrcs, de
 			}
 		}
 		if coverdata == nil {
-			return "", errors.New("coverage requested but coverdata dependency not provided")
+			return "", nil, errors.New("coverage requested but coverdata dependency not provided")
 		}
 		imports[coverdataPath] = coverdata
 		imports["runtime/coverage"] = nil
@@ -524,9 +532,29 @@ func checkImportsAndBuildCfg(goenv *env, importPath string, srcs archiveSrcs, de
 	// Build an importcfg file for the compiler.
 	importcfgPath, err := buildImportcfgFileForCompile(imports, goenv.installSuffix, workDir)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
-	return importcfgPath, nil
+	return importcfgPath, imports, nil
+}
+
+func writeImports(path string, imports map[string]*archive) error {
+	packagePaths := make([]string, 0, len(imports))
+	for _, arc := range imports {
+		if arc != nil && arc.packagePath != "" {
+			packagePaths = append(packagePaths, arc.packagePath)
+		}
+	}
+	sort.Strings(packagePaths)
+
+	var buf bytes.Buffer
+	for i, packagePath := range packagePaths {
+		if i > 0 && packagePath == packagePaths[i-1] {
+			continue
+		}
+		buf.WriteString(packagePath)
+		buf.WriteByte('\n')
+	}
+	return os.WriteFile(path, buf.Bytes(), 0o666)
 }
 
 func compileGo(goenv *env, srcs []string, packagePath, importcfgPath, embedcfgPath, asmHdrPath, symabisPath string, gcFlags []string, pgoprofile, outLinkobjPath, outInterfacePath, coverageCfg string) error {

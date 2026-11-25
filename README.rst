@@ -12,7 +12,7 @@ Go rules for Bazel_
 .. _Go with Bzlmod: docs/go/core/bzlmod.md
 .. _Go with WORKSPACE: docs/go/core/workspace.md
 .. _Core rules: docs/go/core/rules.md
-.. _Coverage: https://bazel.google.cn/docs/coverage
+.. _Coverage: https://bazel.build/configure/coverage
 .. _Dependencies: go/dependencies.rst
 .. _Deprecation schedule: https://github.com/bazelbuild/rules_go/wiki/Deprecation-schedule
 .. _Editor setup instructions: docs/editors.md
@@ -160,7 +160,9 @@ The Go rules are tested and supported on the following host platforms:
 Users have reported success on several other platforms, but the rules are
 only tested on those listed above.
 
-Note: Since version v0.51.0, rules_go requires Bazel ≥ 6.5.0 to work.
+Note: Since version v0.65.0, rules_go requires Bazel ≥ 7.7.0 to work.
+
+rules_go requires a Go SDK ≥ 1.20.
 
 The ``master`` branch is only guaranteed to work with the latest version of Bazel.
 
@@ -445,7 +447,7 @@ How do I test a beta version of the Go SDK?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 rules_go only supports official releases of the Go SDK. However, you can still
-test beta and RC versions by passing a ``version`` like ``"1.16beta1"`` to
+test beta and RC versions by passing a ``version`` like ``"1.21rc2"`` to
 `go_register_toolchains`_. See also `go_download_sdk`_.
 
 .. code:: bzl
@@ -454,4 +456,4 @@ test beta and RC versions by passing a ``version`` like ``"1.16beta1"`` to
 
   go_rules_dependencies()
 
-  go_register_toolchains(version = "1.17beta1")
+  go_register_toolchains(version = "1.21rc2")

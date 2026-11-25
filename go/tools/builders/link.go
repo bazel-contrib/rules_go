@@ -21,7 +21,7 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"go/build"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -39,13 +39,30 @@ func link(args []string) error {
 	builderArgs, toolArgs := splitArgs(args)
 	stamps := multiFlag{}
 	xdefs := multiFlag{}
+	packageMetadataFiles := multiFlag{}
+	importsFiles := multiFlag{}
 	archives := archiveMultiFlag{}
 	flags := flag.NewFlagSet("link", flag.ExitOnError)
 	goenv := envFlags(flags)
 	main := flags.String("main", "", "Path to the main archive.")
+	// The main package path populates runtime/debug.BuildInfo.Path. For example,
+	// "golang.org/x/tools/cmd/stringer" identifies the executable package.
+	mainPackagePath := flags.String("main_package_path", "", "Import path of the main package.")
+	// The main module metadata flag instead names a package metadata JSON file,
+	// for example "bazel-out/.../package-metadata.json". A PURL such as
+	// "pkg:golang/golang.org/x/tools@v0.34.0" in that file populates
+	// BuildInfo.Main as golang.org/x/tools@v0.34.0. The package and module paths
+	// differ when the executable package is below the module root.
+	mainModuleMetadata := flags.String("main_module_metadata", "", "Path to the main module's package_metadata JSON file.")
+	mainImportsPath := flags.String("main_imports", "", "Path to the main archive's own imports manifest.")
+	race := flags.Bool("race", false, "Whether race instrumentation is enabled.")
+	msan := flags.Bool("msan", false, "Whether memory sanitizer instrumentation is enabled.")
+	cover := flags.Bool("cover", false, "Whether coverage instrumentation is enabled.")
 	packagePath := flags.String("p", "", "Package path of the main archive.")
 	outFile := flags.String("o", "", "Path to output file.")
 	flags.Var(&archives, "arc", "Label, package path, and file name of a dependency, separated by '='")
+	flags.Var(&packageMetadataFiles, "package_metadata", "Package path and path of a package_metadata JSON file, separated by '=' (repeated).")
+	flags.Var(&importsFiles, "imports", "Package path and path of an imports manifest, separated by '=' (repeated).")
 	packageList := flags.String("package_list", "", "The file containing the list of standard library packages")
 	buildmode := flags.String("buildmode", "", "Build mode used.")
 	flags.Var(&xdefs, "X", "A string variable to replace in the linked binary (repeated).")
@@ -54,6 +71,10 @@ func link(args []string) error {
 		return err
 	}
 	if err := goenv.checkFlagsAndSetGoroot(); err != nil {
+		return err
+	}
+	go123OrLater, err := onVersion(23)
+	if err != nil {
 		return err
 	}
 
@@ -70,7 +91,7 @@ func link(args []string) error {
 	// If we were given any stamp value files, read and parse them
 	stampMap := map[string]string{}
 	for _, stampfile := range stamps {
-		stampbuf, err := ioutil.ReadFile(stampfile)
+		stampbuf, err := os.ReadFile(stampfile)
 		if err != nil {
 			return fmt.Errorf("Failed reading stamp file %s: %v", stampfile, err)
 		}
@@ -91,7 +112,30 @@ func link(args []string) error {
 	}
 
 	// Build an importcfg file.
-	importcfgName, err := buildImportcfgFileForLink(archives, *packageList, goenv.installSuffix, filepath.Dir(*outFile))
+	modinfo := ""
+	if shouldEmitBuildInfo(*buildmode) {
+		modules, err := reachableModules(*mainImportsPath, packageMetadataFiles, importsFiles)
+		if err != nil {
+			return err
+		}
+		mainModule := moduleInfo{}
+		if *mainModuleMetadata != "" {
+			mainModules, err := modulesFromPackageMetadataFiles([]string{*mainModuleMetadata})
+			if err != nil {
+				return err
+			}
+			if len(mainModules) > 0 {
+				mainModule = mainModules[0]
+			}
+		}
+		modinfo = modInfoData(
+			*mainPackagePath,
+			mainModule,
+			buildInfoSettings(*buildmode, build.Default.BuildTags, *race, *msan, *cover, go123OrLater),
+			modules,
+		)
+	}
+	importcfgName, err := buildImportcfgFileForLink(archives, *packageList, goenv.installSuffix, filepath.Dir(*outFile), modinfo)
 	if err != nil {
 		return err
 	}
@@ -136,6 +180,14 @@ func link(args []string) error {
 		}
 	}
 
+	// Appended before toolArgs, so a -buildid in gc_linkopts still takes precedence.
+	contentBuildID := *buildmode != "c-archive" && hasContentBuildID(os.Getenv("GOOS"))
+	if contentBuildID {
+		goargs = append(goargs, "-buildid="+buildIDPlaceholder)
+	} else {
+		goargs = append(goargs, "-buildid=redacted")
+	}
+
 	if *buildmode != "" {
 		goargs = append(goargs, "-buildmode", *buildmode)
 	}
@@ -158,11 +210,7 @@ func link(args []string) error {
 	goargs = append(goargs, toolArgs...)
 	goargs = append(goargs, *main)
 
-	clearGoRoot, err := onVersion(23)
-	if err != nil {
-		return err
-	}
-	if clearGoRoot {
+	if go123OrLater {
 		// Explicitly set GOROOT to a dummy value when running linker.
 		// This ensures that the GOROOT written into the binary
 		// is constant and thus builds are reproducible.
@@ -174,6 +222,12 @@ func link(args []string) error {
 		return err
 	}
 
+	if contentBuildID {
+		if err := setContentBuildID(*outFile); err != nil {
+			return fmt.Errorf("error setting build ID: %v", err)
+		}
+	}
+
 	if *buildmode == "c-archive" {
 		if err := stripArMetadata(*outFile); err != nil {
 			return fmt.Errorf("error stripping archive metadata: %v", err)
@@ -182,8 +236,6 @@ func link(args []string) error {
 
 	return nil
 }
-
-var versionExp = regexp.MustCompile(`.*go1\.(\d+).*$`)
 
 func onVersion(version int) (bool, error) {
 	v := runtime.Version()

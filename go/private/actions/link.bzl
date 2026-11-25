@@ -24,6 +24,7 @@ load(
 )
 load(
     "//go/private:mode.bzl",
+    "LINKMODE_C_SHARED",
     "LINKMODE_NORMAL",
     "LINKMODE_PLUGIN",
     "extld_from_cc_toolchain",
@@ -33,9 +34,20 @@ load(
     "//go/private:rpath.bzl",
     "rpath",
 )
+load("//go/private:sdk.bzl", "parse_version")
 
 def _format_archive(d):
     return "{}={}={}".format(d.label, d.importmap, d.file.path)
+
+def _format_package_metadata(d):
+    if not d._package_metadata:
+        return None
+    return "{}={}".format(d.importmap, d._package_metadata.path)
+
+def _format_imports(d, main_archive_file):
+    if d.file == main_archive_file:
+        return None
+    return "{}={}".format(d.importmap, d._imports.path)
 
 def emit_link(
         go,
@@ -44,13 +56,20 @@ def emit_link(
         executable = None,
         gc_linkopts = [],
         version_file = None,
-        info_file = None):
+        info_file = None,
+        exec_group = None,
+        buildinfo_main_package_path = None,
+        buildinfo_module_metadata = None):
     """See go/toolchains.rst#link for full documentation."""
 
     if archive == None:
         fail("archive is a required parameter")
     if executable == None:
         fail("executable is a required parameter")
+    if buildinfo_main_package_path == None:
+        buildinfo_main_package_path = archive.data.importpath
+    if buildinfo_module_metadata == None:
+        buildinfo_module_metadata = getattr(archive.data, "_package_metadata", None)
 
     # Exclude -lstdc++ from link options. We don't want to link against it
     # unless we actually have some C++ code. _cgo_codegen will include it
@@ -59,6 +78,20 @@ def emit_link(
 
     if go.coverage_enabled:
         extldflags.append("--coverage")
+    if go.mode.linkmode == LINKMODE_C_SHARED and go.mode.goos in ("darwin", "ios"):
+        # The Go linker doesn't pass -install_name, so ld64 would use the
+        # execroot-relative output path as the install name. Binaries linking
+        # against the dylib record that path and fail to load it at runtime.
+        # Match Bazel's C++ rules, which use @rpath/<basename> together with the
+        # rpaths they add to dependents. This comes before user-provided
+        # -extldflags so that those can still override it.
+        # TODO: C++ toolchains already emit this flag via their
+        # set_install_name feature when the runtime_solib_name variable is set,
+        # but cc_common.create_link_variables doesn't allow setting it. Pass
+        # variables_extension = {"runtime_solib_name": ...} instead of
+        # hardcoding the flag once it does (requires Bazel 9 and
+        # https://github.com/bazelbuild/rules_cc/pull/982).
+        extldflags.append("-Wl,-install_name,@rpath/" + executable.basename)
     gc_linkopts = gc_linkopts + go.mode.gc_linkopts
     gc_linkopts, extldflags = _extract_extldflags(gc_linkopts, extldflags)
     builder_args = go.builder_args(go, "link")
@@ -70,8 +103,10 @@ def emit_link(
 
     # Add in any mode specific behaviours
     if go.mode.race:
+        builder_args.add("-race")
         tool_args.add("-race")
     if go.mode.msan:
+        builder_args.add("-msan")
         tool_args.add("-msan")
 
     if go.mode.pure:
@@ -79,7 +114,7 @@ def emit_link(
     else:
         extld = extld_from_cc_toolchain(go)
         tool_args.add_all(extld)
-        if extld and (go.mode.static or
+        if extld and (go.static_link or
                       go.mode.race or
                       go.mode.linkmode != LINKMODE_NORMAL or
                       go.mode.goos == "windows" and go.mode.msan):
@@ -99,33 +134,40 @@ def emit_link(
             #       runtime/cgo(.text): relocation target memset not defined
             tool_args.add("-linkmode", "external")
 
-    if go.mode.static:
+    if go.static_link:
         extldflags.append("-static")
     if go.mode.linkmode != LINKMODE_NORMAL:
         builder_args.add("-buildmode", go.mode.linkmode)
     if go.mode.linkmode == LINKMODE_PLUGIN:
         tool_args.add("-pluginpath", archive.data.importpath)
 
-    # TODO(zbarsky): Bazel versions older than 7.2.0 do not properly deduplicate this dep
-    # Can replace with the following once we support Bazel 7.2.0+ only:
-    #    if go.coverage_enabled and go.coverdata:
-    #        test_archives = list(test_archives) + [go.coverdata.data]
-    #    arcs = depset(test_archives, transitive = [d.transitive for d in archive.direct])
+    arcs = depset(
+        test_archives + ([go.coverdata.data] if go.coverage_enabled and go.coverdata else []),
+        transitive = [d.transitive for d in archive.direct],
+    )
 
-    if go.coverage_enabled and go.coverdata:
-        potentially_duplicated_arcs = depset(test_archives + [go.coverdata.data], transitive = [d.transitive for d in archive.direct]).to_list()
-        importmaps = {}
-        arcs = []
-        for arc in potentially_duplicated_arcs:
-            if arc.importmap in importmaps:
-                continue
-            importmaps[arc.importmap] = True
-            arcs.append(arc)
-    else:
-        arcs = depset(test_archives, transitive = [d.transitive for d in archive.direct])
+    all_archive_data = depset(test_archives, transitive = [archive.transitive])
+    buildinfo_link_inputs = depset(
+        direct = [
+            metadata
+            for archive_data in test_archives
+            for metadata in [getattr(archive_data, "_package_metadata", None)]
+            if metadata
+        ] + [archive_data._imports for archive_data in test_archives],
+        transitive = [getattr(archive, "_buildinfo_link_inputs", depset())],
+    )
 
     builder_args.add_all(arcs, before_each = "-arc", map_each = _format_archive)
+    builder_args.add_all(all_archive_data, before_each = "-package_metadata", map_each = _format_package_metadata)
+    builder_args.add_all(
+        all_archive_data,
+        before_each = "-imports",
+        map_each = lambda d: _format_imports(d, archive.data.file),
+        allow_closure = True,
+    )
     builder_args.add("-package_list", go.sdk.package_list)
+    if go.coverage_enabled:
+        builder_args.add("-cover")
 
     # Build a list of rpaths for dynamic libraries we need to find.
     # rpaths are relative paths from the binary to directories where libraries
@@ -166,25 +208,36 @@ def emit_link(
 
     builder_args.add("-o", executable)
     builder_args.add("-main", archive.data.file)
+    builder_args.add("-main_package_path", buildinfo_main_package_path)
+    builder_args.add("-main_imports", archive.data._imports)
+    if buildinfo_module_metadata:
+        builder_args.add("-main_module_metadata", buildinfo_module_metadata)
     builder_args.add("-p", archive.data.importmap)
     tool_args.add_all(gc_linkopts)
     tool_args.add_all(go.toolchain.flags.link)
 
-    # Do not remove, somehow this is needed when building for darwin/arm only.
-    tool_args.add("-buildid=redacted")
+    sdk_version = parse_version(go.sdk.version)
+    if go.mode.goos == "darwin" and sdk_version and sdk_version[:2] >= (1, 27) and go.macos_minimum_os:
+        tool_args.add("-macos", go.macos_minimum_os)
+
     if go.mode.strip:
         tool_args.add("-s", "-w")
     tool_args.add_joined("-extldflags", extldflags, join_with = " ")
 
     inputs_direct = stamp_inputs + [go.sdk.package_list]
+    if buildinfo_module_metadata:
+        inputs_direct.append(buildinfo_module_metadata)
     if go.coverage_enabled and go.coverdata:
         inputs_direct.append(go.coverdata.data.file)
     inputs_transitive = [
         archive.libs,
         archive.cgo_deps,
+        archive.cgo_link_inputs,
+        go.stdlib.cgo_link_inputs,
         go.cc_toolchain_files,
         go.sdk.tools,
         go.stdlib.libs,
+        buildinfo_link_inputs,
     ]
     inputs = depset(direct = inputs_direct, transitive = inputs_transitive)
 
@@ -196,6 +249,7 @@ def emit_link(
         arguments = [builder_args, "--", tool_args],
         env = go.env,
         toolchain = GO_TOOLCHAIN_LABEL,
+        exec_group = exec_group,
     )
 
 def _extract_extldflags(gc_linkopts, extldflags):
