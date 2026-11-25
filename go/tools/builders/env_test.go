@@ -3,6 +3,8 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -132,5 +134,59 @@ func TestEncodeResponseFileArg(t *testing.T) {
 				t.Fatalf("encodeResponseFileArg(%q) = %q; want %q", tc.arg, got, tc.want)
 			}
 		})
+	}
+}
+
+// Independent builds and path mapping can give actions identical arguments.
+// Shared TMPDIR cleanup must not remove another action's scratch files.
+func TestWorkDirIsolatedAcrossActions(t *testing.T) {
+	t.Setenv("TMPDIR", t.TempDir())
+	t.Setenv("RULES_GO_WORKDIR_ROOT", ".")
+	root := t.TempDir()
+	firstRoot := filepath.Join(root, "first-execroot")
+	secondRoot := filepath.Join(root, "second-execroot")
+	for _, dir := range []string{firstRoot, secondRoot} {
+		if err := os.Mkdir(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// os.Args stays identical, as it does for actions in independent builds.
+	t.Chdir(firstRoot)
+	first := &env{}
+	firstDir, firstCleanup, err := first.workDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer firstCleanup()
+	if !filepath.IsAbs(firstDir) || filepath.Dir(firstDir) != firstRoot {
+		t.Fatalf("work directory must be absolute and inside the first execroot: %q", firstDir)
+	}
+
+	t.Chdir(secondRoot)
+	second := &env{}
+	secondDir, secondCleanup, err := second.workDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer secondCleanup()
+	if !filepath.IsAbs(secondDir) || filepath.Dir(secondDir) != secondRoot {
+		t.Fatalf("work directory must be absolute and inside the second execroot: %q", secondDir)
+	}
+	importcfg := filepath.Join(secondDir, "importcfg")
+	if err := os.WriteFile(importcfg, []byte("packagefile example=example.a"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	// Cleanup must still target the first execroot after changing directories.
+	firstCleanup()
+	if _, err := os.Stat(firstDir); !os.IsNotExist(err) {
+		t.Fatalf("first action cleanup left its work directory behind: %v", err)
+	}
+	if _, err := os.Stat(importcfg); err != nil {
+		t.Fatalf("first action cleanup removed second action's importcfg: %v", err)
+	}
+	if filepath.Base(firstDir) != filepath.Base(secondDir) {
+		t.Fatalf("work directory name must stay stable across execroots: %q vs %q", firstDir, secondDir)
 	}
 }

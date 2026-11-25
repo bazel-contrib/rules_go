@@ -16,11 +16,11 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -104,8 +104,32 @@ func (e *env) workDir() (path string, cleanup func(), err error) {
 		return e.workDirPath, func() {}, nil
 	}
 	// Keep the stem "rules_go_work" in sync with reproducible_binary_test.go.
-	e.workDirPath, err = ioutil.TempDir("", "rules_go_work-")
+	//
+	// Derive the suffix from the stable Bazel action arguments: a random suffix
+	// here gets baked into cgo's generated "//line" directives whenever this
+	// directory is used to compile cgo-using stdlib packages (net, os/user, ...),
+	// and from
+	// there into GOCACHE-derived, content-hashed outputs such as
+	// stdliblist's declared list_gocache output -- making that action
+	// non-reproducible on every single build. Using the action arguments also
+	// gives concurrent, distinct actions separate directories. This matters for
+	// processwrapper-sandbox, which does not isolate /tmp between actions.
+	workDirDigest := sha256.Sum256([]byte(strings.Join(os.Args[1:], "\x00")))
+	// Actions in independent builds or path-mapped sandboxes can have identical
+	// arguments. Bazel actions set an execroot-relative root so shared TMPDIR
+	// cleanup cannot delete another action's importcfg or generated sources.
+	workDirRoot := os.Getenv("RULES_GO_WORKDIR_ROOT")
+	if workDirRoot == "" {
+		workDirRoot = os.TempDir()
+	}
+	// stdliblist derives GOROOT from this path; Go tools need an absolute
+	// root when invoked from package source directories.
+	workDirRoot, err = filepath.Abs(workDirRoot)
 	if err != nil {
+		return "", func() {}, err
+	}
+	e.workDirPath = filepath.Join(workDirRoot, fmt.Sprintf("rules_go_work-%x", workDirDigest))
+	if err = os.MkdirAll(e.workDirPath, 0o755); err != nil {
 		return "", func() {}, err
 	}
 	if e.verbose {
@@ -327,7 +351,7 @@ func expandParamsFiles(args []string) ([]string, bool, error) {
 // including newlines and excepting single quotes. Characters outside quoted
 // strings may be escaped with a backslash.
 func readParamsFile(name string) ([]string, error) {
-	data, err := ioutil.ReadFile(name)
+	data, err := os.ReadFile(name)
 	if err != nil {
 		return nil, err
 	}
@@ -388,7 +412,7 @@ func writeParamsFile(path string, args []string) error {
 		}
 		buf.WriteString("'\n")
 	}
-	return ioutil.WriteFile(path, buf.Bytes(), 0666)
+	return os.WriteFile(path, buf.Bytes(), 0666)
 }
 
 // splitArgs splits a list of command line arguments into two parts: arguments
@@ -542,7 +566,7 @@ func passLongArgsInResponseFiles(cmd *exec.Cmd) (cleanup func()) {
 	if !useResponseFile(cmd.Path, argLen) {
 		return
 	}
-	tf, err := ioutil.TempFile("", "args")
+	tf, err := os.CreateTemp("", "args")
 	if err != nil {
 		log.Fatalf("error writing long arguments to response file: %v", err)
 	}

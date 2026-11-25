@@ -708,6 +708,11 @@ def go_context(
         "GOROOT_FINAL": "GOROOT",
         "CGO_ENABLED": "0" if mode.pure else "1",
 
+        # Deterministic scratch names can coincide across independent builds
+        # and path-mapped actions. Scope all builder scratch directories to
+        # the action's execroot, including cgo, local, and nogo actions.
+        "RULES_GO_WORKDIR_ROOT": ".",
+
         # If we use --action_env=GOPATH, or in other cases where environment
         # variables are passed through to this builder, the SDK build will try
         # to write to that GOPATH (e.g. for x/net/nettest). This will fail if
