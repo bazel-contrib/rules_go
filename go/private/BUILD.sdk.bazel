@@ -58,6 +58,7 @@ define_sdk_repository_targets(
     ]) + [
         ":config",
     ],
+    fips_packages = {fips_packages},
     go = "bin/go{exe}",
     go_sdk_root_file = "ROOT",
     goarch = "{goarch}",
