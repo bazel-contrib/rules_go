@@ -427,6 +427,11 @@ This downloads a Go SDK for use in toolchains.
 | In WORKSPACE mode, call ``rules_shell_toolchains()`` from                                                   |
 | ``@rules_shell//shell:repositories.bzl`` before ``go_register_toolchains()``.                              |
 +--------------------------------+-----------------------------+---------------------------------------------+
+| :param:`gofips140`             | :type:`string`              | :value:`"off"`                              |
++--------------------------------+-----------------------------+---------------------------------------------+
+| EXPERIMENTAL: The `GOFIPS140` mode to build with. Only ``off`` and ``latest`` are supported for            |
+| now. Requires Go 1.24 or later.                                                                            |
++--------------------------------+-----------------------------+---------------------------------------------+
 
 **Example**:
 
@@ -493,6 +498,11 @@ used. Otherwise, ``go env GOROOT`` is used.
 +--------------------------------+-----------------------------+-----------------------------------+
 | Go experiments to enable via `GOEXPERIMENT`.                                                     |
 +--------------------------------+-----------------------------+-----------------------------------+
+| :param:`gofips140`             | :type:`string`              | :value:`"off"`                    |
++--------------------------------+-----------------------------+-----------------------------------+
+| EXPERIMENTAL: The `GOFIPS140` mode to build with. Only ``off`` and ``latest`` are supported for  |
+| now. Requires Go 1.24 or later.                                                                  |
++--------------------------------+-----------------------------+-----------------------------------+
 
 go_local_sdk
 ~~~~~~~~~~~~
@@ -521,6 +531,11 @@ This prepares a local path to use as the Go SDK in toolchains.
 | :param:`experiments`           | :type:`string_list`         | :value:`[]`                       |
 +--------------------------------+-----------------------------+-----------------------------------+
 | Go experiments to enable via `GOEXPERIMENT`.                                                     |
++--------------------------------+-----------------------------+-----------------------------------+
+| :param:`gofips140`             | :type:`string`              | :value:`"off"`                    |
++--------------------------------+-----------------------------+-----------------------------------+
+| EXPERIMENTAL: The `GOFIPS140` mode to build with. Only ``off`` and ``latest`` are supported for  |
+| now. Requires Go 1.24 or later.                                                                  |
 +--------------------------------+-----------------------------+-----------------------------------+
 
 
@@ -557,6 +572,11 @@ rule.
 | :param:`experiments`           | :type:`string_list`         | :value:`[]`                       |
 +--------------------------------+-----------------------------+-----------------------------------+
 | Go experiments to enable via `GOEXPERIMENT`.                                                     |
++--------------------------------+-----------------------------+-----------------------------------+
+| :param:`gofips140`             | :type:`string`              | :value:`"off"`                    |
++--------------------------------+-----------------------------+-----------------------------------+
+| EXPERIMENTAL: The `GOFIPS140` mode to build with. Only ``off`` and ``latest`` are supported for  |
+| now. Requires Go 1.24 or later.                                                                  |
 +--------------------------------+-----------------------------+-----------------------------------+
 
 

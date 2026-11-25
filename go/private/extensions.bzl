@@ -14,7 +14,7 @@
 
 load("//go/private:go_mod.bzl", "version_from_go_mod", "version_from_go_work")
 load("//go/private:nogo.bzl", "DEFAULT_NOGO", "NOGO_DEFAULT_EXCLUDES", "NOGO_DEFAULT_INCLUDES", "go_register_nogo")
-load("//go/private:sdk.bzl", "detect_host_platform", "fetch_sdks_by_version", "go_download_sdk_rule", "go_host_sdk_rule", "go_multiple_toolchains", "go_wrap_sdk_rule")
+load("//go/private:sdk.bzl", "GOFIPS140_DOC", "detect_host_platform", "fetch_sdks_by_version", "go_download_sdk_rule", "go_host_sdk_rule", "go_multiple_toolchains", "go_wrap_sdk_rule")
 
 def host_compatible_toolchain_impl(ctx):
     ctx.file("BUILD.bazel")
@@ -42,6 +42,10 @@ _COMMON_TAG_ATTRS = {
     "sdks": attr.string_list_dict(),
     "experiments": attr.string_list(
         doc = "Go experiments to enable via GOEXPERIMENT",
+    ),
+    "gofips140": attr.string(
+        default = "off",
+        doc = GOFIPS140_DOC,
     ),
     "urls": attr.string_list(default = ["https://dl.google.com/go/{}"]),
     "patches": attr.label_list(
@@ -71,6 +75,10 @@ _host_tag = tag_class(
         "version": attr.string(),
         "experiments": attr.string_list(
             doc = "Go experiments to enable via GOEXPERIMENT",
+        ),
+        "gofips140": attr.string(
+            default = "off",
+            doc = GOFIPS140_DOC,
         ),
     },
 )
@@ -113,6 +121,10 @@ _wrap_tag = tag_class(
         "version": attr.string(),
         "experiments": attr.string_list(
             doc = "Go experiments to enable via GOEXPERIMENT.",
+        ),
+        "gofips140": attr.string(
+            default = "off",
+            doc = GOFIPS140_DOC,
         ),
         "goos": attr.string(),
         "goarch": attr.string(),
@@ -244,6 +256,7 @@ def _go_sdk_impl(ctx):
                 root_files = wrap_tag.root_files,
                 version = wrap_tag.version,
                 experiments = wrap_tag.experiments,
+                gofips140 = wrap_tag.gofips140,
             )
             toolchains.append(struct(
                 goos = wrap_tag.goos,
@@ -380,6 +393,7 @@ def _go_sdk_impl(ctx):
                 name = name,
                 version = host_tag.version,
                 experiments = host_tag.experiments,
+                gofips140 = host_tag.gofips140,
             )
 
             toolchains.append(struct(
@@ -476,6 +490,7 @@ def _download_sdk(*, get_sdks_by_version, name, goos, goarch, download_tag):
         goarch = goarch,
         sdks = sdks,
         experiments = download_tag.experiments,
+        gofips140 = download_tag.gofips140,
         patches = download_tag.patches,
         patch_strip = download_tag.patch_strip,
         urls = download_tag.urls,

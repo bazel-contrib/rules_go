@@ -162,6 +162,10 @@ func link(args []string) error {
 		}
 		return pkg, name, value, nil
 	}
+	// cmd/go defaults a GOFIPS140 binary to GODEBUG=fips140=on. Do the same
+	// here, since the linker is invoked directly. The linker keeps only the
+	// last -X for a symbol, so add to a value set through x_defs.
+	fips := os.Getenv("GOFIPS140") != "" && os.Getenv("GOFIPS140") != "off"
 	for _, xdef := range xdefs {
 		pkg, name, value, err := parseXdef(xdef)
 		if err != nil {
@@ -176,8 +180,15 @@ func link(args []string) error {
 			return key
 		})
 		if !missingKey {
+			if fips && pkg == "runtime" && name == "godebugDefault" {
+				value += ",fips140=on"
+				fips = false
+			}
 			goargs = append(goargs, "-X", fmt.Sprintf("%s.%s=%s", pkg, name, value))
 		}
+	}
+	if fips {
+		goargs = append(goargs, "-X", "runtime.godebugDefault=fips140=on")
 	}
 
 	// Appended before toolArgs, so a -buildid in gc_linkopts still takes precedence.
