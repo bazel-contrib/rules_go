@@ -57,6 +57,46 @@ _SETTING_KEY_TO_ORIGINAL_SETTING_KEY = {
     for setting in TRANSITIONED_GO_SETTING_KEYS
 }
 
+_SDK_VERSION_BUILD_SETTING = "//go/toolchain:sdk_version"
+_ORIGINAL_SDK_VERSION_BUILD_SETTING = "//go/toolchain:original_sdk_version"
+_SDK_NAME_BUILD_SETTING = "//go/toolchain:sdk_name"
+_ORIGINAL_SDK_NAME_BUILD_SETTING = "//go/toolchain:original_sdk_name"
+
+_BOOTSTRAP_NOGO_BUILD_SETTING = "//go/private:bootstrap_nogo"
+_ORIGINAL_BOOTSTRAP_NOGO_BUILD_SETTING = "//go/private:original_bootstrap_nogo"
+
+# Settings that a transition above a Go rule may change for its Go subgraph,
+# such as go_cross_transition or a rule that selects an instrumented SDK by
+# sdk_name. Each records the incoming value in its original key so that non-Go
+# edges can return to the caller's configuration.
+_RESTORED_SETTING_KEY_TO_ORIGINAL_SETTING_KEY = {
+    _SDK_VERSION_BUILD_SETTING: _ORIGINAL_SDK_VERSION_BUILD_SETTING,
+    _SDK_NAME_BUILD_SETTING: _ORIGINAL_SDK_NAME_BUILD_SETTING,
+    _BOOTSTRAP_NOGO_BUILD_SETTING: _ORIGINAL_BOOTSTRAP_NOGO_BUILD_SETTING,
+}
+
+_RESTORED_SETTING_KEYS = _RESTORED_SETTING_KEY_TO_ORIGINAL_SETTING_KEY.keys() + _RESTORED_SETTING_KEY_TO_ORIGINAL_SETTING_KEY.values()
+
+def _restore_settings(settings):
+    restored = {}
+    for key, original_key in _RESTORED_SETTING_KEY_TO_ORIGINAL_SETTING_KEY.items():
+        original_value = settings[original_key]
+        restored[key] = json.decode(original_value) if original_value else settings[key]
+        restored[original_key] = ""
+    return restored
+
+def _select_sdk_setting(settings, key, value):
+    """Returns the SDK settings that select value for key, recording the caller's value.
+
+    Idempotent, since Bazel applies transitions twice.
+    """
+    original_key = _RESTORED_SETTING_KEY_TO_ORIGINAL_SETTING_KEY[key]
+    old_value = settings[key]
+    original_value = settings[original_key]
+    if value != old_value and not original_value:
+        original_value = json.encode(old_value)
+    return {key: value, original_key: original_value}
+
 # Settings that go_tool_transition inherits from the command line instead of
 # resetting: whether a binary has to be linked statically or without cgo is a
 # property of the platform it runs on, so it applies to Go tool binaries as much
@@ -185,6 +225,7 @@ go_transition = transition(
 # everything that is resolved in it, e.g. the C++ toolchain.
 _reset_transition_dict = dict({
     "//go/private:bootstrap_nogo": False,
+    "//go/private:original_bootstrap_nogo": "",
     "//go/config:static": False,
     "//go/config:msan": False,
     "//go/config:race": False,
@@ -259,12 +300,12 @@ def _non_go_tool_transition_impl(settings, _attr):
     Examples: This transition is applied to attributes referencing proto_library
     targets or protoc directly.
     """
-    return dict(settings, **_reset_transition_dict)
+    return dict(settings, **(_restore_settings(settings) | _reset_transition_dict))
 
 non_go_tool_transition = transition(
     implementation = _non_go_tool_transition_impl,
-    inputs = _reset_transition_keys,
-    outputs = _reset_transition_keys,
+    inputs = _deduped_and_sorted(_reset_transition_keys + _RESTORED_SETTING_KEYS),
+    outputs = _deduped_and_sorted(_reset_transition_keys + _RESTORED_SETTING_KEYS),
 )
 
 def _go_stdlib_transition_impl(settings, _attr):
@@ -410,12 +451,13 @@ def _non_go_transition_impl(settings, _attr):
         #    and cause incorrect Go setting values.
         new_settings[original_key] = ""
 
+    new_settings.update(_restore_settings(settings))
     return new_settings
 
 non_go_transition = transition(
     implementation = _non_go_transition_impl,
-    inputs = TRANSITIONED_GO_SETTING_KEYS + _SETTING_KEY_TO_ORIGINAL_SETTING_KEY.values(),
-    outputs = TRANSITIONED_GO_SETTING_KEYS + _SETTING_KEY_TO_ORIGINAL_SETTING_KEY.values(),
+    inputs = TRANSITIONED_GO_SETTING_KEYS + _SETTING_KEY_TO_ORIGINAL_SETTING_KEY.values() + _RESTORED_SETTING_KEYS,
+    outputs = TRANSITIONED_GO_SETTING_KEYS + _SETTING_KEY_TO_ORIGINAL_SETTING_KEY.values() + _RESTORED_SETTING_KEYS,
 )
 
 def _check_ternary(name, value):
@@ -430,9 +472,9 @@ def _set_ternary(settings, attr, name):
         settings[label] = value == "on"
     return value
 
-_SDK_VERSION_BUILD_SETTING = "//go/toolchain:sdk_version"
 TRANSITIONED_GO_CROSS_SETTING_KEYS = [
     _SDK_VERSION_BUILD_SETTING,
+    _ORIGINAL_SDK_VERSION_BUILD_SETTING,
     "//command_line_option:compilation_mode",
     "//command_line_option:platforms",
 ]
@@ -440,7 +482,7 @@ TRANSITIONED_GO_CROSS_SETTING_KEYS = [
 def _go_cross_transition_impl(settings, attr):
     settings = dict(settings)
     if attr.sdk_version != None:
-        settings[_SDK_VERSION_BUILD_SETTING] = attr.sdk_version
+        settings.update(_select_sdk_setting(settings, _SDK_VERSION_BUILD_SETTING, attr.sdk_version))
 
     if attr.compilation_mode != "":
         settings["//command_line_option:compilation_mode"] = attr.compilation_mode

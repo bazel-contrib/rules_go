@@ -1,5 +1,5 @@
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
-load("@bazel_skylib//rules:common_settings.bzl", "bool_setting")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_setting", "string_setting")
 
 exports_files(["coverage_shim.go"])
 
@@ -177,6 +177,15 @@ bzl_library(
 bool_setting(
     name = "bootstrap_nogo",
     build_setting_default = False,
+    scope = "universal",
+    visibility = ["//visibility:public"],
+)
+
+# The JSON-encoded bootstrap_nogo of the caller of a transition that changes it
+# for a Go subgraph, which non-Go edges restore.
+string_setting(
+    name = "original_bootstrap_nogo",
+    build_setting_default = "",
     scope = "universal",
     visibility = ["//visibility:public"],
 )
