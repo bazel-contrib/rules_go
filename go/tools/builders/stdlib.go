@@ -121,18 +121,18 @@ You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 	// creating reproducible builds because the build ids are hashed from
 	// CGO_CFLAGS, which frequently contains absolute paths. As a workaround,
 	// we strip the build ids, since they won't be used after this.
-	installArgs := goenv.goCmd("install", "-toolexec", abs(os.Args[0])+" filterbuildid")
+	buildFlags := []string{"-toolexec", abs(os.Args[0]) + " filterbuildid"}
 	if len(build.Default.BuildTags) > 0 {
-		installArgs = append(installArgs, "-tags", strings.Join(build.Default.BuildTags, ","))
+		buildFlags = append(buildFlags, "-tags", strings.Join(build.Default.BuildTags, ","))
 	}
 
 	ldflags := []string{"-trimpath", sandboxPath}
 	asmflags := []string{"-trimpath", output}
 	if *race {
-		installArgs = append(installArgs, "-race")
+		buildFlags = append(buildFlags, "-race")
 	}
 	if *msan {
-		installArgs = append(installArgs, "-msan")
+		buildFlags = append(buildFlags, "-msan")
 	}
 	if *pgoprofile != "" {
 		gcflags = append(gcflags, "-pgoprofile=" + abs(*pgoprofile))
@@ -148,14 +148,16 @@ You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 		asmflags = append(asmflags, "-dynlink")
 	}
 
-	installArgs = append(installArgs, "-gcflags=all="+strings.Join(gcflags, " "))
-	installArgs = append(installArgs, "-ldflags=all="+strings.Join(ldflags, " "))
-	installArgs = append(installArgs, "-asmflags=all="+strings.Join(asmflags, " "))
+	buildFlags = append(buildFlags, "-gcflags=all="+strings.Join(gcflags, " "))
+	buildFlags = append(buildFlags, "-ldflags=all="+strings.Join(ldflags, " "))
+	buildFlags = append(buildFlags, "-asmflags=all="+strings.Join(asmflags, " "))
 
 	if err := absCCCompiler(cgoEnvVars, cgoAbsEnvFlags); err != nil {
 		return fmt.Errorf("error modifying cgo environment to absolute path: %v", err)
 	}
 
+	installArgs := goenv.goCmd("install")
+	installArgs = append(installArgs, buildFlags...)
 	installArgs = append(installArgs, packages...)
 	if err := goenv.runCommand(installArgs); err != nil {
 		return err
