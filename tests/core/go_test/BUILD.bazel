@@ -166,6 +166,11 @@ go_bazel_test(
     srcs = ["xmlreport_test.go"],
 )
 
+go_bazel_test(
+    name = "json_report_test",
+    srcs = ["json_report_test.go"],
+)
+
 go_test(
     name = "testmain_import_test",
     srcs = [

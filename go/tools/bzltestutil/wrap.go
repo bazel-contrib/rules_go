@@ -17,6 +17,7 @@ package bzltestutil
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -59,6 +60,19 @@ func shouldAddTestV() bool {
 		wrap, err := strconv.ParseBool(wrapEnv)
 		if err != nil {
 			log.Fatalf("invalid value for GO_TEST_WRAP_TESTV: %q", wrapEnv)
+		}
+		return wrap
+	}
+	return false
+}
+
+// shouldWriteJSON indicates if the test wrapper should write the test2json
+// output to TEST_UNDECLARED_OUTPUTS_DIR.
+func shouldWriteJSON() bool {
+	if wrapEnv, ok := os.LookupEnv("GO_TEST_WRAP_JSON"); ok {
+		wrap, err := strconv.ParseBool(wrapEnv)
+		if err != nil {
+			log.Fatalf("invalid value for GO_TEST_WRAP_JSON: %q", wrapEnv)
 		}
 		return wrap
 	}
@@ -165,16 +179,28 @@ func Wrap(pkg string) error {
 		jsonConverter.Write([]byte("\n"))
 	}
 	jsonConverter.Close()
+	var werrs []error
+	if dir, ok := os.LookupEnv("TEST_UNDECLARED_OUTPUTS_DIR"); ok && shouldWriteJSON() {
+		werrs = append(werrs, writeJSONReport(jsonBuffer.Bytes(), dir))
+	}
 	if out, ok := os.LookupEnv("XML_OUTPUT_FILE"); ok {
-		werr := writeReport(jsonBuffer, pkg, out)
-		if werr != nil {
-			if err != nil {
-				return fmt.Errorf("error while generating testreport: %s, (error wrapping test execution: %s)", werr, err)
-			}
-			return fmt.Errorf("error while generating testreport: %s", werr)
+		werrs = append(werrs, writeReport(jsonBuffer, pkg, out))
+	}
+	if werr := errors.Join(werrs...); werr != nil {
+		if err != nil {
+			return fmt.Errorf("error while generating testreport: %s, (error wrapping test execution: %s)", werr, err)
 		}
+		return fmt.Errorf("error while generating testreport: %s", werr)
 	}
 	return err
+}
+
+// writeJSONReport writes the test2json output to test2json.json in dir.
+func writeJSONReport(json []byte, dir string) error {
+	if err := os.WriteFile(filepath.Join(dir, "test2json.json"), json, 0664); err != nil {
+		return fmt.Errorf("error writing test json: %s", err)
+	}
+	return nil
 }
 
 func writeReport(jsonBuffer bytes.Buffer, pkg string, path string) error {
