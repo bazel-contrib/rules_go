@@ -304,15 +304,82 @@ func stdliblist(args []string) error {
 
 		return s
 	}
+	// Paths inside the declared -cache directory that the emitted JSON
+	// actually points at. Everything else in there is cmd/go bookkeeping
+	// that no consumer dereferences; see pruneUnreferencedCacheEntries.
+	referenced := map[string]bool{}
+	noteIfInCache := func(s string) {
+		if s != "" && strings.HasPrefix(s, absCachePath) {
+			referenced[filepath.Clean(s)] = true
+		}
+	}
 	for decoder.More() {
 		var pkg *goListPackage
 		if err := decoder.Decode(&pkg); err != nil {
 			return err
+		}
+		noteIfInCache(pkg.Export)
+		for _, f := range pkg.CompiledGoFiles {
+			noteIfInCache(f)
 		}
 		if err := encoder.Encode(flatPackageForStd(cloneBase, pkg, pathReplaceFn)); err != nil {
 			return err
 		}
 	}
 
+	if err := pruneUnreferencedCacheEntries(*cachePath, referenced); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+// pruneUnreferencedCacheEntries deletes every file under cacheDir that the
+// stdlib package list does not point at by path.
+//
+// cacheDir is a Bazel-declared TreeArtifact, so its full contents feed the
+// action's output digest, but cmd/go treats it as an ordinary build cache and
+// writes far more into it than this action's consumers ever read. Two classes
+// of that surplus are not reproducible:
+//
+//   - "<actionid>-a" action-cache entries and the cache-wide trim.txt/log.txt
+//     bookkeeping files, each of which embeds a wall-clock timestamp
+//     (cmd/go/internal/cache.putIndexEntry).
+//   - "<outputid>-d" blobs holding cmd/go's module index. Whether one is
+//     written at all is a wall-clock race: modindex.dirHash refuses to index a
+//     directory containing a file modified within the last modTimeCutoff (2s),
+//     and the SDK sources this action indexes are replicated into a fresh work
+//     directory immediately beforehand. A slow run therefore indexes more
+//     packages than a fast one, and the resulting output digests differ even
+//     though every byte the build depends on is identical.
+//
+// Filtering by filename can only ever chase the classes we happen to know
+// about. Keeping exactly the paths the emitted JSON references instead makes
+// the directory's contents a function of that JSON, which is derived from the
+// action's inputs alone. Consumers (the go/packages driver, and
+// GoCompilePkg/GoLink via -stdlib_cache) only dereference the blobs named by
+// pkg.Export and pkg.CompiledGoFiles, so nothing reachable is removed.
+//
+// Empty shard directories and the static README that cmd/go writes on first
+// use are left in place: both are deterministic, and cmd/go expects the layout
+// to be intact if it ever opens the directory as a cache again.
+func pruneUnreferencedCacheEntries(cacheDir string, referenced map[string]bool) error {
+	// Only prune an explicitly supplied cache directory. Without -cache,
+	// absCachePath is the working directory, which can contain unrelated files.
+	if cacheDir == "" {
+		return nil
+	}
+	cacheDir = abs(cacheDir)
+	return filepath.Walk(cacheDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() || info.Name() == "README" {
+			return nil
+		}
+		if referenced[filepath.Clean(path)] {
+			return nil
+		}
+		return os.Remove(path)
+	})
 }
