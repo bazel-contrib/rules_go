@@ -165,10 +165,9 @@ tasks:
       # enabled by default in the rbe_ubuntu2404 platform, we cannot simply remove
       # this flag here, we have to explicitly override it with 0.
       - "--repo_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=0"
-      # go_bazel_test rules are marked local, since the executors don't have bazel
-      # installed. It appears bazel is no longer in PATH on the host machines
-      # in this configuration either.
-      - "--test_tag_filters=-local"
+      # These workers cannot access the network needed by nested Bazel tests.
+      # Keep those and tests with host-only requirements out of this task.
+      - "--test_tag_filters=-local,-requires-network"
     test_targets:
       - "--"
       - "//..."

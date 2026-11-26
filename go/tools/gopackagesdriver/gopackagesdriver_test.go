@@ -406,43 +406,27 @@ func runForTestExpectError(
 	args ...string) packages.DriverResponse {
 	t.Helper()
 
-	// Remove most environment variables, other than those on an allowlist.
-	//
-	// Bazel sets TEST_* and RUNFILES_* and a bunch of other variables.
-	// If Bazel is invoked when these variables, it assumes (correctly)
-	// that it's being invoked by a test, and it does different things that
-	// we don't want. For example, it randomizes the output directory, which
-	// is extremely expensive here. Our test framework creates an output
-	// directory shared among go_bazel_tests and points to it using .bazelrc.
-	//
-	// This only works if TEST_TMPDIR is not set when invoking bazel.
-	// bazel_testing.BazelCmd normally unsets that, but since gopackagesdriver
-	// invokes bazel directly, we need to unset it here.
-	allowEnv := map[string]struct{}{
-		"HOME":        {},
-		"PATH":        {},
-		"PWD":         {},
-		"SYSTEMDRIVE": {},
-		"SYSTEMROOT":  {},
-		"TEMP":        {},
-		"TMP":         {},
-		"TZ":          {},
-		"USER":        {},
-	}
-	var oldEnv []string
-	for _, env := range os.Environ() {
-		key, value, cut := strings.Cut(env, "=")
-		if !cut {
-			continue
-		}
-		if _, allowed := allowEnv[key]; !allowed && !strings.HasPrefix(key, "GOPACKAGES") {
-			os.Unsetenv(key)
-			oldEnv = append(oldEnv, key, value)
-		}
+	// The driver invokes Bazel directly. Give it the harness's selected binary,
+	// startup options, and private environment instead of inheriting the outer
+	// test wrapper's environment or looking for a host Bazel on PATH.
+	cmd := bazel_testing.BazelCmd()
+	oldBazelBin, oldStartupFlags := bazelBin, bazelStartupFlags
+	bazelBin, bazelStartupFlags = cmd.Path, cmd.Args[1:]
+	defer func() {
+		bazelBin, bazelStartupFlags = oldBazelBin, oldStartupFlags
+	}()
+
+	oldEnv := os.Environ()
+	os.Clearenv()
+	for _, env := range cmd.Env {
+		key, value, _ := strings.Cut(env, "=")
+		os.Setenv(key, value)
 	}
 	defer func() {
-		for i := 0; i < len(oldEnv); i += 2 {
-			os.Setenv(oldEnv[i], oldEnv[i+1])
+		os.Clearenv()
+		for _, env := range oldEnv {
+			key, value, _ := strings.Cut(env, "=")
+			os.Setenv(key, value)
 		}
 	}()
 
