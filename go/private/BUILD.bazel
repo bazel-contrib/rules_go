@@ -222,3 +222,9 @@ config_setting(
     },
     visibility = ["//:__pkg__"],
 )
+
+bzl_library(
+    name = "bazel_version",
+    srcs = ["bazel_version.bzl"],
+    visibility = ["//go:__subpackages__"],
+)

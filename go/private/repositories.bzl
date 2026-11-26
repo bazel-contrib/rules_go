@@ -15,6 +15,7 @@
 # Once nested repositories work, this file should cease to exist.
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("//go/private:bazel_version.bzl", "bazel_version_repo")
 load("//go/private:common.bzl", "MINIMUM_BAZEL_VERSION")
 load("//go/private:nogo.bzl", "DEFAULT_NOGO", "go_register_nogo")
 load("//go/private:polyfill_bazel_features.bzl", "polyfill_bazel_features")
@@ -43,6 +44,8 @@ def go_rules_dependencies(force = False):
         wrapper = _always
     else:
         wrapper = _maybe
+
+    wrapper(bazel_version_repo, name = "io_bazel_rules_go_bazel_version")
 
     # Needed by rules_go implementation and tests.
     # We can't call bazel_skylib_workspace from here. At the moment, it's only

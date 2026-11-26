@@ -35,6 +35,7 @@ load(
     "rpath",
 )
 load("//go/private:sdk.bzl", "parse_version")
+load("//go/private/actions:link_resources.bzl", "golink_resource_set")
 
 def _format_archive(d):
     return "{}={}={}".format(d.label, d.importmap, d.file.path)
@@ -250,6 +251,7 @@ def emit_link(
         env = go.env,
         toolchain = GO_TOOLCHAIN_LABEL,
         exec_group = exec_group,
+        resource_set = golink_resource_set(extldflags),
     )
 
 def _extract_extldflags(gc_linkopts, extldflags):

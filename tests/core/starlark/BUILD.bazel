@@ -1,5 +1,7 @@
 load(":common_tests.bzl", "common_test_suite")
 load(":context_tests.bzl", "context_test_suite")
+load(":link_resources_analysis_tests.bzl", "link_resources_analysis_test_suite")
+load(":link_resources_tests.bzl", "link_resources_test_suite")
 load(":module_info_tests.bzl", "module_info_test_suite")
 load(":provider_tests.bzl", "provider_test_suite")
 load(":sdk_tests.bzl", "sdk_test_suite")
@@ -13,3 +15,7 @@ module_info_test_suite()
 provider_test_suite()
 
 sdk_test_suite()
+
+link_resources_test_suite()
+
+link_resources_analysis_test_suite()
