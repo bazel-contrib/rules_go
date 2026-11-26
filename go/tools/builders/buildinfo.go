@@ -324,6 +324,13 @@ func buildInfoSettingsFromEnv(buildmode string, buildTags []string, race, msan, 
 	if key, value := buildInfoArchSetting(goarch, go123ArchSettings, getenv); key != "" && value != "" {
 		settings = append(settings, debug.BuildSetting{Key: key, Value: value})
 	}
+	if getenv("CGO_ENABLED") == "1" {
+		for _, key := range []string{"CGO_CFLAGS", "CGO_CXXFLAGS", "CGO_LDFLAGS"} {
+			if value := getenv(key); value != "" {
+				settings = append(settings, debug.BuildSetting{Key: key, Value: value})
+			}
+		}
+	}
 	return settings
 }
 

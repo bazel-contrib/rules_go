@@ -384,3 +384,30 @@ func TestShouldEmitBuildInfo(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildInfoCGOFlagsRecorded(t *testing.T) {
+	for _, enabled := range []string{"0", "1"} {
+		t.Run(enabled, func(t *testing.T) {
+			env := map[string]string{
+				"CGO_ENABLED":  enabled,
+				"CGO_CFLAGS":   "-O2",
+				"CGO_CXXFLAGS": "-O3",
+				"CGO_LDFLAGS":  "-lm",
+			}
+			settings := buildInfoSettingsFromEnv("exe", nil, false, false, false, true, func(key string) string { return env[key] })
+			actual := make(map[string]string)
+			for _, setting := range settings {
+				actual[setting.Key] = setting.Value
+			}
+			for _, key := range []string{"CGO_CFLAGS", "CGO_CXXFLAGS", "CGO_LDFLAGS"} {
+				want := ""
+				if enabled == "1" {
+					want = env[key]
+				}
+				if actual[key] != want {
+					t.Errorf("%s = %q, want %q", key, actual[key], want)
+				}
+			}
+		})
+	}
+}
