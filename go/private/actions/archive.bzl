@@ -13,10 +13,6 @@
 # limitations under the License.
 
 load(
-    "//go/private:context.bzl",
-    "validate_nogo",
-)
-load(
     "//go/private:mode.bzl",
     "LINKMODE_C_ARCHIVE",
     "LINKMODE_C_SHARED",
@@ -32,6 +28,7 @@ load(
     "//go/private/actions:compilepkg.bzl",
     "emit_compilepkg",
 )
+load("//go/private/actions:nogo.bzl", "emit_nogo")
 load(
     "//go/private/rules:cgo.bzl",
     "cgo_configure",
@@ -62,22 +59,6 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
     out_imports = go.declare_file(go, name = source.name, ext = pre_ext + ".imports")
 
     out_cgo_export_h = None  # set if cgo used in c-shared or c-archive mode
-
-    nogo = go.nogo
-
-    # nogo is a FilesToRunProvider and some targets don't have it, some have it but no executable.
-    if nogo != None and nogo.executable != None and not "no-nogo" in go._ctx.attr.tags:
-        out_facts = go.declare_file(go, name = source.name, ext = pre_ext + ".facts")
-        out_diagnostics = go.declare_directory(go, name = source.name, ext = pre_ext + "_nogo")
-        if validate_nogo(go):
-            out_nogo_validation = go.declare_file(go, name = source.name, ext = pre_ext + ".nogo")
-        else:
-            out_nogo_validation = None
-    else:
-        nogo = None
-        out_facts = None
-        out_diagnostics = None
-        out_nogo_validation = None
 
     direct = source.deps
 
@@ -131,10 +112,6 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
             out_lib = out_lib,
             out_export = out_export,
             out_imports = out_imports,
-            out_facts = out_facts,
-            out_diagnostics = out_diagnostics,
-            out_nogo_validation = out_nogo_validation,
-            nogo = nogo,
             out_cgo_export_h = out_cgo_export_h,
             gc_goopts = source.gc_goopts,
             cgo = True,
@@ -164,16 +141,22 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
             out_lib = out_lib,
             out_export = out_export,
             out_imports = out_imports,
-            out_facts = out_facts,
-            out_diagnostics = out_diagnostics,
-            out_nogo_validation = out_nogo_validation,
-            nogo = nogo,
             gc_goopts = source.gc_goopts,
             cgo = False,
             testfilter = testfilter,
             recompile_internal_deps = recompile_internal_deps,
             is_external_pkg = is_external_pkg,
         )
+
+    nogo = emit_nogo(
+        go,
+        source = source,
+        output_suffix = pre_ext,
+        importpath = importpath,
+        importmap = importmap,
+        cgo_go_srcs = cgo_out_dir,
+        recompile_internal_deps = None if cgo_out_dir else recompile_internal_deps,
+    )
 
     data = GoArchiveData(
         # TODO(#2578): reconsider the provider API. There's a lot of redundant
@@ -210,10 +193,10 @@ def emit_archive(go, source = None, _recompile_suffix = "", recompile_internal_d
         # Information needed by dependents
         file = out_lib,
         export_file = out_export,
-        facts_file = out_facts,
+        facts_file = nogo.facts,
         runfiles = source.runfiles,
-        _validation_output = out_nogo_validation,
-        _nogo_diagnostics = out_diagnostics,
+        _validation_output = nogo.validation,
+        _nogo_diagnostics = nogo.diagnostics,
         _cgo_deps = cgo_deps,
         _cgo_link_inputs = cgo_link_inputs,
     )
