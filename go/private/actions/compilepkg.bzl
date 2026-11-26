@@ -44,10 +44,16 @@ def _embedroot_arg(src):
     return src.root.path
 
 def _embedlookupdir_arg(src):
-    root_relative = src.dirname[len(src.root.path):]
-    if root_relative.startswith("/"):
-        root_relative = root_relative[1:]
-    return root_relative
+    # Derive the root-relative directory from the short path rather than the
+    # path: path mapping may also change the root-relative part of output
+    # paths, such as by removing the package from the path of out_lib.
+    repo_relative = src.short_path
+    if repo_relative.startswith("../"):
+        # The short path of a file in another repository is "../<repo>/<path>".
+        repo_relative = repo_relative[repo_relative.find("/", len("../")) + 1:]
+    workspace_root = src.owner.workspace_root
+    root_relative = workspace_root + "/" + repo_relative if workspace_root else repo_relative
+    return root_relative[:max(root_relative.rfind("/"), 0)]
 
 def emit_compilepkg(
         go,
