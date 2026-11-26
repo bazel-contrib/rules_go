@@ -1,0 +1,22 @@
+load("@com_google_protobuf//bazel:proto_library.bzl", "proto_library")
+load("//go:def.bzl", "go_library")
+load("//proto:def.bzl", "go_proto_library")
+
+proto_library(
+    name = "foo_proto",
+    srcs = ["foo.proto"],
+)
+
+go_proto_library(
+    name = "foo_go_proto",
+    importpath = "example.com/foo",
+    proto = ":foo_proto",
+)
+
+go_library(
+    name = "uses_proto",
+    srcs = ["uses_proto.go"],
+    importpath = "example.com/usesproto",
+    visibility = ["//tests/core/starlark/packagedriver:__subpackages__"],
+    deps = [":foo_go_proto"],
+)

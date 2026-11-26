@@ -278,6 +278,7 @@ _go_proto_compiler = go_rule(
         ),
     }),
     toolchains = _use_toolchain(_PROTO_TOOLCHAIN_TYPE),
+    provides = [GoProtoCompiler, GoInfo],
 )
 
 def go_proto_compiler(name, **kwargs):

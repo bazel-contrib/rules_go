@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package tests.core.starlark.packagedriver.fixtures.proto;
+
+option go_package = "example.com/foo";
+
+message Foo {
+  string value = 1;
+}

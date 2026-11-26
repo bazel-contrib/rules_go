@@ -1,0 +1,21 @@
+load("//tests/core/starlark/packagedriver:non_go_rule.bzl", "non_go_rule")
+
+# Has no Go toolchain, like a wasm target built from C or Python sources.
+platform(
+    name = "no_go_toolchain",
+    constraint_values = [
+        "@platforms//cpu:wasm32",
+        "@platforms//os:none",
+    ],
+    visibility = ["//tests/core/starlark/packagedriver:__subpackages__"],
+)
+
+non_go_rule(
+    name = "non_go",
+    visibility = ["//tests/core/starlark/packagedriver:__subpackages__"],
+    deps = [":non_go_dep"],
+)
+
+non_go_rule(
+    name = "non_go_dep",
+)

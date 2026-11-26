@@ -234,6 +234,8 @@ go_proto_library = go_rule(
     exec_groups = {
         "internal_use_only_go_proto_gen": exec_group(),
     },
+    # GoArchive is returned only when a compiler produces a valid archive.
+    provides = [GoInfo],
 )
 # go_proto_library is a rule that takes a proto_library (in the proto
 # attribute) and produces a go library for it.

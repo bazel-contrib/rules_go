@@ -15,6 +15,7 @@
 load(
     "//go/private:providers.bzl",
     "GoArchive",
+    "GoInfo",
     "GoStdLib",
 )
 load(
@@ -147,6 +148,10 @@ def _go_pkg_info_aspect_impl(target, ctx):
 go_pkg_info_aspect = aspect(
     implementation = _go_pkg_info_aspect_impl,
     attr_aspects = DEPS_ATTRS + PROTO_COMPILER_ATTRS,
+    # Restrict the aspect to Go targets. Elsewhere, _go_stdlib would resolve a
+    # Go toolchain in configurations that may not have one. go_proto_library
+    # and go_proto_compiler match through GoInfo.
+    required_providers = [[GoArchive], [GoInfo]],
     attrs = {
         "_go_stdlib": attr.label(
             default = "//:stdlib",
