@@ -44,6 +44,7 @@ func link(args []string) error {
 	archives := archiveMultiFlag{}
 	flags := flag.NewFlagSet("link", flag.ExitOnError)
 	goenv := envFlags(flags)
+	compressArchives := flags.Bool("compress_archives", false, "Read gzip-compressed package archives.")
 	main := flags.String("main", "", "Path to the main archive.")
 	// The main package path populates runtime/debug.BuildInfo.Path. For example,
 	// "golang.org/x/tools/cmd/stringer" identifies the executable package.
@@ -108,6 +109,24 @@ func link(args []string) error {
 				// Key and value
 				stampMap[line[0]] = line[1]
 			}
+		}
+	}
+
+	if *compressArchives {
+		workDir, cleanup, err := goenv.workDir()
+		if err != nil {
+			return err
+		}
+		defer cleanup()
+		for i := range archives {
+			archives[i].file, err = expandArchive(archives[i].file, workDir)
+			if err != nil {
+				return err
+			}
+		}
+		*main, err = expandArchive(*main, workDir)
+		if err != nil {
+			return err
 		}
 	}
 

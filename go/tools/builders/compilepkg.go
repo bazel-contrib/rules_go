@@ -47,6 +47,7 @@ func compilePkg(args []string) error {
 	var gcFlags, asmFlags, cppFlags, cFlags, cxxFlags, objcFlags, objcxxFlags, ldFlags quoteMultiFlag
 	var coverFormat string
 	var pgoprofile string
+	compressArchives := fs.Bool("compress_archives", false, "Compress the link archive with gzip.")
 	fs.StringVar(&pack, "pack", "", "Path of the pack tool.")
 	fs.Var(&unfilteredSrcs, "src", ".go, .c, .cc, .m, .mm, .s, or .S file to be filtered and compiled")
 	fs.Var(&coverSrcs, "cover", ".go file that should be instrumented for coverage (must also be a -src)")
@@ -108,7 +109,7 @@ func compilePkg(args []string) error {
 		return err
 	}
 
-	return compileArchive(
+	err = compileArchive(
 		goenv,
 		pack,
 		importPath,
@@ -139,6 +140,13 @@ func compilePkg(args []string) error {
 		coverFormat,
 		recompileInternalDeps,
 		pgoprofile)
+	if err != nil {
+		return err
+	}
+	if *compressArchives {
+		return compressArchive(outLinkobjPath)
+	}
+	return nil
 }
 
 func compileArchive(

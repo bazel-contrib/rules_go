@@ -103,3 +103,11 @@ bool_flag(
     build_setting_default = False,
     visibility = ["//visibility:public"],
 )
+
+# Package archives are gzip streams when enabled; export data and executables
+# retain their normal formats. Consumers outside rules_go must decompress them.
+bool_flag(
+    name = "compress_archives",
+    build_setting_default = False,
+    visibility = ["//visibility:public"],
+)
