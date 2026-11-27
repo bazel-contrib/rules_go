@@ -429,8 +429,8 @@ This downloads a Go SDK for use in toolchains.
 +--------------------------------+-----------------------------+---------------------------------------------+
 | :param:`gofips140`             | :type:`string`              | :value:`"off"`                              |
 +--------------------------------+-----------------------------+---------------------------------------------+
-| EXPERIMENTAL: The `GOFIPS140` mode to build with. Only ``off`` and ``latest`` are supported for            |
-| now. Requires Go 1.24 or later.                                                                            |
+| EXPERIMENTAL: The `GOFIPS140` mode to build with: ``off``, ``latest``, or a snapshot in the                |
+| SDK's ``lib/fips140`` such as ``v1.0.0`` or ``certified``. Requires Go 1.24 or later.                      |
 +--------------------------------+-----------------------------+---------------------------------------------+
 
 **Example**:
@@ -500,8 +500,8 @@ used. Otherwise, ``go env GOROOT`` is used.
 +--------------------------------+-----------------------------+-----------------------------------+
 | :param:`gofips140`             | :type:`string`              | :value:`"off"`                    |
 +--------------------------------+-----------------------------+-----------------------------------+
-| EXPERIMENTAL: The `GOFIPS140` mode to build with. Only ``off`` and ``latest`` are supported for  |
-| now. Requires Go 1.24 or later.                                                                  |
+| EXPERIMENTAL: The `GOFIPS140` mode to build with: ``off``, ``latest``, or a snapshot in the      |
+| SDK's ``lib/fips140`` such as ``v1.0.0`` or ``certified``. Requires Go 1.24 or later.            |
 +--------------------------------+-----------------------------+-----------------------------------+
 
 go_local_sdk
@@ -534,8 +534,8 @@ This prepares a local path to use as the Go SDK in toolchains.
 +--------------------------------+-----------------------------+-----------------------------------+
 | :param:`gofips140`             | :type:`string`              | :value:`"off"`                    |
 +--------------------------------+-----------------------------+-----------------------------------+
-| EXPERIMENTAL: The `GOFIPS140` mode to build with. Only ``off`` and ``latest`` are supported for  |
-| now. Requires Go 1.24 or later.                                                                  |
+| EXPERIMENTAL: The `GOFIPS140` mode to build with: ``off``, ``latest``, or a snapshot in the      |
+| SDK's ``lib/fips140`` such as ``v1.0.0`` or ``certified``. Requires Go 1.24 or later.            |
 +--------------------------------+-----------------------------+-----------------------------------+
 
 
@@ -575,8 +575,8 @@ rule.
 +--------------------------------+-----------------------------+-----------------------------------+
 | :param:`gofips140`             | :type:`string`              | :value:`"off"`                    |
 +--------------------------------+-----------------------------+-----------------------------------+
-| EXPERIMENTAL: The `GOFIPS140` mode to build with. Only ``off`` and ``latest`` are supported for  |
-| now. Requires Go 1.24 or later.                                                                  |
+| EXPERIMENTAL: The `GOFIPS140` mode to build with: ``off``, ``latest``, or a snapshot in the      |
+| SDK's ``lib/fips140`` such as ``v1.0.0`` or ``certified``. Requires Go 1.24 or later.            |
 +--------------------------------+-----------------------------+-----------------------------------+
 
 

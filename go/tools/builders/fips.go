@@ -19,6 +19,22 @@ import (
 	"strings"
 )
 
+// fipsSnapshot reports whether GOFIPS140 selects a snapshot in lib/fips140,
+// as opposed to "off" or "latest", which builds from the SDK's own sources.
+func fipsSnapshot() bool {
+	v := os.Getenv("GOFIPS140")
+	return v != "" && v != "off" && v != "latest"
+}
+
+// fipsGorootPaths returns the GOROOT paths the go command needs in addition
+// to the usual ones to build with the current GOFIPS140.
+func fipsGorootPaths() []string {
+	if fipsSnapshot() {
+		return []string{"lib/fips140"}
+	}
+	return nil
+}
+
 // readFIPSPackageList returns the import paths of the GOFIPS140 snapshot
 // packages listed in the file at path, one per line.
 func readFIPSPackageList(path string) ([]string, error) {

@@ -60,7 +60,7 @@ You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 	}
 
 	// Link in the bare minimum needed to the new GOROOT
-	if err := replicate(goroot, output, replicatePaths("src", "pkg/tool", "pkg/include")); err != nil {
+	if err := replicate(goroot, output, replicatePaths(append([]string{"src", "pkg/tool", "pkg/include"}, fipsGorootPaths()...)...)); err != nil {
 		return err
 	}
 
@@ -81,6 +81,15 @@ You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 	// mode, there may be a go.mod file in a parent directory which will turn
 	// modules on in "auto" mode.
 	os.Setenv("GO111MODULE", "off")
+
+	// The go command unpacks a GOFIPS140 snapshot into the module cache, which
+	// is read-only without -modcacherw and could then not be removed.
+	if fipsSnapshot() {
+		modCachePath := filepath.Join(output, ".gomodcache")
+		os.Setenv("GOMODCACHE", modCachePath)
+		os.Setenv("GOFLAGS", "-modcacherw")
+		defer os.RemoveAll(modCachePath)
+	}
 
 	// Make sure we have an absolute path to the C compiler.
 	cc := abs(os.Getenv("CC"))
@@ -163,6 +172,46 @@ You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 	installArgs = append(installArgs, packages...)
 	if err := goenv.runCommand(installArgs); err != nil {
 		return err
+	}
+	if fipsSnapshot() {
+		return installFIPSSnapshotArchives(goenv, output, buildFlags, *race, *msan, fipsPackageList)
+	}
+	return nil
+}
+
+// installFIPSSnapshotArchives places the archives of the GOFIPS140 snapshot
+// packages into goroot/pkg. "go install std" compiles them but leaves them in
+// the build cache (golang/go#76225), where the linker cannot find them.
+// Building each one with the flags "go install std" used is a cache hit that
+// copies the archive out.
+func installFIPSSnapshotArchives(goenv *env, goroot string, buildFlags []string, race, msan bool, packageListPath string) error {
+	pkgs, err := readFIPSPackageList(packageListPath)
+	if err != nil {
+		return err
+	}
+	if len(pkgs) == 0 {
+		return fmt.Errorf("GOFIPS140=%s: %s lists no snapshot packages", os.Getenv("GOFIPS140"), packageListPath)
+	}
+	platform := os.Getenv("GOOS") + "_" + os.Getenv("GOARCH")
+	if race {
+		platform += "_race"
+	} else if msan {
+		platform += "_msan"
+	}
+	for _, pkg := range pkgs {
+		dst := filepath.Join(goroot, "pkg", platform, filepath.FromSlash(pkg)+".a")
+		if _, err := os.Stat(dst); err == nil {
+			continue
+		}
+		if err := os.MkdirAll(filepath.Dir(dst), 0o777); err != nil {
+			return err
+		}
+		buildArgs := goenv.goCmd("build")
+		buildArgs = append(buildArgs, buildFlags...)
+		buildArgs = append(buildArgs, "-o", dst, pkg)
+		if err := goenv.runCommand(buildArgs); err != nil {
+			return err
+		}
 	}
 	return nil
 }

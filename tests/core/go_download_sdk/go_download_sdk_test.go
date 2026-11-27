@@ -418,23 +418,31 @@ func withModuleSDK(t *testing.T, sdkTags string) {
 	})
 }
 
-// With gofips140 = "latest" the standard library is built in FIPS mode from
-// the SDK's own sources and binaries default to GODEBUG=fips140=on.
-func TestGoFIPS140Latest(t *testing.T) {
-	withModuleSDK(t, `go_sdk.download(
+// With gofips140 set, the standard library is built in FIPS mode and binaries
+// default to GODEBUG=fips140=on. "latest" uses the SDK's own sources, anything
+// else a snapshot in the SDK's lib/fips140.
+func TestGoFIPS140(t *testing.T) {
+	for _, gofips140 := range []string{"latest", "v1.0.0"} {
+		t.Run(gofips140, func(t *testing.T) {
+			withModuleSDK(t, `go_sdk.download(
     name = "go_sdk_fips",
     version = "1.24.0",
-    gofips140 = "latest",
+    gofips140 = "`+gofips140+`",
 )
 use_repo(go_sdk, "go_sdk_fips")
 `)
 
-	if err := bazel_testing.RunBazel("test", "//:fips_test", "//:fips_godebug_x_def_test"); err != nil {
-		t.Fatal(err)
+			if err := bazel_testing.RunBazel("test", "//:fips_test", "//:fips_godebug_x_def_test"); err != nil {
+				t.Fatal(err)
+			}
+			if err := bazel_testing.RunBazel("test", "--@io_bazel_rules_go//go/config:race", "//:fips_test"); err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
 }
 
-// Snapshot versions are not supported yet, SDKs before Go 1.24 do not know
+// The SDK must have the requested snapshot, SDKs before Go 1.24 do not know
 // GOFIPS140, and the bootstrap SDK build file does not pass it on. All must be
 // rejected rather than silently producing a non-FIPS build.
 func TestGoFIPS140Unsupported(t *testing.T) {
@@ -442,9 +450,9 @@ func TestGoFIPS140Unsupported(t *testing.T) {
 		desc, attrs string
 	}{
 		{
-			desc: "snapshot_version",
+			desc: "unknown_snapshot",
 			attrs: `version = "1.24.0",
-    gofips140 = "v1.0.0",`,
+    gofips140 = "v9.9.9",`,
 		},
 		{
 			desc: "sdk_before_go_1_24",
