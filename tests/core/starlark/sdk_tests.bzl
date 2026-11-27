@@ -117,6 +117,7 @@ def _package_list_fips_out_test_impl(ctx):
         for action in analysistest.target_actions(env)
     }
     asserts.equals(env, "a/x\nb\n", contents["sdk_tests_fips_packages.txt"])
+    asserts.equals(env, "a/x\nb\n", contents["sdk_tests_packages.txt"])
 
     return analysistest.end(env)
 

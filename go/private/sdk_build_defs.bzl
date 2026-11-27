@@ -60,6 +60,7 @@ def define_sdk_repository_targets(
         headers = [":headers"],
         libs = [":libs"],
         package_list = ":package_list",
+        fips_package_list = ":fips_packages.txt",
         root_file = go_sdk_root_file,
         tools = [":tools"],
         version = version,

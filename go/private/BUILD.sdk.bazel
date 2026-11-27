@@ -24,7 +24,10 @@ filegroup(
 filegroup(
     name = "srcs",
     srcs = glob(
-        ["src/**/*"],
+        [
+            "src/**/*",
+            "lib/fips140/**",
+        ],
         allow_empty = True,
         exclude = STDLIB_SRCS_EXCLUDE,
     ),
@@ -55,7 +58,10 @@ define_sdk_repository_targets(
         "bin/go*",
         "src/**",
         "pkg/**",
-    ]) + [
+    ]) + glob(
+        ["lib/fips140/**"],
+        allow_empty = True,
+    ) + [
         ":config",
     ],
     fips_packages = {fips_packages},

@@ -39,6 +39,7 @@ def _go_sdk_impl(ctx):
             gofips140 = ctx.attr.gofips140,
             root_file = ctx.file.root_file,
             package_list = package_list,
+            fips_package_list = ctx.file.fips_package_list,
             libs = depset(ctx.files.libs),
             headers = depset(ctx.files.headers),
             srcs = depset(ctx.files.srcs),
@@ -77,6 +78,10 @@ go_sdk = rule(
             allow_single_file = True,
             doc = ("A text file containing a list of packages in the " +
                    "standard library that may be imported."),
+        ),
+        "fips_package_list": attr.label(
+            allow_single_file = True,
+            doc = "A text file containing a list of the packages in the GOFIPS140 snapshot.",
         ),
         "libs": attr.label_list(
             # allow_files is not set to [".a"] because that wouldn't allow
@@ -125,7 +130,7 @@ go_sdk = rule(
 )
 
 def _package_list_impl(ctx):
-    _build_package_list(ctx, ctx.files.srcs, ctx.file.root_file, ctx.outputs.out)
+    _build_package_list(ctx, ctx.files.srcs, ctx.file.root_file, ctx.outputs.out, ctx.attr.fips_packages)
     fips_content = "".join([pkg + "\n" for pkg in sorted(ctx.attr.fips_packages)])
     ctx.actions.write(ctx.outputs.fips_out, fips_content)
     return [DefaultInfo(files = depset([ctx.outputs.out]))]
@@ -162,8 +167,8 @@ package_list = rule(
     },
 )
 
-def _build_package_list(ctx, srcs, root_file, out):
-    packages = {}
+def _build_package_list(ctx, srcs, root_file, out, fips_packages = []):
+    packages = {pkg: None for pkg in fips_packages}
     src_dir = root_file.dirname + "/src/"
     for src in srcs:
         pkg_src_dir = src.dirname
