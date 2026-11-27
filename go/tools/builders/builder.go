@@ -65,6 +65,8 @@ func main() {
 		action = genNogoMain
 	case "preprofile":
 		action = preprofile
+	case "sdktool":
+		action = sdkTool
 	case "stdlib":
 		action = stdlib
 	case "stdliblist":
