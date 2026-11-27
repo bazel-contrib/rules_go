@@ -746,25 +746,19 @@ func (i *importer) Import(path string) (*types.Package, error) {
 	if !ok {
 		return nil, fmt.Errorf("could not import %q", path)
 	}
-	// open file
-	f, err := os.Open(archive)
+	data, err := os.ReadFile(archive)
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		f.Close()
-		if err != nil {
-			// add file name to error
-			err = fmt.Errorf("reading export data: %s: %v", archive, err)
-		}
-	}()
-
-	r, err := gcexportdata.NewReader(f)
+	exportData, err := extractExportData(data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("reading export data: %s: %w", archive, err)
 	}
-
-	return gcexportdata.Read(r, i.fset, i.packageCache, path)
+	pkg, err := gcexportdata.Read(bytes.NewReader(exportData), i.fset, i.packageCache, path)
+	if err != nil {
+		return nil, fmt.Errorf("reading export data: %s: %w", archive, err)
+	}
+	return pkg, nil
 }
 
 // cachedPackage returns the already-imported package with the given path, or

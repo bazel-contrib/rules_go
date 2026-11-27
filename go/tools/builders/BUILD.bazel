@@ -104,6 +104,15 @@ go_test(
 )
 
 go_test(
+    name = "nogo_exportdata_test",
+    size = "small",
+    srcs = [
+        "nogo_exportdata.go",
+        "nogo_exportdata_test.go",
+    ],
+)
+
+go_test(
     name = "env_test",
     size = "small",
     srcs = [
@@ -181,6 +190,7 @@ go_source(
         "constants.go",
         "env.go",
         "flags.go",
+        "nogo_exportdata.go",
         "nogo_fix.go",
         "nogo_goversions_go118.go",
         "nogo_goversions_go121.go",
