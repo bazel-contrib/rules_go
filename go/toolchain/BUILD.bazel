@@ -15,7 +15,17 @@ string_flag(
 )
 
 string_flag(
+    name = "original_sdk_version",
+    build_setting_default = "",
+)
+
+string_flag(
     name = "sdk_name",
+    build_setting_default = "",
+)
+
+string_flag(
+    name = "original_sdk_name",
     build_setting_default = "",
 )
 
