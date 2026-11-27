@@ -231,8 +231,12 @@ go_proto_library = go_rule(
     # resolves to the same platform as the one resolved for the binary.
     # Note that this exec platform matching is still fragile; the proper fix
     # is to create proper toolchains for the protoc compiler.
+    #
+    # With multiple exec platforms (e.g. remote Linux workers plus a macOS host), the group
+    # must resolve the same toolchains as go_proto_compiler (and with it protoc and the plugin),
+    # otherwise an unconstrained group could pick another exec platform than the tools.
     exec_groups = {
-        "internal_use_only_go_proto_gen": exec_group(),
+        "internal_use_only_go_proto_gen": exec_group(toolchains = [GO_TOOLCHAIN] + CGO_TOOLCHAINS),
     },
 )
 # go_proto_library is a rule that takes a proto_library (in the proto
