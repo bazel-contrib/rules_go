@@ -334,6 +334,24 @@ need to configure them:
 - `GOPACKAGESDRIVER_BAZEL_QUERY_SCOPE` which specifies the scope for `importpath` queries (since `gopls` only issues `file=` queries, so **use if you know what you're doing!**)
 - `GOPACKAGESDRIVER_BAZEL_BUILD_FLAGS` which will be passed to `bazel build`
   invocations
+- `GOPACKAGESDRIVER_PKG_JSON_LIST`: path to a file listing `.pkg.json` files
+  produced by `go_pkg_info_aspect`, one per line. When set, the driver answers
+  from those files and never invokes `bazel`, so `go/packages`-based tools can
+  run inside a Bazel action. Placeholder paths resolve against the working
+  directory (the execution root inside an action). Only import-path queries
+  (optionally ending in `/...`) are supported. Files are filtered for the
+  `GOOS`, `GOARCH` and `GOTAGS` of the driver's environment, so set them in the
+  action when targeting another platform.
+
+  The list must contain the transitive `GoPkgInfo.pkg_json_files` and the
+  `GoPkgInfo.stdlib_json_file`. Declare these JSON files, the list itself,
+  `GoPkgInfo.compiled_go_files`, `GoPkgInfo.export_files`, and
+  `GoPkgInfo.stdlib_cache_dir` (when present) as action inputs. Also declare
+  the matching Go SDK's sources (for example, `@go_sdk//:srcs`, using your
+  SDK repository's name). The aspect's source output does not include SDK
+  sources; without them, loading standard-library types with the default
+  `export_stdlib = False`, or requesting dependency syntax, can fail inside
+  a sandbox even though it works from an unsandboxed execution root.
 
 ## Debugging
 It is possible to debug driver issues by calling it directly and looking at the errors
