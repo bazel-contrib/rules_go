@@ -40,6 +40,7 @@ def define_sdk_repository_targets(
         experiments,
         exec_compatible_with,
         files_srcs,
+        fips_packages = [],
         go,
         goarch,
         gofips140 = "off",
@@ -98,6 +99,7 @@ def define_sdk_repository_targets(
         srcs = package_list_srcs,
         out = "packages.txt",
         fips_out = "fips_packages.txt",
+        fips_packages = fips_packages,
         root_file = "ROOT",
     )
 
