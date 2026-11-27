@@ -126,9 +126,16 @@ func outputBasePath(cloneBase, p string) string {
 
 // absoluteSourcesPaths replace cloneBase of the absolution
 // paths with the label for all source files in a package
-func absoluteSourcesPaths(cloneBase, pkgDir string, srcs []string) []string {
+func absoluteSourcesPaths(cloneBase, pkgDir string, srcs []string, pathReplaceFn func(p string) string) []string {
 	ret := make([]string, 0, len(srcs))
-	pkgDir = outputBasePath(cloneBase, pkgDir)
+
+	// The sources of a GOFIPS140 snapshot are in the module cache, not in the
+	// GOROOT under cloneBase.
+	if replaced := pathReplaceFn(pkgDir); replaced != pkgDir {
+		pkgDir = replaced
+	} else {
+		pkgDir = outputBasePath(cloneBase, pkgDir)
+	}
 	for _, src := range srcs {
 		absPath := src
 
@@ -159,8 +166,8 @@ func filterGoFiles(srcs []string, pathReplaceFn func(p string) string) []string 
 }
 
 func flatPackageForStd(cloneBase string, pkg *goListPackage, pathReplaceFn func(p string) string) *flatPackage {
-	goFiles := absoluteSourcesPaths(cloneBase, pkg.Dir, pkg.GoFiles)
-	compiledGoFiles := absoluteSourcesPaths(cloneBase, pkg.Dir, pkg.CompiledGoFiles)
+	goFiles := absoluteSourcesPaths(cloneBase, pkg.Dir, pkg.GoFiles, pathReplaceFn)
+	compiledGoFiles := absoluteSourcesPaths(cloneBase, pkg.Dir, pkg.CompiledGoFiles, pathReplaceFn)
 
 	newPkg := &flatPackage{
 		ID:              stdlibPackageID(pkg.ImportPath),

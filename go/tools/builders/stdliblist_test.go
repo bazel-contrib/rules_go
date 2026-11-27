@@ -100,3 +100,36 @@ func Test_stdliblist_export(t *testing.T) {
 		t.Error("At least one export file should be set when -export is set.")
 	}
 }
+
+func Test_absoluteSourcesPaths(t *testing.T) {
+	cloneBase := filepath.FromSlash("/work/clone")
+	cache := filepath.FromSlash("/work/cache")
+	pathReplaceFn := func(p string) string {
+		if strings.HasPrefix(p, cache) {
+			return strings.Replace(p, cache, "__BAZEL_EXECROOT__", 1)
+		}
+		return p
+	}
+
+	for _, tc := range []struct {
+		desc, dir, want string
+	}{
+		{
+			desc: "goroot",
+			dir:  "/work/clone/external/go_sdk/src/crypto/sha256",
+			want: "__BAZEL_OUTPUT_BASE__/external/go_sdk/src/crypto/sha256/sha256.go",
+		},
+		{
+			desc: "fips_snapshot",
+			dir:  "/work/cache/golang.org/fips140@v1.0.0/fips140/v1.0.0/sha256",
+			want: "__BAZEL_EXECROOT__/golang.org/fips140@v1.0.0/fips140/v1.0.0/sha256/sha256.go",
+		},
+	} {
+		t.Run(tc.desc, func(t *testing.T) {
+			got := absoluteSourcesPaths(cloneBase, filepath.FromSlash(tc.dir), []string{"sha256.go"}, pathReplaceFn)
+			if want := filepath.FromSlash(tc.want); len(got) != 1 || got[0] != want {
+				t.Errorf("got %v, want [%s]", got, want)
+			}
+		})
+	}
+}
