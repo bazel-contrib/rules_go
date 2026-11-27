@@ -39,6 +39,8 @@ func stdlib(args []string) error {
 	flags.Var(&packages, "package", "Packages to build")
 	var gcflags quoteMultiFlag
 	flags.Var(&gcflags, "gcflags", "Go compiler flags")
+	var fipsPackageList string
+	flags.StringVar(&fipsPackageList, "fips_package_list", "", "The file containing the list of packages in the GOFIPS140 snapshot")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}

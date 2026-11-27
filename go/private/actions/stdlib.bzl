@@ -137,6 +137,10 @@ def _build_stdlib(go):
     inputs_direct = [sdk.go, sdk.package_list, sdk.root_file]
     inputs_transitive = [sdk.headers, sdk.srcs, sdk.tools, go.cc_toolchain_files]
 
+    if sdk.fips_package_list:
+        args.add("-fips_package_list", sdk.fips_package_list)
+        inputs_direct.append(sdk.fips_package_list)
+
     if go.mode.pgoprofile:
         args.add("-pgoprofile", go.mode.pgoprofile)
         inputs_direct.append(go.mode.pgoprofile)
