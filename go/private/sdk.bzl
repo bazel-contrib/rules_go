@@ -19,7 +19,7 @@ load("//go/private:platforms.bzl", "GOARCH_CONSTRAINTS", "GOOS_CONSTRAINTS")
 
 MIN_SUPPORTED_VERSION = (1, 20, 0)
 
-GOFIPS140_DOC = "EXPERIMENTAL: The GOFIPS140 mode to build with. Only 'off' and 'latest' are supported for now."
+GOFIPS140_DOC = "EXPERIMENTAL: The GOFIPS140 mode to build with: 'off', 'latest', or a snapshot in the SDK's lib/fips140 such as 'v1.0.0' or 'certified'."
 
 def _go_host_sdk_impl(ctx):
     goroot = _detect_host_sdk(ctx)
@@ -38,7 +38,6 @@ go_host_sdk_rule = repository_rule(
         ),
         "gofips140": attr.string(
             default = "off",
-            values = ["off", "latest"],
             doc = GOFIPS140_DOC,
         ),
         "_sdk_build_file": attr.label(
@@ -153,7 +152,6 @@ go_download_sdk_rule = repository_rule(
         ),
         "gofips140": attr.string(
             default = "off",
-            values = ["off", "latest"],
             doc = GOFIPS140_DOC,
         ),
         "urls": attr.string_list(default = ["https://dl.google.com/go/{}"]),
@@ -366,7 +364,6 @@ _go_local_sdk = repository_rule(
         ),
         "gofips140": attr.string(
             default = "off",
-            values = ["off", "latest"],
             doc = GOFIPS140_DOC,
         ),
         "_sdk_build_file": attr.label(
@@ -424,7 +421,6 @@ go_wrap_sdk_rule = repository_rule(
         ),
         "gofips140": attr.string(
             default = "off",
-            values = ["off", "latest"],
             doc = GOFIPS140_DOC,
         ),
         "_sdk_build_file": attr.label(
@@ -525,7 +521,7 @@ def _fips_snapshot_packages(ctx, goroot, gofips140):
 
     zip_path = ctx.path("{}/{}.zip".format(lib_dir, version))
     if not zip_path.exists:
-        fail("gofips140 = '{}': the SDK has no snapshot {}".format(gofips140, zip_path))
+        fail("gofips140 = '{}' is not a snapshot or an alias in the SDK: {} does not exist".format(gofips140, zip_path))
 
     # The zip holds golang.org/fips140@<version>/fips140/<version>/<pkg>/<file>.go,
     # which is the package crypto/internal/fips140/<version>/<pkg>.

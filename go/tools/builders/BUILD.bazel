@@ -76,6 +76,7 @@ go_test(
     size = "small",
     srcs = [
         "env.go",
+        "fips.go",
         "flags.go",
         "replicate.go",
         "stdliblist.go",
