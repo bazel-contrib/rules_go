@@ -29,6 +29,8 @@ func stdlib(args []string) error {
 	// process the args
 	flags := flag.NewFlagSet("stdlib", flag.ExitOnError)
 	goenv := envFlags(flags)
+	var srcs multiFlag
+	flags.Var(&srcs, "src", "Go SDK source file")
 	out := flags.String("out", "", "Path to output go root")
 	race := flags.Bool("race", false, "Build in race mode")
 	msan := flags.Bool("msan", false, "Build in msan mode")
@@ -58,7 +60,7 @@ You may need to use the flags --cpu=x64_windows --compiler=mingw-gcc.`)
 	}
 
 	// Link in the bare minimum needed to the new GOROOT
-	if err := replicate(goroot, output, replicatePaths("src", "pkg/tool", "pkg/include")); err != nil {
+	if err := replicateSDK(abs(goroot), output, srcs); err != nil {
 		return err
 	}
 
