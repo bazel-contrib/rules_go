@@ -64,6 +64,15 @@ You can register multiple Go SDKs and select which one to use on a per-target ba
 As long as you specify the `version` of an SDK, it will be downloaded lazily, that is, only when it is actually needed during a particular build.
 The usual rules of [toolchain resolution](https://bazel.build/extending/toolchains#toolchain-resolution) apply, with SDKs registered in the root module taking precedence over those registered in dependencies.
 
+Every registered SDK adds a toolchain per target platform, and Bazel analyzes all registered toolchains in each configuration that runs toolchain resolution.
+If the root module's SDKs cover the exec platforms you build on, you can skip registering the toolchains of the SDKs that dependencies download:
+
+```starlark
+go_sdk.ignore_shadowed_dependency_sdks()
+```
+
+The SDK repositories of dependencies are still created, but they can no longer be selected via `@rules_go//go/toolchain:sdk_version` or `sdk_name` on those exec platforms.
+
 ### Using a Go SDK
 
 By default, Go SDK repositories are created with mangled names and are not expected to be referenced directly.
