@@ -131,6 +131,12 @@ _wrap_tag = tag_class(
     },
 )
 
+_ignore_shadowed_dependency_sdks_tag = tag_class(
+    doc = """Don't register the toolchains of SDKs from non-root modules for exec platforms that an SDK of the root module covers.
+
+Those toolchains are only selected when `@rules_go//go/toolchain:sdk_version` or `sdk_name` points at them, but every configuration that runs toolchain resolution analyzes them. The SDK repositories are still created. Only honored in the root module.""",
+)
+
 _from_file_tag = tag_class(
     doc = """Use a specific Go SDK version described by a `go.mod` or `go.work` file.  Optionally supply GOOS, GOARCH, and download from a customisable URL, and apply local patches or set experiments.""",
     attrs = _COMMON_TAG_ATTRS | {
@@ -159,6 +165,15 @@ _COMMON_EXEC_PLATFORMS = [
 # targets using any of these toolchains due to the changed repository name.
 _MAX_NUM_TOOLCHAINS = 9999
 _TOOLCHAIN_INDEX_PAD_LENGTH = len(str(_MAX_NUM_TOOLCHAINS))
+
+def drop_shadowed_dependency_toolchains(toolchains, host_goos, host_goarch):
+    """Drops the toolchains of non-root SDKs for exec platforms that a root module SDK covers."""
+
+    def exec_platform(toolchain):
+        return (toolchain.goos or host_goos, toolchain.goarch or host_goarch)
+
+    root_exec_platforms = {exec_platform(t): None for t in toolchains if t.root}
+    return [t for t in toolchains if t.root or exec_platform(t) not in root_exec_platforms]
 
 def _go_sdk_impl(ctx):
     nogo = DEFAULT_NOGO
@@ -259,6 +274,7 @@ def _go_sdk_impl(ctx):
                 gofips140 = wrap_tag.gofips140,
             )
             toolchains.append(struct(
+                root = module.is_root,
                 goos = wrap_tag.goos,
                 goarch = wrap_tag.goarch,
                 sdk_repo = name,
@@ -332,6 +348,7 @@ def _go_sdk_impl(ctx):
                 first_host_compatible_toolchain = first_host_compatible_toolchain or "@{}//:host_compatible_root_file".format(name)
 
             toolchains.append(struct(
+                root = module.is_root,
                 goos = download_tag.goos,
                 goarch = download_tag.goarch,
                 sdk_repo = name,
@@ -369,6 +386,7 @@ def _go_sdk_impl(ctx):
                     )
 
                     toolchains.append(struct(
+                        root = module.is_root,
                         goos = goos,
                         goarch = goarch,
                         sdk_repo = default_name,
@@ -397,6 +415,7 @@ def _go_sdk_impl(ctx):
             )
 
             toolchains.append(struct(
+                root = module.is_root,
                 goos = "",
                 goarch = "",
                 sdk_repo = name,
@@ -406,6 +425,8 @@ def _go_sdk_impl(ctx):
             first_host_compatible_toolchain = first_host_compatible_toolchain or "@{}//:host_compatible_root_file".format(name)
 
     host_compatible_toolchain(name = "go_host_compatible_sdk_label", toolchain = first_host_compatible_toolchain)
+    if any([module.is_root and module.tags.ignore_shadowed_dependency_sdks for module in ctx.modules]):
+        toolchains = drop_shadowed_dependency_toolchains(toolchains, host_detected_goos, host_detected_goarch)
     if len(toolchains) > _MAX_NUM_TOOLCHAINS:
         fail("more than {} go_sdk tags are not supported".format(_MAX_NUM_TOOLCHAINS))
 
@@ -507,6 +528,7 @@ go_sdk = module_extension(
         "nogo": _nogo_tag,
         "wrap": _wrap_tag,
         "from_file": _from_file_tag,
+        "ignore_shadowed_dependency_sdks": _ignore_shadowed_dependency_sdks_tag,
     },
     # The choice of a host-compatible SDK is expressed in repository rule attribute values and
     # depends on host OS and architecture.
